@@ -1,0 +1,120 @@
+Meteo Aitor Bermeo v10.48 · iconos de estado real de Open‑Meteo
+Fecha: 2026-08-06
+
+La portada muestra únicamente el código actual de Open‑Meteo: no combina las
+horas posteriores para fabricar un icono compuesto. «Cubierto» se representa
+con nube y la llovizna o lluvia con nube y lluvia, sin sol.
+
+Las 24 tarjetas se actualizan automáticamente cada cinco minutos y cada una
+usa el código correspondiente a su propia franja horaria. No requieren
+correcciones manuales diarias.
+
+VERSIÓN ANTERIOR
+
+Meteo Aitor Bermeo v10.47 · flechas de viento y mapa 850 visible
+Fecha: 2026-08-05
+
+Las barbas siguen la convención meteorológica profesional: asta dirigida hacia
+el origen del viento, media pluma de 5 kt, pluma de 10 kt y banderín de 50 kt.
+Se elimina el aspecto de flecha/número de la versión anterior.
+
+La nubosidad combina la cobertura del modelo con su precipitación: cielo azul
+despejado, nubes blancas sin agua, grises con lluvia débil y más oscuras con
+precipitación intensa. Se suavizan sus contornos para evitar cubos de malla.
+
+La lluvia avanza por intensidad de azul tenue a verde, amarillo, naranja y
+rojo; no usa tonos violetas.
+
+VERSIÓN ANTERIOR v10.42 · visor de lluvia nativo restaurado
+
+El visor vuelve a mostrar primero las capas que sí llegan como tesela nativa
+del modelo: precipitación prevista, reflectividad prevista y nubosidad. Se
+retiran del selector los acumulados calculados que producían bloques de color
+irreales en mapas amplios.
+
+VERSIÓN ANTERIOR v10.41 · capas de precipitación reparadas
+
+Los acumulados y las fases de precipitación no pueden volver a usar el
+respaldo de cinco filas: generaba bloques de color irreales. En caso de que la
+función compartida esté limitada, la aplicación conserva una malla detallada
+de 18 filas para estas capas, identificada como respaldo detallado.
+
+VERSIÓN ANTERIOR v10.40 · capas de precipitación y barbas profesionales
+
+El visor incorpora precipitación total, lluvia, chubascos, nieve, probabilidad
+de precipitación y acumulados completos hacia delante de 3, 6, 12 y 24 horas.
+Cada capa tiene su propia escala de color legible. Las barbas de viento pasan
+a la convención meteorológica: marcan dirección de procedencia y velocidad en
+nudos, con banderín de 50 kt, barbas de 10 kt y media barba de 5 kt.
+
+VERSIÓN ANTERIOR v10.39 · portada y avance diario con ECMWF IFS
+
+La portada de Bermeo y el avance visible de los próximos cuatro días consultan
+exclusivamente el modelo europeo ECMWF IFS mediante Open-Meteo. Se conserva el
+visor de mapas completo, con sus selectores ECMWF, GFS e ICON independientes.
+
+VERSIÓN BASE v10.38 · valores y vectores reparados · radar AEMET georreferenciado · temperatura del mar y olas
+Fecha: 2026-08-04
+
+La lluvia débil de 0,01 a 0,2 mm/h gana contraste cian y azul progresivo. El
+valor cero continúa transparente y las intensidades moderadas o fuertes
+mantienen su escala meteorológica, sin alterar los datos publicados.
+
+Las nubes secas ganan blanco y definición; las masas con precipitación quedan
+en gris más profundo mediante interpolación continua, sin bloques ni manchas.
+Viento a 10 m usa los componentes U/V realmente publicados por ECMWF, GFS e
+ICON y deriva de ellos la velocidad, evitando la espera infinita del campo
+inexistente wind_speed_10m. El selector horario conserva la imagen anterior,
+agrupa movimientos rápidos y precarga la hora siguiente para que no deje el
+mapa en blanco al arrastrar. El radar nacional prueba primero OpenData y, si
+esa pasarela falla, el visor público oficial de AEMET; ya no cambia de capa
+silenciosamente. Las temperaturas y la precipitación conservan los valores
+reales del modelo elegido, sin forzarlos a coincidir con otra web.
+
+Conserva la pantalla única, favoritos, mareas, avisos y navegación fija.
+El visor deja de esperar a que las dos teselas de nubosidad terminen a la vez:
+se activa con la primera capa válida y completa la segunda sin bloquear los
+controles. Lluvia y el resto de capas también liberan los controles a los seis
+segundos si la red móvil tarda y continúan descargando en segundo plano.
+La portada muestra una mini previsión real de los tres días siguientes con día,
+símbolo meteorológico y temperaturas máxima y mínima. Los indicadores de
+ubicación, hora y zona horaria son más pequeños, especialmente en móvil.
+En pantallas pequeñas, las tarjetas de datos actuales se muestran en filas
+compactas, la previsión diaria se desplaza horizontalmente y el bloque horario
+reduce su tamaño. La versión de escritorio no cambia.
+Lluvia prevista, reflectividad estimada y nubosidad usan teselas espaciales
+nativas y continuas de Open-Meteo dentro del propio mapa. Se eliminan los
+círculos y manchas creados por la interpolación puntual anterior.
+El visor cartográfico se abre automáticamente con «Mapa claro»; el usuario
+puede cambiar después a relieve topográfico u oscuro profesional.
+Temperatura a 2 m conserva la malla puntual validada y la máscara terrestre
+Natural Earth para que el color meteorológico no cubra el mar. La nubosidad
+es blanca donde no llueve y pasa a gris más oscuro donde el mismo modelo
+publica precipitación. Se elimina el recuadro explicativo inferior izquierdo.
+En «Mapa claro», el mar adopta un azul más limpio y luminoso y la nubosidad se
+mantiene blanca/gris para que ambas superficies se distingan con claridad.
+La nube alta es blanca, la media gris clara y la baja gris marcada; cuando hay
+precipitación, la propia masa se vuelve gris oscuro para identificar lluvia.
+Renueva el visor con mar azul y cartografía en color, transparencia real en
+zonas secas o despejadas, nubes blancas tipo satélite, lluvia y reflectividad
+prevista localizadas, temperatura continua con el Atlántico azul, T850 fría en azules, partículas y
+barbas de viento independientes, isobaras calculadas y centros H/L.
+Incluye ECMWF, NOAA GFS y DWD ICON en las mismas capas nativas, radar mundial
+RainViewer integrado, radar AEMET presentado como producto nacional fijo y
+Windy únicamente como opción secundaria que el usuario abre manualmente.
+Presión, temperatura a 850 hPa, nubosidad y CIN usan la fuente espacial del
+modelo seleccionado cuando esa variable está publicada por dicho modelo.
+La portada sustituye la antigua plataforma por una fotografía real de la Isla
+de Izaro, con autoría y licencia visibles en la propia imagen.
+La portada predeterminada de Bermeo usa Open‑Meteo multimodelo: ECMWF aporta
+temperatura y viento y GFS corrige la nubosidad y el sirimiri costeros cuando
+la discrepancia es importante. AEMET es la referencia principal de avisos y
+Euskalmet se conserva como contraste autonómico. El bloque marítimo incorpora
+olas, período, mar de fondo y temperatura superficial mediante Open‑Meteo
+Marine, sin sustituir las fuentes de mareas.
+Incluye «↻ Actualizar tiempo» para renovar previsión y mareas, caché veraz por
+capa, tres intentos de metadatos, dos reintentos de teselas y sin ningún cartel
+superpuesto sobre su línea temporal, actualización
+automática cada cinco minutos y ajustes móviles para controles táctiles.
+Paquete completo preparado para Vercel Drop.
+Los archivos de este directorio deben quedar en la raíz del despliegue.

@@ -1,0 +1,107 @@
+{
+  "functions": {
+    "api/weather.js": {
+      "maxDuration": 15
+    },
+    "api/marine.js": {
+      "maxDuration": 15
+    },
+    "api/euskalmet.js": {
+      "maxDuration": 30
+    },
+    "api/euskalmet-status.js": {
+      "maxDuration": 10
+    },
+    "api/aemet.js": {
+      "maxDuration": 30
+    },
+    "api/aemet-status.js": {
+      "maxDuration": 10
+    },
+    "api/map-forecast.js": {
+      "maxDuration": 30
+    },
+    "api/aemet-radar.js": {
+      "maxDuration": 20
+    },
+    "api/euskalmet-tides.js": {
+      "maxDuration": 15
+    },
+    "api/rainviewer.js": {
+      "maxDuration": 10
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
+      ]
+    },
+    {
+      "source": "/service-worker.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)-v9-12.webp",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)-v10-7.jpg",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/vendor/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, must-revalidate"
+        }
+      ]
+    }
+  ]
+}
