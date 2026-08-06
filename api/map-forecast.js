@@ -22,9 +22,11 @@ function modelForLayer(requested, layer) {
   return model;
 }
 
-// Se consultan 48 horas para poder calcular acumulados completos de hasta 24
-// horas en cada uno de los 24 pasos que muestra el visor.
-const FORECAST_HOURS = 48;
+// El visor llega hasta la misma hora del quinto día (121 marcas horarias). Se añaden 24 horas de
+// margen para que los acumulados hacia delante de 24 h sigan siendo completos
+// también en el último tramo de la línea temporal.
+const VISIBLE_FORECAST_HOURS = 5 * 24 + 1;
+const FORECAST_HOURS = VISIBLE_FORECAST_HOURS + 24;
 // La malla profesional se divide en lotes moderados: aporta más detalle al
 // hacer zoom sin crear URLs gigantes ni concentrar toda la carga en una sola
 // petición al proveedor abierto.
@@ -395,9 +397,9 @@ module.exports = async function handler(req, res) {
       throw new Error('CIN no está publicado para esta pasada; se volverá a intentar automáticamente.');
     }
     const first = locations[0]?.hourly || {};
-    // La línea temporal permanece en 24 horas; las 24 siguientes solo se usan
-    // para que los acumulados hacia delante no queden truncados.
-    const times = Array.isArray(first.time) ? first.time.slice(0, 24) : [];
+    // Se muestran cinco días completos. Las 24 horas extra solicitadas arriba
+    // se reservan para que los acumulados hacia delante no queden truncados.
+    const times = Array.isArray(first.time) ? first.time.slice(0, VISIBLE_FORECAST_HOURS) : [];
     if (!times.length || locations.length !== requestPoints.length) {
       throw new Error('El modelo no devolvió una malla temporal utilizable.');
     }
