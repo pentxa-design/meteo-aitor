@@ -1516,22 +1516,29 @@ function mixedSymbols(codes=[],day=true){
   if(f.cloud)return ['☁️'];
   return [day?'☀️':'🌙'];
 }
-function dailyWeatherSymbols(d,dateStr,representativeCode=null){
-  const indices=hourlyIndicesForDate(d,dateStr,true),codes=d.hourly?.weather_code||[],precipitation=d.hourly?.precipitation||[];
-  const entries=indices.map(index=>({code:finiteWeatherNumber(codes[index]),amount:finiteWeatherNumber(precipitation[index])??0})).filter(entry=>entry.code!==null);
-  if(!entries.length)return weatherSymbolsForCode(representativeCode,true,d.daily?.precipitation_sum?.[(d.daily?.time||[]).indexOf(dateStr)]);
-  const daytimeCodes=entries.map(entry=>entry.code),flags=conditionFlags(daytimeCodes),maxAmount=Math.max(0,...entries.map(entry=>entry.amount)),rainEntries=entries.filter(entry=>conditionFlags([entry.code]).rain),daytimeRain=rainEntries.reduce((total,entry)=>total+entry.amount,0),meaningfulRain=rainEntries.some(entry=>rainIntensity(entry.code,entry.amount)>=2)||daytimeRain>=.4||rainEntries.length>=2;
-  if(flags.storm)return ['⛈️'];
-  if(flags.snow&&flags.sun)return ['🌤️','🌨️'];
-  if(flags.snow)return ['🌨️'];
-  // Una traza aislada de llovizna no define el aspecto de todo el día. La
-  // precipitación nocturna ya queda indicada en la línea de probabilidad.
-  if(meaningfulRain&&flags.sun)return entries.some(entry=>rainIntensity(entry.code,entry.amount)===3)?['🌦️','💧','💧']:['🌦️'];
+function dailyPhaseSymbol(entries=[],fallbackCode=null){
+  if(!entries.length)return weatherSymbolsForCode(fallbackCode,true)[0]||'🌦️';
+  const codes=entries.map(entry=>entry.code),flags=conditionFlags(codes),rainEntries=entries.filter(entry=>conditionFlags([entry.code]).rain),rainTotal=rainEntries.reduce((total,entry)=>total+entry.amount,0),meaningfulRain=rainEntries.some(entry=>rainIntensity(entry.code,entry.amount)>=2)||rainTotal>=.4||rainEntries.length>=2;
+  if(flags.storm)return '⛈️';
+  if(flags.snow)return '🌨️';
   if(meaningfulRain){
     const strongest=entries.filter(entry=>conditionFlags([entry.code]).rain).sort((a,b)=>rainIntensity(b.code,b.amount)-rainIntensity(a.code,a.amount)||b.amount-a.amount)[0];
-    return weatherSymbolsForCode(strongest?.code??representativeCode,true,maxAmount);
+    if(flags.sun&&rainIntensity(strongest?.code,strongest?.amount)<3)return '🌦️';
+    return weatherSymbolsForCode(strongest?.code??fallbackCode,true,strongest?.amount)[0]||'🌧️';
   }
-  return weatherSymbolsForCode(representativeCode,true,maxAmount);
+  const count=list=>entries.filter(entry=>list.includes(entry.code)).length,clearCount=count([0,1]),cloudCount=count([2,3,45,48]);
+  if(clearCount>=cloudCount&&clearCount){const clearSky=count([0]),mainlyClear=count([1]);return weatherSymbolsForCode(clearSky>=mainlyClear?0:1,true)[0]}
+  if(cloudCount)return weatherSymbolsForCode(count([2])>=count([3,45,48])?2:3,true)[0];
+  return weatherSymbolsForCode(fallbackCode,true)[0]||'🌦️';
+}
+function dailyWeatherSymbols(d,dateStr,representativeCode=null){
+  const indices=hourlyIndicesForDate(d,dateStr,true),codes=d.hourly?.weather_code||[],precipitation=d.hourly?.precipitation||[],times=d.hourly?.time||[];
+  const entries=indices.map(index=>({code:finiteWeatherNumber(codes[index]),amount:finiteWeatherNumber(precipitation[index])??0,hour:Number(String(times[index]).slice(11,13))})).filter(entry=>entry.code!==null);
+  if(!entries.length)return weatherSymbolsForCode(representativeCode,true,d.daily?.precipitation_sum?.[(d.daily?.time||[]).indexOf(dateStr)]);
+  // El icono sigue la evolución publicada por el modelo: mañana a la izquierda
+  // y tarde a la derecha. Así se lee lluvia → claros o claros → lluvia.
+  const morning=entries.filter(entry=>entry.hour<14),afternoon=entries.filter(entry=>entry.hour>=14),morningSymbol=dailyPhaseSymbol(morning,representativeCode),afternoonSymbol=dailyPhaseSymbol(afternoon,representativeCode);
+  return morningSymbol===afternoonSymbol?[morningSymbol]:[morningSymbol,afternoonSymbol];
 }
 function renderHeroForecast(d,loc){
   const container=$('heroForecast');if(!container)return;
