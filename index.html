@@ -729,10 +729,10 @@ const ALIASES={
 };
 const weatherMap={
   0:['Despejado','☀️','sunny'],1:['Principalmente despejado','🌤️','sunny'],2:['Parcialmente nuboso','⛅','cloudy'],3:['Cubierto','☁️','cloudy'],
-  45:['Niebla','🌫️','fog'],48:['Niebla con escarcha','🌫️','fog'],51:['Llovizna débil','🌧️','rain'],53:['Llovizna','🌧️','rain'],55:['Llovizna intensa','🌧️','rain'],
+  45:['Niebla','🌫️','fog'],48:['Niebla con escarcha','🌫️','fog'],51:['Llovizna débil','☁️','rain'],53:['Llovizna','🌧️','rain'],55:['Llovizna intensa','🌧️','rain'],
   56:['Llovizna helada','🌧️','rain'],57:['Llovizna helada intensa','🌧️','rain'],61:['Lluvia débil','🌧️','rain'],63:['Lluvia','🌧️','rain'],65:['Lluvia intensa','🌧️','rain'],
   66:['Lluvia helada','🌧️','rain'],67:['Lluvia helada intensa','🌧️','rain'],71:['Nieve débil','🌨️','snow'],73:['Nieve','❄️','snow'],75:['Nieve intensa','❄️','snow'],77:['Granizo de nieve','🌨️','snow'],
-  80:['Chubascos débiles','🌧️','rain'],81:['Chubascos','🌧️','rain'],82:['Chubascos fuertes','⛈️','storm'],85:['Chubascos de nieve','🌨️','snow'],86:['Chubascos de nieve fuertes','❄️','snow'],
+  80:['Chubascos débiles','🌦️','rain'],81:['Chubascos','🌧️','rain'],82:['Chubascos fuertes','🌧️','rain'],85:['Chubascos de nieve','🌨️','snow'],86:['Chubascos de nieve fuertes','❄️','snow'],
   95:['Tormenta','⛈️','storm'],96:['Tormenta con granizo','⛈️','storm'],99:['Tormenta fuerte con granizo','⛈️','storm']
 };
 function norm(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().replace(/\s+/g,' ')}
@@ -1427,9 +1427,30 @@ function iconHTML(symbols,big=false){
   if(list.length===1)return `<span aria-hidden="true">${list[0]}</span>`;
   return `<span class="weatherCombo" aria-label="Tiempo variable">${list.map((s,i)=>`<span class="${s==='⛈️'?'stormMark':''}">${s}</span>`).join('')}</span>`;
 }
-function exactWeatherSymbol(code,day=true){
-  const weather=weatherMap[finiteWeatherNumber(code)]||['Datos parciales','☁️','cloudy'];
-  return !day&&weather[2]==='sunny'?'🌙':weather[1];
+function rainIntensity(code,precipitation=null){
+  const value=finiteWeatherNumber(code),amount=finiteWeatherNumber(precipitation)??0;
+  if([55,57,65,67,82].includes(value)||amount>=4)return 3;
+  if([53,63,81].includes(value)||amount>=1)return 2;
+  if([51,56,61,66,80].includes(value)||amount>0)return 1;
+  return 0;
+}
+function weatherSymbolsForCode(code,day=true,precipitation=null){
+  const value=finiteWeatherNumber(code),amount=finiteWeatherNumber(precipitation)??0;
+  if(value===null)return ['🌦️'];
+  if([95,96,99].includes(value))return ['⛈️'];
+  if([71,73,75,77,85,86].includes(value))return [value===73||value===75||value===86?'❄️':'🌨️'];
+  const intensity=rainIntensity(value,amount);
+  if(intensity===3)return ['🌧️','💧','💧'];
+  if(intensity===2)return ['🌧️'];
+  if(intensity===1){
+    if(day&&([0,1,2,80].includes(value)))return ['🌦️'];
+    return ['☁️','💧'];
+  }
+  const weather=weatherMap[value]||['Datos parciales','☁️','cloudy'];
+  return [!day&&weather[2]==='sunny'?'🌙':weather[1]];
+}
+function exactWeatherSymbol(code,day=true,precipitation=null){
+  return weatherSymbolsForCode(code,day,precipitation).join('');
 }
 function hourlyIndicesForDate(d,dateStr,daylightOnly=false){
   const times=d.hourly?.time||[],isDay=d.hourly?.is_day||[];
@@ -1448,7 +1469,7 @@ function representativeDailyCode(d,dateStr,dailyCode=null){
     const frequencies=new Map();entries.forEach(entry=>{if(list.includes(entry.code))frequencies.set(entry.code,(frequencies.get(entry.code)||0)+1)});
     return [...frequencies].sort((a,b)=>b[1]-a[1])[0]?.[0]??null;
   };
-  const stormCodes=[82,95,96,99],snowCodes=[71,73,75,77,85,86],rainCodes=[51,53,55,56,57,61,63,65,66,67,80,81],clearCodes=[0,1],cloudCodes=[2,3,45,48];
+  const stormCodes=[95,96,99],snowCodes=[71,73,75,77,85,86],rainCodes=[51,53,55,56,57,61,63,65,66,67,80,81,82],clearCodes=[0,1],cloudCodes=[2,3,45,48];
   const stormCount=count(stormCodes),snowCount=count(snowCodes),rainCount=count(rainCodes),clearCount=count(clearCodes),cloudCount=count(cloudCodes),dayPrecipitation=entries.reduce((total,entry)=>total+entry.precipitation,0);
   if(stormCount)return mode(stormCodes);
   if(snowCount>=Math.max(2,Math.ceil(entries.length*.2)))return mode(snowCodes);
@@ -1472,9 +1493,9 @@ function conditionFlags(codes=[]){
   const validCodes=(Array.isArray(codes)?codes:[codes]).map(finiteWeatherNumber).filter(code=>code!==null);
   return {
     valid:validCodes.length>0,
-    storm:validCodes.some(c=>[82,95,96,99].includes(c)),
+    storm:validCodes.some(c=>[95,96,99].includes(c)),
     snow:validCodes.some(c=>[71,73,75,77,85,86].includes(c)),
-    rain:validCodes.some(c=>[51,53,55,56,57,61,63,65,66,67,80,81].includes(c)),
+    rain:validCodes.some(c=>[51,53,55,56,57,61,63,65,66,67,80,81,82].includes(c)),
     cloud:validCodes.some(c=>[2,3,45,48].includes(c)),
     sun:validCodes.some(c=>[0,1,2].includes(c))
   };
@@ -1495,14 +1516,29 @@ function mixedSymbols(codes=[],day=true){
   if(f.cloud)return ['☁️'];
   return [day?'☀️':'🌙'];
 }
+function dailyWeatherSymbols(d,dateStr,representativeCode=null){
+  const indices=hourlyIndicesForDate(d,dateStr,true),codes=d.hourly?.weather_code||[],precipitation=d.hourly?.precipitation||[];
+  const entries=indices.map(index=>({code:finiteWeatherNumber(codes[index]),amount:finiteWeatherNumber(precipitation[index])??0})).filter(entry=>entry.code!==null);
+  if(!entries.length)return weatherSymbolsForCode(representativeCode,true,d.daily?.precipitation_sum?.[(d.daily?.time||[]).indexOf(dateStr)]);
+  const daytimeCodes=entries.map(entry=>entry.code),flags=conditionFlags(daytimeCodes),maxAmount=Math.max(0,...entries.map(entry=>entry.amount));
+  if(flags.storm)return ['⛈️'];
+  if(flags.snow&&flags.sun)return ['🌤️','🌨️'];
+  if(flags.snow)return ['🌨️'];
+  if(flags.rain&&flags.sun)return entries.some(entry=>rainIntensity(entry.code,entry.amount)===3)?['🌦️','💧','💧']:['🌦️'];
+  if(flags.rain){
+    const strongest=entries.filter(entry=>conditionFlags([entry.code]).rain).sort((a,b)=>rainIntensity(b.code,b.amount)-rainIntensity(a.code,a.amount)||b.amount-a.amount)[0];
+    return weatherSymbolsForCode(strongest?.code??representativeCode,true,maxAmount);
+  }
+  return weatherSymbolsForCode(representativeCode,true,maxAmount);
+}
 function renderHeroForecast(d,loc){
   const container=$('heroForecast');if(!container)return;
   const timezone=d.timezone||timezoneForLocation(loc),today=localCurrentTime(timezone).slice(0,10),times=Array.isArray(d.daily?.time)?d.daily.time:[],upcoming=times.map((time,index)=>({time:String(time),index})).filter(item=>item.time>today).slice(0,4);
   if(!upcoming.length){container.hidden=true;return}
   const dayNames=['dom','lun','mar','mié','jue','vie','sáb'];
   container.hidden=false;container.innerHTML=upcoming.map((item,position)=>{
-    const date=new Date(item.time+'T12:00:00'),dailyCode=finiteWeatherNumber(d.daily?.weather_code?.[item.index]),representativeCode=representativeDailyCode(d,item.time,dailyCode),dailyCodes=hourlyCodesForDate(d,item.time),fallback=mixedSymbols(dailyCodes.length?dailyCodes:[dailyCode],true)[0],symbol=representativeCode===null?fallback:(weatherMap[representativeCode]?.[1]||fallback),name=position===0?'Mañana':dayNames[date.getDay()],maximum=weatherRound(d.daily?.temperature_2m_max?.[item.index],'°'),minimum=weatherRound(d.daily?.temperature_2m_min?.[item.index],'°');
-    return `<div class="heroForecastDay"><div class="heroForecastIcon">${iconHTML(symbol)}</div><div class="heroForecastName">${name}</div><div class="heroForecastTemp">${maximum} <span>${minimum}</span></div></div>`
+    const date=new Date(item.time+'T12:00:00'),dailyCode=finiteWeatherNumber(d.daily?.weather_code?.[item.index]),representativeCode=representativeDailyCode(d,item.time,dailyCode),symbols=dailyWeatherSymbols(d,item.time,representativeCode),name=position===0?'Mañana':dayNames[date.getDay()],maximum=weatherRound(d.daily?.temperature_2m_max?.[item.index],'°'),minimum=weatherRound(d.daily?.temperature_2m_min?.[item.index],'°');
+    return `<div class="heroForecastDay"><div class="heroForecastIcon">${iconHTML(symbols)}</div><div class="heroForecastName">${name}</div><div class="heroForecastTemp">${maximum} <span>${minimum}</span></div></div>`
   }).join('');
 }
 function hourlyCodesForDate(d,dateStr){
@@ -1559,7 +1595,7 @@ function renderHourly(d,loc={}){
     const rainLine=rainProbability===null?(precipitation===null?'💧 —':`💧 ${weatherFixed(precipitation,1,' mm')}`):`💧 ${weatherRound(rainProbability,'%')} · ${weatherFixed(precipitation,1,' mm')}`;
     const secondary=isEuskalmet?(officialText?`<div class="hourDew">${esc(shortOfficialText(officialText,72))}</div>`:''):`<div class="hourDew">Rocío ${weatherRound(h.dew_point_2m?.[i],'°')} · HR ${weatherRound(h.relative_humidity_2m?.[i],'%')}</div>`;
     cell.setAttribute('aria-label',`${day}, ${rangeLabel}, ${wm[0]}`);
-    cell.innerHTML=`<div class="hourTime">${isNow?'Ahora':esc(rangeLabel)}</div><div class="hourDay">${esc(isNow?rangeLabel:day)}</div><div class="hourIcon">${isDay?wm[1]:(wm[2]==='sunny'?'🌙':wm[1])}</div><div class="hourTemp">${weatherRound(h.temperature_2m?.[i],'°')}</div><div class="hourRain">${rainLine}</div><div class="hourWind">💨 ${weatherRound(h.wind_speed_10m?.[i],' km/h')} · ${windDirection(h.wind_direction_10m?.[i]).split(' · ')[0]}</div>${secondary}${gust!==null?`<div class="hourGust ${risk.className}">Racha ${weatherRound(gust,' km/h')}</div>`:''}${officialSource?`<div class="hourOfficial">✓ ${esc(officialSource)}</div>`:''}`;
+    cell.innerHTML=`<div class="hourTime">${isNow?'Ahora':esc(rangeLabel)}</div><div class="hourDay">${esc(isNow?rangeLabel:day)}</div><div class="hourIcon">${iconHTML(weatherSymbolsForCode(code,isDay,precipitation))}</div><div class="hourTemp">${weatherRound(h.temperature_2m?.[i],'°')}</div><div class="hourRain">${rainLine}</div><div class="hourWind">💨 ${weatherRound(h.wind_speed_10m?.[i],' km/h')} · ${windDirection(h.wind_direction_10m?.[i]).split(' · ')[0]}</div>${secondary}${gust!==null?`<div class="hourGust ${risk.className}">Racha ${weatherRound(gust,' km/h')}</div>`:''}${officialSource?`<div class="hourOfficial">✓ ${esc(officialSource)}</div>`:''}`;
     box.appendChild(cell);
   });
 }
@@ -1695,13 +1731,13 @@ function render(loc,d){
   const c=d.current||{};
   const currentCode=finiteWeatherNumber(c.weather_code),wm=currentCode===null?['Datos meteorológicos parciales','🌦️','cloudy']:(weatherMap[currentCode]||['Tiempo variable','🌦️','cloudy']);
   const currentHour=Number(String(c.time||'').slice(11,13)),isDay=finiteWeatherNumber(c.is_day)===null?(currentHour>=7&&currentHour<21):Number(c.is_day)===1;
-  const currentSymbol=exactWeatherSymbol(currentCode,isDay);
+  const currentSymbols=weatherSymbolsForCode(currentCode,isDay,c.precipitation??c.rain);
   $('hero').className='hero '+wm[2]+' '+(isDay?'day':'night');
   $('place').textContent=loc.name||'Ubicación';
   $('country').textContent=[loc.admin1,loc.country].filter(Boolean).join(' · ');
   $('temp').textContent=weatherRound(c.temperature_2m,'°');
   $('condition').textContent=(isDay?'':'Noche · ')+(c._official_description?shortOfficialText(c._official_description,150):wm[0]);
-  $('bigIcon').innerHTML=iconHTML([currentSymbol],true);
+  $('bigIcon').innerHTML=iconHTML(currentSymbols,true);
   renderHeroForecast(d,loc);
   $('feels').textContent=weatherRound(c.apparent_temperature,' °C');
   $('humidity').textContent=weatherRound(c.relative_humidity_2m,' %');
@@ -1732,7 +1768,7 @@ function render(loc,d){
     const dailyCode=finiteWeatherNumber(d.daily?.weather_code?.[i]);
     const date=new Date(t+'T12:00:00');
     const dailyCodes=hourlyCodesForDate(d,t);
-    const representativeCode=t===today?dailyCode:representativeDailyCode(d,t,dailyCode),symbols=[exactWeatherSymbol(representativeCode,true)];
+    const representativeCode=t===today?dailyCode:representativeDailyCode(d,t,dailyCode),symbols=dailyWeatherSymbols(d,t,representativeCode);
     const flags=conditionFlags([...dailyCodes,dailyCode]);
     const stormText=flags.storm?'<div class="rainp" style="color:#ffe56b;font-weight:800">⚡ Riesgo de tormenta</div>':'';
     const officialText=d.daily?.official_text?.[i]||'';const officialSource=d.daily?.official_source?.[i]||'';const official=officialText?`<div class="officialTag">✓ ${esc(officialSource||'Fuente oficial')}</div><div class="officialText" title="${esc(officialText)}">${esc(shortOfficialText(officialText))}</div>`:'';
