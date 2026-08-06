@@ -399,6 +399,26 @@
     .marineNow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:8px}.marineMetric{min-width:0;padding:8px 10px;border-radius:13px;background:rgba(3,20,48,.38);border:1px solid rgba(130,224,255,.14)}.marineMetric span{display:block;color:#9bc9df;font-size:8px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}.marineMetric strong{display:block;margin-top:3px;color:#fff;font-size:14px;white-space:nowrap}.marineMetric small{display:block;margin-top:2px;color:#8fb2c7;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.marineNow.loading{opacity:.65}.marineNow.error .marineMetric strong{color:#bdd0dc}
     @media(max-width:820px){.tideDays{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.tidesPanel{padding:12px}.tidesHead{align-items:flex-start}.tidesActions{flex-direction:column;align-items:flex-end}.tidesSource{min-height:27px}.tidesToggle{min-height:27px}.tideDays{grid-template-columns:1fr}.tideNext{grid-template-columns:auto 1fr auto}.tideNextHeight{grid-column:auto;text-align:right}.tidesFoot{display:block}.tidesRetry{margin-top:8px}.tideSkeleton{height:76px}}
     @media(max-width:560px){.marineNow{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.marineMetric{padding:7px 9px}.marineMetric strong{font-size:13px}}
+
+    /* Móvil: los accesos y mandos del mapa pasan a una cuadrícula. Antes se
+       mantenían en una fila desplazable y quedaban cortados en pantallas
+       estrechas, especialmente dentro de la aplicación instalada. */
+    @media(max-width:520px){
+      .sectionNav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;overflow:visible;gap:7px;padding:7px;max-width:100%}
+      .navLink{min-width:0;min-height:42px;padding:8px 7px;white-space:normal;text-align:center;line-height:1.15}
+      .navRefresh{grid-column:1 / -1;order:initial;position:static;min-height:46px;margin:0}
+      .mapAitor{max-width:100%}
+      .mapControls{grid-template-columns:minmax(0,1fr)}
+      .mapRefresh{grid-column:auto;width:100%}
+      .mapToggles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:6px;padding:8px}
+      .mapToggle,.mapFullscreen{box-sizing:border-box;min-width:0;min-height:42px;white-space:normal;justify-content:center;text-align:center}
+      .mapBaseControl,.mapOpacity{grid-column:1 / -1;justify-content:space-between}
+      .mapBaseControl select{flex:1;min-width:0;max-width:none;text-align:right}
+      .mapOpacity input{flex:1;min-width:0;width:auto}
+      #mapFullscreen{grid-column:1 / -1}
+      .mapLayerRail{scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+      .mapLayerButton{scroll-snap-align:start}
+    }
   </style>
 </head>
 <body>
@@ -3010,7 +3030,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.48',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.49',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });

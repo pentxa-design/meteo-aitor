@@ -1,3 +1,12 @@
+Meteo Aitor Bermeo v10.49 · controles cómodos en móvil
+Fecha: 2026-08-06
+
+En móvil, la navegación y los controles del mapa se organizan en filas que
+caben en pantalla. Se elimina el desplazamiento lateral que cortaba botones y
+pestañas dentro de la aplicación instalada. La versión de escritorio no cambia.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.48 · iconos de estado real de Open‑Meteo
 Fecha: 2026-08-06
 
