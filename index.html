@@ -2166,6 +2166,9 @@ function renderMapNativeAnnotations(){
 }
 function queueMapNativeAnnotations(force=false,delay=420){
   clearTimeout(mapAitorState.nativeAnnotationTimer);if(!mapUsesNativeTiles()||!mapAitorState.nativeSource)return;
+  // La tesela AROME de nube baja ya es el dato espacial de 1,5 km. Evitamos
+  // una segunda malla de puntos que no mejora la imagen y consume cuota.
+  if(mapAitorState.model==='arome'&&mapAitorState.layer==='cloud'){$('mapStatus').textContent='AROME HD · nubosidad baja nativa · lluvia del mismo modelo integrada';return}
   mapAitorState.nativeAnnotationTimer=setTimeout(()=>{mapAitorState.nativeAnnotationTimer=null;loadMapNativeAnnotations(force)},Math.max(0,delay));
 }
 async function loadMapNativeAnnotations(force=false){
@@ -2565,7 +2568,7 @@ function renderMapCloudLegend(){
 }
 function updateMapLabels(){
   const data=mapAitorState.data,config=mapLayerConfig();
-  const legend=$('mapLegend');if(legend){legend.classList.toggle('mapLegendCloud',mapAitorState.layer==='cloud');legend.title=mapAitorState.layer==='cloud'?'Cielo azul · nube blanca sin precipitación · gris con precipitación':''}
+  const legend=$('mapLegend');if(legend){legend.classList.toggle('mapLegendCloud',mapAitorState.layer==='cloud');legend.title=mapAitorState.layer==='cloud'?(mapAitorState.model==='arome'?'AROME HD · nube baja nativa · más oscura donde el mismo modelo da precipitación':'Cielo azul · nube blanca sin precipitación · gris con precipitación'):''}
   if(mapAitorState.layer==='rainviewer'){
     const frame=mapAitorState.rainviewerData?.frames?.[mapAitorState.timeIndex];
     const daylight=updateMapLightTheme(frame?.time,true);
