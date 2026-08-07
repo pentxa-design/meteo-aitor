@@ -66,6 +66,7 @@ const LAYER_FIELDS = {
   thermo: ['temperature_2m', 'dew_point_2m', 'relative_humidity_2m'],
   windbundle: ['wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m'],
   precipitation: ['precipitation', 'precipitation_probability', 'rain', 'showers', 'snowfall', 'pressure_msl'],
+  precipitation_accumulation: ['precipitation'],
   cloud: ['cloud_cover', 'cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high', 'precipitation', 'pressure_msl'],
   pressure: ['pressure_msl'],
   t850: ['temperature_850hPa'],
@@ -222,7 +223,9 @@ function precipitationAccumulation(values, hours) {
   const series = Array.isArray(values) ? values : [];
   return series.map((_, index) => {
     let total = 0;
-    for (let offset = 0; offset < hours; offset += 1) {
+    // Open-Meteo publica precipitation como suma de la hora precedente.
+    // Para "próximas N horas" se suman los N intervalos posteriores.
+    for (let offset = 1; offset <= hours; offset += 1) {
       const value = Number(series[index + offset]);
       if (Number.isFinite(value)) total += Math.max(0, value);
     }
@@ -411,10 +414,12 @@ module.exports = async function handler(req, res) {
       model: { requested: effectiveRequested, label: marineRequested ? model.label : sourceModel === 'best_match' ? 'Modelo automático · respaldo' : model.label, sourceModel, cinAvailable, fallback: !marineRequested && sourceModel === 'best_match', provider: marineRequested ? 'Open-Meteo Marine' : 'Open-Meteo', resolution: marineRequested ? 'Mejor modelo marino disponible' : effectiveRequested === 'gfs' ? 'GFS seamless' : effectiveRequested === 'icon' ? 'ICON seamless' : displayLayer === 't850' ? 'ECMWF IFS 0.25°' : 'ECMWF IFS HRES' },
       diagnostics: displayLayer === 'forecast_reflectivity'
         ? { native: false, derived: true, sourceVariable: 'precipitation', interval: 'preceding_hour_sum', units: 'dBZ', formula: 'Z=200·R^1.6' }
+        : displayLayer === 'precipitation_3h'
+          ? { native: false, derived: true, sourceVariable: 'precipitation', interval: 'three-hour-forward-sum', units: 'mm', samples: 3 }
         : displayLayer === 'cape'
-          ? { native: true, derived: false, sourceVariable: 'cape', level: 'surface', parcel: 'surface-based', units: 'J/kg' }
-          : displayLayer === 'cin'
-            ? { native: true, derived: false, sourceVariable: 'convective_inhibition', level: 'surface', parcel: 'surface-based', units: 'J/kg', signConvention: 'negative=inhibition' }
+          ? { native: true, derived: false, sourceVariable: 'cape', parcelType: 'not-specified-by-provider', units: 'J/kg' }
+        : displayLayer === 'cin'
+            ? { native: true, derived: false, sourceVariable: 'convective_inhibition', parcelType: 'not-specified-by-provider', units: 'J/kg', signConvention: 'negative=inhibition' }
             : null,
       bundle: layer,
       displayLayer,
