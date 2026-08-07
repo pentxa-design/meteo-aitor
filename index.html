@@ -471,7 +471,7 @@
   <section id="tidesPanel" class="tidesPanel" aria-labelledby="tidesTitle">
     <div class="tidesHead">
       <div>
-        <div id="tidesKicker" class="tidesKicker">TablaDeMareas · Bilbao</div>
+        <div id="tidesKicker" class="tidesKicker">Euskalmet · La mar</div>
         <h2 id="tidesTitle" class="tidesTitle">Mareas de Bermeo y Bizkaia</h2>
         <div class="tidesSub">Pleamares y bajamares de fuentes oficiales vascas, con su altura publicada.</div>
       </div>
@@ -491,7 +491,7 @@
     <div id="tideDays" class="tideDays" aria-live="polite"><div class="tideSkeleton"></div></div>
     <div class="tidesFoot">
       <div><span id="tidesStatus">Actualizando mareas…</span> · Hora oficial peninsular.</div>
-      <div><a href="https://tablademareas.com/es/vizcaya/bilbao" target="_blank" rel="noopener">TablaDeMareas Bilbao ↗</a> <button id="tidesRetry" class="tidesRetry" type="button">Reintentar</button></div>
+      <div><a id="tidesOfficialLink" href="https://www.euskalmet.euskadi.eus/la-mar/euskadi/" target="_blank" rel="noopener">Ver mareas en Euskalmet ↗</a> <button id="tidesRetry" class="tidesRetry" type="button">Reintentar</button></div>
     </div>
   </section>
 
@@ -873,11 +873,12 @@ function renderBermeoTides(data){
   const allEvents=days.flatMap(day=>day.events.map(event=>({...event,date:event.eventDate||day.date,key:tideEventKey(event.eventDate||day.date,event.time)})));
   const next=allEvents.find(event=>event.key>=nowKey)||null;
   const nextKey=next?.key||'';
-  const panel=$('tidesPanel'),heightNote=data.heightDatum||'referencia de la fuente',sourceName=data.source||'TablaDeMareas · Bilbao';
+  const panel=$('tidesPanel'),heightNote=data.heightDatum||'altura publicada por Euskalmet',sourceName=data.source||'Euskalmet · La mar';
   panel.classList.remove('error');
   $('tidesKicker').textContent=sourceName;
   $('tidesSource').hidden=false;
   $('tidesSource').textContent=data.sourceLabel||'Tabla diaria';
+  $('tidesOfficialLink').href=data.sourceUrl||'https://www.euskalmet.euskadi.eus/la-mar/euskadi/';
   $('tidesRetry').style.display='none';
 
   if(next){
@@ -917,7 +918,7 @@ async function loadBermeoTides(){
     if(!data.ok||!data.days?.length)throw new Error(data.error||'La tabla diaria no publicó mareas.');
     renderBermeoTides(data);
   }catch(error){
-    renderTidesError(error?.message==='HTTP 502'?'TablaDeMareas Bilbao no respondió. Pulsa «Reintentar».':'No se pudieron actualizar las mareas diarias.');
+    renderTidesError(error?.message==='HTTP 502'?'Euskalmet no respondió. Pulsa «Reintentar».':'No se pudieron actualizar las mareas de Euskalmet.');
   }
 }
 function marineValue(value,unit,digits=1){
