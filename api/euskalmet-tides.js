@@ -47,6 +47,13 @@ function parseTides(source) {
     .sort((dayA, dayB) => dayA.date.localeCompare(dayB.date));
 }
 
+function parseSeaTemperature(source) {
+  const match = String(source).match(/sea-temp__degrees[^>]*>\s*(-?\d+(?:[.,]\d+)?)/i);
+  if (!match) return null;
+  const value = Number(match[1].replace(',', '.'));
+  return Number.isFinite(value) ? value : null;
+}
+
 async function fetchEuskalmetTides(signal) {
   const response = await fetch(EUSKALMET_TIDES_FEED_URL, {
     signal,
@@ -59,13 +66,14 @@ async function fetchEuskalmetTides(signal) {
 
   const source = await response.text();
   const days = parseTides(source);
+  const seaTemperature = parseSeaTemperature(source);
   if (!days.length) throw new Error('Euskalmet no publicó mareas reconocibles.');
 
   const today = madridDate();
   if (!days.some(day => day.date >= today)) {
     throw new Error('Euskalmet todavía no ha publicado mareas vigentes.');
   }
-  return days;
+  return { days, seaTemperature };
 }
 
 module.exports = async function handler(req, res) {
@@ -83,7 +91,7 @@ module.exports = async function handler(req, res) {
   const timeout = setTimeout(() => controller.abort(), 7000);
 
   try {
-    const days = await fetchEuskalmetTides(controller.signal);
+    const { days, seaTemperature } = await fetchEuskalmetTides(controller.signal);
     res.setHeader('Cache-Control', 's-maxage=900');
     return res.status(200).json({
       ok: true,
@@ -94,6 +102,8 @@ module.exports = async function handler(req, res) {
       timezone: 'Hora oficial peninsular',
       retrievedAt: new Date().toISOString(),
       publicationDate: days[0].date,
+      seaTemperature,
+      seaTemperatureUnit: '°C',
       sourceUrl: EUSKALMET_TIDES_PUBLIC_URL,
       days
     });
@@ -112,4 +122,4 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports._test = { parseTides, madridDate };
+module.exports._test = { parseTides, parseSeaTemperature, madridDate };

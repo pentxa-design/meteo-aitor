@@ -11,7 +11,7 @@ const MODELS = {
 // actuales publican reflectividad derivada y CAPE en los tres modelos; CIN se
 // dibuja mediante la malla horaria cuando el dominio espacial no lo ofrece.
 const GFS_ONLY_LAYERS = new Set();
-const AROME_LAYERS = new Set(['precipitation', 'forecast_reflectivity', 'cloud', 'temperature', 'humidity', 'wind', 'gust', 'cape']);
+const AROME_LAYERS = new Set(['precipitation', 'forecast_reflectivity', 'cloud', 'temperature', 'dewpoint', 'humidity', 'wind', 'gust', 'cape']);
 
 function modelForLayer(requested, layer) {
   if (GFS_ONLY_LAYERS.has(layer)) {
@@ -81,6 +81,7 @@ function fieldsForLayer(bundle, requested = 'ecmwf', displayLayer = bundle) {
     if (['precipitation', 'forecast_reflectivity'].includes(displayLayer)) return ['precipitation'];
     if (displayLayer === 'cloud') return ['cloud_cover_low', 'precipitation'];
     if (displayLayer === 'temperature') return ['temperature_2m'];
+    if (displayLayer === 'dewpoint') return ['dew_point_2m'];
     if (displayLayer === 'humidity') return ['relative_humidity_2m'];
     if (displayLayer === 'wind') return ['wind_speed_10m', 'wind_direction_10m'];
     if (displayLayer === 'gust') return ['wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m'];
