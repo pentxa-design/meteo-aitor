@@ -1931,7 +1931,7 @@ const MAP_WINDY_LAYERS={reflectivity:'radar',rainviewer:'radar',precipitation:'r
 const MAP_GFS_ONLY_LAYERS=new Set();
 const MAP_MARINE_LAYERS=new Set(['sea_temperature','waves']);
 const MAP_NATIVE_TILE_LAYERS=new Set(['precipitation','forecast_reflectivity','cloud','temperature','humidity','wind','gust','pressure','t850','cape','cin']);
-const MAP_AROME_LAYERS=new Set(['reflectivity','rainviewer','precipitation','forecast_reflectivity','cloud','temperature','dewpoint','humidity','wind','gust','cape']);
+const MAP_AROME_LAYERS=new Set(['reflectivity','rainviewer','precipitation','forecast_reflectivity','cloud','temperature','humidity','wind','gust','cape']);
 const MAP_NATIVE_VARIABLES={precipitation:'precipitation',forecast_reflectivity:'precipitation',cloud:'cloud_cover',temperature:'temperature_2m',humidity:'relative_humidity_2m',wind:'wind_u_component_10m',gust:'wind_gusts_10m',pressure:'pressure_msl',t850:'temperature_850hPa',cape:'cape',cin:'convective_inhibition'};
 const MAP_NATIVE_SOURCES={
   ecmwf:{default:{domain:'ecmwf_ifs',label:'ECMWF IFS HRES · 9 km'},humidity:{domain:'ecmwf_ifs025',label:'ECMWF IFS · 25 km'},t850:{domain:'ecmwf_ifs025',label:'ECMWF IFS · 25 km'}},
@@ -3364,7 +3364,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.59',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.60',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
