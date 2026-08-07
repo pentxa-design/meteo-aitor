@@ -866,6 +866,27 @@ function tideCalendarLabel(date){
   return new Intl.DateTimeFormat('es-ES',{day:'numeric',month:'short',timeZone:'UTC'}).format(new Date(`${date}T12:00:00Z`)).replace('.','');
 }
 function tideHeight(value){const number=finiteWeatherNumber(value);return number===null?'—':number.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})}
+const EUSKALMET_TIDES_FEED='https://www.euskalmet.euskadi.eus/vamet/sea/es/webmet00-latest.html';
+const EUSKALMET_TIDES_PAGE='https://www.euskalmet.euskadi.eus/la-mar/euskadi/';
+function parseEuskalmetTides(source){
+  const pattern=/(\d{8}):(\d{2}):(\d{2}):(\d{2}):(high|low)#(-?\d+(?:[.,]\d+)?)/g,grouped=new Map(),seen=new Set();let match;
+  while((match=pattern.exec(String(source)))!==null){
+    const [,compactDate,hour,minute,,type,rawHeight]=match,date=`${compactDate.slice(0,4)}-${compactDate.slice(4,6)}-${compactDate.slice(6,8)}`,time=`${hour}:${minute}`,height=Number(rawHeight.replace(',','.')),key=`${date}-${time}-${type}`;
+    if(seen.has(key)||!Number.isFinite(height))continue;seen.add(key);if(!grouped.has(date))grouped.set(date,[]);
+    grouped.get(date).push({eventDate:date,type,label:type==='high'?'Pleamar':'Bajamar',time,height});
+  }
+  return [...grouped.entries()].map(([date,events])=>({date,events:events.sort((a,b)=>a.time.localeCompare(b.time))})).sort((a,b)=>a.date.localeCompare(b.date));
+}
+async function getEuskalmetTidesDirect(){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+  try{
+    const response=await fetch(EUSKALMET_TIDES_FEED,{signal:controller.signal,cache:'no-store',headers:{Accept:'text/html'}});
+    if(!response.ok)throw new Error('Euskalmet respondió HTTP '+response.status);
+    const days=parseEuskalmetTides(await response.text());
+    if(!days.length||!days.some(day=>day.date>=madridToday()))throw new Error('Euskalmet no publicó mareas vigentes.');
+    return {ok:true,source:'Euskalmet · La mar',sourceLabel:'Fuente oficial',official:true,heightDatum:'altura publicada por Euskalmet',timezone:'Hora oficial peninsular',retrievedAt:new Date().toISOString(),publicationDate:days[0].date,sourceUrl:EUSKALMET_TIDES_PAGE,days};
+  }finally{clearTimeout(timer)}
+}
 function renderBermeoTides(data){
   const nowKey=madridNowKey(),today=madridToday();
   const available=(data.days||[]).filter(day=>day.date>=today&&Array.isArray(day.events)&&day.events.length).slice(0,3);
@@ -914,7 +935,8 @@ function renderTidesError(message='No se pudieron consultar las mareas.'){
 async function loadBermeoTides(){
   $('tidesStatus').textContent='Actualizando mareas…';
   try{
-    const data=await getJSON('/api/euskalmet-tides',14000);
+    let data;
+    try{data=await getEuskalmetTidesDirect()}catch(_){data=await getJSON('/api/euskalmet-tides',14000)}
     if(!data.ok||!data.days?.length)throw new Error(data.error||'La tabla diaria no publicó mareas.');
     renderBermeoTides(data);
   }catch(error){
@@ -3116,7 +3138,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.49',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.50',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
