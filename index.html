@@ -2840,7 +2840,9 @@ function mapLayerDensity(layer,zoom=mapAitorState.map?.getZoom()||5){
   // los campos suaves. Esta densidad evita las manchas aisladas y conserva la
   // posición real de frentes, bandas de lluvia y masas nubosas.
   if(layer==='cloud')return zoom<=3?20:zoom<=6?24:28;
-  if(['precipitation_3h','precipitation_6h','precipitation_12h','precipitation_24h'].includes(layer))return zoom<=3?20:zoom<=6?22:24;
+  // Los acumulados requieren varias horas por punto. Una malla contenida evita
+  // agotar el límite del proveedor; el suavizado espacial elimina los bloques.
+  if(['precipitation_3h','precipitation_6h','precipitation_12h','precipitation_24h'].includes(layer))return zoom<=6?8:10;
   if(['precipitation','rain','showers','snowfall','precipitation_probability','forecast_reflectivity'].includes(layer))return zoom<=3?14:zoom<=6?16:18;
   if(['pressure','t850','cin'].includes(layer))return zoom<=6?6:9;
   if(layer==='cape')return zoom<=5?10:13;
@@ -2897,7 +2899,7 @@ async function mapFetchForecast(query,signal){
   // Los acumulados y fases de precipitación necesitan una cuadrícula real.
   // 18 filas sigue siendo un respaldo razonable, pero conserva frentes y
   // núcleos sin convertir todo el Atlántico en un bloque de color.
-  if(limited&&['precipitation_3h','precipitation_6h','precipitation_12h','precipitation_24h'].includes(displayLayer))directQuery.set('density','20');
+  if(limited&&['precipitation_3h','precipitation_6h','precipitation_12h','precipitation_24h'].includes(displayLayer))directQuery.set('density','8');
   else if(limited&&precipitationLayers.has(displayLayer))directQuery.set('density','18');
   else if(limited)directQuery.set('density','5');
   try{
