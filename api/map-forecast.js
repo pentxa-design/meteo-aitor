@@ -3,6 +3,7 @@ const MARINE_OPEN_METEO = 'https://marine-api.open-meteo.com/v1/marine';
 
 const MODELS = {
   ecmwf: { label: 'ECMWF IFS HRES · 9 km', candidates: ['ecmwf_ifs', 'best_match'] },
+  arome: { label: 'Météo‑France AROME HD · 1,5 km · 48 h', candidates: ['meteofrance_arome_france_hd'] },
   icon: { label: 'DWD ICON Seamless · ICON‑EU 7 km', candidates: ['dwd_icon_seamless', 'best_match'] },
   gfs: { label: 'NOAA GFS Seamless', candidates: ['ncep_gfs_seamless', 'best_match'] }
 };
@@ -10,6 +11,7 @@ const MODELS = {
 // actuales publican reflectividad derivada y CAPE en los tres modelos; CIN se
 // dibuja mediante la malla horaria cuando el dominio espacial no lo ofrece.
 const GFS_ONLY_LAYERS = new Set();
+const AROME_LAYERS = new Set(['precipitation', 'forecast_reflectivity', 'cloud', 'temperature', 'humidity', 'wind', 'gust', 'cape']);
 
 function modelForLayer(requested, layer) {
   if (GFS_ONLY_LAYERS.has(layer)) {
@@ -74,7 +76,16 @@ const LAYER_FIELDS = {
   marine: ['wave_height', 'wave_direction', 'wave_period', 'sea_surface_temperature']
 };
 
-function fieldsForLayer(bundle) {
+function fieldsForLayer(bundle, requested = 'ecmwf', displayLayer = bundle) {
+  if (requested === 'arome') {
+    if (['precipitation', 'forecast_reflectivity'].includes(displayLayer)) return ['precipitation'];
+    if (displayLayer === 'cloud') return ['cloud_cover_low', 'precipitation'];
+    if (displayLayer === 'temperature') return ['temperature_2m'];
+    if (displayLayer === 'humidity') return ['relative_humidity_2m'];
+    if (displayLayer === 'wind') return ['wind_speed_10m', 'wind_direction_10m'];
+    if (displayLayer === 'gust') return ['wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m'];
+    if (displayLayer === 'cape') return ['cape'];
+  }
   return LAYER_FIELDS[bundle] || LAYER_FIELDS.thermo;
 }
 
@@ -143,7 +154,7 @@ async function requestCandidate(points, candidate, hourlyFields) {
       latitude: batch.map(point => point.latitude).join(','),
       longitude: batch.map(point => point.longitude).join(','),
       hourly: hourlyFields.join(','),
-      forecast_hours: String(FORECAST_HOURS),
+      forecast_hours: String(candidate === 'meteofrance_arome_france_hd' ? 48 : FORECAST_HOURS),
       wind_speed_unit: 'kmh',
       temperature_unit: 'celsius',
       precipitation_unit: 'mm',
@@ -354,6 +365,9 @@ module.exports = async function handler(req, res) {
   const mapGrid = grid(south, north, west, east, density);
   const layer = String(req.query?.layer || 'thermo').toLowerCase();
   const displayLayer = String(req.query?.displayLayer || layer).toLowerCase();
+  if (requested === 'arome' && !AROME_LAYERS.has(displayLayer)) {
+    return res.status(422).json({ ok: false, error: 'AROME HD no publica esta capa en la salida utilizada; no se sustituye por otro modelo.' });
+  }
   const cinRequested = displayLayer === 'cin';
   // GFS publica CIN de forma operativa en esta ruta, mientras que las salidas
   // específicas de ECMWF/ICON pueden devolver la serie completa a null. CIN
@@ -383,7 +397,7 @@ module.exports = async function handler(req, res) {
     // retrasan las capas habituales por una variable convectiva opcional.
     let forecast;
     let cinAvailable = cinRequested;
-    const requestedFields = fieldsForLayer(layer);
+    const requestedFields = fieldsForLayer(layer, effectiveRequested, displayLayer);
     forecast = marineRequested ? await requestMarine(requestPoints, requestedFields) : await requestForecast(requestPoints, model, requestedFields);
     let { result: locations, sourceModel } = forecast;
     if (cinRequested && cinAvailable) {
@@ -411,7 +425,7 @@ module.exports = async function handler(req, res) {
     const payload = {
       ok: true,
       generatedAt: new Date().toISOString(),
-      model: { requested: effectiveRequested, label: marineRequested ? model.label : sourceModel === 'best_match' ? 'Modelo automático · respaldo' : model.label, sourceModel, cinAvailable, fallback: !marineRequested && sourceModel === 'best_match', provider: marineRequested ? 'Open-Meteo Marine' : 'Open-Meteo', resolution: marineRequested ? 'Mejor modelo marino disponible' : effectiveRequested === 'gfs' ? 'GFS seamless' : effectiveRequested === 'icon' ? 'ICON seamless' : displayLayer === 't850' ? 'ECMWF IFS 0.25°' : 'ECMWF IFS HRES' },
+      model: { requested: effectiveRequested, label: marineRequested ? model.label : sourceModel === 'best_match' ? 'Modelo automático · respaldo' : model.label, sourceModel, cinAvailable, fallback: !marineRequested && sourceModel === 'best_match', provider: marineRequested ? 'Open-Meteo Marine' : 'Open-Meteo', resolution: marineRequested ? 'Mejor modelo marino disponible' : effectiveRequested === 'arome' ? 'AROME France HD 0.01° · 1,5 km' : effectiveRequested === 'gfs' ? 'GFS seamless' : effectiveRequested === 'icon' ? 'ICON seamless' : displayLayer === 't850' ? 'ECMWF IFS 0.25°' : 'ECMWF IFS HRES' },
       diagnostics: displayLayer === 'forecast_reflectivity'
         ? { native: false, derived: true, sourceVariable: 'precipitation', interval: 'preceding_hour_sum', units: 'dBZ', formula: 'Z=200·R^1.6' }
         : displayLayer === 'precipitation_3h'
