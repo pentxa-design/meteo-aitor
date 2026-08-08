@@ -1,5 +1,11 @@
-Meteo Aitor Bermeo v10.69 · tarjetas de datos más compactas
+Meteo Aitor Bermeo v10.70 · franjas y datos más compactos
 Fecha: 2026-08-08
+
+Las tarjetas de Mañana, Tarde y Noche reducen altura y espacios, conservando
+todos los símbolos, temperaturas y avisos. En móvil se elimina únicamente el
+detalle numérico repetido que ya aparece completo en Próximas 24 horas.
+
+Meteo Aitor Bermeo v10.69 · tarjetas de datos más compactas
 
 Las diez tarjetas de datos actuales ocupan menos altura en escritorio:
 se reducen el relleno, la separación y el tamaño tipográfico sin eliminar
