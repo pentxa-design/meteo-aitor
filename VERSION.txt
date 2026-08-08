@@ -1,3 +1,21 @@
+Meteo Aitor Bermeo v10.76 · lluvia de 3 horas limpia y CIN con valores en Android
+Fecha: 2026-08-08
+
+La lluvia acumulada de tres horas ya no rellena huecos cuando la fuente solo
+puede entregar una malla parcial o demasiado separada. En ese caso presenta
+los milímetros reales como puntos compactos y coloreados; el campo continuo
+solo se dibuja cuando hay resolución suficiente.
+
+La consulta normal de esta capa usa más puntos al acercar el mapa. También se
+ha retirado el bloque largo de fuentes situado bajo el visor; la atribución
+cartográfica obligatoria continúa visible dentro del propio mapa.
+
+Las cifras de CAPE y CIN se leen ahora de la misma tesela espacial que pinta
+la capa. Así aparecen también en Android aunque falle o se limite la consulta
+auxiliar de puntos; colores, valores, modelo y hora no se sustituyen.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.75 · controles del mapa compactos en móvil
 Fecha: 2026-08-08
 
