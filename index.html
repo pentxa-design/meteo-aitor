@@ -1901,7 +1901,7 @@ setInterval(()=>{if(!document.hidden&&state.location&&isBermeoLocation(state.loc
    Lluvia, nubes y los demás campos espaciales se sirven como teselas nativas
    continuas. Los valores auxiliares se superponen sin sustituir las teselas.
 --------------------------------------------------------------------------- */
-const mapAitorState={map:null,grid:null,labels:null,values:null,windArrows:null,isobars:null,field:null,nativeField:null,nativePendingField:null,nativePrefetchField:null,nativePrefetchTimer:null,nativePrefetchCleanupTimer:null,nativePrefetchKey:null,nativePrefetchReady:false,nativeFrameTimer:null,nativeDesiredTimeIndex:null,nativeDragging:false,nativeCloudShadeTimer:null,nativePreviewField:null,nativePreviewTimer:null,nativeCacheIdentity:null,nativeCacheFrames:0,nativeCacheTrimTimer:null,nativeSource:null,nativeVectorSource:null,nativeWindSampleUrl:null,nativeGustSampleUrl:null,nativeWindSampleTimer:null,nativeWindSampleRequestId:0,nativeAdapters:new Map(),nativeMetaCache:new Map(),nativeRequestId:0,nativeRetryKey:null,nativeRetryCount:0,nativeRetryTimer:null,nativeAnnotationController:null,nativeAnnotationRequestId:0,nativeAnnotationTimer:null,nativeAnnotationKey:null,marker:null,pickerMarker:null,pickerLocation:null,data:null,layer:'precipitation',model:'ecmwf',renderedLayer:null,renderedModel:null,timeIndex:0,selectedForecastTime:null,playing:false,playTimer:null,playbackSpeed:1,lastPlaybackToggleAt:0,loading:false,requestController:null,requestId:0,radarRequestId:0,radarTimer:null,renderFrame:null,cache:new Map(),fieldCache:new Map(),lastGood:new Map(),lastError:null,windCanvas:null,windFrame:null,particles:[],viewportTimer:null,selectionTimer:null,retryTimer:null,retryTick:null,retryRequest:null,retryAttempt:0,baseLayers:null,baseLabelLayers:null,baseReliefLayers:null,activeBaseLabel:null,activeBaseRelief:null,baseStyle:'standard',daylight:false,rainviewerLayer:null,rainviewerData:null,aemetRadarLayer:null,officialEmbedLayer:null,officialEmbedDismissed:false,location:{...BERMEO}};
+const mapAitorState={map:null,grid:null,labels:null,values:null,windArrows:null,isobars:null,field:null,nativeField:null,nativePendingField:null,nativePrefetchField:null,nativePrefetchTimer:null,nativePrefetchCleanupTimer:null,nativePrefetchKey:null,nativePrefetchReady:false,nativeFrameCache:new Map(),nativePrefetchTimers:new Map(),nativePrefetchGeneration:0,nativePrefetchDirection:1,nativeFrameTimer:null,nativeDesiredTimeIndex:null,nativeDragging:false,nativeCloudShadeTimer:null,nativePreviewField:null,nativePreviewTimer:null,nativePreviewCache:new Map(),nativePreviewTimers:new Map(),nativePreviewGeneration:0,nativeCacheIdentity:null,nativeCacheFrames:0,nativeCacheTrimTimer:null,nativeSource:null,nativeVectorSource:null,nativeWindSampleUrl:null,nativeGustSampleUrl:null,nativeWindSampleTimer:null,nativeWindSampleRequestId:0,nativeAdapters:new Map(),nativeMetaCache:new Map(),nativeRequestId:0,nativeRetryKey:null,nativeRetryCount:0,nativeRetryTimer:null,nativeAnnotationController:null,nativeAnnotationRequestId:0,nativeAnnotationTimer:null,nativeAnnotationKey:null,marker:null,pickerMarker:null,pickerLocation:null,data:null,layer:'precipitation',model:'ecmwf',renderedLayer:null,renderedModel:null,timeIndex:0,selectedForecastTime:null,playing:false,playTimer:null,playbackSpeed:1,lastPlaybackToggleAt:0,loading:false,requestController:null,requestId:0,radarRequestId:0,radarTimer:null,renderFrame:null,cache:new Map(),fieldCache:new Map(),lastGood:new Map(),lastError:null,windCanvas:null,windFrame:null,particles:[],viewportTimer:null,selectionTimer:null,retryTimer:null,retryTick:null,retryRequest:null,retryAttempt:0,baseLayers:null,baseLabelLayers:null,baseReliefLayers:null,activeBaseLabel:null,activeBaseRelief:null,baseStyle:'standard',daylight:false,rainviewerLayer:null,rainviewerData:null,aemetRadarLayer:null,officialEmbedLayer:null,officialEmbedDismissed:false,location:{...BERMEO}};
 const MAP_LAYERS={
   precipitation:{key:'precipitation',title:'Precipitación prevista',unit:'mm/h',scale:[.02,.05,.1,.2,.5,1,2,4,6,8,10,15,20,30,50],colors:['#7cddf6','#3ac2ea','#1aa8d8','#17bd71','#0bac50','#4ac832','#a7da30','#f7df35','#ffb326','#ff7c22','#f14a22','#e52f23','#ca1f22','#a41620','#741019'],legend:['0,02','0,05','0,1','0,2','0,5','1','2','4','6','8','10','15','20','30','50+'],detail:'Precipitación horaria prevista: azul solo en lluvia débil; verde al ganar intensidad; después amarillo, naranja y rojo. El cero queda completamente transparente y no se usan tonos violetas.'},
   precipitation_3h:{key:'precipitation_3h',title:'Lluvia acumulada · próximas 3 h',unit:'mm / 3 h',scale:[.1,.25,.5,1,2,3,5,8,12,18,25,40],colors:['#4cf070','#20d65a','#0fb448','#087a32','#4cae32','#98d42f','#d7df2b','#ffe12b','#ffb526','#ff7922','#ed3f29','#bd1f69'],legend:['0,1','0,25','0,5','1','2','3','5','8','12','18','25','40+'],detail:'Acumulado previsto desde la hora seleccionada hasta las tres horas siguientes. En vistas amplias se muestran únicamente muestras numéricas exactas para evitar manchas creadas por una interpolación demasiado lejana; al acercar el mapa aparece el campo continuo. Usa la misma lectura verde, amarillo y rojo de la lluvia prevista.'},
@@ -2152,20 +2152,48 @@ function clearMapNativePending(){
   clearTimeout(mapAitorState.nativeWindSampleTimer);mapAitorState.nativeWindSampleTimer=null;mapAitorState.nativeWindSampleRequestId+=1;mapAitorState.nativeWindSampleUrl=null;mapAitorState.nativeGustSampleUrl=null;if(mapAitorState.data?.nativeTileSamples)mapAitorState.data=null;
   if(mapAitorState.nativePendingField){mapAitorState.nativePendingField.remove();mapAitorState.nativePendingField=null}
 }
-function clearMapNativePrefetch(){
+function mapNativeFrameKey(index,source=mapAitorState.nativeSource,layerName=mapAitorState.layer,model=mapAitorState.model){
+  const entry=source?.timeline?.[index];return entry?[layerName,model,source.domain,entry.index].join('|'):null
+}
+function mapNativeSetFrameVisibility(field,visible){
+  field?.eachLayer?.(tile=>{if(tile?.setOpacity)tile.setOpacity(visible?Number(tile.options?.nativeTargetOpacity)||0:0)})
+}
+function mapNativeFrameCacheLimit(){
+  const compact=window.matchMedia?.('(max-width:820px)').matches,lowMemory=Number(navigator.deviceMemory||8)<=4;return compact||lowMemory?6:10
+}
+function mapNativeRemoveFrameEntry(key,entry=mapAitorState.nativeFrameCache.get(key)){
+  if(!entry||entry.field===mapAitorState.nativeField)return false;
+  try{entry.field?.remove?.()}catch(_){ }mapAitorState.nativeFrameCache.delete(key);return true
+}
+function mapNativeTrimFrameCache(center=mapNativeDesiredIndex()){
+  const limit=mapNativeFrameCacheLimit(),entries=[...mapAitorState.nativeFrameCache.entries()];if(entries.length<=limit)return;
+  entries.filter(([,entry])=>entry.field!==mapAitorState.nativeField&&entry.index!==center).sort((a,b)=>{
+    const distance=Math.abs(b[1].index-center)-Math.abs(a[1].index-center);if(distance)return distance;
+    const aReady=a[1].ready?1:0,bReady=b[1].ready?1:0;if(aReady!==bReady)return aReady-bReady;return a[1].touched-b[1].touched
+  }).slice(0,Math.max(0,entries.length-limit)).forEach(([key,entry])=>mapNativeRemoveFrameEntry(key,entry))
+}
+function mapNativeRememberFrame(key,index,field,ready=true){
+  if(!key||!field)return null;field._mapNativeFrameKey=key;field._mapNativeFrameIndex=index;
+  const previous=mapAitorState.nativeFrameCache.get(key);if(previous&&previous.field!==field&&previous.field!==mapAitorState.nativeField)previous.field.remove();
+  const entry={key,index,field,ready,identity:mapAitorState.nativeCacheIdentity,touched:Date.now()};mapAitorState.nativeFrameCache.set(key,entry);mapNativeTrimFrameCache(index);return entry
+}
+function clearMapNativePrefetch(keepCurrent=true){
   clearTimeout(mapAitorState.nativePrefetchTimer);mapAitorState.nativePrefetchTimer=null;
   clearTimeout(mapAitorState.nativePrefetchCleanupTimer);mapAitorState.nativePrefetchCleanupTimer=null;
-  if(mapAitorState.nativePrefetchField){mapAitorState.nativePrefetchField.remove();mapAitorState.nativePrefetchField=null}
+  mapAitorState.nativePrefetchGeneration+=1;mapAitorState.nativePrefetchTimers.forEach(timer=>clearTimeout(timer));mapAitorState.nativePrefetchTimers.clear();
+  [...mapAitorState.nativeFrameCache.entries()].forEach(([key,entry])=>{if(!keepCurrent||entry.field!==mapAitorState.nativeField){try{entry.field?.remove?.()}catch(_){ }mapAitorState.nativeFrameCache.delete(key)}});
+  if(mapAitorState.nativePrefetchField&&mapAitorState.nativePrefetchField!==mapAitorState.nativeField){mapAitorState.nativePrefetchField.remove();mapAitorState.nativePrefetchField=null}
   mapAitorState.nativePrefetchKey=null;mapAitorState.nativePrefetchReady=false;
+  if(!keepCurrent)clearMapNativePreviewCache();
 }
 async function clearMapNativeLibraryCache(){
   clearTimeout(mapAitorState.nativeCacheTrimTimer);mapAitorState.nativeCacheTrimTimer=null;mapAitorState.nativeCacheFrames=0;
   try{await window.OMWeatherMapLayer?.clearBlockCache?.()}catch(_){ }
 }
 function scheduleMapNativeCacheTrim(){
-  mapAitorState.nativeCacheFrames+=1;if(mapAitorState.nativeCacheFrames<12)return false;if(mapAitorState.nativeCacheTrimTimer)return true;
-  const trim=async()=>{if(mapAitorState.playing||mapAitorState.nativePendingField||mapAitorState.nativeFrameTimer){mapAitorState.nativeCacheTrimTimer=setTimeout(trim,900);return}mapAitorState.nativeCacheTrimTimer=null;clearMapNativePrefetch();await clearMapNativeLibraryCache();if(mapUsesNativeTiles()&&mapAitorState.nativeSource)prefetchMapNativeFrame(mapAitorState.timeIndex+1)};
-  mapAitorState.nativeCacheTrimTimer=setTimeout(trim,8000);return true;
+  mapAitorState.nativeCacheFrames+=1;if(mapAitorState.nativeCacheFrames<30)return false;if(mapAitorState.nativeCacheTrimTimer)return true;
+  const trim=async()=>{if(mapAitorState.playing||mapAitorState.nativeDragging||mapAitorState.nativePendingField||mapAitorState.nativeFrameTimer){mapAitorState.nativeCacheTrimTimer=setTimeout(trim,900);return}mapAitorState.nativeCacheTrimTimer=null;clearMapNativePrefetch(true);await clearMapNativeLibraryCache();if(mapUsesNativeTiles()&&mapAitorState.nativeSource)prefetchMapNativeWindow(mapAitorState.timeIndex,mapAitorState.nativePrefetchDirection)};
+  mapAitorState.nativeCacheTrimTimer=setTimeout(trim,12000);return true;
 }
 function mapNativeFrameSpecs(source,layerName,entry){
   let specs=[...(source.layerSpecs||mapNativeLayerSpecs(layerName))];if(layerName==='cloud'&&mapAitorState.model==='arome')specs=specs.filter(spec=>spec.kind!=='cloud_rain_arome');const vectorSource=mapAitorState.nativeVectorSource,vectorEntry=layerName==='gust'?mapNearestNativeEntry(vectorSource,entry.time):null;
@@ -2179,14 +2207,38 @@ function queueMapNativeAromeRainShade(source,entry,group,delay=140){
     const spec=(source.layerSpecs||[]).find(item=>item.kind==='cloud_rain_arome');if(!spec)return;const base=mapNativeOmFile(source,entry),url=mapNativeTileUrl(spec.base||base,spec),targetOpacity=Math.max(.08,Math.min(1,mapFieldOpacity()*spec.factor)),tile=mapNativeAdapter(spec.kind).createTileLayer(url,{pane:'mapWeatherRadar',opacity:0,maxZoom:12,maxNativeZoom:12,keepBuffer:1,updateWhenIdle:true,className:'mapNativeWeatherTile mapNativeWeatherTile-cloud mapNativeWeatherTileKind-cloud_rain_arome mapNativeWeatherSecondary',attribution:'Datos meteorológicos © Open‑Meteo'});tile.options.nativeOpacityFactor=spec.factor;tile.options.nativeTargetOpacity=targetOpacity;tile.once('load',()=>{if(mapAitorState.nativeField===group)tile.setOpacity(targetOpacity)});group.addLayer(tile)
   },Math.max(0,delay))
 }
-function prefetchMapNativeFrame(index){
-  clearTimeout(mapAitorState.nativePrefetchTimer);const map=mapAitorState.map,source=mapAitorState.nativeSource,entry=source?.timeline?.[index],layerName=mapAitorState.layer,model=mapAitorState.model;if(!map||!entry||!mapUsesNativeTiles())return;
-  const key=[layerName,model,source.domain,entry.index].join('|');if(key===mapAitorState.nativePrefetchKey)return;
-  mapAitorState.nativePrefetchTimer=setTimeout(()=>{
-    if(layerName!==mapAitorState.layer||model!==mapAitorState.model||source!==mapAitorState.nativeSource)return;clearMapNativePrefetch();updateMapNativeReadBounds();
-    const specs=mapNativeFrameSpecs(source,layerName,entry),base=mapNativeOmFile(source,entry),visibleCount=Math.max(1,specs.filter(spec=>!spec.support).length),cloudCount=Math.max(1,specs.filter(spec=>!spec.support&&spec.kind==='cloud').length),tiles=specs.map(spec=>{const url=mapNativeTileUrl(spec.base||base,spec),targetOpacity=spec.support?.001:Math.max(.12,Math.min(1,mapFieldOpacity()*spec.factor)),tile=mapNativeAdapter(spec.kind).createTileLayer(url,{pane:'mapWeatherRadar',opacity:0,maxZoom:12,maxNativeZoom:12,keepBuffer:0,updateWhenIdle:true,className:'mapNativeWeatherTile mapNativeWeatherTile-'+layerName+' mapNativeWeatherTileKind-'+spec.kind+(spec.support?' mapNativeWeatherSupport':'')+' mapNativeWeatherPrefetch',attribution:'Datos meteorológicos © Open‑Meteo'});tile.options.nativeOpacityFactor=spec.factor;tile.options.nativeTargetOpacity=targetOpacity;tile.options.nativeSourceUrl=url;tile.options.nativeVariable=spec.variable;tile.options.nativeKind=spec.kind;tile.options.nativeSupport=!!spec.support;return tile}),field=L.layerGroup(tiles);mapAitorState.nativePrefetchField=field;mapAitorState.nativePrefetchKey=key;mapAitorState.nativePrefetchReady=false;
-    let ready=0;tiles.forEach(tile=>tile.once('load',()=>{if(tile.options.nativeSupport||layerName==='cloud'&&tile.options.nativeKind!=='cloud')return;ready+=1;const required=layerName==='cloud'?cloudCount:visibleCount;if(ready>=required&&mapAitorState.nativePrefetchField===field)mapAitorState.nativePrefetchReady=true}));mapAitorState.nativePrefetchCleanupTimer=setTimeout(()=>{if(mapAitorState.nativePrefetchField===field)clearMapNativePrefetch()},45000);field.addTo(map);
-  },70);
+function activateMapNativeCachedFrame(cached){
+  const source=mapAitorState.nativeSource,entry=source?.timeline?.[cached?.index],expected=mapNativeFrameKey(cached?.index);if(!cached?.ready||!entry||cached.key!==expected||cached.identity!==mapAitorState.nativeCacheIdentity)return false;
+  const previous=mapAitorState.nativeField;if(previous===cached.field){mapAitorState.timeIndex=cached.index;updateMapLabels();if(mapAitorState.nativeDragging)prefetchMapNativePreviewWindow(cached.index,mapAitorState.nativePrefetchDirection);else{if(mapAitorState.nativeDesiredTimeIndex===cached.index)mapAitorState.nativeDesiredTimeIndex=null;prefetchMapNativeWindow(cached.index,mapAitorState.nativePrefetchDirection)}return true}
+  clearTimeout(mapAitorState.nativeRetryTimer);mapAitorState.nativeRequestId+=1;clearMapNativePending();clearMapNativePreview(false);
+  if(previous){mapNativeSetFrameVisibility(previous,false);const previousKey=previous._mapNativeFrameKey,previousIndex=previous._mapNativeFrameIndex;if(previousKey&&Number.isInteger(previousIndex))mapNativeRememberFrame(previousKey,previousIndex,previous,true);else previous.remove()}
+  cached.touched=Date.now();mapNativeSetFrameVisibility(cached.field,true);mapAitorState.nativeField=cached.field;mapAitorState.nativePendingField=null;mapAitorState.timeIndex=cached.index;mapAitorState.renderedLayer=mapAitorState.layer;mapAitorState.renderedModel=mapAitorState.model;mapAitorState.nativeRetryCount=0;mapAitorState.lastError=null;
+  mapAitorState.nativeWindSampleUrl=null;mapAitorState.nativeGustSampleUrl=null;cached.field.eachLayer?.(tile=>{const variable=tile.options?.nativeVariable,url=tile.options?.nativeSourceUrl;if(variable==='wind_u_component_10m')mapAitorState.nativeWindSampleUrl=url;if(variable==='wind_gusts_10m')mapAitorState.nativeGustSampleUrl=url});
+  if(mapAitorState.data?.nativeTileSamples)mapAitorState.data=null;if(mapAitorState.values)mapAitorState.values.clearLayers();if(mapAitorState.windArrows)mapAitorState.windArrows.clearLayers();if(mapAitorState.isobars)mapAitorState.isobars.clearLayers();if(mapAitorState.labels)mapAitorState.labels.clearLayers();stopMapWind();
+  const range=$('mapTimeRange');if(range){range.max=Math.max(0,source.timeline.length-1);range.value=mapAitorState.nativeDesiredTimeIndex??cached.index}
+  $('mapLayerBadge').classList.remove('mapLoadError');$('mapStatus').dataset.transport='open-meteo-spatial';$('mapStatus').textContent='Hora preparada · cambio instantáneo · '+source.label;setMapBusy(false);hideMapPickerMarker();$('mapPickerHint')?.classList.add('isHidden');updateMapLabels();updateMapInfo();renderMapNativeAnnotations();queueMapNativeAromeRainShade(source,entry,cached.field,80);
+  if(!mapAitorState.nativeDragging&&mapAitorState.nativeDesiredTimeIndex===cached.index)mapAitorState.nativeDesiredTimeIndex=null;
+  if(mapNativeUsesDirectSamples()){if(['wind','gust'].includes(mapAitorState.layer))queueMapNativeWindSamples(35);else queueMapNativeScalarSamples('relative_humidity_2m','relative_humidity_2m',35)}
+  mapNativeTrimFrameCache(cached.index);if(!scheduleMapNativeCacheTrim()){if(mapAitorState.nativeDragging)prefetchMapNativePreviewWindow(cached.index,mapAitorState.nativePrefetchDirection);else prefetchMapNativeWindow(cached.index,mapAitorState.nativePrefetchDirection)}if(mapAitorState.playing)scheduleMapNativePlayback();return true
+}
+function prefetchMapNativeFrame(index,delay=70){
+  const map=mapAitorState.map,source=mapAitorState.nativeSource,entry=source?.timeline?.[index],layerName=mapAitorState.layer,model=mapAitorState.model;if(!map||!entry||!mapUsesNativeTiles())return null;
+  const key=mapNativeFrameKey(index,source,layerName,model),existing=mapAitorState.nativeFrameCache.get(key);if(existing){existing.touched=Date.now();if(existing.ready&&mapNativeDesiredIndex()===index)activateMapNativeCachedFrame(existing);return existing}
+  if(mapAitorState.nativePrefetchTimers.has(key))return null;const generation=mapAitorState.nativePrefetchGeneration;
+  const timer=setTimeout(()=>{
+    mapAitorState.nativePrefetchTimers.delete(key);if(generation!==mapAitorState.nativePrefetchGeneration||layerName!==mapAitorState.layer||model!==mapAitorState.model||source!==mapAitorState.nativeSource)return;updateMapNativeReadBounds();
+    const specs=mapNativeFrameSpecs(source,layerName,entry),base=mapNativeOmFile(source,entry),visibleCount=Math.max(1,specs.filter(spec=>!spec.support).length),cloudCount=Math.max(1,specs.filter(spec=>!spec.support&&spec.kind==='cloud').length),tiles=specs.map(spec=>{const url=mapNativeTileUrl(spec.base||base,spec),targetOpacity=spec.support?.001:Math.max(.12,Math.min(1,mapFieldOpacity()*spec.factor)),tile=mapNativeAdapter(spec.kind).createTileLayer(url,{pane:'mapWeatherRadar',opacity:0,maxZoom:12,maxNativeZoom:12,keepBuffer:0,updateWhenIdle:false,className:'mapNativeWeatherTile mapNativeWeatherTile-'+layerName+' mapNativeWeatherTileKind-'+spec.kind+(spec.support?' mapNativeWeatherSupport':'')+' mapNativeWeatherPrefetch mapNativeWeatherFrame-'+index,attribution:'Datos meteorológicos © Open‑Meteo'});tile.options.nativeOpacityFactor=spec.factor;tile.options.nativeTargetOpacity=targetOpacity;tile.options.nativeSourceUrl=url;tile.options.nativeVariable=spec.variable;tile.options.nativeKind=spec.kind;tile.options.nativeSupport=!!spec.support;return tile}),field=L.layerGroup(tiles);field.addTo(map);const cached=mapNativeRememberFrame(key,index,field,false);let ready=0;
+    tiles.forEach(tile=>tile.once('load',()=>{if(tile.options.nativeSupport||layerName==='cloud'&&tile.options.nativeKind!=='cloud')return;ready+=1;const required=layerName==='cloud'?cloudCount:visibleCount;if(ready>=required&&mapAitorState.nativeFrameCache.get(key)===cached){cached.ready=true;cached.touched=Date.now();if(mapNativeDesiredIndex()===index)activateMapNativeCachedFrame(cached)}}));mapNativeTrimFrameCache(mapNativeDesiredIndex());
+  },Math.max(0,delay));mapAitorState.nativePrefetchTimers.set(key,timer);return null
+}
+function prefetchMapNativeWindow(center=mapAitorState.timeIndex,direction=1){
+  const timeline=mapAitorState.nativeSource?.timeline||[];if(!timeline.length||!mapUsesNativeTiles())return;const maximum=timeline.length-1,forward=direction<0?-1:1;
+  // La película rápida ya cubre el movimiento. Mantener muchas horas completas
+  // a zoom 12 decodificándose a la vez bloqueaba el cursor, especialmente con
+  // AROME. Solo se afinan por adelantado las vecinas inmediatas.
+  const depth=mapNativeUsesDirectSamples()?1:mapAitorState.model==='arome'?2:3,delays=[120,360,760];
+  for(let step=1;step<=depth;step+=1){const index=center+forward*step;if(index<0||index>maximum)break;prefetchMapNativeFrame(index,delays[step-1]??(2100+step*220))}
+  const behind=center-forward;if(behind>=0&&behind<=maximum)prefetchMapNativeFrame(behind,depth>4?900:420);prefetchMapNativePreviewWindow(center,forward)
 }
 function queueMapNativeFrame(delay=170){
   clearTimeout(mapAitorState.nativeFrameTimer);mapAitorState.nativeFrameTimer=setTimeout(()=>{mapAitorState.nativeFrameTimer=null;renderMapNativeFrame()},Math.max(0,delay));
@@ -2196,20 +2248,26 @@ function mapNativeDesiredIndex(){
   return Math.max(0,Math.min(maximum,value===null||value===undefined?mapAitorState.timeIndex:Number(value)||0))
 }
 function mapNativeLiveTargetPending(){
-  return mapAitorState.nativeDesiredTimeIndex!==null&&mapNativeDesiredIndex()!==mapAitorState.timeIndex
+  return mapAitorState.nativeDesiredTimeIndex!==null&&(mapNativeDesiredIndex()!==mapAitorState.timeIndex||!!mapAitorState.nativePreviewField)
 }
 function previewMapNativeTime(index){
   const entry=mapAitorState.nativeSource?.timeline?.[index],time=String(entry?.time||'').replace(/Z$/,'');if(!time)return;
   mapRememberForecastTime(time);updateMapLightTheme(time);$('mapTimelineLabel').textContent=mapTimeText(time);$('mapStatus').textContent='Avanzando en directo · '+$('mapTimelineLabel').textContent
 }
 function queueMapNativeLiveFrame(delay=90){
-  if(!mapUsesNativeTiles()||!mapAitorState.nativeSource||mapAitorState.nativeFrameTimer||mapAitorState.nativePendingField)return;
-  const desired=mapNativeDesiredIndex();if(desired===mapAitorState.timeIndex){if(!mapAitorState.nativeDragging)mapAitorState.nativeDesiredTimeIndex=null;return}
+  if(!mapUsesNativeTiles()||!mapAitorState.nativeSource)return;
+  const desired=mapNativeDesiredIndex(),cached=mapAitorState.nativeFrameCache.get(mapNativeFrameKey(desired));if(cached?.ready){activateMapNativeCachedFrame(cached);return}
+  const quick=mapAitorState.nativePreviewCache.get(mapNativePreviewKey(desired));if(quick?.ready)activateMapNativePreview(quick);else{activateMapNativeNearestPreview(desired);queueMapNativePreview(0)}
+  if(desired===mapAitorState.timeIndex&&!mapAitorState.nativePreviewField){if(!mapAitorState.nativeDragging)mapAitorState.nativeDesiredTimeIndex=null;return}
+  // Seguimiento, no debounce: mientras se arrastra el cursor una petición ya
+  // programada debe ejecutarse y perseguir la posición más reciente. Cancelarla
+  // en cada input hacía avanzar la etiqueta, pero congelaba el mapa hasta parar.
+  if(mapAitorState.nativeFrameTimer)return;
   mapAitorState.nativeFrameTimer=setTimeout(()=>{
     mapAitorState.nativeFrameTimer=null;if(!mapUsesNativeTiles()||!mapAitorState.nativeSource)return;
-    if(mapAitorState.nativePendingField){queueMapNativeLiveFrame(70);return}
-    const target=mapNativeDesiredIndex();if(target===mapAitorState.timeIndex){if(!mapAitorState.nativeDragging)mapAitorState.nativeDesiredTimeIndex=null;return}
-    mapAitorState.timeIndex=target;updateMapLabels();$('mapStatus').textContent='Avanzando en directo · cargando '+$('mapTimelineLabel').textContent;renderMapNativeFrame()
+    const target=mapNativeDesiredIndex();if(target===mapAitorState.timeIndex&&!mapAitorState.nativePreviewField){if(!mapAitorState.nativeDragging)mapAitorState.nativeDesiredTimeIndex=null;return}
+    const ready=mapAitorState.nativeFrameCache.get(mapNativeFrameKey(target));if(ready?.ready){activateMapNativeCachedFrame(ready);return}
+    prefetchMapNativePreview(target,0);if(mapAitorState.nativeDragging){prefetchMapNativePreviewWindow(target,mapAitorState.nativePrefetchDirection);if(!mapAitorState.nativePreviewField)$('mapStatus').textContent='Preparando vista rápida real · '+$('mapTimelineLabel').textContent;return}prefetchMapNativeFrame(target,0);prefetchMapNativeFrame(target+mapAitorState.nativePrefetchDirection,180);if(!mapAitorState.nativePreviewField)$('mapStatus').textContent='Preparando la hora real del modelo · '+$('mapTimelineLabel').textContent
   },Math.max(0,delay))
 }
 function continueMapNativeLiveFrame(delay=70){
@@ -2220,32 +2278,22 @@ function continueMapNativeLiveFrame(delay=70){
 function renderMapNativeFrame(retrying=false){
   const map=mapAitorState.map,source=mapAitorState.nativeSource,entry=source?.timeline?.[mapAitorState.timeIndex];if(!map||!source||!entry||!mapUsesNativeTiles())return;
   updateMapNativeReadBounds();
-  const layerName=mapAitorState.layer,model=mapAitorState.model,retryKey=[layerName,model,source.domain,entry.index].join('|'),previousField=mapAitorState.nativeField,keepPrevious=!!(previousField&&mapAitorState.renderedLayer===layerName&&mapAitorState.renderedModel===model),prefetched=mapAitorState.nativePrefetchKey===retryKey&&mapAitorState.nativePrefetchReady&&mapAitorState.nativePrefetchField?mapAitorState.nativePrefetchField:null,requestId=++mapAitorState.nativeRequestId;
-  if(!retrying||mapAitorState.nativeRetryKey!==retryKey){mapAitorState.nativeRetryKey=retryKey;mapAitorState.nativeRetryCount=0}clearTimeout(mapAitorState.nativeRetryTimer);clearMapNativePending();if(mapAitorState.nativePrefetchKey&&mapAitorState.nativePrefetchKey!==retryKey)clearMapNativePrefetch();if(!keepPrevious)clearMapLayers();unsetMapRadar();stopMapWind();if(mapAitorState.values)mapAitorState.values.clearLayers();if(mapAitorState.windArrows)mapAitorState.windArrows.clearLayers();if(mapAitorState.isobars)mapAitorState.isobars.clearLayers();if(mapAitorState.labels)mapAitorState.labels.clearLayers();
-  if(prefetched){
-    clearTimeout(mapAitorState.nativePrefetchCleanupTimer);mapAitorState.nativePrefetchCleanupTimer=null;mapAitorState.nativePrefetchField=null;mapAitorState.nativePrefetchKey=null;mapAitorState.nativePrefetchReady=false;clearMapNativePreview(false);
-    prefetched.eachLayer(tile=>{tile.setOpacity(Number(tile.options.nativeTargetOpacity)||0);const variable=tile.options.nativeVariable,url=tile.options.nativeSourceUrl;if(variable==='wind_u_component_10m')mapAitorState.nativeWindSampleUrl=url;if(variable==='wind_gusts_10m')mapAitorState.nativeGustSampleUrl=url});if(previousField)previousField.remove();mapAitorState.nativeField=prefetched;mapAitorState.nativePendingField=null;mapAitorState.renderedLayer=layerName;mapAitorState.renderedModel=model;mapAitorState.nativeRetryCount=0;mapAitorState.lastError=null;
-    const range=$('mapTimeRange');range.max=Math.max(0,source.timeline.length-1);range.value=mapAitorState.nativeDesiredTimeIndex??mapAitorState.timeIndex;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+mapLayerConfig().title;$('mapStatus').dataset.transport='open-meteo-spatial';$('mapStatus').textContent='Hora precargada · teselas nativas '+source.label;setMapBusy(false);hideMapPickerMarker();$('mapPickerHint')?.classList.add('isHidden');updateMapLabels();updateMapInfo();renderMapNativeAnnotations();queueMapNativeAromeRainShade(source,entry,prefetched,80);const continuing=continueMapNativeLiveFrame(45);if(mapNativeUsesDirectSamples(layerName,model)){if(!continuing){if(['wind','gust'].includes(layerName))queueMapNativeWindSamples(30);else queueMapNativeScalarSamples('relative_humidity_2m','relative_humidity_2m',30)}}else if(!continuing&&!scheduleMapNativeCacheTrim())prefetchMapNativeFrame(mapAitorState.timeIndex+1);if(mapAitorState.playing)scheduleMapNativePlayback();return;
-  }
+  const layerName=mapAitorState.layer,model=mapAitorState.model,retryKey=[layerName,model,source.domain,entry.index].join('|'),cached=mapAitorState.nativeFrameCache.get(retryKey);if(cached?.ready&&cached.field!==mapAitorState.nativeField){activateMapNativeCachedFrame(cached);return}
+  const previousField=mapAitorState.nativeField,keepPrevious=!!(previousField&&mapAitorState.renderedLayer===layerName&&mapAitorState.renderedModel===model),requestId=++mapAitorState.nativeRequestId;
+  if(!retrying||mapAitorState.nativeRetryKey!==retryKey){mapAitorState.nativeRetryKey=retryKey;mapAitorState.nativeRetryCount=0}clearTimeout(mapAitorState.nativeRetryTimer);clearMapNativePending();if(!keepPrevious)clearMapLayers();unsetMapRadar();stopMapWind();if(mapAitorState.values)mapAitorState.values.clearLayers();if(mapAitorState.windArrows)mapAitorState.windArrows.clearLayers();if(mapAitorState.isobars)mapAitorState.isobars.clearLayers();if(mapAitorState.labels)mapAitorState.labels.clearLayers();
   const layers=[],base=mapNativeOmFile(source,entry),specs=mapNativeFrameSpecs(source,layerName,entry),visibleLayerCount=Math.max(1,specs.filter(spec=>!spec.support).length),cloudLayerCount=Math.max(1,specs.filter(spec=>!spec.support&&spec.kind==='cloud').length);let readyLayers=0,readyCloudLayers=0,loaded=0,errors=0,finished=false,activated=!keepPrevious,softUnlock=null,swapTimeout=null,hardTimeout=null,nextField=null;
-  const activate=()=>{if(activated||requestId!==mapAitorState.nativeRequestId)return;activated=true;clearTimeout(swapTimeout);clearMapNativePreview(false);layers.forEach(tile=>tile.setOpacity(Number(tile.options.nativeTargetOpacity)||0));if(previousField)previousField.remove();mapAitorState.nativeField=nextField;mapAitorState.nativePendingField=null;mapAitorState.renderedLayer=layerName;mapAitorState.renderedModel=model;updateMapLabels();updateMapInfo();renderMapNativeAnnotations()};
-  const finish=()=>{if(finished||requestId!==mapAitorState.nativeRequestId)return;finished=true;clearTimeout(hardTimeout);clearTimeout(softUnlock);clearTimeout(swapTimeout);activate();mapAitorState.nativeRetryCount=0;mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapStatus').dataset.transport='open-meteo-spatial';$('mapStatus').textContent=mapAitorState.nativeFallbackNotice||('Teselas nativas '+source.label+(mapAitorState.data?' · valores y vectores activos':' · fijas y continuas'));setMapBusy(false);updateMapLabels();updateMapInfo();renderMapNativeAnnotations();queueMapNativeAromeRainShade(source,entry,mapAitorState.nativeField,120);const continuing=continueMapNativeLiveFrame(55);if(mapNativeUsesDirectSamples(layerName,model)){if(!continuing){if(['wind','gust'].includes(layerName))queueMapNativeWindSamples(60);else queueMapNativeScalarSamples('relative_humidity_2m','relative_humidity_2m',60)}}else if(!continuing&&!scheduleMapNativeCacheTrim())prefetchMapNativeFrame(mapAitorState.timeIndex+1);if(mapAitorState.playing)scheduleMapNativePlayback()};
+  const activate=()=>{if(activated||requestId!==mapAitorState.nativeRequestId)return;activated=true;clearTimeout(swapTimeout);clearMapNativePreview(false);layers.forEach(tile=>tile.setOpacity(Number(tile.options.nativeTargetOpacity)||0));if(previousField){mapNativeSetFrameVisibility(previousField,false);const previousKey=previousField._mapNativeFrameKey,previousIndex=previousField._mapNativeFrameIndex;if(previousKey&&Number.isInteger(previousIndex))mapNativeRememberFrame(previousKey,previousIndex,previousField,true);else previousField.remove()}mapAitorState.nativeField=nextField;mapAitorState.nativePendingField=null;mapAitorState.renderedLayer=layerName;mapAitorState.renderedModel=model;updateMapLabels();updateMapInfo();renderMapNativeAnnotations()};
+  const finish=()=>{if(finished||requestId!==mapAitorState.nativeRequestId)return;finished=true;clearTimeout(hardTimeout);clearTimeout(softUnlock);clearTimeout(swapTimeout);activate();mapNativeRememberFrame(retryKey,mapAitorState.timeIndex,nextField,true);mapAitorState.nativeRetryCount=0;mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapStatus').dataset.transport='open-meteo-spatial';$('mapStatus').textContent=mapAitorState.nativeFallbackNotice||('Teselas nativas '+source.label+(mapAitorState.data?' · valores y vectores activos':' · fijas y continuas'));setMapBusy(false);updateMapLabels();updateMapInfo();renderMapNativeAnnotations();queueMapNativeAromeRainShade(source,entry,mapAitorState.nativeField,120);const continuing=continueMapNativeLiveFrame(45);if(mapNativeUsesDirectSamples(layerName,model)){if(!continuing){if(['wind','gust'].includes(layerName))queueMapNativeWindSamples(60);else queueMapNativeScalarSamples('relative_humidity_2m','relative_humidity_2m',60)}}if(!continuing&&!scheduleMapNativeCacheTrim())prefetchMapNativeWindow(mapAitorState.timeIndex,mapAitorState.nativePrefetchDirection);if(mapAitorState.playing)scheduleMapNativePlayback()};
   specs.forEach((spec,index)=>{
-    const adapter=mapNativeAdapter(spec.kind),url=mapNativeTileUrl(spec.base||base,spec),targetOpacity=spec.support?.001:Math.max(.12,Math.min(1,mapFieldOpacity()*spec.factor)),tile=adapter.createTileLayer(url,{pane:'mapWeatherRadar',opacity:keepPrevious?0:targetOpacity,maxZoom:12,maxNativeZoom:12,keepBuffer:1,updateWhenIdle:false,className:'mapNativeWeatherTile mapNativeWeatherTile-'+layerName+' mapNativeWeatherTileKind-'+spec.kind+(spec.support?' mapNativeWeatherSupport':''),attribution:'Datos meteorológicos © Open‑Meteo'});if(spec.variable==='wind_u_component_10m')mapAitorState.nativeWindSampleUrl=url;if(spec.variable==='wind_gusts_10m')mapAitorState.nativeGustSampleUrl=url;tile.options.nativeOpacityFactor=spec.factor;tile.options.nativeTargetOpacity=targetOpacity;tile.options.nativeSourceUrl=url;tile.options.nativeVariable=spec.variable;tile.options.nativeKind=spec.kind;tile.options.nativeSupport=!!spec.support;tile.once('tileload',()=>{loaded+=1});tile.once('load',()=>{if(spec.support)return;readyLayers+=1;if(layerName==='cloud'&&spec.kind==='cloud'){readyCloudLayers+=1;if(readyCloudLayers>=cloudLayerCount){activate();setMapBusy(false);$('mapStatus').textContent='Nubosidad visible · completando únicamente el sombreado de precipitación…'}}if(readyLayers>=visibleLayerCount)finish()});tile.on('tileerror',()=>{errors+=1});layers.push(tile);
+    const adapter=mapNativeAdapter(spec.kind),url=mapNativeTileUrl(spec.base||base,spec),targetOpacity=spec.support?.001:Math.max(.12,Math.min(1,mapFieldOpacity()*spec.factor)),tile=adapter.createTileLayer(url,{pane:'mapWeatherRadar',opacity:keepPrevious?0:targetOpacity,maxZoom:12,maxNativeZoom:12,keepBuffer:1,updateWhenIdle:false,className:'mapNativeWeatherTile mapNativeWeatherTile-'+layerName+' mapNativeWeatherTileKind-'+spec.kind+(spec.support?' mapNativeWeatherSupport':'')+' mapNativeWeatherFrame-'+mapAitorState.timeIndex,attribution:'Datos meteorológicos © Open‑Meteo'});if(spec.variable==='wind_u_component_10m')mapAitorState.nativeWindSampleUrl=url;if(spec.variable==='wind_gusts_10m')mapAitorState.nativeGustSampleUrl=url;tile.options.nativeOpacityFactor=spec.factor;tile.options.nativeTargetOpacity=targetOpacity;tile.options.nativeSourceUrl=url;tile.options.nativeVariable=spec.variable;tile.options.nativeKind=spec.kind;tile.options.nativeSupport=!!spec.support;tile.once('tileload',()=>{loaded+=1});tile.once('load',()=>{if(spec.support)return;readyLayers+=1;if(layerName==='cloud'&&spec.kind==='cloud'){readyCloudLayers+=1;if(readyCloudLayers>=cloudLayerCount){activate();setMapBusy(false);$('mapStatus').textContent='Nubosidad visible · completando únicamente el sombreado de precipitación…'}}if(readyLayers>=visibleLayerCount)finish()});tile.on('tileerror',()=>{errors+=1});layers.push(tile);
   });
-  nextField=L.layerGroup(layers).addTo(map);const previewActive=!!mapAitorState.nativePreviewField;if(keepPrevious){mapAitorState.nativePendingField=nextField}else{mapAitorState.nativeField=nextField;mapAitorState.renderedLayer=layerName;mapAitorState.renderedModel=model}const range=$('mapTimeRange');range.max=Math.max(0,source.timeline.length-1);range.value=mapAitorState.nativeDesiredTimeIndex??mapAitorState.timeIndex;hideMapPickerMarker();$('mapPickerHint')?.classList.add('isHidden');updateMapLabels();updateMapInfo();renderMapNativeAnnotations();
-  // La hora siguiente se descarga en paralelo con la actual. Así, al mover
-  // el cursor, la tesela completa ya está preparada y no aparece a medias.
-  // En viento y rachas se conservan primero las dos teselas de la hora actual
-  // (intensidad y vector u/v). El lector espacial mantiene muy pocos estados;
-  // precargar antes la hora siguiente expulsaba precisamente esos datos.
-  if(!mapNativeUsesDirectSamples(layerName,model))prefetchMapNativeFrame(mapAitorState.timeIndex+1);
+  nextField=L.layerGroup(layers).addTo(map);nextField._mapNativeFrameKey=retryKey;nextField._mapNativeFrameIndex=mapAitorState.timeIndex;const previewActive=!!mapAitorState.nativePreviewField;if(keepPrevious){mapAitorState.nativePendingField=nextField}else{mapAitorState.nativeField=nextField;mapAitorState.renderedLayer=layerName;mapAitorState.renderedModel=model}const range=$('mapTimeRange');range.max=Math.max(0,source.timeline.length-1);range.value=mapAitorState.nativeDesiredTimeIndex??mapAitorState.timeIndex;hideMapPickerMarker();$('mapPickerHint')?.classList.add('isHidden');updateMapLabels();updateMapInfo();renderMapNativeAnnotations();
   if(retrying||keepPrevious){setMapBusy(false,previewActive?'Vista inmediata activa · afinando '+source.label+'…':(retrying?'Reintentando ':'Cargando la hora seleccionada · ')+source.label+'…');$('mapLayerBadge').innerHTML='<span></span>'+mapLayerConfig().title+(previewActive?' · vista inmediata':retrying?' · reintentando':' · cambiando hora');}
   else{setMapBusy(true,'Cargando teselas nativas '+source.label+'…');softUnlock=setTimeout(()=>{if(finished||requestId!==mapAitorState.nativeRequestId)return;setMapBusy(false);$('mapLayerBadge').innerHTML='<span></span>'+mapLayerConfig().title+' · completando capa';$('mapStatus').textContent='La conexión móvil está tardando · puedes seguir usando el visor mientras se completa.';},6000)}
   hardTimeout=setTimeout(()=>{if(finished||requestId!==mapAitorState.nativeRequestId)return;if(layerName==='cloud'&&activated){mapAitorState.nativeFallbackNotice='Nubosidad '+source.label+' visible · sombreado de precipitación auxiliar incompleto';finish();return}finished=true;clearTimeout(softUnlock);clearTimeout(swapTimeout);if(mapAitorState.nativePendingField===nextField){nextField.remove();mapAitorState.nativePendingField=null}if(mapAitorState.nativeRetryCount<2){mapAitorState.nativeRetryCount+=1;const attempt=mapAitorState.nativeRetryCount;setMapBusy(false);$('mapLayerBadge').innerHTML='<span></span>'+mapLayerConfig().title+' · reintento '+attempt+'/2';$('mapStatus').textContent=(keepPrevious?'Se conserva la hora anterior · ':'')+'reintentando conexión '+attempt+'/2 · '+source.label+'…';mapAitorState.nativeRetryTimer=setTimeout(()=>{if(requestId===mapAitorState.nativeRequestId)renderMapNativeFrame(true)},attempt===1?750:1600);return}mapAitorState.lastError=new Error('Las teselas meteorológicas no respondieron tras tres intentos.');$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+mapLayerConfig().title+' · conexión temporalmente no disponible';$('mapStatus').textContent=(keepPrevious?'Se conserva la última hora visible. ':'')+'Pulsa Actualizar mapa; Windy permanece como opción secundaria.';$('mapInfo').innerHTML='<strong>'+mapLayerConfig().title+' temporalmente sin datos nuevos</strong>Se realizaron tres intentos sin sustituir la capa por otra fuente.';setMapBusy(false)},18000);
 }
 async function loadMapNativeLayer(force=false,preserveTime=false,targetTime=null){
-  if(!mapUsesNativeTiles()||!mapAitorState.map)return;if(mapAitorState.requestController){mapAitorState.requestController.abort();mapAitorState.requestController=null}clearMapNativePending();clearMapNativePrefetch();clearMapNativePreview(false);clearMapRetry();if($('mapOfficialEmbed')?.dataset.automatic==='1')closeMapOfficial(false);
+  if(!mapUsesNativeTiles()||!mapAitorState.map)return;if(mapAitorState.requestController){mapAitorState.requestController.abort();mapAitorState.requestController=null}clearMapNativePending();clearMapNativePrefetch(false);clearMapNativePreview(false);clearMapRetry();if($('mapOfficialEmbed')?.dataset.automatic==='1')closeMapOfficial(false);
   const requestedTime=targetTime||(preserveTime?mapCurrentForecastTime():null),requestId=++mapAitorState.nativeRequestId,layer=mapAitorState.layer,model=mapAitorState.model,source=mapNativeSourceFor(layer,model);setMapBusy(true,'Conectando '+source.label+' con Aitor Meteo Maps…');
   try{
     const cacheIdentity=model+'|'+layer;if(mapAitorState.nativeCacheIdentity!==cacheIdentity){mapAitorState.nativeCacheIdentity=cacheIdentity;await clearMapNativeLibraryCache();if(requestId!==mapAitorState.nativeRequestId||layer!==mapAitorState.layer||model!==mapAitorState.model)return}
@@ -2583,7 +2631,8 @@ function mapFieldOpacity(){
 }
 function updateMapFieldOpacity(){
   if(mapAitorState.field?.eachLayer)mapAitorState.field.eachLayer(layer=>{if(layer?.setOpacity)layer.setOpacity(mapFieldOpacity())});
-  if(mapAitorState.nativePreviewField?.eachLayer)mapAitorState.nativePreviewField.eachLayer(layer=>{if(layer?.setOpacity)layer.setOpacity(mapFieldOpacity())});
+  mapAitorState.nativePreviewCache.forEach(entry=>entry.field?.eachLayer?.(layer=>{if(!layer?.setOpacity)return;const target=mapFieldOpacity()*Number(layer.options?.nativeOpacityFactor||1);layer.options.nativeTargetOpacity=target;layer.setOpacity(entry.field===mapAitorState.nativePreviewField?target:0)}));
+  mapAitorState.nativeFrameCache.forEach(entry=>entry.field?.eachLayer?.(layer=>{if(!layer?.setOpacity)return;const target=mapFieldOpacity()*Number(layer.options?.nativeOpacityFactor||1);layer.options.nativeTargetOpacity=target;if(entry.field===mapAitorState.nativeField)layer.setOpacity(mapAitorState.nativePreviewField?0:target);else layer.setOpacity(0)}));
   [mapAitorState.nativeField,mapAitorState.nativePendingField].forEach(group=>{if(group?.eachLayer)group.eachLayer(layer=>{if(!layer?.setOpacity)return;const target=mapFieldOpacity()*Number(layer.options?.nativeOpacityFactor||1);layer.options.nativeTargetOpacity=target;if(group===mapAitorState.nativeField)layer.setOpacity(mapAitorState.nativePreviewField?0:target)})});
   if(mapAitorState.rainviewerLayer?.setOpacity)mapAitorState.rainviewerLayer.setOpacity(mapFieldOpacity());
   if(mapAitorState.aemetRadarLayer?.setOpacity)mapAitorState.aemetRadarLayer.setOpacity(Math.max(.58,mapFieldOpacity()))
@@ -2654,17 +2703,57 @@ function buildMapField(quick=false){
 }
 function clearMapNativePreview(restoreNative=false){
   clearTimeout(mapAitorState.nativePreviewTimer);mapAitorState.nativePreviewTimer=null;
-  if(mapAitorState.nativePreviewField){mapAitorState.nativePreviewField.remove();mapAitorState.nativePreviewField=null}
-  if(restoreNative&&mapAitorState.nativeField?.eachLayer)mapAitorState.nativeField.eachLayer(layer=>{if(layer?.setOpacity)layer.setOpacity(Number(layer.options?.nativeTargetOpacity)||0)});
+  if(mapAitorState.nativePreviewField){mapNativeSetFrameVisibility(mapAitorState.nativePreviewField,false);mapAitorState.nativePreviewField=null}
+  if(restoreNative)mapNativeSetFrameVisibility(mapAitorState.nativeField,true);
+}
+function clearMapNativePreviewCache(){
+  clearTimeout(mapAitorState.nativePreviewTimer);mapAitorState.nativePreviewTimer=null;mapAitorState.nativePreviewGeneration+=1;mapAitorState.nativePreviewTimers.forEach(timer=>clearTimeout(timer));mapAitorState.nativePreviewTimers.clear();
+  mapAitorState.nativePreviewCache.forEach(entry=>{try{entry.field?.remove?.()}catch(_){ }});mapAitorState.nativePreviewCache.clear();mapAitorState.nativePreviewField=null
+}
+function mapNativePreviewKey(index){const key=mapNativeFrameKey(index);return key?key+'|rápida':null}
+function mapNativePreviewCacheLimit(){return window.matchMedia?.('(max-width:820px)').matches||Number(navigator.deviceMemory||8)<=4?14:32}
+function mapNativeTrimPreviewCache(center=mapNativeDesiredIndex()){
+  const limit=mapNativePreviewCacheLimit(),entries=[...mapAitorState.nativePreviewCache.entries()];if(entries.length<=limit)return;
+  entries.filter(([,entry])=>entry.field!==mapAitorState.nativePreviewField&&entry.index!==center).sort((a,b)=>{
+    if(Boolean(a[1].anchor)!==Boolean(b[1].anchor))return a[1].anchor?1:-1;
+    return Math.abs(b[1].index-center)-Math.abs(a[1].index-center)||a[1].touched-b[1].touched
+  }).slice(0,entries.length-limit).forEach(([key,entry])=>{entry.field.remove();mapAitorState.nativePreviewCache.delete(key)})
+}
+function activateMapNativePreview(cached){
+  const source=mapAitorState.nativeSource,entry=source?.timeline?.[cached?.index],expected=mapNativePreviewKey(cached?.index);if(!cached?.ready||!entry||cached.key!==expected||cached.identity!==mapAitorState.nativeCacheIdentity)return false;
+  const sharp=mapAitorState.nativeFrameCache.get(mapNativeFrameKey(cached.index));if(sharp?.ready)return activateMapNativeCachedFrame(sharp);
+  if(mapAitorState.nativePreviewField&&mapAitorState.nativePreviewField!==cached.field)mapNativeSetFrameVisibility(mapAitorState.nativePreviewField,false);mapNativeSetFrameVisibility(mapAitorState.nativeField,false);mapNativeSetFrameVisibility(cached.field,true);mapAitorState.nativePreviewField=cached.field;cached.touched=Date.now();mapAitorState.timeIndex=cached.index;
+  if(mapAitorState.data?.nativeTileSamples)mapAitorState.data=null;if(mapAitorState.values)mapAitorState.values.clearLayers();if(mapAitorState.windArrows)mapAitorState.windArrows.clearLayers();if(mapAitorState.isobars)mapAitorState.isobars.clearLayers();if(mapAitorState.labels)mapAitorState.labels.clearLayers();stopMapWind();
+  const range=$('mapTimeRange');if(range)range.value=mapAitorState.nativeDesiredTimeIndex??cached.index;updateMapLabels();updateMapInfo();$('mapStatus').textContent='Vista rápida real · afinando '+source.label+' · '+$('mapTimelineLabel').textContent;setMapBusy(false);mapNativeTrimPreviewCache(cached.index);prefetchMapNativePreviewWindow(cached.index,mapAitorState.nativePrefetchDirection);return true
+}
+function activateMapNativeNearestPreview(desired=mapNativeDesiredIndex()){
+  const source=mapAitorState.nativeSource,direction=mapAitorState.nativePrefetchDirection<0?-1:1,current=mapAitorState.nativePreviewField?._mapNativeFrameIndex??mapAitorState.nativeField?._mapNativeFrameIndex??mapAitorState.timeIndex;
+  const candidates=[...mapAitorState.nativePreviewCache.values()].filter(entry=>entry.ready&&entry.identity===mapAitorState.nativeCacheIdentity&&entry.index!==current&&(direction>0?entry.index>current&&entry.index<=desired:entry.index<current&&entry.index>=desired)).sort((a,b)=>Math.abs(a.index-desired)-Math.abs(b.index-desired));
+  const nearest=candidates[0];if(!nearest||!activateMapNativePreview(nearest))return false;
+  const visibleTime=String(source?.timeline?.[nearest.index]?.time||'').replace(/Z$/,''),desiredTime=String(source?.timeline?.[desired]?.time||'').replace(/Z$/,'');
+  $('mapStatus').textContent='Avance real '+mapTimeText(visibleTime)+' · preparando '+mapTimeText(desiredTime);return true
+}
+function prefetchMapNativePreview(index,delay=30,anchor=false){
+  const map=mapAitorState.map,source=mapAitorState.nativeSource,entry=source?.timeline?.[index],layerName=mapAitorState.layer,model=mapAitorState.model;if(!map||!entry||!mapUsesNativeTiles())return null;const key=mapNativePreviewKey(index),existing=mapAitorState.nativePreviewCache.get(key);if(existing){existing.touched=Date.now();existing.anchor=existing.anchor||anchor;if(existing.ready&&mapNativeDesiredIndex()===index)activateMapNativePreview(existing);return existing}if(mapAitorState.nativePreviewTimers.has(key))return null;
+  const generation=mapAitorState.nativePreviewGeneration,timer=setTimeout(()=>{mapAitorState.nativePreviewTimers.delete(key);if(generation!==mapAitorState.nativePreviewGeneration||layerName!==mapAitorState.layer||model!==mapAitorState.model||source!==mapAitorState.nativeSource)return;
+    const allSpecs=mapNativeFrameSpecs(source,layerName,entry).filter(spec=>!spec.support),specs=allSpecs.length?[allSpecs[0]]:[],base=mapNativeOmFile(source,entry),nativeZoom=Math.max(2,Math.min(5,Math.floor(map.getZoom())-1));if(!specs.length)return;
+    const tiles=specs.map(spec=>{const url=mapNativeTileUrl(spec.base||base,spec),targetOpacity=Math.max(.12,Math.min(1,mapFieldOpacity()*spec.factor)),tile=mapNativeAdapter(spec.kind).createTileLayer(url,{pane:'mapWeatherRadar',opacity:0,maxZoom:12,maxNativeZoom:nativeZoom,keepBuffer:0,updateWhenIdle:false,className:'mapNativeWeatherTile mapNativeWeatherQuickTile mapNativeWeatherTile-'+layerName+' mapNativeWeatherTileKind-'+spec.kind+' mapNativeWeatherFrame-'+index,attribution:'Datos meteorológicos © Open‑Meteo'});tile.options.nativeOpacityFactor=spec.factor;tile.options.nativeTargetOpacity=targetOpacity;tile.options.nativeSourceUrl=url;tile.options.nativeVariable=spec.variable;tile.options.nativeKind=spec.kind;return tile}),field=L.layerGroup(tiles);field._mapNativeFrameIndex=index;field.addTo(map);const cached={key,index,field,ready:false,anchor,identity:mapAitorState.nativeCacheIdentity,touched:Date.now()};mapAitorState.nativePreviewCache.set(key,cached);let ready=0;tiles.forEach(tile=>tile.once('load',()=>{ready+=1;if(ready>=tiles.length&&mapAitorState.nativePreviewCache.get(key)===cached){cached.ready=true;cached.touched=Date.now();if(mapNativeDesiredIndex()===index)activateMapNativePreview(cached)}}));mapNativeTrimPreviewCache(mapNativeDesiredIndex())
+  },Math.max(0,delay));mapAitorState.nativePreviewTimers.set(key,timer);return null
+}
+function prefetchMapNativePreviewWindow(center=mapAitorState.timeIndex,direction=1){
+  const timeline=mapAitorState.nativeSource?.timeline||[];if(!timeline.length||!mapUsesNativeTiles())return;const maximum=timeline.length-1,forward=direction<0?-1:1,limit=mapNativePreviewCacheLimit(),anchorCount=limit<=14?5:10,depth=limit-anchorCount-3;
+  for(let step=0;step<anchorCount;step+=1){const index=Math.round(maximum*step/Math.max(1,anchorCount-1));prefetchMapNativePreview(index,120+step*145,true)}
+  for(let step=1;step<=depth;step+=1){const index=center+forward*step;if(index<0||index>maximum)break;prefetchMapNativePreview(index,70+step*95)}
+  for(let step=1;step<=2;step+=1){const index=center-forward*step;if(index>=0&&index<=maximum)prefetchMapNativePreview(index,450+step*120)}
 }
 function renderMapNativePreview(){
-  // No se aproxima una tesela espacial con la malla auxiliar: en encuadres
-  // amplios deformaba los frentes. Se conserva la última tesela nítida hasta
-  // que la hora seleccionada termina de cargar con el modelo original.
-  clearMapNativePreview(true);return false;
+  const index=mapNativeDesiredIndex(),cached=mapAitorState.nativePreviewCache.get(mapNativePreviewKey(index));if(cached?.ready)return activateMapNativePreview(cached);prefetchMapNativePreview(index,0);return false
 }
-function queueMapNativePreview(delay=45){
-  clearTimeout(mapAitorState.nativePreviewTimer);mapAitorState.nativePreviewTimer=null;
+function queueMapNativePreview(delay=25){
+  // Igual que el fotograma principal: no reiniciar el reloj con cada píxel del
+  // deslizador. El callback toma siempre el último índice solicitado.
+  if(mapAitorState.nativePreviewTimer)return;
+  mapAitorState.nativePreviewTimer=setTimeout(()=>{mapAitorState.nativePreviewTimer=null;renderMapNativePreview()},Math.max(0,delay));
 }
 function mapLegendValues(config){
   const values=[...(config.legend||[])],compact=Boolean(window.matchMedia?.('(max-width:820px)').matches);
@@ -2737,7 +2826,7 @@ function updateMapInfo(){
   $('mapInfo').innerHTML='<strong>'+config.title+(value!==null?' · '+mapFormatValue(config,value):'')+'</strong>'+config.detail+' Fuente: '+source+'.'+officialSeaNote;
 }
 function clearMapLayers(){
-  clearMapNativePending();clearMapNativePrefetch();
+  clearMapNativePending();clearMapNativePrefetch(false);
   clearMapNativePreview(false);
   if(mapAitorState.field){mapAitorState.field.remove();mapAitorState.field=null}
   if(mapAitorState.nativeField){mapAitorState.nativeField.remove();mapAitorState.nativeField=null}
@@ -3137,7 +3226,7 @@ function setMapLayer(layer){
   if(!mapModelSupportsLayer(mapAitorState.model,layer)){const message=mapModelLayerAvailabilityText(mapAitorState.model,layer);$('mapStatus').textContent=message;$('mapInfo').innerHTML='<strong>Capa no publicada por AROME HD</strong>'+message;syncMapSelection(mapAitorState.layer,mapAitorState.model);return}
   const targetTime=mapCurrentForecastTime();mapAitorState.nativeDesiredTimeIndex=null;mapAitorState.nativeDragging=false;mapAitorState.nativeFallbackNotice=null;
   if(mapAitorState.playing)stopMapPlayback();
-  clearMapRetry();clearMapNativePending();clearMapNativePrefetch();clearMapNativePreview(false);clearMapNativeAnnotations();mapAitorState.retryAttempt=0;mapAitorState.nativeRequestId+=1;if(mapAitorState.requestController)mapAitorState.requestController.abort();
+  clearMapRetry();clearMapNativePending();clearMapNativePrefetch(false);clearMapNativePreview(false);clearMapNativeAnnotations();mapAitorState.retryAttempt=0;mapAitorState.nativeRequestId+=1;if(mapAitorState.requestController)mapAitorState.requestController.abort();
   const selectedModel=MAP_GFS_ONLY_LAYERS.has(layer)?'gfs':$('mapModel').value;syncMapSelection(layer,selectedModel);updateMapReliefStrength();
   if($('mapOfficialEmbed')?.classList.contains('active'))setMapOfficialLayer(mapOfficialLayerFor(layer));
   if(layer==='reflectivity'||layer==='rainviewer')hideMapPickerMarker();
@@ -3156,7 +3245,7 @@ function setMapModel(model){
   const targetTime=mapCurrentForecastTime();mapAitorState.nativeDesiredTimeIndex=null;mapAitorState.nativeDragging=false;
   let layer=mapAitorState.layer;mapAitorState.nativeFallbackNotice=null;
   if(!mapModelSupportsLayer(model,layer)){layer='precipitation';mapAitorState.nativeFallbackNotice='AROME HD seleccionado · esta salida no publica la capa anterior; se muestra precipitación horaria AROME sin mezclar modelos'}
-  clearMapRetry();clearMapNativePending();clearMapNativePrefetch();clearMapNativePreview(false);clearMapNativeAnnotations();mapAitorState.retryAttempt=0;syncMapSelection(layer,model);updateMapReliefStrength();
+  clearMapRetry();clearMapNativePending();clearMapNativePrefetch(false);clearMapNativePreview(false);clearMapNativeAnnotations();mapAitorState.retryAttempt=0;syncMapSelection(layer,model);updateMapReliefStrength();
   if(mapAitorState.layer==='reflectivity'||mapAitorState.layer==='rainviewer')return;
   if(mapUsesNativeTiles()){mapAitorState.nativeRequestId+=1;mapAitorState.nativeSource=null;loadMapNativeLayer(false,false,targetTime);return}
   stopMapWind();queueMapLoad(false,650,false,targetTime);
@@ -3180,7 +3269,7 @@ function mapStep(delta){
     mapAitorState.timeIndex=Math.max(0,Math.min(frames.length-1,mapAitorState.timeIndex+delta));renderRainViewerFrame();return;
   }
   if(mapUsesNativeTiles()){
-    const times=mapAitorState.nativeSource?.timeline||[];if(!times.length)return;mapAitorState.nativeDesiredTimeIndex=null;mapAitorState.nativeDragging=false;mapAitorState.timeIndex=Math.max(0,Math.min(times.length-1,mapAitorState.timeIndex+delta));$('mapTimeRange').value=mapAitorState.timeIndex;updateMapLabels();renderMapNativeAnnotations();queueMapNativeFrame(0);return;
+    const times=mapAitorState.nativeSource?.timeline||[];if(!times.length)return;const origin=mapAitorState.nativeDesiredTimeIndex??mapAitorState.timeIndex,target=Math.max(0,Math.min(times.length-1,origin+delta));mapAitorState.nativePrefetchDirection=delta<0?-1:1;mapAitorState.nativeDesiredTimeIndex=target;mapAitorState.nativeDragging=false;$('mapTimeRange').value=target;previewMapNativeTime(target);queueMapNativeLiveFrame(0);return;
   }
   const times=mapAitorState.data?.times||[];if(!times.length||mapAitorState.layer==='reflectivity')return;
   mapAitorState.timeIndex=Math.max(0,Math.min(times.length-1,mapAitorState.timeIndex+delta));$('mapTimeRange').value=mapAitorState.timeIndex;renderMapGrid();
@@ -3313,7 +3402,7 @@ function initMapAitor(){
   const lightLabels=()=>L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,pane:'mapLabels',opacity:.96,className:'mapBoundaryLabels',attribution:cartoAttribution});
   const darkLabels=()=>L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,pane:'mapLabels',opacity:.96,className:'mapBoundaryLabelsDark',attribution:cartoAttribution});
   mapAitorState.map=map;mapAitorState.baseLayers={topographic,dark,standard};mapAitorState.baseLabelLayers={topographic:lightLabels(),standard:lightLabels(),dark:darkLabels()};mapAitorState.baseReliefLayers={topographic:relief(),dark:relief(),standard:relief()};loadMapLandMask();syncMapSelection(mapAitorState.layer,mapAitorState.model);setMapBaseStyle('standard');updateMapLightTheme();mapAitorState.grid=L.layerGroup().addTo(map);mapAitorState.isobars=L.layerGroup().addTo(map);mapAitorState.labels=L.layerGroup().addTo(map);mapAitorState.values=L.layerGroup().addTo(map);mapAitorState.windArrows=L.layerGroup().addTo(map);
-  map.on('resize moveend zoomend',()=>{resizeMapWind();const nativeTime=String(mapAitorState.nativeSource?.timeline?.[mapAitorState.timeIndex]?.time||'').replace(/Z$/,'');updateMapLightTheme(nativeTime||mapAitorState.data?.times?.[mapAitorState.timeIndex]);if(mapUsesNativeTiles()){updateMapNativeReadBounds();renderMapNativeAnnotations();queueMapNativeAnnotations(false,650);if(['wind','gust'].includes(mapAitorState.layer))queueMapNativeWindSamples(720)}else if(mapAitorState.data&&!mapAitorState.loading&&mapAitorState.layer!=='reflectivity'){refreshMapAnnotations();queueMapViewportRefresh()}});
+  map.on('resize moveend zoomend',event=>{resizeMapWind();const nativeTime=String(mapAitorState.nativeSource?.timeline?.[mapAitorState.timeIndex]?.time||'').replace(/Z$/,'');updateMapLightTheme(nativeTime||mapAitorState.data?.times?.[mapAitorState.timeIndex]);if(mapUsesNativeTiles()){if((event.type==='moveend'||event.type==='zoomend')&&!mapAitorState.nativeDragging){clearMapNativePreview(true);clearMapNativePreviewCache();clearMapNativePrefetch(true);clearTimeout(mapAitorState.viewportTimer);mapAitorState.viewportTimer=setTimeout(()=>prefetchMapNativeWindow(mapAitorState.timeIndex,mapAitorState.nativePrefetchDirection),280)}updateMapNativeReadBounds();renderMapNativeAnnotations();queueMapNativeAnnotations(false,650);if(['wind','gust'].includes(mapAitorState.layer))queueMapNativeWindSamples(720)}else if(mapAitorState.data&&!mapAitorState.loading&&mapAitorState.layer!=='reflectivity'){refreshMapAnnotations();queueMapViewportRefresh()}});
   map.on('click',event=>setMapPicker(event.latlng));
   $('mapLayer').addEventListener('change',event=>setMapLayer(event.target.value));
   $('mapModel').addEventListener('change',event=>setMapModel(event.target.value));
@@ -3328,11 +3417,11 @@ function initMapAitor(){
   $('mapTimeRange').addEventListener('input',event=>{
     if(mapAitorState.layer==='reflectivity')return;const index=Number(event.target.value)||0;
     if(mapAitorState.layer==='rainviewer'){mapAitorState.timeIndex=index;renderRainViewerFrame();return}
-    if(mapUsesNativeTiles()){mapAitorState.nativeDragging=true;mapAitorState.nativeDesiredTimeIndex=index;previewMapNativeTime(index);queueMapNativeLiveFrame(55);return}
+    if(mapUsesNativeTiles()){const origin=mapAitorState.nativeDesiredTimeIndex??mapAitorState.timeIndex;if(index!==origin)mapAitorState.nativePrefetchDirection=index<origin?-1:1;mapAitorState.nativeDragging=true;mapAitorState.nativeDesiredTimeIndex=index;previewMapNativeTime(index);queueMapNativeLiveFrame(16);return}
     mapAitorState.timeIndex=index;scheduleMapRender()
   });
   $('mapTimeRange').addEventListener('change',()=>{
-    if(mapUsesNativeTiles()){mapAitorState.nativeDragging=false;queueMapNativeLiveFrame(0);continueMapNativeLiveFrame(0);return}
+    if(mapUsesNativeTiles()){mapAitorState.nativeDragging=false;queueMapNativeLiveFrame(320);continueMapNativeLiveFrame(320);return}
     if(mapAitorState.layer!=='rainviewer'&&mapAitorState.layer!=='reflectivity')scheduleMapRender()
   });
   $('mapWorld').addEventListener('click',()=>setMapView('world'));
@@ -3364,7 +3453,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.60',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.63',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
