@@ -1,3 +1,14 @@
+Meteo Aitor Bermeo v10.73 · resumen móvil compacto
+Fecha: 2026-08-08
+
+En móvil, los diez datos actuales se organizan en una banda horizontal de dos
+filas y 46 px de alto por tarjeta. Se mantienen todos los valores y el usuario
+puede desplazarlos lateralmente. El aviso de viento reduce altura, espacios y
+tipografía sin ocultar su nivel, velocidad, rachas ni dirección. El diseño de
+escritorio no cambia.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.72 · visor horario fluido
 Fecha: 2026-08-08
 

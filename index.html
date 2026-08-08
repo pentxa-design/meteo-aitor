@@ -234,6 +234,19 @@
     .windSevere{background:linear-gradient(135deg,rgba(255,85,118,.24),rgba(116,32,66,.48));border-color:rgba(255,114,144,.38)}
     .windDot{width:14px;height:14px;border-radius:50%;background:#22d38a;box-shadow:0 0 18px currentColor;flex:0 0 auto}.windModerate .windDot{background:#ffd84d}.windStrong .windDot{background:#ff8a3d}.windSevere .windDot{background:#ff5576}
     .windPanel strong{display:block}.windPanel small{display:block;margin-top:3px;color:#d5e7f4}
+    @media(max-width:700px){
+      .main>.grid{display:grid;grid-template-rows:repeat(2,46px);grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(132px,38vw);gap:6px;overflow-x:auto;overflow-y:hidden;margin-top:9px;padding:1px 1px 4px;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+      .main>.grid::-webkit-scrollbar{display:none}
+      .main>.grid>.card{box-sizing:border-box;min-width:0;min-height:46px;height:46px;padding:6px 9px;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:6px;scroll-snap-align:start}
+      .main>.grid>.card::before{height:3px}
+      .main>.grid .label{max-width:54%;font-size:8px;line-height:1.08;letter-spacing:.035em}
+      .main>.grid .value{font-size:14.5px;line-height:1;margin-top:0;white-space:nowrap;text-align:right}
+      .windPanel{min-height:0;gap:8px;margin-top:7px;padding:8px 10px;border-radius:13px}
+      .windDot{width:9px;height:9px;box-shadow:0 0 11px currentColor}
+      .windPanel>div{min-width:0;line-height:1.2}
+      .windPanel strong{display:inline;font-size:13px}
+      .windPanel small{display:inline;margin:0 0 0 6px;font-size:10px;line-height:1.2}
+    }
     .hourlyScroll{display:grid;grid-auto-flow:column;grid-auto-columns:132px;gap:10px;overflow-x:auto;padding:2px 2px 10px;scroll-snap-type:x proximity;scrollbar-width:thin}
     .hourCell{scroll-snap-align:start;min-height:220px;padding:14px 11px;border-radius:18px;background:linear-gradient(155deg,rgba(19,54,94,.96),rgba(34,31,83,.94));border:1px solid rgba(255,255,255,.10);text-align:center;box-shadow:0 12px 25px rgba(0,0,0,.14)}
     .hourTime{font-weight:900}.hourDay{font-size:10px;text-transform:uppercase;color:var(--muted);margin-top:2px}.hourIcon{font-size:31px;margin:10px 0 7px}.hourTemp{font-size:25px;font-weight:900}.hourRain,.hourWind,.hourDew{font-size:11px;margin-top:7px;color:#bfe8ff}.hourStormRisk{font-size:10px;font-weight:900;color:#ffe56b;margin-top:6px}.hourGust{display:inline-block;margin-top:8px;padding:4px 7px;border-radius:999px;font-size:10px;font-weight:850;background:rgba(255,255,255,.10)}.hourOfficial{margin-top:7px;font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#9dffe5}
@@ -3543,7 +3556,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.72',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.73',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
