@@ -1,5 +1,13 @@
-Meteo Aitor Bermeo v10.68 · franjas visibles dentro de la portada
+Meteo Aitor Bermeo v10.69 · tarjetas de datos más compactas
 Fecha: 2026-08-08
+
+Las diez tarjetas de datos actuales ocupan menos altura en escritorio:
+se reducen el relleno, la separación y el tamaño tipográfico sin eliminar
+ningún dato. En móvil se conserva la disposición compacta ya existente. La
+previsión de las próximas 24 horas aparece justo después de Hoy por franjas;
+mareas, datos actuales y el resto del contenido continúan debajo.
+
+Meteo Aitor Bermeo v10.68 · franjas visibles dentro de la portada
 
 La fotografía principal muestra directamente la evolución real de hoy como
 Mañana, Tarde y Noche. Cada franja enseña únicamente los símbolos derivados

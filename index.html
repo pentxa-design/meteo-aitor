@@ -61,7 +61,7 @@
     @keyframes rainMove{from{transform:translateY(-28px)}to{transform:translateY(28px)}}@keyframes snowMove{from{transform:translateY(-20px)}to{transform:translateY(46px)}}
     .hero>*:not(.skyFx){position:relative;z-index:3}.photoSource{position:absolute!important;right:14px;bottom:11px;z-index:4!important;font-size:10px;color:rgba(255,255,255,.74);text-decoration:none;background:rgba(0,0,0,.22);padding:4px 7px;border-radius:999px;display:none}.photoSource:hover{color:white}
     .place{font-size:clamp(23px,5vw,38px);font-weight:850;text-shadow:0 2px 12px rgba(0,0,0,.42)}.country{color:rgba(255,255,255,.88);margin-top:3px;text-shadow:0 2px 10px rgba(0,0,0,.42)}.now{display:flex;justify-content:space-between;align-items:flex-end;margin-top:42px;gap:15px}.temp{font-size:clamp(62px,18vw,108px);line-height:.8;font-weight:900;letter-spacing:-6px;text-shadow:0 4px 18px rgba(0,0,0,.40)}.condition{font-size:19px;font-weight:700;margin-top:12px;text-shadow:0 2px 10px rgba(0,0,0,.50)}.bigIcon{font-size:clamp(70px,18vw,125px);filter:drop-shadow(0 10px 15px rgba(0,0,0,.28))}
-    .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:15px}.card{background:rgba(13,38,57,.92);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:17px;box-shadow:0 12px 25px rgba(0,0,0,.15)}.label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}.value{font-size:22px;font-weight:820;margin-top:7px}
+    .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:11px}.card{background:rgba(13,38,57,.92);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:11px 14px;box-shadow:0 9px 20px rgba(0,0,0,.14)}.label{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}.value{font-size:20px;line-height:1.05;font-weight:820;margin-top:4px}
     h2{margin:28px 3px 13px}.days{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}.days>.day{text-align:center;background:rgba(13,38,57,.92);border:1px solid rgba(255,255,255,.09);border-radius:19px;padding:15px 8px}.dayName{font-weight:780}.dayIcon{font-size:34px;margin:11px 0}.max{font-weight:850}.min{color:var(--muted)}.rainp{font-size:12px;color:#9bddff;margin-top:8px}
     .footer{color:var(--muted);font-size:12px;text-align:center;margin-top:25px}.homeCover{display:none!important}.fav{float:right;background:rgba(255,255,255,.12);color:white;padding:10px 13px;font-size:14px;position:relative;z-index:8;touch-action:manipulation}.fav.isSaved{background:linear-gradient(135deg,#ffd84d,#ff7d5b);border-color:rgba(255,246,179,.82);color:#17264a}.favoritesBar{display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.10)}.favoritesBar.hasFavs{display:flex}.favoritesLabel{font-size:12px;font-weight:850;color:#bfeaff;margin-right:2px}.favoriteChip{padding:8px 11px;border-radius:999px;background:rgba(63,156,219,.18);border:1px solid rgba(142,225,255,.28);color:#f2fbff;font-size:12px;line-height:1;touch-action:manipulation}.favoriteChip.active{background:linear-gradient(135deg,rgba(22,217,255,.32),rgba(99,86,255,.42));border-color:rgba(181,246,255,.70)}.saveNotice{display:none;margin:0 3px 13px;padding:10px 12px;border-radius:13px;background:rgba(25,207,145,.14);border:1px solid rgba(86,239,182,.34);color:#d7ffed;font-size:13px;font-weight:700}.saveNotice.show{display:block}.saveNotice.removed{background:rgba(255,208,77,.13);border-color:rgba(255,216,77,.38);color:#fff0bb}
     @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:720px){.days{grid-template-columns:repeat(4,1fr)}.searchRow{grid-template-columns:1fr}.searchRow button{height:50px}.results{top:134px}.hero{padding:21px}.now{align-items:center}.temp{letter-spacing:-4px}}
@@ -1958,14 +1958,16 @@ function toggleFavorite(event){
 $('favBtn').addEventListener('click',toggleFavorite);
 $('searchBtn').onclick=doSearch;$('search').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch()});document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{$('search').value=b.dataset.q;doSearch()});document.addEventListener('click',e=>{if(!e.target.closest('.searchBox'))$('results').style.display='none'});
 function prepareSingleScreen(){
-  const cover=$('bermeoCover'),main=$('main'),app=document.querySelector('.app'),search=document.querySelector('.searchBox'),source=document.querySelector('.sourcePolicy'),tides=$('tidesPanel');
+  const cover=$('bermeoCover'),main=$('main'),app=document.querySelector('.app'),search=document.querySelector('.searchBox'),source=document.querySelector('.sourcePolicy'),tides=$('tidesPanel'),dayParts=$('dayPartsPanel'),hourlyTitle=$('hourlyTitle'),hourly=$('hourly');
   if(cover){cover.hidden=true;cover.setAttribute('aria-hidden','true')}
   if(!app||!main||!search)return;
   app.insertBefore(search,main);
   app.insertBefore($('status'),main);
   app.insertBefore($('saveNotice'),main);
   if(source)app.insertBefore(source,main);
-  if(tides){const anchor=$('dayPartsPanel')||$('hero');if(anchor)anchor.insertAdjacentElement('afterend',tides)}
+  const anchor=dayParts||$('hero');
+  if(anchor&&hourlyTitle&&hourly){anchor.insertAdjacentElement('afterend',hourlyTitle);hourlyTitle.insertAdjacentElement('afterend',hourly);if(tides)hourly.insertAdjacentElement('afterend',tides)}
+  else if(tides&&anchor)anchor.insertAdjacentElement('afterend',tides)
 }
 $('tidesRetry').addEventListener('click',loadBermeoTides);
 $('tidesToggle').addEventListener('click',()=>{const panel=$('tidesPanel'),expanded=panel.classList.toggle('expanded');$('tidesToggle').setAttribute('aria-expanded',String(expanded));$('tidesToggle').textContent=expanded?'Ocultar detalle':'Ver 3 días'});
@@ -3555,7 +3557,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.68',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.69',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
