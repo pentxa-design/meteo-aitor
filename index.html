@@ -431,14 +431,27 @@
       .mapAitor{max-width:100%}
       .mapControls{grid-template-columns:minmax(0,1fr)}
       .mapRefresh{grid-column:auto;width:100%}
-      .mapToggles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:6px;padding:8px}
-      .mapToggle,.mapFullscreen{box-sizing:border-box;min-width:0;min-height:42px;white-space:normal;justify-content:center;text-align:center}
-      .mapBaseControl,.mapOpacity{grid-column:1 / -1;justify-content:space-between}
-      .mapBaseControl select{flex:1;min-width:0;max-width:none;text-align:right}
-      .mapOpacity input{flex:1;min-width:0;width:auto}
-      #mapFullscreen{grid-column:1 / -1}
-      .mapLayerRail{scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
-      .mapLayerButton{scroll-snap-align:start}
+      .mapToggles{display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,38px);grid-auto-columns:132px;overflow-x:auto;overflow-y:hidden;gap:5px;padding:6px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+      .mapToggle,.mapFullscreen{box-sizing:border-box;min-width:0;min-height:38px;padding:6px 7px;white-space:normal;justify-content:center;text-align:center}
+      .mapToggle,.mapFullscreen{scroll-snap-align:start}
+      .mapBaseControl,.mapOpacity{grid-column:auto;justify-content:space-between}
+      .mapBaseControl select{flex:1;min-width:0;max-width:72px;text-align:right;text-overflow:ellipsis}
+      .mapOpacity{gap:4px}.mapOpacity input{flex:1;min-width:42px;width:auto}.mapOpacity output{min-width:27px}
+      #mapFullscreen{grid-column:auto}
+      .mapLayerRail{top:48px;height:50px;gap:4px;padding:4px;border-radius:12px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;transition:opacity .14s ease,transform .14s ease}
+      .mapLayerButton{grid-template-columns:23px minmax(0,1fr);flex-basis:94px;width:94px;min-height:40px;padding:3px 4px;scroll-snap-align:start}
+      .mapLayerIcon{width:23px;height:23px;font-size:11px}
+      .mapAitor .leaflet-control-zoom{margin-top:105px}
+      .mapModelDock{bottom:61px;gap:2px;padding:3px;transition:opacity .14s ease,transform .14s ease}
+      .mapModelButton{min-height:26px;padding:0 7px}
+      .mapTimeline{grid-template-columns:auto auto auto auto 1fr;gap:4px;padding:4px 5px;border-radius:12px;transition:opacity .14s ease,transform .14s ease}
+      .mapRoundBtn{width:30px;height:30px;font-size:12px}
+      .mapSpeedButton{min-width:37px;height:28px;padding:0 6px}
+      .mapTimelineLabel{font-size:9px;line-height:1.05}
+      .mapTopRibbon{transition:opacity .14s ease,transform .14s ease}
+      .mapViewport.isMapMoving .mapLayerRail,.mapViewport.isMapMoving .mapTopRibbon{opacity:.14;transform:translateY(-6px);pointer-events:none}
+      .mapViewport.isMapMoving .mapTimeline{opacity:.14;transform:translateY(6px);pointer-events:none}
+      .mapViewport.isMapMoving .mapModelDock{opacity:.14;transform:translate(-50%,6px);pointer-events:none}
     }
     .mapAccumulationPoint span{display:inline-block;min-width:30px;padding:1px 5px;border-radius:999px;background:var(--map-value-color,#20d65a);border:1px solid rgba(255,255,255,.88);box-shadow:0 2px 7px rgba(2,16,27,.40)}
   </style>
@@ -3505,6 +3518,9 @@ function initMapAitor(){
   const lightLabels=()=>L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,pane:'mapLabels',opacity:.96,className:'mapBoundaryLabels',attribution:cartoAttribution});
   const darkLabels=()=>L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,pane:'mapLabels',opacity:.96,className:'mapBoundaryLabelsDark',attribution:cartoAttribution});
   mapAitorState.map=map;mapAitorState.baseLayers={topographic,dark,standard};mapAitorState.baseLabelLayers={topographic:lightLabels(),standard:lightLabels(),dark:darkLabels()};mapAitorState.baseReliefLayers={topographic:relief(),dark:relief(),standard:relief()};loadMapLandMask();syncMapSelection(mapAitorState.layer,mapAitorState.model);setMapBaseStyle('standard');updateMapLightTheme();mapAitorState.grid=L.layerGroup().addTo(map);mapAitorState.isobars=L.layerGroup().addTo(map);mapAitorState.labels=L.layerGroup().addTo(map);mapAitorState.values=L.layerGroup().addTo(map);mapAitorState.windArrows=L.layerGroup().addTo(map);
+  const mapViewport=$('mapViewport');let mapControlsRestoreTimer=null;
+  map.on('movestart zoomstart dragstart',()=>{clearTimeout(mapControlsRestoreTimer);mapViewport?.classList.add('isMapMoving')});
+  map.on('moveend zoomend dragend',()=>{clearTimeout(mapControlsRestoreTimer);mapControlsRestoreTimer=setTimeout(()=>mapViewport?.classList.remove('isMapMoving'),140)});
   map.on('resize moveend zoomend',event=>{resizeMapWind();const nativeTime=String(mapAitorState.nativeSource?.timeline?.[mapAitorState.timeIndex]?.time||'').replace(/Z$/,'');updateMapLightTheme(nativeTime||mapAitorState.data?.times?.[mapAitorState.timeIndex]);if(mapUsesNativeTiles()){if((event.type==='moveend'||event.type==='zoomend')&&!mapAitorState.nativeDragging){clearMapNativePreview(true);clearMapNativePreviewCache();clearMapNativePrefetch(true);clearTimeout(mapAitorState.viewportTimer);mapAitorState.viewportTimer=setTimeout(()=>prefetchMapNativeWindow(mapAitorState.timeIndex,mapAitorState.nativePrefetchDirection),280)}updateMapNativeReadBounds();renderMapNativeAnnotations();queueMapNativeAnnotations(false,650);if(['wind','gust'].includes(mapAitorState.layer))queueMapNativeWindSamples(720)}else if(mapAitorState.data&&!mapAitorState.loading&&mapAitorState.layer!=='reflectivity'){refreshMapAnnotations();queueMapViewportRefresh()}});
   map.on('click',event=>setMapPicker(event.latlng));
   $('mapLayer').addEventListener('change',event=>setMapLayer(event.target.value));
@@ -3556,7 +3572,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.74',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.75',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });

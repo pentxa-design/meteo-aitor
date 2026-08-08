@@ -1,3 +1,17 @@
+Meteo Aitor Bermeo v10.75 · controles del mapa compactos en móvil
+Fecha: 2026-08-08
+
+Los controles flotantes del visor ocupan menos mapa en teléfonos: selector de
+capas, modelos y línea temporal son más bajos, manteniendo las 17 capas, los
+cuatro modelos y todos los botones. Las opciones se distribuyen en dos filas
+deslizables y el bloque previo al mapa también es mucho más corto.
+
+Al desplazar o ampliar el mapa, los controles flotantes se atenúan y se apartan
+ligeramente; reaparecen 140 ms después de terminar el gesto. Así no tapan la
+zona meteorológica que se está consultando y siguen disponibles al detenerse.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.74 · menú móvil no flotante
 Fecha: 2026-08-08
 
