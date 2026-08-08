@@ -552,6 +552,10 @@
     <div id="windPanel" class="windPanel windLight" aria-live="polite"><span class="windDot" aria-hidden="true"></span><div><strong id="windRisk">Viento flojo</strong><small id="windRiskDetail">Calculando el nivel de rachas…</small></div></div>
     <h2 id="hourlyTitle">Próximas 24 horas</h2>
     <div id="hourly" class="hourlyScroll" aria-label="Previsión meteorológica de las próximas 24 horas"><div class="weatherEmpty">Consultando la previsión horaria…</div></div>
+    <section id="sevenDayPanel" aria-labelledby="sevenDayTitle">
+      <h2 id="sevenDayTitle">Próximos 7 días</h2>
+      <div id="days" class="days"><div class="weatherEmpty">Consultando la previsión oficial diaria…</div></div>
+    </section>
 
     <section id="mapAitorStudio" class="mapAitor" aria-labelledby="mapAitorTitle">
       <div class="mapAitorHead">
@@ -700,24 +704,6 @@
       </div>
     </section>
 
-    <h2>Próximos 7 días</h2><div id="days" class="days"><div class="weatherEmpty">Consultando la previsión oficial diaria…</div></div>
-    <div class="modelsWrap">
-      <h2>Modelos y herramientas</h2>
-      <div class="sectionSub">Sección profesional de contraste rápido para que no falten modelos, radar y fuentes operativas.</div>
-      <div class="modelsGrid">
-        <div class="modelCard"><div class="modelTop"><div class="modelName">Europeo · ECMWF</div><div class="modelTag">Modelo base</div></div><div class="modelDesc">Referencia general para evolución sinóptica, temperatura, lluvia y viento.</div><div class="modelActions"><a id="linkECMWF" class="miniLink" href="https://www.windy.com" target="_blank" rel="noopener">Ver ECMWF</a><a id="linkCompareModels1" class="miniLink" href="https://www.windy.com/multimodel/43.421/-2.722" target="_blank" rel="noopener">Comparar</a></div></div>
-        <div class="modelCard"><div class="modelTop"><div class="modelName">Francés · AROME HD</div><div class="modelTag">1,5 km · 48 h</div></div><div class="modelDesc">Alta resolución a corto plazo para Bermeo y el entorno del País Vasco: lluvia, nubes bajas, temperatura, humedad, viento, rachas y CAPE.</div><div class="modelActions"><a class="miniLink" href="https://open-meteo.com/en/docs/meteofrance-api" target="_blank" rel="noopener">Ficha oficial</a><a id="linkCompareModelsArome" class="miniLink" href="https://www.windy.com/multimodel/43.421/-2.722" target="_blank" rel="noopener">Comparar</a></div></div>
-        <div class="modelCard"><div class="modelTop"><div class="modelName">Americano · GFS</div><div class="modelTag">Global</div></div><div class="modelDesc">Útil para contraste amplio, cambios de masas de aire y seguimiento a más días.</div><div class="modelActions"><a id="linkGFS" class="miniLink" href="https://www.windy.com" target="_blank" rel="noopener">Ver GFS</a><a id="linkCompareModels2" class="miniLink" href="https://www.windy.com/multimodel/43.421/-2.722" target="_blank" rel="noopener">Comparar</a></div></div>
-        <div class="modelCard"><div class="modelTop"><div class="modelName">Europeo · ICON</div><div class="modelTag">Detalle</div></div><div class="modelDesc">Muy útil para Europa en nubosidad, viento, precipitación y detalle a corto plazo.</div><div class="modelActions"><a id="linkICON" class="miniLink" href="https://www.windy.com" target="_blank" rel="noopener">Ver ICON</a><a id="linkCompareModels3" class="miniLink" href="https://www.windy.com/multimodel/43.421/-2.722" target="_blank" rel="noopener">Comparar</a></div></div>
-        <div class="modelCard"><div class="modelTop"><div class="modelName">Radar y avisos</div><div class="modelTag">Operativo</div></div><div class="modelDesc">Radar y mapas Meteored junto a los avisos oficiales de AEMET y Euskalmet.</div><div class="modelActions"><a id="linkRadar" class="miniLink" href="https://www.tiempo.com/radar-espana-reflect.html" target="_blank" rel="noopener">Meteored</a><a id="linkAemet" class="miniLink" href="https://www.aemet.es" target="_blank" rel="noopener">AEMET</a><a id="linkEuskalmet" class="miniLink" href="https://www.euskalmet.euskadi.eus" target="_blank" rel="noopener">Euskalmet</a></div></div>
-      </div>
-      <div class="sourceGrid">
-        <a id="linkWindy" class="sourcePill" href="https://www.windy.com" target="_blank" rel="noopener">Windy<small>capas y modelos</small></a>
-        <a id="linkMeteored" class="sourcePill" href="https://www.tiempo.com/mapas-meteorologicos/" target="_blank" rel="noopener">Meteored<small>radar, mapas y ECMWF</small></a>
-        <a id="linkAemet2" class="sourcePill" href="https://www.aemet.es" target="_blank" rel="noopener">AEMET<small>avisos oficiales</small></a>
-        <a id="linkEuskalmet2" class="sourcePill" href="https://www.euskalmet.euskadi.eus" target="_blank" rel="noopener">Euskalmet<small>Euskadi</small></a>
-      </div>
-    </div>
   </section>
   <footer class="footer">Tiempo actual y horas de Bermeo: modelo europeo ECMWF IFS mediante Open‑Meteo. AEMET es la referencia principal de avisos oficiales y Euskalmet el contraste autonómico; las mareas conservan sus fuentes marítimas.</footer>
 </main>
@@ -1958,7 +1944,7 @@ function toggleFavorite(event){
 $('favBtn').addEventListener('click',toggleFavorite);
 $('searchBtn').onclick=doSearch;$('search').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch()});document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{$('search').value=b.dataset.q;doSearch()});document.addEventListener('click',e=>{if(!e.target.closest('.searchBox'))$('results').style.display='none'});
 function prepareSingleScreen(){
-  const cover=$('bermeoCover'),main=$('main'),app=document.querySelector('.app'),search=document.querySelector('.searchBox'),source=document.querySelector('.sourcePolicy'),tides=$('tidesPanel'),dayParts=$('dayPartsPanel'),hourlyTitle=$('hourlyTitle'),hourly=$('hourly');
+  const cover=$('bermeoCover'),main=$('main'),app=document.querySelector('.app'),search=document.querySelector('.searchBox'),source=document.querySelector('.sourcePolicy'),tides=$('tidesPanel'),dayParts=$('dayPartsPanel'),hourlyTitle=$('hourlyTitle'),hourly=$('hourly'),sevenDays=$('sevenDayPanel');
   if(cover){cover.hidden=true;cover.setAttribute('aria-hidden','true')}
   if(!app||!main||!search)return;
   app.insertBefore(search,main);
@@ -1966,7 +1952,7 @@ function prepareSingleScreen(){
   app.insertBefore($('saveNotice'),main);
   if(source)app.insertBefore(source,main);
   const anchor=dayParts||$('hero');
-  if(anchor&&hourlyTitle&&hourly){anchor.insertAdjacentElement('afterend',hourlyTitle);hourlyTitle.insertAdjacentElement('afterend',hourly);if(tides)hourly.insertAdjacentElement('afterend',tides)}
+  if(anchor&&hourlyTitle&&hourly){anchor.insertAdjacentElement('afterend',hourlyTitle);hourlyTitle.insertAdjacentElement('afterend',hourly);if(sevenDays){hourly.insertAdjacentElement('afterend',sevenDays);if(tides)sevenDays.insertAdjacentElement('afterend',tides)}else if(tides)hourly.insertAdjacentElement('afterend',tides)}
   else if(tides&&anchor)anchor.insertAdjacentElement('afterend',tides)
 }
 $('tidesRetry').addEventListener('click',loadBermeoTides);
@@ -3557,7 +3543,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.70',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.71',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
