@@ -91,6 +91,8 @@
 
     .heroForecast{grid-template-columns:repeat(4,minmax(78px,104px));max-width:438px}
     @media(max-width:430px){.heroForecast{grid-template-columns:repeat(2,minmax(0,1fr));max-width:none}}
+    .heroPhases{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;max-width:438px;margin-top:13px}.heroPhase{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px;min-height:43px;padding:6px 9px;border-radius:14px;background:rgba(5,25,52,.40);border:1px solid rgba(214,244,255,.22);backdrop-filter:blur(10px);text-shadow:0 1px 4px rgba(0,0,0,.42)}.heroPhaseName{font-size:9px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#e7f7ff;white-space:nowrap}.heroPhaseWindow{display:block;margin-top:2px;font-size:7px;font-weight:750;letter-spacing:0;color:#b8d7e8}.heroPhaseIcon{font-size:20px;line-height:1;white-space:nowrap}.heroPhaseIcon .weatherCombo{font-size:16px}.heroPhaseEmpty{opacity:.68}
+    @media(max-width:430px){.heroPhases{gap:5px;max-width:none;margin-top:10px}.heroPhase{min-height:39px;padding:5px 6px;border-radius:12px;gap:3px}.heroPhaseName{font-size:7.5px}.heroPhaseWindow{font-size:6px}.heroPhaseIcon{font-size:17px}.heroPhaseIcon .weatherCombo{font-size:13px}}
     .dayPartsPanel{margin:15px 0 0;padding:15px;border-radius:22px;background:linear-gradient(145deg,rgba(11,51,88,.96),rgba(31,30,83,.94));border:1px solid rgba(120,219,255,.24);box-shadow:0 16px 34px rgba(0,20,65,.22)}
     .dayPartsHead{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:10px}.dayPartsTitle{font-size:17px;font-weight:900}.dayPartsSource{font-size:9px;color:#bfe4f6;text-align:right}.dayPartsGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.dayPartCard{min-width:0;padding:11px;border-radius:16px;background:linear-gradient(155deg,rgba(19,65,103,.92),rgba(34,35,91,.90));border:1px solid rgba(160,226,255,.18)}.dayPartName{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#aeeeff}.dayPartWindow{font-size:8px;color:#9ebbcf;margin-top:2px}.dayPartIcon{font-size:28px;line-height:1.1;margin:8px 0 6px}.dayPartIcon .weatherCombo{font-size:24px}.dayPartState{font-size:12px;font-weight:850;line-height:1.2;color:#fff}.dayPartTemp{font-size:11px;font-weight:800;color:#d7f2ff;margin-top:6px}.dayPartDetail{font-size:9px;color:#bfe8ff;margin-top:5px;line-height:1.25}.dayPartAlert{font-size:9px;font-weight:900;color:#ffe56b;margin-top:5px}.dayPartEmpty{color:#b8cedd}
     @media(max-width:430px){.dayPartsPanel{padding:11px;border-radius:18px}.dayPartsHead{align-items:flex-start}.dayPartsTitle{font-size:15px}.dayPartsSource{max-width:48%;font-size:7.5px}.dayPartsGrid{gap:5px}.dayPartCard{padding:8px 6px;border-radius:13px}.dayPartName{font-size:8.5px}.dayPartWindow{font-size:7px}.dayPartIcon{font-size:22px;margin:6px 0 4px}.dayPartIcon .weatherCombo{font-size:18px}.dayPartState{font-size:9.5px}.dayPartTemp{font-size:9px;margin-top:4px}.dayPartDetail,.dayPartAlert{font-size:7.5px;margin-top:4px}}
@@ -526,6 +528,7 @@
       <button id="favBtn" class="fav" type="button" aria-pressed="false">☆ Guardar</button>
       <div id="place" class="place">Bermeo</div><div id="country" class="country">Bizkaia · España</div>
       <div class="now"><div><div id="temp" class="temp">—°</div><div id="condition" class="condition">Consultando Open‑Meteo · ECMWF IFS…</div></div><div id="bigIcon" class="bigIcon">🌦️</div></div>
+      <div id="heroPhases" class="heroPhases" aria-label="Evolución real de hoy por franjas"><div class="heroPhase heroPhaseEmpty"><div><div class="heroPhaseName">Mañana</div><span class="heroPhaseWindow">06–13 h</span></div><div class="heroPhaseIcon">—</div></div><div class="heroPhase heroPhaseEmpty"><div><div class="heroPhaseName">Tarde</div><span class="heroPhaseWindow">14–20 h</span></div><div class="heroPhaseIcon">—</div></div><div class="heroPhase heroPhaseEmpty"><div><div class="heroPhaseName">Noche</div><span class="heroPhaseWindow">21–23 h</span></div><div class="heroPhaseIcon">—</div></div></div>
       <div id="heroForecast" class="heroForecast" aria-label="Previsión de hoy y los tres días siguientes"><div class="heroForecastDay"><div class="heroForecastIcon">🌦️</div><div class="heroForecastName">Hoy</div><div class="heroForecastTemp">—° <span>—°</span></div></div><div class="heroForecastDay"><div class="heroForecastIcon">🌦️</div><div class="heroForecastName">Mañana</div><div class="heroForecastTemp">—° <span>—°</span></div></div><div class="heroForecastDay"><div class="heroForecastIcon">🌦️</div><div class="heroForecastName">Próximo</div><div class="heroForecastTemp">—° <span>—°</span></div></div><div class="heroForecastDay"><div class="heroForecastIcon">🌦️</div><div class="heroForecastName">Próximo</div><div class="heroForecastTemp">—° <span>—°</span></div></div></div>
       <div class="heroMeta"><div class="heroBadge">📍 <strong id="heroSearchName">Ubicación</strong></div><div class="heroBadge">🕒 <strong id="heroTime">--:--:--</strong></div><div class="heroBadge">🌍 <strong id="heroZone">Zona local</strong></div></div>
       <a id="photoSource" class="photoSource" href="#" target="_blank" rel="noopener">Portada dinámica</a>
@@ -1629,17 +1632,37 @@ function exactPeriodState(entries){
   if(second!==sequence[0])sequence.push(second);
   return sequence.join(' → ');
 }
+const WEATHER_DAY_PARTS=[{name:'Mañana',window:'06–13 h',start:6,end:13,day:true},{name:'Tarde',window:'14–20 h',start:14,end:20,day:true},{name:'Noche',window:'21–23 h',start:21,end:23,day:false}];
+function weatherDayPartEntries(d,date,period){
+  const h=d.hourly||{},times=h.time||[];
+  const indices=times.reduce((result,time,index)=>{const value=String(time),hour=Number(value.slice(11,13));if(value.slice(0,10)===date&&hour>=period.start&&hour<=period.end)result.push(index);return result},[]);
+  return indices.map(index=>({index,code:finiteWeatherNumber(h.weather_code?.[index]),temperature:finiteWeatherNumber(h.temperature_2m?.[index]),precipitation:finiteWeatherNumber(h.precipitation?.[index])??0,probability:finiteWeatherNumber(h.precipitation_probability?.[index]),gust:finiteWeatherNumber(h.wind_gusts_10m?.[index]),convectiveRisk:hourlyConvectiveRisk(d,index).active})).filter(entry=>entry.code!==null);
+}
+function weatherDayPartSymbols(entries,period){
+  if(!entries.length)return [];
+  const notable=entries.reduce((best,entry)=>periodWeatherRank(entry)>periodWeatherRank(best)?entry:best,entries[0]),convective=entries.some(entry=>entry.convectiveRisk),maxGust=Math.max(...entries.map(entry=>entry.gust).filter(value=>value!==null),-Infinity),symbols=weatherSymbolsForCode(notable.code,period.day,notable.precipitation,convective);
+  if(maxGust>=30)symbols.push('💨');
+  return symbols;
+}
+function renderHeroPhases(d,loc={}){
+  const container=$('heroPhases');if(!container)return;
+  const timezone=d.timezone||timezoneForLocation(loc),today=localCurrentTime(timezone).slice(0,10);
+  container.innerHTML=WEATHER_DAY_PARTS.map(period=>{
+    const entries=weatherDayPartEntries(d,today,period);
+    if(!entries.length)return `<div class="heroPhase heroPhaseEmpty"><div><div class="heroPhaseName">${period.name}</div><span class="heroPhaseWindow">${period.window}</span></div><div class="heroPhaseIcon">—</div></div>`;
+    const symbols=weatherDayPartSymbols(entries,period),description=exactPeriodState(entries);
+    return `<div class="heroPhase" title="${esc(description)}" aria-label="${period.name}: ${esc(description)}"><div><div class="heroPhaseName">${period.name}</div><span class="heroPhaseWindow">${period.window}</span></div><div class="heroPhaseIcon">${iconHTML(symbols)}</div></div>`;
+  }).join('');
+}
 function renderDayParts(d,loc={}){
   const grid=$('dayPartsGrid'),source=$('dayPartsSource');if(!grid||!source)return;
-  const timezone=d.timezone||timezoneForLocation(loc),today=localCurrentTime(timezone).slice(0,10),h=d.hourly||{},times=h.time||[];
-  const periods=[{name:'Mañana',window:'06–13 h',start:6,end:13,day:true},{name:'Tarde',window:'14–20 h',start:14,end:20,day:true},{name:'Noche',window:'21–23 h',start:21,end:23,day:false}];
+  const timezone=d.timezone||timezoneForLocation(loc),today=localCurrentTime(timezone).slice(0,10);
   source.textContent=d._dataPolicy==='euskalmet-only'?'Euskalmet · horas publicadas sin interpolar':isBermeoLocation(loc)?'ECMWF IFS · Open‑Meteo · horas sin interpolar':'Open‑Meteo · horas sin interpolar';
-  grid.innerHTML=periods.map(period=>{
-    const indices=times.reduce((result,time,index)=>{const value=String(time),hour=Number(value.slice(11,13));if(value.slice(0,10)===today&&hour>=period.start&&hour<=period.end)result.push(index);return result},[]);
-    const entries=indices.map(index=>({index,code:finiteWeatherNumber(h.weather_code?.[index]),temperature:finiteWeatherNumber(h.temperature_2m?.[index]),precipitation:finiteWeatherNumber(h.precipitation?.[index])??0,probability:finiteWeatherNumber(h.precipitation_probability?.[index]),gust:finiteWeatherNumber(h.wind_gusts_10m?.[index]),convectiveRisk:hourlyConvectiveRisk(d,index).active})).filter(entry=>entry.code!==null);
+  grid.innerHTML=WEATHER_DAY_PARTS.map(period=>{
+    const entries=weatherDayPartEntries(d,today,period);
     if(!entries.length)return `<div class="dayPartCard dayPartEmpty"><div class="dayPartName">${period.name}</div><div class="dayPartWindow">${period.window}</div><div class="dayPartState">Sin franja publicada</div></div>`;
-    const notable=entries.reduce((best,entry)=>periodWeatherRank(entry)>periodWeatherRank(best)?entry:best,entries[0]),temperatures=entries.map(entry=>entry.temperature).filter(value=>value!==null),minimum=Math.min(...temperatures),maximum=Math.max(...temperatures),gusts=entries.map(entry=>entry.gust).filter(value=>value!==null),maxGust=Math.max(...gusts,-Infinity),windRelevant=maxGust>=30,convective=entries.some(entry=>entry.convectiveRisk),confirmedStorm=entries.some(entry=>[95,96,99].includes(entry.code)),precipitationTotal=entries.reduce((total,entry)=>total+entry.precipitation,0),probabilities=entries.map(entry=>entry.probability).filter(value=>value!==null),maxProbability=Math.max(...probabilities,-Infinity);
-    const symbols=weatherSymbolsForCode(notable.code,period.day,notable.precipitation,convective);if(windRelevant)symbols.push('💨');
+    const temperatures=entries.map(entry=>entry.temperature).filter(value=>value!==null),minimum=Math.min(...temperatures),maximum=Math.max(...temperatures),gusts=entries.map(entry=>entry.gust).filter(value=>value!==null),maxGust=Math.max(...gusts,-Infinity),windRelevant=maxGust>=30,confirmedStorm=entries.some(entry=>[95,96,99].includes(entry.code)),convective=entries.some(entry=>entry.convectiveRisk),precipitationTotal=entries.reduce((total,entry)=>total+entry.precipitation,0),probabilities=entries.map(entry=>entry.probability).filter(value=>value!==null),maxProbability=Math.max(...probabilities,-Infinity);
+    const symbols=weatherDayPartSymbols(entries,period);
     const temperatureText=temperatures.length?(minimum===maximum?`${Math.round(minimum)} °C`:`${Math.round(minimum)}–${Math.round(maximum)} °C`):'Temperatura no publicada';
     const rainText=precipitationTotal>0?`💧 ${precipitationTotal.toLocaleString('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1})} mm${Number.isFinite(maxProbability)?` · hasta ${Math.round(maxProbability)}%`:''}`:'';
     const windText=windRelevant?`💨 Racha ${Math.round(maxGust)} km/h`:'';
@@ -1856,6 +1879,7 @@ function render(loc,d){
   $('temp').textContent=weatherRound(c.temperature_2m,'°');
   $('condition').textContent=(isDay?'':'Noche · ')+(c._official_description?shortOfficialText(c._official_description,150):wm[0]);
   $('bigIcon').innerHTML=iconHTML(currentSymbols,true);
+  renderHeroPhases(d,loc);
   renderHeroForecast(d,loc);
   renderDayParts(d,loc);
   $('feels').textContent=weatherRound(c.apparent_temperature,' °C');
@@ -3531,7 +3555,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.67',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.68',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });

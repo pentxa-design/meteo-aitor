@@ -1,3 +1,14 @@
+Meteo Aitor Bermeo v10.68 · franjas visibles dentro de la portada
+Fecha: 2026-08-08
+
+La fotografía principal muestra directamente la evolución real de hoy como
+Mañana, Tarde y Noche. Cada franja enseña únicamente los símbolos derivados
+de sus horas publicadas: sol, nubes, precipitación, rayos y viento pueden
+combinarse cuando los datos ECMWF/Open-Meteo así lo indican. El icono grande
+sigue reservado al estado actual para no confundir observación y previsión.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.67 · resumen real por franjas
 Fecha: 2026-08-08
 
