@@ -523,7 +523,7 @@
       <button id="favBtn" class="fav" type="button" aria-pressed="false">☆ Guardar</button>
       <div id="place" class="place">Bermeo</div><div id="country" class="country">Bizkaia · España</div>
       <div class="now"><div><div id="temp" class="temp">—°</div><div id="condition" class="condition">Consultando Open‑Meteo · ECMWF IFS…</div></div><div id="bigIcon" class="bigIcon">🌦️</div></div>
-      <div id="heroForecast" class="heroForecast" aria-label="Previsión de los próximos cuatro días"><div class="heroForecastDay"><div class="heroForecastIcon">🌦️</div><div class="heroForecastName">Mañana</div><div class="heroForecastTemp">—° <span>—°</span></div></div><div class="heroForecastDay"><div class="heroForecastIcon">🌦️</div><div class="heroForecastName">Próximo</div><div class="heroForecastTemp">—° <span>—°</span></div></div><div class="heroForecastDay"><div class="heroForecastIcon">🌦️</div><div class="heroForecastName">Próximo</div><div class="heroForecastTemp">—° <span>—°</span></div></div><div class="heroForecastDay"><div class="heroForecastIcon">🌦️</div><div class="heroForecastName">Próximo</div><div class="heroForecastTemp">—° <span>—°</span></div></div></div>
+      <div id="heroForecast" class="heroForecast" aria-label="Previsión de hoy y los tres días siguientes"><div class="heroForecastDay"><div class="heroForecastIcon">🌦️</div><div class="heroForecastName">Hoy</div><div class="heroForecastTemp">—° <span>—°</span></div></div><div class="heroForecastDay"><div class="heroForecastIcon">🌦️</div><div class="heroForecastName">Mañana</div><div class="heroForecastTemp">—° <span>—°</span></div></div><div class="heroForecastDay"><div class="heroForecastIcon">🌦️</div><div class="heroForecastName">Próximo</div><div class="heroForecastTemp">—° <span>—°</span></div></div><div class="heroForecastDay"><div class="heroForecastIcon">🌦️</div><div class="heroForecastName">Próximo</div><div class="heroForecastTemp">—° <span>—°</span></div></div></div>
       <div class="heroMeta"><div class="heroBadge">📍 <strong id="heroSearchName">Ubicación</strong></div><div class="heroBadge">🕒 <strong id="heroTime">--:--:--</strong></div><div class="heroBadge">🌍 <strong id="heroZone">Zona local</strong></div></div>
       <a id="photoSource" class="photoSource" href="#" target="_blank" rel="noopener">Portada dinámica</a>
     </article>
@@ -1600,11 +1600,11 @@ function dailyWeatherSymbols(d,dateStr,representativeCode=null){
 }
 function renderHeroForecast(d,loc){
   const container=$('heroForecast');if(!container)return;
-  const timezone=d.timezone||timezoneForLocation(loc),today=localCurrentTime(timezone).slice(0,10),times=Array.isArray(d.daily?.time)?d.daily.time:[],upcoming=times.map((time,index)=>({time:String(time),index})).filter(item=>item.time>today).slice(0,4);
+  const timezone=d.timezone||timezoneForLocation(loc),today=localCurrentTime(timezone).slice(0,10),times=Array.isArray(d.daily?.time)?d.daily.time:[],upcoming=times.map((time,index)=>({time:String(time),index})).filter(item=>item.time>=today).slice(0,4);
   if(!upcoming.length){container.hidden=true;return}
   const dayNames=['dom','lun','mar','mié','jue','vie','sáb'];
-  container.hidden=false;container.innerHTML=upcoming.map((item,position)=>{
-    const date=new Date(item.time+'T12:00:00'),dailyCode=finiteWeatherNumber(d.daily?.weather_code?.[item.index]),representativeCode=representativeDailyCode(d,item.time,dailyCode),symbols=dailyWeatherSymbols(d,item.time,representativeCode),name=position===0?'Mañana':dayNames[date.getDay()],maximum=weatherRound(d.daily?.temperature_2m_max?.[item.index],'°'),minimum=weatherRound(d.daily?.temperature_2m_min?.[item.index],'°');
+  container.hidden=false;container.innerHTML=upcoming.map(item=>{
+    const date=new Date(item.time+'T12:00:00'),dailyCode=finiteWeatherNumber(d.daily?.weather_code?.[item.index]),representativeCode=representativeDailyCode(d,item.time,dailyCode),symbols=dailyWeatherSymbols(d,item.time,representativeCode),name=item.time===today?'Hoy':item.time===times[times.indexOf(today)+1]?'Mañana':dayNames[date.getDay()],maximum=weatherRound(d.daily?.temperature_2m_max?.[item.index],'°'),minimum=weatherRound(d.daily?.temperature_2m_min?.[item.index],'°');
     return `<div class="heroForecastDay"><div class="heroForecastIcon">${iconHTML(symbols)}</div><div class="heroForecastName">${name}</div><div class="heroForecastTemp">${maximum} <span>${minimum}</span></div></div>`
   }).join('');
 }
@@ -3480,7 +3480,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.65',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.66',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });

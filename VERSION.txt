@@ -1,3 +1,13 @@
+Meteo Aitor Bermeo v10.66 · hoy visible en la portada
+Fecha: 2026-08-08
+
+La tarjeta principal incorpora «Hoy» en su resumen de cuatro días. De esta
+forma, la evolución horaria real del día —por ejemplo sol → tormenta— también
+queda visible en la portada, manteniendo el símbolo grande reservado para el
+tiempo observado en ese momento.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.65 · riesgo convectivo en los símbolos
 Fecha: 2026-08-08
 
