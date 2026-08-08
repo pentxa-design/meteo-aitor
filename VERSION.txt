@@ -1,3 +1,13 @@
+Meteo Aitor Bermeo v10.74 · menú móvil no flotante
+Fecha: 2026-08-08
+
+En móvil, el menú de accesos «Ahora», «Mareas», «24 horas», «Radar y mapas»,
+«Avisos AEMET» y «Actualizar tiempo» deja de quedar fijado al desplazar la
+página. Se mueve con el contenido y ya no tapa la previsión horaria, diaria ni
+las mareas. En escritorio conserva el comportamiento fijo anterior.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.73 · resumen móvil compacto
 Fecha: 2026-08-08
 

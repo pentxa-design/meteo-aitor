@@ -216,7 +216,7 @@
     .sourcePolicy strong{display:block;font-size:15px}.sourcePolicy small{display:block;color:#c7def0;margin-top:4px;line-height:1.35}.sourceActions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}.sourceBadge{padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.12);font-size:11px;font-weight:850;white-space:nowrap}.weatherRetry{min-height:34px;padding:7px 11px;border-radius:11px;font-size:11px;white-space:nowrap}
     .installBtn{display:none;margin-left:auto;min-height:44px;padding:10px 15px;color:white;background:linear-gradient(135deg,#16d8e8,#5776ff 55%,#a355ff)}
     .offlineNote{display:none;margin:12px 0;padding:12px 14px;border-radius:14px;background:rgba(255,174,66,.14);border:1px solid rgba(255,201,112,.28);color:#ffe3b3;font-size:13px}
-    @media(max-width:700px){.sectionNav{top:calc(6px + env(safe-area-inset-top,0px));margin-bottom:13px;border-radius:15px}.navLink{min-height:40px;padding:8px 10px;font-size:11px}.navRefresh{order:-1;min-height:44px;margin-left:0;padding-inline:14px;position:sticky;left:0;z-index:2}.coverDays{grid-template-columns:repeat(7,82px)}.sourcePolicy{grid-template-columns:1fr}.sourceActions{justify-content:flex-start}.sourceBadge{justify-self:start}.top{align-items:flex-start}.installBtn{margin-left:0}}
+    @media(max-width:700px){.sectionNav{position:static;top:auto;margin-bottom:13px;border-radius:15px}.navLink{min-height:40px;padding:8px 10px;font-size:11px}.navRefresh{order:-1;min-height:44px;margin-left:0;padding-inline:14px;position:sticky;left:0;z-index:2}.coverDays{grid-template-columns:repeat(7,82px)}.sourcePolicy{grid-template-columns:1fr}.sourceActions{justify-content:flex-start}.sourceBadge{justify-self:start}.top{align-items:flex-start}.installBtn{margin-left:0}}
 
 
     .quickModels{margin-top:16px;padding:14px;border-radius:18px;background:rgba(4,23,53,.34);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(10px)}
@@ -3556,7 +3556,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.73',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.74',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
