@@ -1,3 +1,17 @@
+Meteo Aitor Bermeo v10.65 · riesgo convectivo en los símbolos
+Fecha: 2026-08-08
+
+La previsión de Bermeo incorpora los campos horarios CAPE y chubascos del
+ECMWF. Cuando coinciden precipitación convectiva, probabilidad suficiente e
+inestabilidad, las tarjetas muestran agua y rayo con la indicación «Riesgo
+convectivo». Los códigos WMO 95, 96 y 99 continúan reservados para tormenta
+publicada explícitamente por la fuente.
+
+Los símbolos de portada y de siete días reflejan también la evolución real
+mañana/tarde de esos campos, sin sustituir ni alterar las cantidades de lluvia.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.49 · controles cómodos en móvil
 Fecha: 2026-08-06
 
