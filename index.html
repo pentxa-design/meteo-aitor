@@ -91,6 +91,9 @@
 
     .heroForecast{grid-template-columns:repeat(4,minmax(78px,104px));max-width:438px}
     @media(max-width:430px){.heroForecast{grid-template-columns:repeat(2,minmax(0,1fr));max-width:none}}
+    .dayPartsPanel{margin:15px 0 0;padding:15px;border-radius:22px;background:linear-gradient(145deg,rgba(11,51,88,.96),rgba(31,30,83,.94));border:1px solid rgba(120,219,255,.24);box-shadow:0 16px 34px rgba(0,20,65,.22)}
+    .dayPartsHead{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:10px}.dayPartsTitle{font-size:17px;font-weight:900}.dayPartsSource{font-size:9px;color:#bfe4f6;text-align:right}.dayPartsGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.dayPartCard{min-width:0;padding:11px;border-radius:16px;background:linear-gradient(155deg,rgba(19,65,103,.92),rgba(34,35,91,.90));border:1px solid rgba(160,226,255,.18)}.dayPartName{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#aeeeff}.dayPartWindow{font-size:8px;color:#9ebbcf;margin-top:2px}.dayPartIcon{font-size:28px;line-height:1.1;margin:8px 0 6px}.dayPartIcon .weatherCombo{font-size:24px}.dayPartState{font-size:12px;font-weight:850;line-height:1.2;color:#fff}.dayPartTemp{font-size:11px;font-weight:800;color:#d7f2ff;margin-top:6px}.dayPartDetail{font-size:9px;color:#bfe8ff;margin-top:5px;line-height:1.25}.dayPartAlert{font-size:9px;font-weight:900;color:#ffe56b;margin-top:5px}.dayPartEmpty{color:#b8cedd}
+    @media(max-width:430px){.dayPartsPanel{padding:11px;border-radius:18px}.dayPartsHead{align-items:flex-start}.dayPartsTitle{font-size:15px}.dayPartsSource{max-width:48%;font-size:7.5px}.dayPartsGrid{gap:5px}.dayPartCard{padding:8px 6px;border-radius:13px}.dayPartName{font-size:8.5px}.dayPartWindow{font-size:7px}.dayPartIcon{font-size:22px;margin:6px 0 4px}.dayPartIcon .weatherCombo{font-size:18px}.dayPartState{font-size:9.5px}.dayPartTemp{font-size:9px;margin-top:4px}.dayPartDetail,.dayPartAlert{font-size:7.5px;margin-top:4px}}
 
     /* Paleta profesional de colores vivos */
     :root{
@@ -527,6 +530,10 @@
       <div class="heroMeta"><div class="heroBadge">📍 <strong id="heroSearchName">Ubicación</strong></div><div class="heroBadge">🕒 <strong id="heroTime">--:--:--</strong></div><div class="heroBadge">🌍 <strong id="heroZone">Zona local</strong></div></div>
       <a id="photoSource" class="photoSource" href="#" target="_blank" rel="noopener">Portada dinámica</a>
     </article>
+    <section id="dayPartsPanel" class="dayPartsPanel" aria-labelledby="dayPartsTitle">
+      <div class="dayPartsHead"><div id="dayPartsTitle" class="dayPartsTitle">Hoy por franjas</div><div id="dayPartsSource" class="dayPartsSource">Esperando datos horarios reales…</div></div>
+      <div id="dayPartsGrid" class="dayPartsGrid" aria-live="polite"><div class="dayPartCard dayPartEmpty">Consultando mañana…</div><div class="dayPartCard dayPartEmpty">Consultando tarde…</div><div class="dayPartCard dayPartEmpty">Consultando noche…</div></div>
+    </section>
     <div class="grid">
       <div class="card"><div class="label">Sensación</div><div id="feels" class="value">—</div></div>
       <div class="card"><div class="label">Humedad</div><div id="humidity" class="value">—</div></div>
@@ -1592,11 +1599,54 @@ function dailyPhaseSymbol(entries=[],fallbackCode=null){
 function dailyWeatherSymbols(d,dateStr,representativeCode=null){
   const indices=hourlyIndicesForDate(d,dateStr,true),codes=d.hourly?.weather_code||[],precipitation=d.hourly?.precipitation||[],times=d.hourly?.time||[];
   const entries=indices.map(index=>({code:finiteWeatherNumber(codes[index]),amount:finiteWeatherNumber(precipitation[index])??0,hour:Number(String(times[index]).slice(11,13)),convectiveRisk:hourlyConvectiveRisk(d,index).active})).filter(entry=>entry.code!==null);
-  if(!entries.length)return weatherSymbolsForCode(representativeCode,true,d.daily?.precipitation_sum?.[(d.daily?.time||[]).indexOf(dateStr)]);
+  let symbols;
+  if(!entries.length)symbols=weatherSymbolsForCode(representativeCode,true,d.daily?.precipitation_sum?.[(d.daily?.time||[]).indexOf(dateStr)]);
   // El icono sigue la evolución publicada por el modelo: mañana a la izquierda
   // y tarde a la derecha. Así se lee lluvia → claros o claros → lluvia.
-  const morning=entries.filter(entry=>entry.hour<14),afternoon=entries.filter(entry=>entry.hour>=14),morningSymbol=dailyPhaseSymbol(morning,representativeCode),afternoonSymbol=dailyPhaseSymbol(afternoon,representativeCode);
-  return morningSymbol===afternoonSymbol?[morningSymbol]:[morningSymbol,afternoonSymbol];
+  if(entries.length){const morning=entries.filter(entry=>entry.hour<14),afternoon=entries.filter(entry=>entry.hour>=14),morningSymbol=dailyPhaseSymbol(morning,representativeCode),afternoonSymbol=dailyPhaseSymbol(afternoon,representativeCode);symbols=morningSymbol===afternoonSymbol?[morningSymbol]:[morningSymbol,afternoonSymbol]}
+  if(actualDailyMaxGust(d,dateStr)>=30)symbols.push('💨');
+  return symbols;
+}
+function actualDailyMaxGust(d,dateStr){
+  const dailyIndex=(d.daily?.time||[]).indexOf(dateStr),dailyValue=finiteWeatherNumber(d.daily?.wind_gusts_10m_max?.[dailyIndex]);
+  const hourlyValues=hourlyIndicesForDate(d,dateStr).map(index=>finiteWeatherNumber(d.hourly?.wind_gusts_10m?.[index])).filter(value=>value!==null);
+  return Math.max(...(dailyValue===null?hourlyValues:[dailyValue,...hourlyValues]),-Infinity);
+}
+function periodWeatherRank(entry){
+  const code=entry.code;
+  if([95,96,99].includes(code))return 100;
+  if(entry.convectiveRisk)return 90;
+  if([71,73,75,77,85,86].includes(code))return 80;
+  const intensity=rainIntensity(code,entry.precipitation);if(intensity)return 50+intensity*5;
+  if([45,48].includes(code))return 40;
+  if(code===3)return 30;if(code===2)return 20;if(code===1)return 10;return 0;
+}
+function exactPeriodState(entries){
+  if(!entries.length)return 'Sin franja publicada';
+  const first=entries[0],last=entries[entries.length-1],notable=entries.reduce((best,entry)=>periodWeatherRank(entry)>periodWeatherRank(best)?entry:best,first);
+  const description=entry=>(weatherMap[entry.code]||['Datos parciales'])[0],sequence=[description(first)];
+  const second=description(notable)!==sequence[0]?description(notable):description(last);
+  if(second!==sequence[0])sequence.push(second);
+  return sequence.join(' → ');
+}
+function renderDayParts(d,loc={}){
+  const grid=$('dayPartsGrid'),source=$('dayPartsSource');if(!grid||!source)return;
+  const timezone=d.timezone||timezoneForLocation(loc),today=localCurrentTime(timezone).slice(0,10),h=d.hourly||{},times=h.time||[];
+  const periods=[{name:'Mañana',window:'06–13 h',start:6,end:13,day:true},{name:'Tarde',window:'14–20 h',start:14,end:20,day:true},{name:'Noche',window:'21–23 h',start:21,end:23,day:false}];
+  source.textContent=d._dataPolicy==='euskalmet-only'?'Euskalmet · horas publicadas sin interpolar':isBermeoLocation(loc)?'ECMWF IFS · Open‑Meteo · horas sin interpolar':'Open‑Meteo · horas sin interpolar';
+  grid.innerHTML=periods.map(period=>{
+    const indices=times.reduce((result,time,index)=>{const value=String(time),hour=Number(value.slice(11,13));if(value.slice(0,10)===today&&hour>=period.start&&hour<=period.end)result.push(index);return result},[]);
+    const entries=indices.map(index=>({index,code:finiteWeatherNumber(h.weather_code?.[index]),temperature:finiteWeatherNumber(h.temperature_2m?.[index]),precipitation:finiteWeatherNumber(h.precipitation?.[index])??0,probability:finiteWeatherNumber(h.precipitation_probability?.[index]),gust:finiteWeatherNumber(h.wind_gusts_10m?.[index]),convectiveRisk:hourlyConvectiveRisk(d,index).active})).filter(entry=>entry.code!==null);
+    if(!entries.length)return `<div class="dayPartCard dayPartEmpty"><div class="dayPartName">${period.name}</div><div class="dayPartWindow">${period.window}</div><div class="dayPartState">Sin franja publicada</div></div>`;
+    const notable=entries.reduce((best,entry)=>periodWeatherRank(entry)>periodWeatherRank(best)?entry:best,entries[0]),temperatures=entries.map(entry=>entry.temperature).filter(value=>value!==null),minimum=Math.min(...temperatures),maximum=Math.max(...temperatures),gusts=entries.map(entry=>entry.gust).filter(value=>value!==null),maxGust=Math.max(...gusts,-Infinity),windRelevant=maxGust>=30,convective=entries.some(entry=>entry.convectiveRisk),confirmedStorm=entries.some(entry=>[95,96,99].includes(entry.code)),precipitationTotal=entries.reduce((total,entry)=>total+entry.precipitation,0),probabilities=entries.map(entry=>entry.probability).filter(value=>value!==null),maxProbability=Math.max(...probabilities,-Infinity);
+    const symbols=weatherSymbolsForCode(notable.code,period.day,notable.precipitation,convective);if(windRelevant)symbols.push('💨');
+    const temperatureText=temperatures.length?(minimum===maximum?`${Math.round(minimum)} °C`:`${Math.round(minimum)}–${Math.round(maximum)} °C`):'Temperatura no publicada';
+    const rainText=precipitationTotal>0?`💧 ${precipitationTotal.toLocaleString('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1})} mm${Number.isFinite(maxProbability)?` · hasta ${Math.round(maxProbability)}%`:''}`:'';
+    const windText=windRelevant?`💨 Racha ${Math.round(maxGust)} km/h`:'';
+    const details=[rainText,windText].filter(Boolean).map(text=>`<div class="dayPartDetail">${text}</div>`).join('');
+    const alert=confirmedStorm?'<div class="dayPartAlert">⚡ Tormenta en el modelo</div>':convective?'<div class="dayPartAlert">⚡ Riesgo convectivo</div>':'';
+    return `<div class="dayPartCard" aria-label="${period.name}: ${esc(exactPeriodState(entries))}, ${temperatureText}${windRelevant?`, racha ${Math.round(maxGust)} kilómetros por hora`:''}"><div class="dayPartName">${period.name}</div><div class="dayPartWindow">${period.window}</div><div class="dayPartIcon">${iconHTML(symbols)}</div><div class="dayPartState">${esc(exactPeriodState(entries))}</div><div class="dayPartTemp">${temperatureText}</div>${details}${alert}</div>`;
+  }).join('');
 }
 function renderHeroForecast(d,loc){
   const container=$('heroForecast');if(!container)return;
@@ -1807,6 +1857,7 @@ function render(loc,d){
   $('condition').textContent=(isDay?'':'Noche · ')+(c._official_description?shortOfficialText(c._official_description,150):wm[0]);
   $('bigIcon').innerHTML=iconHTML(currentSymbols,true);
   renderHeroForecast(d,loc);
+  renderDayParts(d,loc);
   $('feels').textContent=weatherRound(c.apparent_temperature,' °C');
   $('humidity').textContent=weatherRound(c.relative_humidity_2m,' %');
   $('dewpoint').textContent=weatherRound(c.dew_point_2m,' °C');
@@ -1840,7 +1891,7 @@ function render(loc,d){
     const flags=conditionFlags([...dailyCodes,dailyCode]),convectiveDay=hourlyIndicesForDate(d,t).some(index=>hourlyConvectiveRisk(d,index).active);
     const stormText=flags.storm||convectiveDay?'<div class="rainp" style="color:#ffe56b;font-weight:800">⚡ Riesgo de tormenta</div>':'';
     const officialText=d.daily?.official_text?.[i]||'';const officialSource=d.daily?.official_source?.[i]||'';const official=officialText?`<div class="officialTag">✓ ${esc(officialSource||'Fuente oficial')}</div><div class="officialText" title="${esc(officialText)}">${esc(shortOfficialText(officialText))}</div>`:'';
-    const maxGust=finiteWeatherNumber(d.daily?.wind_gusts_10m_max?.[i]);const dailyRisk=windLevel(maxGust),rainPeriod=dailyRainPeriod(d,t),rainPeriodLabel=rainPeriod?`${esc(rainPeriod)} · `:'';
+    const rawMaxGust=actualDailyMaxGust(d,t),maxGust=Number.isFinite(rawMaxGust)?rawMaxGust:null;const dailyRisk=windLevel(maxGust),rainPeriod=dailyRainPeriod(d,t),rainPeriodLabel=rainPeriod?`${esc(rainPeriod)} · `:'';
     const el=document.createElement('div');el.className='day';
     el.innerHTML=`<div class="dayName">${!loc._dailyStale&&t===today?'Hoy':names[date.getDay()]}</div><div class="dayIcon">${iconHTML(symbols)}</div><div><span class="max">${weatherRound(d.daily.temperature_2m_max?.[i],'°')}</span> <span class="min">${weatherRound(d.daily.temperature_2m_min?.[i],'°')}</span></div><div class="rainp">💧 ${rainPeriodLabel}${weatherRound(d.daily.precipitation_probability_max?.[i],'%')} · ${weatherFixed(d.daily.precipitation_sum?.[i],1,' mm')}</div>${maxGust!==null?`<div class="dailyWind ${dailyRisk.className}">Racha ${Math.round(maxGust)} km/h</div>`:''}${stormText}${official}`;
     days.appendChild(el)
@@ -1890,7 +1941,7 @@ function prepareSingleScreen(){
   app.insertBefore($('status'),main);
   app.insertBefore($('saveNotice'),main);
   if(source)app.insertBefore(source,main);
-  if(tides){const hero=$('hero');if(hero)hero.insertAdjacentElement('afterend',tides)}
+  if(tides){const anchor=$('dayPartsPanel')||$('hero');if(anchor)anchor.insertAdjacentElement('afterend',tides)}
 }
 $('tidesRetry').addEventListener('click',loadBermeoTides);
 $('tidesToggle').addEventListener('click',()=>{const panel=$('tidesPanel'),expanded=panel.classList.toggle('expanded');$('tidesToggle').setAttribute('aria-expanded',String(expanded));$('tidesToggle').textContent=expanded?'Ocultar detalle':'Ver 3 días'});
@@ -3480,7 +3531,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.66',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.67',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });

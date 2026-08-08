@@ -1,3 +1,14 @@
+Meteo Aitor Bermeo v10.67 · resumen real por franjas
+Fecha: 2026-08-08
+
+La portada resume mañana, tarde y noche usando exclusivamente los códigos WMO,
+temperaturas, precipitación, CAPE, chubascos y rachas de las horas realmente
+publicadas. No interpola descripciones. Cuando las rachas alcanzan el nivel
+relevante ya utilizado por la app, el icono de viento se suma al fenómeno
+meteorológico tanto en portada como en cada uno de los siete días.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.66 · hoy visible en la portada
 Fecha: 2026-08-08
 
