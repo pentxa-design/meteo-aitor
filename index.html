@@ -2666,6 +2666,13 @@ function mapValueAtCoordinates(latitude,longitude,key){
   const focus=data.focus,exact=data.focusPoint,exactValue=exact?.hourly?.[key]?.[mapAitorState.timeIndex];
   if(focus&&Math.abs(latitude-focus.latitude)<.001&&Math.abs(longitude-focus.longitude)<.001&&mapValidNumber(exactValue))return Number(exactValue);
   if(latitude<bounds.south||latitude>bounds.north||longitude<bounds.west||longitude>bounds.east)return null;
+  // MUCAPE/MUCIN son campos convectivos con gradientes bruscos. Sus cifras se
+  // toman del punto GFS 0,25° más próximo, igual que el dato NOAA original,
+  // en lugar de fabricar un promedio entre cuatro celdas diferentes.
+  if(MAP_GFS_ONLY_LAYERS.has(mapAitorState.layer)&&['cape','convective_inhibition'].includes(key)){
+    const nearest=mapFindPoint({lat:Number(latitude),lng:Number(longitude)}),nearestValue=mapValue(nearest,key);
+    return mapValidNumber(nearestValue)?Number(nearestValue):null
+  }
   const rowFloat=(latitude-bounds.south)/Math.max(.0001,bounds.north-bounds.south)*(data.grid.rows-1),columnFloat=(longitude-bounds.west)/Math.max(.0001,bounds.east-bounds.west)*(data.grid.columns-1),value=mapInterpolatedValue(rowFloat,columnFloat,key);
   if(!mapValidNumber(value))return null;
   const sparseConfig=Object.values(MAP_LAYERS).find(item=>item.key===key);
@@ -3221,8 +3228,8 @@ function mapLayerDensity(layer,zoom=mapAitorState.map?.getZoom()||5){
   if(layer==='precipitation_3h')return zoom<=4?10:zoom<=6?12:14;
   if(['precipitation_6h','precipitation_12h','precipitation_24h'].includes(layer))return zoom<=6?8:10;
   if(['precipitation','rain','showers','snowfall','precipitation_probability','forecast_reflectivity'].includes(layer))return zoom<=3?14:zoom<=6?16:18;
-  if(['pressure','t850','cin'].includes(layer))return zoom<=6?6:9;
-  if(layer==='cape')return zoom<=5?10:13;
+  if(['pressure','t850'].includes(layer))return zoom<=6?6:9;
+  if(['cape','cin'].includes(layer))return 18;
   if(MAP_MARINE_LAYERS.has(layer))return zoom<=3?8:zoom<=6?10:12;
   if(layer==='temperature')return zoom<=3?8:zoom<=6?11:13;
   if(['dewpoint','humidity','wind','gust'].includes(layer))return zoom<=3?8:zoom<=6?10:12;
@@ -3590,7 +3597,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.77',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.78',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });

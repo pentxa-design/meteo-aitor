@@ -71,9 +71,14 @@ function alignedBounds(bounds) {
   };
 }
 
-function grid(bounds, rows) {
-  const aspect = Math.max(1, Math.min(1.8, (bounds.east - bounds.west) / Math.max(0.01, bounds.north - bounds.south)));
-  const columns = Math.max(8, Math.min(48, Math.round(rows * aspect)));
+function grid(bounds, minimumRows) {
+  // Conserva aproximadamente el paso nativo de 0,25° de GFS en las vistas
+  // regionales. La antigua malla de 6–13 filas interpolaba valores situados
+  // hasta casi un grado de distancia y podía alterar mucho CAPE/CIN cerca de
+  // sus bordes. El límite mantiene acotado el tamaño de la respuesta cuando
+  // el usuario abre una vista continental.
+  const rows = Math.max(minimumRows, Math.min(48, Math.round((bounds.north - bounds.south) * 4) + 1));
+  const columns = Math.max(8, Math.min(48, Math.round((bounds.east - bounds.west) * 4) + 1));
   const points = [];
   for (let row = 0; row < rows; row += 1) {
     const latitude = bounds.south + (bounds.north - bounds.south) * row / (rows - 1);
@@ -269,7 +274,7 @@ module.exports = async function handler(req, res) {
   };
   const bounds = limitedBounds(requestedBounds, focus);
   const noaaBounds = alignedBounds(bounds);
-  const density = clamp(req.query?.density, 6, 18, 10);
+  const density = clamp(req.query?.density, 6, 18, 18);
   const outputGrid = grid(bounds, density);
   const cacheKey = [
     density,

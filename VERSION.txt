@@ -1,3 +1,16 @@
+Meteo Aitor Bermeo v10.78 · valores MUCAPE/MUCIN en puntos NOAA nativos
+Fecha: 2026-08-08
+
+Las etiquetas locales de MUCAPE y MUCIN dejan de promediar celdas separadas.
+Ahora muestran el valor del punto NOAA GFS 0,25° más próximo y la malla regional
+mantiene aproximadamente la resolución nativa. Esto evita diferencias grandes
+en bordes convectivos, donde CAPE y CIN pueden variar mucho en pocos kilómetros.
+
+Solo cambian MUCAPE y MUCIN. Lluvia, nubes, radar, viento, presión y las demás
+capas permanecen intactas. La caché de la aplicación sube a v10.78.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.77 · MUCAPE y MUCIN oficiales NOAA GFS 0,25°
 Fecha: 2026-08-08
 
