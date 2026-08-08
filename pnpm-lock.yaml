@@ -1,0 +1,22 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      grib2class:
+        specifier: 1.0.7
+        version: 1.0.7
+
+packages:
+
+  grib2class@1.0.7:
+    resolution: {integrity: sha512-r9ZML6c7VIL+K5qaig/pzaHFS0CQXMaiZaEg2RjC4zbgY9dah3amyut8tMtAm+A1labNLB9f3hVg+RAiMxcxGA==}
+
+snapshots:
+
+  grib2class@1.0.7: {}

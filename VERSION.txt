@@ -1,3 +1,18 @@
+Meteo Aitor Bermeo v10.77 · MUCAPE y MUCIN oficiales NOAA GFS 0,25°
+Fecha: 2026-08-08
+
+Las dos capas convectivas del visor dejan de usar el CAPE y CIN genéricos.
+Ahora descargan directamente de NOAA NOMADS la pareja GFS de 255–0 mb sobre
+el suelo: MUCAPE y MUCIN de la parcela más inestable, siempre del mismo campo,
+pasada y hora válida. Se ofrecen la hora actual y las 24 horas siguientes.
+
+Al seleccionar cualquiera de las dos capas, el modelo queda fijado y rotulado
+como NOAA GFS 0,25°. Si NOAA no responde, no se sustituye silenciosamente por
+otro CAPE/CIN. Lluvia, nubes, radar, viento, presión y las demás capas no se
+modifican. La caché de la aplicación sube a v10.77 para que baste con refrescar.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.76 · lluvia de 3 horas limpia y CIN con valores en Android
 Fecha: 2026-08-08
 

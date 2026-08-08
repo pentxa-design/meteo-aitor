@@ -616,8 +616,8 @@
               <option value="gust">Rachas · 10 m</option>
               <option value="pressure">Presión MSL · isobaras</option>
               <option value="t850">Temperatura · 850 hPa</option>
-              <option value="cape">CAPE · inestabilidad</option>
-              <option value="cin">CIN · inhibición convectiva</option>
+              <option value="cape">MUCAPE · más inestable (NOAA)</option>
+              <option value="cin">MUCIN · inhibición más inestable (NOAA)</option>
               <option value="sea_temperature">Temperatura superficial del mar</option>
               <option value="waves">Altura de las olas</option>
             </select>
@@ -678,8 +678,8 @@
               <div class="mapLayerGroup">
                 <div class="mapLayerGroupTitle">Altura y tormentas</div>
                 <button class="mapLayerButton" type="button" data-map-layer="t850"><span class="mapLayerIcon">850</span><span>Temp. 850 hPa</span></button>
-                <button class="mapLayerButton" type="button" data-map-layer="cape"><span class="mapLayerIcon">⚡</span><span>CAPE</span></button>
-                <button class="mapLayerButton" type="button" data-map-layer="cin"><span class="mapLayerIcon">CIN</span><span>Inhibición CIN</span></button>
+                <button class="mapLayerButton" type="button" data-map-layer="cape"><span class="mapLayerIcon">⚡</span><span>MUCAPE</span></button>
+                <button class="mapLayerButton" type="button" data-map-layer="cin"><span class="mapLayerIcon">MU</span><span>MUCIN</span></button>
               </div>
               <div class="mapLayerGroup">
                 <div class="mapLayerGroupTitle">Mar</div>
@@ -2026,16 +2026,16 @@ const MAP_LAYERS={
   gust:{key:'wind_gusts_10m',title:'Rachas a 10 m',unit:'km/h',scale:[0,10,20,35,50,65,80,100,125,150],colors:['#354a78','#3379ac','#2ca8c5','#38cfc9','#65d49c','#d1d94c','#f0b53e','#ec6b45','#d43f68','#762b78'],legend:['0','10','20','35','50','65','80','100','125','150+'],detail:'Racha máxima prevista en el intervalo, con color de intensidad y barbas de viento normalizadas.'},
   pressure:{key:'pressure_msl',title:'Presión a nivel del mar',unit:'hPa',scale:[960,975,985,995,1005,1013,1020,1030,1040,1050],colors:['#392767','#344f9b','#337fb6','#4eb7c0','#8bcda5','#d6d6a1','#ead06e','#e6a34f','#d96a46','#9f3b48'],legend:['960','975','985','995','1005','1013','1020','1030','1040','1050+'],detail:'Presión reducida al nivel del mar con isobaras reales cada 4 hPa, calculadas sobre la malla del modelo.'},
   t850:{key:'temperature_850hPa',title:'Temperatura a 850 hPa',unit:'°C',scale:[-50,-35,-25,-15,-5,0,5,10,12,14,16,18,20,22,24,28,32,36,50],colors:['#5a155f','#8a3494','#595ca8','#3d58a0','#4f83b2','#68a8c8','#92cbd4','#c1dce2','#9caed0','#7d82b7','#c5c0b2','#fff0a0','#f6d35e','#f1a43e','#e47730','#bd3c27','#86251b','#50170f','#1d0805'],legend:['-50','-35','-25','-15','-5','0','5','10','12','14','16','18','20','22','24','28','32','36','50'],detail:'Temperatura aproximada a 1.500 m. La escala de 850 hPa aumenta el contraste sinóptico sin alterar los datos: violeta y azul destacan las entradas frías y vaguadas; tonos neutros separan 16 °C; amarillo y naranja muestran el aire cálido desde 18–20 °C y rojo los valores más altos.'},
-  cape:{key:'cape',title:'CAPE · modelo',unit:'J/kg',scale:[100,250,500,750,1000,1500,2000,3000,4000,5000,6000],colors:['#49364f','#274d6c','#08788d','#009c98','#29b879','#78c94f','#d0d62d','#ffb520','#f2692f','#b93058','#5b1b62'],legend:['100','250','500','750','1000','1500','2000','3000','4000','5000','6000+'],detail:'CAPE publicado por el modelo seleccionado; Open‑Meteo no identifica esta variable como MUCAPE. Menos de 100 J/kg queda transparente; turquesa y verde indican energía creciente, amarillo y naranja valores altos y rojo o púrpura los máximos.'},
-  cin:{key:'convective_inhibition',title:'CIN · modelo',unit:'J/kg',scale:[-1000,-700,-500,-400,-300,-200,-150,-100,-50,-20,-5,0],colors:['#486579','#5e506b','#694156','#77344c','#8d2d45','#aa343d','#c43e36','#df5030','#f36b35','#ff9147','#ffc37a','#fff1da'],legend:['-1000','-700','-500','-400','-300','-200','-150','-100','-50','-20','-5','0'],detail:'CIN publicado por el modelo seleccionado; Open‑Meteo no identifica esta variable como MUCIN. Cerca de 0 J/kg significa poca tapa; cuanto más negativo, mayor inhibición.'},
+  cape:{key:'cape',title:'MUCAPE · más inestable',unit:'J/kg',scale:[100,250,500,750,1000,1500,2000,3000,4000,5000,6000],colors:['#49364f','#274d6c','#08788d','#009c98','#29b879','#78c94f','#d0d62d','#ffb520','#f2692f','#b93058','#5b1b62'],legend:['100','250','500','750','1000','1500','2000','3000','4000','5000','6000+'],detail:'MUCAPE oficial de NOAA GFS 0,25° para la parcela más inestable de la capa 255–0 mb sobre el suelo. Menos de 100 J/kg queda transparente; cuanto mayor es el valor, más energía potencial tiene la convección si logra iniciarse.'},
+  cin:{key:'convective_inhibition',title:'MUCIN · inhibición más inestable',unit:'J/kg',scale:[-1000,-700,-500,-400,-300,-200,-150,-100,-50,-20,-5,0],colors:['#486579','#5e506b','#694156','#77344c','#8d2d45','#aa343d','#c43e36','#df5030','#f36b35','#ff9147','#ffc37a','#fff1da'],legend:['-1000','-700','-500','-400','-300','-200','-150','-100','-50','-20','-5','0'],detail:'MUCIN oficial de NOAA GFS 0,25° para la misma parcela más inestable de 255–0 mb. Cerca de 0 J/kg significa poca tapa; cuanto más negativo, mayor inhibición. Una tormenta ya formada o forzada puede persistir aunque el MUCIN local sea negativo.'},
   sea_temperature:{key:'sea_surface_temperature',title:'Temperatura superficial del mar',unit:'°C',scale:[-2,0,5,10,14,17,20,23,26,29,32,35],colors:['#35156e','#2939a5','#176bd2','#159fcf','#20c5b7','#70d37d','#d7df48','#ffe03d','#ffad32','#f26e2c','#ce3428','#721b36'],legend:['-2','0','5','10','14','17','20','23','26','29','32','35+'],detail:'Temperatura de la superficie del agua prevista por Open‑Meteo Marine. La capa se recorta al mar y no colorea la tierra.'},
   waves:{key:'wave_height',title:'Altura de las olas',unit:'m',scale:[0,.25,.5,.75,1,1.5,2,3,4,6,8,12],colors:['#284675','#2c78a9','#24a8c1','#25cdc5','#64d495','#b7dc5c','#e7da49','#f4b141','#ed7c3c','#dd4f4f','#a93969','#622a72'],legend:['0','0,25','0,5','0,75','1','1,5','2','3','4','6','8','12+'],detail:'Altura significativa de las olas prevista por Open‑Meteo Marine. Al pulsar un punto también se indica la dirección y el período cuando están publicados.'}
 };
 
 const MAP_WINDY_LAYERS={reflectivity:'radar',rainviewer:'radar',precipitation:'rain',precipitation_3h:'rain',precipitation_6h:'rain',precipitation_12h:'rain',precipitation_24h:'rain',rain:'rain',showers:'rain',snowfall:'snow',precipitation_probability:'rain',forecast_reflectivity:'rain',cloud:'clouds',temperature:'temp',dewpoint:'dewpoint',humidity:'rh',wind:'wind',gust:'gust',pressure:'pressure',t850:'temp',cape:'cape',cin:'cape',sea_temperature:'sst',waves:'waves'};
-const MAP_GFS_ONLY_LAYERS=new Set();
+const MAP_GFS_ONLY_LAYERS=new Set(['cape','cin']);
 const MAP_MARINE_LAYERS=new Set(['sea_temperature','waves']);
-const MAP_NATIVE_TILE_LAYERS=new Set(['precipitation','forecast_reflectivity','cloud','temperature','humidity','wind','gust','pressure','t850','cape','cin']);
+const MAP_NATIVE_TILE_LAYERS=new Set(['precipitation','forecast_reflectivity','cloud','temperature','humidity','wind','gust','pressure','t850']);
 const MAP_AROME_LAYERS=new Set(['reflectivity','rainviewer','precipitation','forecast_reflectivity','cloud','temperature','humidity','wind','gust','cape']);
 const MAP_NATIVE_VARIABLES={precipitation:'precipitation',forecast_reflectivity:'precipitation',cloud:'cloud_cover',temperature:'temperature_2m',humidity:'relative_humidity_2m',wind:'wind_u_component_10m',gust:'wind_gusts_10m',pressure:'pressure_msl',t850:'temperature_850hPa',cape:'cape',cin:'convective_inhibition'};
 const MAP_NATIVE_SOURCES={
@@ -2046,8 +2046,8 @@ const MAP_NATIVE_SOURCES={
 };
 function mapForcedGfsLabel(layer){
   if(layer==='forecast_reflectivity')return'NOAA GFS · reflectividad estimada';
-  if(layer==='cape')return'NOAA GFS · CAPE del modelo';
-  if(layer==='cin')return'NOAA GFS · CIN del modelo';
+  if(layer==='cape')return'NOAA GFS 0,25° · MUCAPE 255–0 mb';
+  if(layer==='cin')return'NOAA GFS 0,25° · MUCIN 255–0 mb';
   return'NOAA GFS';
 }
 function mapOfficialLayerFor(layer=mapAitorState.layer){return MAP_WINDY_LAYERS[layer]||'rain'}
@@ -2114,7 +2114,7 @@ function mapCurrentForecastTime(){
 }
 function mapColor(config,value){const v=mapNumber(value),scale=config.scale,colors=config.colors;let index=0;while(index<scale.length-1&&v>=scale[index+1])index+=1;return colors[Math.min(index,colors.length-1)]}
 function mapHexRgb(hex){const value=String(hex||'#000').replace('#','');return{r:parseInt(value.slice(0,2),16)||0,g:parseInt(value.slice(2,4),16)||0,b:parseInt(value.slice(4,6),16)||0}}
-function mapModelSupportsLayer(model,layer){return model!=='arome'||MAP_AROME_LAYERS.has(layer)}
+function mapModelSupportsLayer(model,layer){return MAP_GFS_ONLY_LAYERS.has(layer)||model!=='arome'||MAP_AROME_LAYERS.has(layer)}
 function mapModelLayerAvailabilityText(model,layer){return model==='arome'&&!mapModelSupportsLayer(model,layer)?'AROME HD no publica esta capa en la salida espacial utilizada. Elige lluvia, reflectividad estimada, nubes, temperatura, humedad, viento, rachas o CAPE.':''}
 function mapUsesNativeTiles(layer=mapAitorState.layer,model=mapAitorState.model){return MAP_NATIVE_TILE_LAYERS.has(layer)&&mapModelSupportsLayer(model,layer)&&!(layer==='cin'&&model==='icon')}
 function mapNativeSourceFor(layer=mapAitorState.layer,model=mapAitorState.model){const models=MAP_NATIVE_SOURCES[model]||MAP_NATIVE_SOURCES.ecmwf;return{...(models[layer]||models.default),model,layer}}
@@ -3175,7 +3175,7 @@ function setMapBusy(busy,message=''){
   if(busy){$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Cargando '+mapLayerConfig().title+'…';}
   if(message)$('mapStatus').textContent=message;
 }
-function mapCacheKey(query){return query.toString()}
+function mapCacheKey(query){const normalized=new URLSearchParams(query);if(MAP_GFS_ONLY_LAYERS.has(normalized.get('displayLayer'))){normalized.set('displayLayer','mu');normalized.delete('cin')}return normalized.toString()}
 function mapLastGoodKey(layer,model){return String(layer)+'|'+String(model)}
 function rememberMapLastGood(layer,model,data,timeIndex){
   const key=mapLastGoodKey(layer,model);mapAitorState.lastGood.delete(key);mapAitorState.lastGood.set(key,{data,timeIndex:Number(timeIndex)||0,savedAt:Date.now()});
@@ -3264,7 +3264,7 @@ async function mapFetchForecast(query,signal){
   // directa queda como respaldo para una red que no alcance esa función.
   let proxyError=null;
   try{
-    const response=await fetch('/api/map-forecast?'+query.toString(),{signal,headers:{Accept:'application/json'}}),payload=await response.json().catch(()=>null);
+    const displayLayer=query.get('displayLayer')||query.get('layer')||'',muLayer=MAP_GFS_ONLY_LAYERS.has(displayLayer),endpoint=muLayer?'/api/map-mu':'/api/map-forecast',response=await fetch(endpoint+'?'+query.toString(),{signal,headers:{Accept:'application/json'}}),payload=await response.json().catch(()=>null);
     if(!response.ok||!payload?.ok){const error=new Error(payload?.error||('HTTP '+response.status));error.status=response.status;error.retryAfter=Number(payload?.retryAfter)||Number(response.headers.get('Retry-After'))||60;error.dailyLimit=error.retryAfter>=1800||/daily api request limit|l[ií]mite diario/i.test(String(error.message));throw error}
     return payload;
   }catch(error){if(error?.name==='AbortError')throw error;proxyError=error}
@@ -3272,6 +3272,9 @@ async function mapFetchForecast(query,signal){
   // con solo 5 filas para campos suaves. Nunca se aplica a precipitación:
   // una malla tan pobre crea manchas gigantes que no existen en el modelo.
   const directQuery=new URLSearchParams(query),limited=[429,502].includes(Number(proxyError?.status)),displayLayer=directQuery.get('displayLayer')||directQuery.get('layer')||'';
+  // MUCAPE/MUCIN no se sustituyen por el CAPE/CIN genérico de Open‑Meteo.
+  // Si NOAA falla, la capa queda sin dato y se reintenta de forma explícita.
+  if(MAP_GFS_ONLY_LAYERS.has(displayLayer))throw proxyError;
   const precipitationLayers=new Set(['precipitation','precipitation_3h','precipitation_6h','precipitation_12h','precipitation_24h','rain','showers','snowfall','precipitation_probability','forecast_reflectivity']);
   // Los acumulados y fases de precipitación necesitan una cuadrícula real.
   // 18 filas sigue siendo un respaldo razonable, pero conserva frentes y
@@ -3587,7 +3590,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.76',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.77',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
