@@ -1,3 +1,14 @@
+Meteo Aitor Bermeo v10.72 · visor horario fluido
+Fecha: 2026-08-08
+
+El cursor temporal prioriza siempre la hora que se está señalando, cancela la
+vista rápida que haya quedado rezagada y precarga las horas ligeras siguientes.
+Se conserva la tesela real de cada modelo y se afina a máxima resolución al
+detener el cursor. Aplicado a lluvia, nubosidad, reflectividad, viento y demás
+capas espaciales, sin retirar datos ni capas.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.71 · previsión ordenada y visor propio protagonista
 Fecha: 2026-08-08
 
