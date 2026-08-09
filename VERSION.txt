@@ -1,3 +1,19 @@
+Meteo Aitor Bermeo v10.82 · cantidades de lluvia ICON desde la tesela DWD
+Fecha: 2026-08-09
+
+La precipitación horaria de ICON toma ahora sus cifras en milímetros de la
+misma tesela nativa DWD que colorea el mapa. Se elimina para esta combinación
+la segunda petición puntual que podía fallar y dejar la lluvia visible sin
+etiquetas numéricas, manteniendo idénticos modelo, campo y hora.
+
+Las cifras positivas de ICON también permanecen visibles, espaciadas y sin
+ceros, en la vista regional utilizada en el visor.
+
+No se modifica ninguna otra capa ni modelo. La caché de la aplicación sube a
+v10.82.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.81 · desplazamiento horario sin trabajos duplicados
 Fecha: 2026-08-09
 

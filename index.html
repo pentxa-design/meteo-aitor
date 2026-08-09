@@ -2244,7 +2244,7 @@ function buildMapNativeWindSamples(){
   const focus=mapAitorState.location||BERMEO;mapAitorState.data={ok:true,nativeTileSamples:true,bundle:'windbundle',model:{requested:mapAitorState.model,label:source.label,sourceModel:source.domain},bounds:{south,north,west,east},focus,grid:{rows,columns,stepLatitude:(north-south)/Math.max(1,rows-1),stepLongitude:(east-west)/Math.max(1,columns-1)},times:timeline.map(entry=>String(entry.time||'').replace(/Z$/,'')),points,focusPoint:sample(Number(focus.latitude),Number(focus.longitude))};return true
 }
 function mapNativeUsesDirectSamples(layer=mapAitorState.layer,model=mapAitorState.model){
-  return ['wind','gust','cape','cin'].includes(layer)||model==='arome'&&layer==='humidity'
+  return ['wind','gust','cape','cin'].includes(layer)||model==='arome'&&layer==='humidity'||model==='icon'&&layer==='precipitation'
 }
 function mapNativeVisibleSampleUrl(variable){
   let url=null;mapAitorState.nativeField?.eachLayer?.(tile=>{if(!url&&!tile.options?.nativeSupport&&tile.options?.nativeVariable===variable)url=tile.options.nativeSourceUrl||null});return url
@@ -2462,7 +2462,7 @@ function mapNativeAlignedData(response,timeline){
 function renderMapNativeAnnotations(){
   if(!mapUsesNativeTiles())return;
   if(mapAitorState.values)mapAitorState.values.clearLayers();if(mapAitorState.windArrows)mapAitorState.windArrows.clearLayers();if(mapAitorState.isobars)mapAitorState.isobars.clearLayers();if(mapAitorState.labels)mapAitorState.labels.clearLayers();
-  if(!mapAitorState.data){stopMapWind();renderMapLocation();if(['wind','gust'].includes(mapAitorState.layer))queueMapNativeWindSamples();else if(['cape','cin'].includes(mapAitorState.layer)||mapAitorState.model==='arome'&&mapAitorState.layer==='humidity')queueMapNativeScalarSamples(MAP_NATIVE_VARIABLES[mapAitorState.layer]||'relative_humidity_2m',mapLayerConfig().key,80);return}
+  if(!mapAitorState.data){stopMapWind();renderMapLocation();if(['wind','gust'].includes(mapAitorState.layer))queueMapNativeWindSamples();else if(mapNativeUsesDirectSamples())queueMapNativeScalarSamples(MAP_NATIVE_VARIABLES[mapAitorState.layer]||'relative_humidity_2m',mapLayerConfig().key,80);return}
   renderMapIsobars();renderMapValueLabels();renderMapWindArrows();renderMapLocation();drawMapWind();
 }
 function queueMapNativeAnnotations(force=false,delay=420){
@@ -2478,6 +2478,10 @@ function queueMapNativeAnnotations(force=false,delay=420){
   // La humedad AROME se lee de la propia tesela espacial. Evita perder las
   // cifras cuando la API puntual está limitada y garantiza la misma hora.
   if(mapAitorState.model==='arome'&&mapAitorState.layer==='humidity'){queueMapNativeScalarSamples('relative_humidity_2m','relative_humidity_2m',80);$('mapStatus').textContent='Humedad AROME activa · preparando valores de esta hora';return}
+  // La lluvia ICON se muestrea de la propia tesela DWD que colorea el mapa.
+  // Evita que una segunda petición puntual deje la imagen visible sin sus mm
+  // y garantiza que color, cantidad y hora procedan del mismo campo nativo.
+  if(mapAitorState.model==='icon'&&mapAitorState.layer==='precipitation'){queueMapNativeScalarSamples('precipitation','precipitation',80);$('mapStatus').textContent='Precipitación ICON activa · preparando cantidades en mm de esta hora';return}
   // La tesela AROME de nube baja ya es el dato espacial de 1,5 km. Evitamos
   // una segunda malla de puntos que no mejora la imagen y consume cuota.
   if(mapAitorState.model==='arome'&&mapAitorState.layer==='cloud'){$('mapStatus').textContent='AROME HD · nubosidad baja nativa · lluvia del mismo modelo integrada';return}
@@ -3107,8 +3111,11 @@ function renderMapValueLabels(){
   const data=mapAitorState.data,config=mapLayerConfig();if(!data||!$('mapValueLabels').checked||!mapHasLayerData())return;
   const zoom=mapAitorState.map?.getZoom()||6;
   // La lluvia muy dispersa necesita acercamiento. Nubosidad y campos marinos
-  // sí muestran valores regionales para que la capa no parezca vacía.
-  if(['precipitation','precipitation_15m','reflectivity_estimated'].includes(config.key)&&zoom<7)return;
+  // sí muestran valores regionales para que la capa no parezca vacía. ICON
+  // puede mostrar sus mm espaciados a escala regional porque proceden de la
+  // misma tesela DWD visible y no de una segunda malla aproximada.
+  const iconNativeRain=config.key==='precipitation'&&mapAitorState.model==='icon'&&data.nativeTileSamples;
+  if(['precipitation','precipitation_15m','reflectivity_estimated'].includes(config.key)&&zoom<7&&!iconNativeRain)return;
   const exactAccumulation=mapAccumulationUsesExactSamples(config),marine=MAP_MARINE_LAYERS.has(mapAitorState.layer),townCount=exactAccumulation||marine?0:renderMapTownValues();if(townCount>=3||window.innerWidth<650&&!marine&&!exactAccumulation)return;
   const rows=data.grid.rows,columns=data.grid.columns,rowStep=exactAccumulation?1:zoom>=8?1:(rows>7?2:1),columnStep=exactAccumulation?1:zoom>=8?2:(columns>9?2:1);
   for(let row=0;row<rows;row+=rowStep){for(let column=0;column<columns;column+=columnStep){const point=data.points[row*columns+column],value=mapValue(point,config.key),directCin=config.key==='convective_inhibition'&&data.nativeTileSamples;if(!mapPhenomenonVisible(config,value)||(config.key==='convective_inhibition'&&!directCin&&!(mapValue(point,'cape')>100)))continue;const color=exactAccumulation?mapColor(config,value):'',icon=L.divIcon({className:'mapValueLabel'+(exactAccumulation?' mapAccumulationPoint':''),html:'<span'+(exactAccumulation?' style="--map-value-color:'+color+'"':'')+'>'+mapShortValue(config,value)+'</span>',iconSize:[40,24],iconAnchor:[20,12]});mapAitorState.values.addLayer(L.marker([point.latitude,point.longitude],{icon,interactive:false,keyboard:false}))}}
@@ -3715,7 +3722,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.81',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.82',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
