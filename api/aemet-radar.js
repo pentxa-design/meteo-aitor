@@ -12,11 +12,11 @@ async function gateway(path, apiKey) {
   return payload.datos;
 }
 
-async function fetchImage(imageUrl) {
+async function fetchImage(imageUrl, messages = {}) {
   const response = await fetch(imageUrl, { headers: { Accept: 'image/*' } });
-  if (!response.ok) throw new Error(`No se pudo descargar la imagen de radar (HTTP ${response.status}).`);
+  if (!response.ok) throw new Error(`${messages.download || 'No se pudo descargar la imagen de radar'} (HTTP ${response.status}).`);
   const bytes = Buffer.from(await response.arrayBuffer());
-  if (bytes.length < 1000) throw new Error('AEMET devolvió una imagen de radar incompleta.');
+  if (bytes.length < 1000) throw new Error(messages.incomplete || 'AEMET devolvió una imagen de radar incompleta.');
   return { bytes, contentType: response.headers.get('content-type') || 'image/png' };
 }
 
@@ -43,6 +43,29 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ ok: false, error: 'Método no permitido' });
   }
   const apiKey = String(process.env.AEMET_API_KEY || '').trim();
+  const product = String(req.query?.product || '').trim().toLowerCase();
+  if (product === 'lightning') {
+    if (!apiKey) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(503).json({ ok: false, source: 'AEMET OpenData', error: 'La clave AEMET OpenData no está configurada.' });
+    }
+    try {
+      const imageUrl = await gateway('/red/rayos/mapa', apiKey);
+      const image = await fetchImage(imageUrl, {
+        download: 'No se pudo descargar el mapa de rayos',
+        incomplete: 'AEMET devolvió un mapa de rayos incompleto.'
+      });
+      res.setHeader('Content-Type', image.contentType);
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=300');
+      res.setHeader('X-Meteo-Aitor-Lightning-Source', 'AEMET-OpenData');
+      return res.status(200).send(image.bytes);
+    } catch (error) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(502).json({ ok: false, source: 'AEMET OpenData', error: error?.message || 'No se pudo cargar el mapa de rayos AEMET.' });
+    }
+  }
   try {
     let radar = null;
     if (apiKey) {
