@@ -1,7 +1,7 @@
 {
   "name": "meteo-aitor-bermeo",
   "private": true,
-  "version": "10.78.0",
+  "version": "10.79.0",
   "dependencies": {
     "grib2class": "1.0.7"
   }

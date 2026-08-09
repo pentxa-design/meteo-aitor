@@ -27,6 +27,12 @@
     "api/aemet-radar.js": {
       "maxDuration": 20
     },
+    "api/aemet-lightning.js": {
+      "maxDuration": 20
+    },
+    "api/map-arome-15m.js": {
+      "maxDuration": 30
+    },
     "api/euskalmet-tides.js": {
       "maxDuration": 15
     },
