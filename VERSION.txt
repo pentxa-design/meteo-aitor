@@ -1,3 +1,26 @@
+Meteo Aitor Bermeo v10.84 · visor fluido y capas meteorológicas legibles
+Fecha: 2026-08-10
+
+La línea temporal nativa enseña primero una vista ligera de la hora realmente
+solicitada y carga el detalle completo al detenerse. Los botones, la
+reproducción y los saltos entre días ya no esperan una sucesión de horas
+antiguas que el usuario ha dejado atrás.
+
+La lluvia acumulada de las próximas 3 horas conserva el modelo elegido y dibuja
+un campo azul continuo para localizar las zonas de precipitación. Las cifras
+siguen siendo muestras exactas del modelo; violeta, rosa y naranja reservan el
+contraste para acumulados mayores.
+
+MUCIN mundial conserva todos sus valores negativos oficiales NOAA GFS y ahora
+se distingue también en la panorámica reducida. Temperatura, punto de rocío,
+humedad, presión y temperatura a 850 hPa obtienen sus cifras directamente de la
+misma tesela visible, evitando consultas auxiliares desalineadas o agotadas.
+
+No se elimina ni sustituye ninguna capa. La caché de la aplicación sube a
+v10.84.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.83 · modelos mundiales y convección NOAA global
 Fecha: 2026-08-09
 
