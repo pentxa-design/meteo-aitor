@@ -1,3 +1,23 @@
+Meteo Aitor Bermeo v10.80 · AROME definido, horas fluidas y viento coherente
+Fecha: 2026-08-09
+
+La capa de lluvia AROME cada 15 minutos conserva sus valores reales, pero
+descarta visualmente la llovizna residual que formaba grandes manchas en vistas
+amplias. Usa una malla más densa, contornos más firmes y opacidad progresiva.
+
+Al avanzar por sus 192 intervalos, el visor dibuja primero una imagen ligera y
+solo calcula el acabado completo al detenerse. El cálculo específico de AROME
+reutiliza la malla numérica y evita repetir interpolaciones por cada píxel.
+
+Las partículas de viento ya no interpolan 359° y 1° como si el punto medio
+fuera 180°. La dirección se compone como vector, se suaviza entre celdas y se
+reinicia limpiamente al cambiar de hora, evitando giros visuales falsos.
+
+No se elimina ninguna capa ni se alteran lluvia horaria, nubes, radar, presión,
+MUCAPE, MUCIN o mar. La caché de la aplicación sube a v10.80.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.79 · rayos AEMET y lluvia AROME cada 15 minutos
 Fecha: 2026-08-09
 
