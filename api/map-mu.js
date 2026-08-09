@@ -1,14 +1,15 @@
 const GRIB2CLASS = require('grib2class');
 
-const NOAA_FILTER = 'https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl';
+const NOAA_FILTER_ROOT = 'https://nomads.ncep.noaa.gov/cgi-bin';
 const HOUR_MS = 60 * 60 * 1000;
 const FRAME_HOURS = 24;
 const FETCH_TIMEOUT = 10000;
 const FETCH_CONCURRENCY = 6;
 const CACHE_TTL = 15 * 60 * 1000;
 const MAX_STALE_AGE = 2 * 60 * 60 * 1000;
-const MAX_LATITUDE_SPAN = 18;
-const MAX_LONGITUDE_SPAN = 28;
+const MAX_LATITUDE_SPAN = 12;
+const MAX_LONGITUDE_SPAN = 20;
+const WORLD_BOUNDS = Object.freeze({ south: -80, north: 85, west: -180, east: 180 });
 const RESPONSE_CACHE = globalThis.__METEO_AITOR_MU_CACHE__ ||
   (globalThis.__METEO_AITOR_MU_CACHE__ = new Map());
 
@@ -43,42 +44,48 @@ function candidateRuns(now = Date.now()) {
   return [0, 1, 2].map(index => new Date(delayed.getTime() - index * 6 * HOUR_MS));
 }
 
-function limitedBounds(input, focus) {
-  let { south, north, west, east } = input;
-  const latitudeSpan = north - south;
-  const longitudeSpan = east - west;
-  if (latitudeSpan > MAX_LATITUDE_SPAN) {
-    const center = Number.isFinite(focus.latitude) ? focus.latitude : (south + north) / 2;
-    south = Math.max(-80, center - MAX_LATITUDE_SPAN / 2);
-    north = Math.min(85, south + MAX_LATITUDE_SPAN);
-    south = north - MAX_LATITUDE_SPAN;
-  }
-  if (longitudeSpan > MAX_LONGITUDE_SPAN) {
-    const center = Number.isFinite(focus.longitude) ? focus.longitude : (west + east) / 2;
-    west = Math.max(-179.75, center - MAX_LONGITUDE_SPAN / 2);
-    east = Math.min(179.75, west + MAX_LONGITUDE_SPAN);
-    west = east - MAX_LONGITUDE_SPAN;
-  }
-  return { south, north, west, east };
+function gridResolution(bounds) {
+  const latitudeSpan = bounds.north - bounds.south;
+  const longitudeSpan = bounds.east - bounds.west;
+  return latitudeSpan > MAX_LATITUDE_SPAN || longitudeSpan > MAX_LONGITUDE_SPAN
+    ? { code: '1p00', degrees: 1, stepHours: 3 }
+    : { code: '0p25', degrees: 0.25, stepHours: 1 };
 }
 
-function alignedBounds(bounds) {
+function canonicalRegionalBounds(center) {
+  // Ventana estable de 12° × 20°. El centro cambia solo cada 2°, por lo que
+  // un paneo pequeño reutiliza la misma caché y no repite 25 descargas NOAA.
+  const latitude = Math.max(-74, Math.min(79, Math.round(center.latitude / 2) * 2));
+  const longitude = Math.max(-169.75, Math.min(169.75, Math.round(center.longitude / 2) * 2));
   return {
-    south: Math.floor(bounds.south * 4) / 4,
-    north: Math.ceil(bounds.north * 4) / 4,
-    west: Math.floor(bounds.west * 4) / 4,
-    east: Math.ceil(bounds.east * 4) / 4
+    south: latitude - MAX_LATITUDE_SPAN / 2,
+    north: latitude + MAX_LATITUDE_SPAN / 2,
+    west: longitude - MAX_LONGITUDE_SPAN / 2,
+    east: longitude + MAX_LONGITUDE_SPAN / 2
   };
 }
 
-function grid(bounds, minimumRows) {
+function alignedBounds(bounds, resolution) {
+  const steps = 1 / resolution.degrees;
+  return {
+    south: Math.floor(bounds.south * steps) / steps,
+    north: Math.ceil(bounds.north * steps) / steps,
+    west: Math.floor(bounds.west * steps) / steps,
+    east: Math.ceil(bounds.east * steps) / steps
+  };
+}
+
+function grid(bounds, minimumRows, resolution) {
   // Conserva aproximadamente el paso nativo de 0,25° de GFS en las vistas
   // regionales. La antigua malla de 6–13 filas interpolaba valores situados
   // hasta casi un grado de distancia y podía alterar mucho CAPE/CIN cerca de
   // sus bordes. El límite mantiene acotado el tamaño de la respuesta cuando
   // el usuario abre una vista continental.
-  const rows = Math.max(minimumRows, Math.min(48, Math.round((bounds.north - bounds.south) * 4) + 1));
-  const columns = Math.max(8, Math.min(48, Math.round((bounds.east - bounds.west) * 4) + 1));
+  const nativeSteps = 1 / resolution.degrees;
+  const rowLimit = resolution.degrees >= 1 ? 48 : 49;
+  const rows = Math.max(minimumRows, Math.min(rowLimit, Math.round((bounds.north - bounds.south) * nativeSteps) + 1));
+  const columnLimit = resolution.degrees >= 1 ? 96 : 81;
+  const columns = Math.max(8, Math.min(columnLimit, Math.round((bounds.east - bounds.west) * nativeSteps) + 1));
   const points = [];
   for (let row = 0; row < rows; row += 1) {
     const latitude = bounds.south + (bounds.north - bounds.south) * row / (rows - 1);
@@ -90,10 +97,10 @@ function grid(bounds, minimumRows) {
   return { rows, columns, points };
 }
 
-function noaaUrl(run, forecastHour, bounds) {
+function noaaUrl(run, forecastHour, bounds, resolution) {
   const identity = runIdentity(run);
   const parameters = new URLSearchParams({
-    file: `gfs.t${identity.hour}z.pgrb2.0p25.f${pad(forecastHour, 3)}`,
+    file: `gfs.t${identity.hour}z.pgrb2.${resolution.code}.f${pad(forecastHour, 3)}`,
     'lev_255-0_mb_above_ground': 'on',
     var_CAPE: 'on',
     var_CIN: 'on',
@@ -104,7 +111,7 @@ function noaaUrl(run, forecastHour, bounds) {
     bottomlat: String(bounds.south),
     dir: `/gfs.${identity.date}/${identity.hour}/atmos`
   });
-  return `${NOAA_FILTER}?${parameters.toString()}`;
+  return `${NOAA_FILTER_ROOT}/filter_gfs_${resolution.code}.pl?${parameters.toString()}`;
 }
 
 async function fetchBuffer(url, timeout = FETCH_TIMEOUT) {
@@ -167,21 +174,26 @@ function parseFrame(buffer) {
   };
 }
 
-async function fetchFrame(run, forecastHour, bounds) {
-  const buffer = await fetchBuffer(noaaUrl(run, forecastHour, bounds));
+async function fetchFrame(run, forecastHour, bounds, resolution) {
+  const buffer = await fetchBuffer(noaaUrl(run, forecastHour, bounds, resolution));
   return { forecastHour, frame: parseFrame(buffer) };
 }
 
-async function selectRun(bounds) {
+async function selectRun(bounds, resolution) {
   const now = Date.now();
   let lastError;
   for (const run of candidateRuns(now)) {
-    const currentHour = Math.max(0, Math.round((now - run.getTime()) / HOUR_MS));
+    const elapsedHours = Math.max(0, Math.round((now - run.getTime()) / HOUR_MS));
+    // NOAA publica la rejilla de 1° cada tres horas. Se toma el último plazo
+    // ya válido; la malla regional de 0,25° conserva sus pasos horarios.
+    const currentHour = resolution.stepHours > 1
+      ? Math.floor(elapsedHours / resolution.stepHours) * resolution.stepHours
+      : elapsedHours;
     const finalHour = currentHour + FRAME_HOURS;
     try {
       const [current, final] = await Promise.all([
-        fetchFrame(run, currentHour, bounds),
-        fetchFrame(run, finalHour, bounds)
+        fetchFrame(run, currentHour, bounds, resolution),
+        fetchFrame(run, finalHour, bounds, resolution)
       ]);
       return { run, currentHour, probes: new Map([[currentHour, current], [finalHour, final]]) };
     } catch (error) {
@@ -191,7 +203,7 @@ async function selectRun(bounds) {
   throw lastError || new Error('NOAA no publicó todavía una pasada GFS completa.');
 }
 
-async function fetchFrames(run, offsets, bounds, probes) {
+async function fetchFrames(run, offsets, bounds, probes, resolution) {
   const results = new Array(offsets.length);
   let next = 0;
   async function worker() {
@@ -200,7 +212,7 @@ async function fetchFrames(run, offsets, bounds, probes) {
       next += 1;
       const forecastHour = offsets[index];
       try {
-        results[index] = probes.get(forecastHour) || await fetchFrame(run, forecastHour, bounds);
+        results[index] = probes.get(forecastHour) || await fetchFrame(run, forecastHour, bounds, resolution);
       } catch {
         results[index] = null;
       }
@@ -243,6 +255,26 @@ function compactPoint(point, frames) {
   };
 }
 
+function responseWithFocus(payload, focus) {
+  const bounds = payload.bounds;
+  const inside = focus.latitude >= bounds.south && focus.latitude <= bounds.north &&
+    focus.longitude >= bounds.west && focus.longitude <= bounds.east;
+  if (!inside || !payload.points.length) return { ...payload, focus, focusPoint: null };
+  let nearest = payload.points[0];
+  let nearestDistance = Infinity;
+  for (const point of payload.points) {
+    const distance = Math.hypot(point.latitude - focus.latitude, point.longitude - focus.longitude);
+    if (distance < nearestDistance) {
+      nearest = point;
+      nearestDistance = distance;
+    }
+  }
+  // En detalle regional la malla visual conserva el paso de 0,25°. En vista
+  // mundial este punto es solo el nodo visual más cercano y no se presenta
+  // como una lectura local exacta.
+  return { ...payload, focus, focusPoint: payload.model.resolutionDegrees <= 0.25 ? nearest : null };
+}
+
 function trimCache() {
   for (const [key, entry] of RESPONSE_CACHE.entries()) {
     if (!entry || Date.now() - entry.savedAt > MAX_STALE_AGE) RESPONSE_CACHE.delete(key);
@@ -272,27 +304,37 @@ module.exports = async function handler(req, res) {
     latitude: clamp(req.query?.focusLat, -80, 85, 43.4201),
     longitude: clamp(req.query?.focusLon, -179.75, 179.75, -2.7224)
   };
-  const bounds = limitedBounds(requestedBounds, focus);
-  const noaaBounds = alignedBounds(bounds);
+  const viewportCenter = {
+    latitude: clamp(req.query?.viewLat, -80, 85, (requestedBounds.south + requestedBounds.north) / 2),
+    longitude: clamp(req.query?.viewLon, -179.75, 179.75, (requestedBounds.west + requestedBounds.east) / 2)
+  };
+  const resolution = gridResolution(requestedBounds);
+  const bounds = resolution.degrees >= 1
+    ? { ...WORLD_BOUNDS }
+    : canonicalRegionalBounds(viewportCenter);
+  const noaaBounds = alignedBounds(bounds, resolution);
   const density = clamp(req.query?.density, 6, 18, 18);
-  const outputGrid = grid(bounds, density);
+  const outputGrid = grid(bounds, density, resolution);
   const cacheKey = [
+    resolution.code,
     density,
     bounds.south.toFixed(2), bounds.north.toFixed(2),
-    bounds.west.toFixed(2), bounds.east.toFixed(2),
-    focus.latitude.toFixed(2), focus.longitude.toFixed(2)
+    bounds.west.toFixed(2), bounds.east.toFixed(2)
   ].join('|');
   const cached = RESPONSE_CACHE.get(cacheKey);
   if (cached && Date.now() - cached.savedAt < CACHE_TTL) {
     res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=3600');
     res.setHeader('X-Map-Cache', 'HIT');
-    return res.status(200).json(cached.payload);
+    return res.status(200).json(responseWithFocus(cached.payload, focus));
   }
 
   try {
-    const selected = await selectRun(noaaBounds);
-    const offsets = Array.from({ length: FRAME_HOURS + 1 }, (_, index) => selected.currentHour + index);
-    const frames = await fetchFrames(selected.run, offsets, noaaBounds, selected.probes);
+    const selected = await selectRun(noaaBounds, resolution);
+    const offsets = Array.from(
+      { length: Math.floor(FRAME_HOURS / resolution.stepHours) + 1 },
+      (_, index) => selected.currentHour + index * resolution.stepHours
+    );
+    const frames = await fetchFrames(selected.run, offsets, noaaBounds, selected.probes, resolution);
     if (frames.length < 3) throw new Error('NOAA no devolvió suficientes horas MUCAPE/MUCIN.');
     frames.sort((a, b) => a.forecastHour - b.forecastHour);
     const times = frames.map(item => new Date(selected.run.getTime() + item.forecastHour * HOUR_MS).toISOString().replace(/:00\.000Z$/, ':00'));
@@ -305,15 +347,23 @@ module.exports = async function handler(req, res) {
       displayLayer: String(req.query?.displayLayer || 'cape'),
       model: {
         requested: 'gfs',
-        label: 'NOAA GFS 0,25° · MUCAPE/MUCIN',
-        sourceModel: 'ncep_gfs_0p25_nomads',
+        label: resolution.degrees >= 1
+          ? 'NOAA GFS · fuente 1° · vista mundial reducida · MUCAPE/MUCIN'
+          : 'NOAA GFS 0,25° · MUCAPE/MUCIN',
+        sourceModel: `ncep_gfs_${resolution.code}_nomads`,
         run: run.iso,
         parcelLayer: '255–0 mb sobre el suelo',
+        resolutionDegrees: resolution.degrees,
+        displayResolutionDegrees: Math.max(
+          (bounds.north - bounds.south) / Math.max(1, outputGrid.rows - 1),
+          (bounds.east - bounds.west) / Math.max(1, outputGrid.columns - 1)
+        ),
+        overview: resolution.degrees >= 1,
+        timeStepHours: resolution.stepHours,
         fallback: false,
         cinAvailable: true
       },
       bounds,
-      focus,
       grid: {
         rows: outputGrid.rows,
         columns: outputGrid.columns,
@@ -321,20 +371,19 @@ module.exports = async function handler(req, res) {
         stepLongitude: (bounds.east - bounds.west) / (outputGrid.columns - 1)
       },
       times,
-      points: outputGrid.points.map(point => compactPoint(point, frames)),
-      focusPoint: compactPoint(focus, frames)
+      points: outputGrid.points.map(point => compactPoint(point, frames))
     };
     RESPONSE_CACHE.set(cacheKey, { savedAt: Date.now(), payload });
     trimCache();
     res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=3600');
     res.setHeader('X-Map-Cache', 'MISS');
-    return res.status(200).json(payload);
+    return res.status(200).json(responseWithFocus(payload, focus));
   } catch (error) {
     const stale = RESPONSE_CACHE.get(cacheKey);
     if (stale && Date.now() - stale.savedAt < MAX_STALE_AGE) {
       res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=900');
       res.setHeader('X-Map-Cache', 'STALE');
-      return res.status(200).json({ ...stale.payload, stale: true });
+      return res.status(200).json({ ...responseWithFocus(stale.payload, focus), stale: true });
     }
     res.setHeader('Cache-Control', 'no-store');
     return res.status(502).json({

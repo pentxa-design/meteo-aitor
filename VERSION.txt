@@ -1,3 +1,28 @@
+Meteo Aitor Bermeo v10.83 · modelos mundiales y convección NOAA global
+Fecha: 2026-08-09
+
+ECMWF, ICON y GFS se identifican y conservan como modelos mundiales. AROME HD
+sigue siendo regional y, al salir de su dominio real, el visor cambia de forma
+explícita a NOAA GFS mundial sin inventar datos ni prolongar AROME fuera de Europa.
+
+MUCAPE y MUCIN cubren ahora el planeta con los campos oficiales NOAA GFS de la
+parcela más inestable 255–0 mb. La panorámica usa la fuente de 1° cada 3 horas y
+una representación mundial reducida; al acercar a una región cambia a la malla
+real de 0,25° con pasos horarios. La panorámica cubre también el cruce del
+meridiano 180° y las ventanas regionales usan una caché estable para evitar
+descargas y bloqueos repetidos.
+
+Las cifras convectivas se espacian y desaparecen en la vista mundial para no
+taparlo; vuelven al acercar. MUCIN muestra sus valores negativos aunque MUCAPE
+sea bajo, sin ocultar una variable por el valor de la otra. El radar mundial es
+más transparente y aclara que los ecos, CAPE y CIN ayudan a vigilar tormentas,
+pero no confirman por sí solos un tornado: deben contrastarse con radar Doppler
+y avisos oficiales.
+
+No se elimina ninguna capa existente. La caché de la aplicación sube a v10.83.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.82 · cantidades de lluvia ICON desde la tesela DWD
 Fecha: 2026-08-09
 

@@ -4,7 +4,7 @@ const MARINE_OPEN_METEO = 'https://marine-api.open-meteo.com/v1/marine';
 const MODELS = {
   ecmwf: { label: 'ECMWF IFS HRES · 9 km', candidates: ['ecmwf_ifs', 'best_match'] },
   arome: { label: 'Météo‑France AROME HD · 1,5 km · 48 h', candidates: ['meteofrance_arome_france_hd'] },
-  icon: { label: 'DWD ICON Seamless · ICON‑EU 7 km', candidates: ['dwd_icon_seamless', 'best_match'] },
+  icon: { label: 'DWD ICON Seamless · global/Europa según zona', candidates: ['dwd_icon_seamless', 'best_match'] },
   gfs: { label: 'NOAA GFS Seamless', candidates: ['ncep_gfs_seamless', 'best_match'] }
 };
 // Las variables se mantienen en el modelo elegido. Las teselas espaciales
