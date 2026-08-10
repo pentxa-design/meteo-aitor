@@ -2755,7 +2755,7 @@ function mapPhenomenonThreshold(config){const zoom=mapAitorState.map?.getZoom()|
 function mapPhenomenonVisible(config,value){if(!mapValidNumber(value))return false;if([...MAP_RAIN_FIELD_KEYS,'precipitation_probability','reflectivity_estimated','cloud_cover','cape'].includes(config.key))return Number(value)>mapPhenomenonThreshold(config);if(config.key==='convective_inhibition')return Number(value)<-.5;return true}
 function mapSmoothstep(start,end,value){const t=Math.max(0,Math.min(1,(Number(value)-start)/Math.max(.0001,end-start)));return t*t*(3-2*t)}
 function mapLayerOpacity(config,value,settings={}){
-  let opacity=1;const factor={temperature:.99,wind:.92,gust:.94,pressure:.84,cloud:.95,precipitation:.99,precipitation_15m:.99,precipitation_3h:.99,precipitation_accumulated:.99,precipitation_6h:.97,precipitation_12h:.97,precipitation_24h:.97,rain:.98,showers:.98,snowfall:.98,precipitation_probability:.88,forecast_reflectivity:.99,dewpoint:.98,humidity:.90,t850:.99,cape:.97,cin:.96,sea_temperature:.96,waves:.94}[mapAitorState.layer]??.94;opacity*=factor;
+  let opacity=1;const factor={temperature:.99,wind:.92,gust:.94,pressure:.84,cloud:.95,precipitation:.99,precipitation_15m:.99,precipitation_3h:.99,precipitation_accumulated:.99,precipitation_6h:.97,precipitation_12h:.97,precipitation_24h:.97,rain:.98,showers:.98,snowfall:.98,precipitation_probability:.88,forecast_reflectivity:.99,dewpoint:.98,humidity:.90,t850:.99,cape:.97,cin:.90,sea_temperature:.96,waves:.94}[mapAitorState.layer]??.94;opacity*=factor;
   if(MAP_RAIN_FIELD_KEYS.has(config.key)){
     const threshold=settings.threshold??mapPhenomenonThreshold(config),rain=Math.max(0,mapNumber(value));if(rain<=threshold)return 0;
     const zoom=settings.zoom??mapAitorState.map?.getZoom()??5,ramp=zoom<=3?.18:zoom<=4?.14:zoom<=6?.09:.06;
@@ -2795,14 +2795,10 @@ function mapLayerOpacity(config,value,settings={}){
   }
   if(config.key==='convective_inhibition'){
     const inhibition=Math.abs(Math.min(0,mapNumber(value)));if(inhibition<.5)return 0;
-    // La panorámica mundial llega reducida a una rejilla ligera. Con el suelo
-    // regional de opacidad el MUCIN fuerte quedaba en torno al 23 % efectivo
-    // y parecía ausente aunque NOAA hubiese entregado todos los nodos.
-    const overview=Boolean(mapAitorState.data?.model?.overview),floor=overview?.82:.38,ceiling=overview?1:.98,end=overview?1000:700;
-    // Cuanto mayor es |MUCIN|, más firme debe verse el color. La fórmula
-    // anterior hacía lo contrario y volvía translúcidas justo las tapas más
-    // intensas, aunque los valores NOAA fueran correctos.
-    opacity*=floor+(ceiling-floor)*mapSmoothstep(20,end,inhibition);
+    // MUCIN se recorta después con el soporte de MUCAPE. Aquí graduamos solo
+    // la fuerza de la inhibición para conservar las zonas y dejar legible la
+    // cartografía fuera del entorno convectivo.
+    opacity*=.40+.58*mapSmoothstep(20,700,inhibition);
   }
   return Math.max(0,Math.min(.98,opacity));
 }
@@ -2970,7 +2966,7 @@ function mapFieldOpacity(){
   // vivo, pero países, costas, carreteras y nombres permanecen legibles. Las
   // capas de fenómeno (lluvia, reflectividad y nubes) conservan más contraste
   // porque sus valores nulos ya son completamente transparentes.
-  const factor={temperature:.86,t850:.82,dewpoint:.76,humidity:.62,wind:.68,gust:.70,pressure:.58,cloud:.93,precipitation:.90,precipitation_15m:.92,forecast_reflectivity:.92,cape:.90,cin:.98,sea_temperature:.82,waves:.84}[mapAitorState.layer]??1;
+  const factor={temperature:.86,t850:.82,dewpoint:.76,humidity:.62,wind:.68,gust:.70,pressure:.58,cloud:.93,precipitation:.90,precipitation_15m:.92,forecast_reflectivity:.92,cape:.90,cin:.90,sea_temperature:.82,waves:.84}[mapAitorState.layer]??1;
   return requested*factor;
 }
 function mapRainViewerOpacity(){
@@ -2992,7 +2988,7 @@ function updateMapFieldOpacity(){
 function mapAccumulationUsesExactSamples(config=mapLayerConfig()){
   const data=mapAitorState.data;if(!MAP_NOAA_RAIN_LAYERS.has(config?.key)||!data?.grid)return false;
   const rows=Number(data.grid.rows)||0,columns=Number(data.grid.columns)||0,south=Number(data.bounds?.south),north=Number(data.bounds?.north),west=Number(data.bounds?.west),east=Number(data.bounds?.east),centerLatitude=(south+north)/2;
-  const latitudeStep=Math.abs(Number(data.grid.stepLatitude)||((north-south)/Math.max(1,rows-1))),longitudeStep=Math.abs(Number(data.grid.stepLongitude)||((east-west)/Math.max(1,columns-1))),latitudeKm=latitudeStep*111.32,longitudeKm=longitudeStep*111.32*Math.max(.12,Math.cos(centerLatitude*Math.PI/180)),cellKm=Math.max(latitudeKm,longitudeKm),zoom=mapAitorState.map?.getZoom()||5,detailedFallback=data.transport==='direct-rain-detail',maximumCellKm=detailedFallback?(zoom<=3?200:zoom<=4?450:zoom<=6?220:120):(zoom<=3?75:zoom<=4?130:90);
+  const latitudeStep=Math.abs(Number(data.grid.stepLatitude)||((north-south)/Math.max(1,rows-1))),longitudeStep=Math.abs(Number(data.grid.stepLongitude)||((east-west)/Math.max(1,columns-1))),latitudeKm=latitudeStep*111.32,longitudeKm=longitudeStep*111.32*Math.max(.12,Math.cos(centerLatitude*Math.PI/180)),cellKm=Math.max(latitudeKm,longitudeKm),zoom=mapAitorState.map?.getZoom()||5,detailedFallback=data.transport==='direct-rain-detail',worldSurface=Boolean(data.model?.overview)&&Number(data.model?.displayResolutionDegrees)<=2.01,maximumCellKm=detailedFallback?(zoom<=3?200:zoom<=4?450:zoom<=6?220:120):(zoom<=3?(worldSurface?250:75):zoom<=4?130:90);
   // No se unen muestras separadas cientos de kilómetros: una malla mundial
   // 10×18 tiene datos reales, pero no resolución para afirmar dónde termina
   // cada mancha. Al ampliar y quedar por debajo de ~75 km sí se interpola.
@@ -3031,6 +3027,10 @@ function buildMapField(quick=false){
         value=weightTotal>=.74&&(validSamples>=2||maximumWeight>=.999)?Math.expm1(logTotal/weightTotal):NaN;aromeCoverage=weightTotal>0?activeWeight/weightTotal:0;
       }else value=mapInterpolatedValue(rowFloat,columnFloat,config.key);
       const valid=mapValidNumber(value);let alpha=valid?Math.round(mapLayerOpacity(config,value,settings)*255):0,color={r:0,g:0,b:0};
+      if(alpha>0&&config.key==='convective_inhibition'){
+        const capeSupport=mapInterpolatedValue(rowFloat,columnFloat,'cape');
+        alpha=Math.round(alpha*mapSmoothstep(100,700,capeSupport));
+      }
       if(valid){
         if(mapAitorState.layer==='cloud'){
           const latitude=latitudes[y],longitude=longitudes[x],low=mapInterpolatedValue(rowFloat,columnFloat,'cloud_cover_low'),mid=mapInterpolatedValue(rowFloat,columnFloat,'cloud_cover_mid'),high=mapInterpolatedValue(rowFloat,columnFloat,'cloud_cover_high'),rain=mapInterpolatedValue(rowFloat,columnFloat,'precipitation'),cloudSignal=Math.max(0,Math.min(100,mapNumber(value))),baseAlpha=alpha;
@@ -3301,7 +3301,7 @@ function renderMapWeatherSymbols(){
 function renderMapTownValues(){
   const map=mapAitorState.map,data=mapAitorState.data,config=mapLayerConfig();if(!map||!data)return 0;
   const bounds=map.getBounds(),center=map.getCenter(),zoom=map.getZoom(),size=map.getSize(),thermal=config.key==='temperature_2m',muOverview=MAP_GFS_ONLY_LAYERS.has(mapAitorState.layer)&&(data.model?.overview||Number(data.model?.resolutionDegrees||.25)>.25),compact=window.innerWidth<650,limit=compact?(thermal?9:7):(thermal?(zoom<=3?30:zoom<=5?52:zoom>=8?64:58):(zoom<=3?16:zoom<=5?26:zoom>=8?42:34)),placed=[],spacingX=compact?(thermal?86:102):(thermal?50:66),spacingY=compact?56:(thermal?23:28);
-  const raw=MAP_KNOWN_PLACES.filter(place=>bounds.contains([place.latitude,place.longitude])).map(place=>({...place,value:mapValueAtCoordinates(place.latitude,place.longitude,config.key),point:map.latLngToContainerPoint([place.latitude,place.longitude])})).filter(place=>muOverview?mapValidNumber(place.value):mapPhenomenonVisible(config,place.value));
+  const raw=MAP_KNOWN_PLACES.filter(place=>bounds.contains([place.latitude,place.longitude])).map(place=>({...place,value:mapValueAtCoordinates(place.latitude,place.longitude,config.key),cape:config.key==='convective_inhibition'?mapValueAtCoordinates(place.latitude,place.longitude,'cape'):null,point:map.latLngToContainerPoint([place.latitude,place.longitude])})).filter(place=>config.key==='convective_inhibition'?mapValidNumber(place.value)&&place.value<-.5&&mapValidNumber(place.cape)&&place.cape>100:muOverview?mapValidNumber(place.value):mapPhenomenonVisible(config,place.value));
   let towns=raw;
   // En la vista Península-Europa se reserva una localidad por zona. Así los
   // valores llegan también a Francia, Reino Unido, Italia y Europa central.
@@ -3325,7 +3325,7 @@ function renderMapValueLabels(){
   if(['precipitation','precipitation_15m','reflectivity_estimated'].includes(config.key)&&zoom<7&&!iconNativeRain)return;
   const exactAccumulation=mapAccumulationUsesExactSamples(config),continuousAccumulation=MAP_NOAA_RAIN_LAYERS.has(config.key)&&!exactAccumulation,marine=MAP_MARINE_LAYERS.has(mapAitorState.layer),townCount=exactAccumulation||continuousAccumulation||marine?0:renderMapTownValues();if(townCount>=3||window.innerWidth<650&&!marine&&!exactAccumulation&&!continuousAccumulation)return;
   const rows=data.grid.rows,columns=data.grid.columns,rowStep=exactAccumulation?1:continuousAccumulation?2:zoom>=8?1:(rows>7?2:1),columnStep=exactAccumulation?1:continuousAccumulation?2:zoom>=8?2:(columns>9?2:1),placed=[],size=map?.getSize?.()||{x:1200,y:700},spacing=exactAccumulation?44:continuousAccumulation?62:zoom>=8?56:zoom>=6?72:90,maxLabels=exactAccumulation?80:continuousAccumulation?34:zoom>=8?48:zoom>=6?30:18;
-  for(let row=0;row<rows&&placed.length<maxLabels;row+=rowStep){for(let column=0;column<columns&&placed.length<maxLabels;column+=columnStep){const point=data.points[row*columns+column],value=mapValue(point,config.key);if(!mapPhenomenonVisible(config,value))continue;const pixel=map?.latLngToContainerPoint?.([point.latitude,point.longitude]);if(!pixel||pixel.x<-20||pixel.y<-20||pixel.x>size.x+20||pixel.y>size.y+20||placed.some(other=>pixel.distanceTo(other)<spacing))continue;placed.push(pixel);const color=exactAccumulation?mapColor(config,value):'',icon=L.divIcon({className:'mapValueLabel'+(exactAccumulation?' mapAccumulationPoint':''),html:'<span'+(exactAccumulation?' style="--map-value-color:'+color+'"':'')+'>'+mapShortValue(config,value)+'</span>',iconSize:[40,24],iconAnchor:[20,12]});mapAitorState.values.addLayer(L.marker([point.latitude,point.longitude],{icon,interactive:false,keyboard:false}))}}
+  for(let row=0;row<rows&&placed.length<maxLabels;row+=rowStep){for(let column=0;column<columns&&placed.length<maxLabels;column+=columnStep){const point=data.points[row*columns+column],value=mapValue(point,config.key),cape=config.key==='convective_inhibition'?mapValue(point,'cape'):null;if(!mapPhenomenonVisible(config,value)||config.key==='convective_inhibition'&&(!mapValidNumber(cape)||cape<=100))continue;const pixel=map?.latLngToContainerPoint?.([point.latitude,point.longitude]);if(!pixel||pixel.x<-20||pixel.y<-20||pixel.x>size.x+20||pixel.y>size.y+20||placed.some(other=>pixel.distanceTo(other)<spacing))continue;placed.push(pixel);const color=exactAccumulation?mapColor(config,value):'',icon=L.divIcon({className:'mapValueLabel'+(exactAccumulation?' mapAccumulationPoint':''),html:'<span'+(exactAccumulation?' style="--map-value-color:'+color+'"':'')+'>'+mapShortValue(config,value)+'</span>',iconSize:[40,24],iconAnchor:[20,12]});mapAitorState.values.addLayer(L.marker([point.latitude,point.longitude],{icon,interactive:false,keyboard:false}))}}
 }
 function mapWindBarbSvg(speedKmh){
   let knots=Math.max(0,Math.round((mapNumber(speedKmh)/1.852)/5)*5);if(knots<5)return'<svg viewBox="0 0 40 40" aria-hidden="true"><circle class="barbCalm" cx="20" cy="20" r="4.5"/></svg>';
@@ -3678,7 +3678,7 @@ async function loadMapForecast(fit=false,force=false,targetTime=mapCurrentForeca
     if(MAP_GFS_ONLY_LAYERS.has(requestedLayer))response.model={...(response.model||{}),requested:'gfs',label:mapForcedGfsLabel(requestedLayer,response.model?.resolutionDegrees,response.model?.overview),fallback:false};
     mapAitorState.data=response;mapAitorState.layer=requestedLayer;mapAitorState.model=requestedModel;mapAitorState.renderedLayer=requestedLayer;mapAitorState.renderedModel=requestedModel;mapAitorState.timeIndex=responseTimeIndex;mapAitorState.lastError=null;mapAitorState.retryAttempt=0;clearMapRetry();rememberMapLastGood(requestedLayer,requestedModel,response,mapAitorState.timeIndex);
     const range=$('mapTimeRange');range.max=Math.max(0,response.times.length-1);range.value=mapAitorState.timeIndex;
-    const exactAccumulation=mapAccumulationUsesExactSamples(MAP_LAYERS[requestedLayer]),regionalNoaaRain=MAP_NOAA_RAIN_LAYERS.has(requestedLayer)&&Number(response.model?.resolutionDegrees)<=.25,displayStep=Number(response.model?.displayResolutionDegrees||response.model?.resolutionDegrees),approximateSurface=MAP_NOAA_RAIN_LAYERS.has(requestedLayer)&&!exactAccumulation&&response.transport==='direct-rain-detail';$('mapStatus').dataset.transport=response.transport||'server';$('mapStatus').textContent=(cached?'Caché rápida · ':response.partial?'Última malla parcial · ':response.stale?'Caché segura · ':'')+'Malla '+response.model.label+' · '+response.points.length+' puntos'+(regionalNoaaRain?' · superficie '+String(displayStep).replace('.',',')+'° activa':exactAccumulation?' · panorámica de muestras; usa EU o ES para superficie':approximateSurface?' · superficie interpolada aproximada':'');
+    const exactAccumulation=mapAccumulationUsesExactSamples(MAP_LAYERS[requestedLayer]),continuousNoaaRain=MAP_NOAA_RAIN_LAYERS.has(requestedLayer)&&!exactAccumulation,displayStep=Number(response.model?.displayResolutionDegrees||response.model?.resolutionDegrees),approximateSurface=continuousNoaaRain&&response.transport==='direct-rain-detail';$('mapStatus').dataset.transport=response.transport||'server';$('mapStatus').textContent=(cached?'Caché rápida · ':response.partial?'Última malla parcial · ':response.stale?'Caché segura · ':'')+'Malla '+response.model.label+' · '+response.points.length+' puntos'+(continuousNoaaRain?' · superficie '+String(displayStep).replace('.',',')+'° activa':exactAccumulation?' · panorámica de muestras; usa EU o ES para superficie':approximateSurface?' · superficie interpolada aproximada':'');
     $('mapLayerBadge').classList.remove('mapLoadError');unsetMapRadar();renderMapGrid();if($('mapOfficialEmbed')?.dataset.automatic==='1')closeMapOfficial(false);
     if(fit&&response?.focus)map.panTo([response.focus.latitude,response.focus.longitude],{animate:true});
   }catch(error){
@@ -4004,7 +4004,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.88',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.89',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
