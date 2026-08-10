@@ -1,4 +1,4 @@
-const CACHE='meteo-aitor-v10-89-world-rain-mucin';
+const CACHE='meteo-aitor-v10-90-rain-towns';
 const SHELL=['./','./index.html','./manifest.webmanifest','./vendor/leaflet/leaflet.css','./vendor/leaflet/leaflet.js','./vendor/openmeteo-weather-map-layer-0.0.20.js','./vendor/leaflet/images/layers.png','./vendor/leaflet/images/layers-2x.png','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-1024.png','./icons/icon-180.png','./icons/brand-gaztelugatxe.png','./assets/sky-real-sunny-v10-7.jpg','./assets/sky-real-partly-v10-7.jpg','./assets/isla-izaro-bermeo-2013-cc-by-sa-3.jpg','./assets/ne-110m-land.geojson','./assets/sky-real-light-rain-v10-7.jpg','./assets/sky-real-heavy-rain-v10-7.jpg','./assets/sky-bermeo-night-v9-12.webp'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

@@ -1,3 +1,17 @@
+Meteo Aitor Bermeo v10.90 · pueblos identificados en lluvia
+Fecha: 2026-08-10
+
+En Lluvia 3 h y Precipitación acumulada, cada zona con lluvia muestra ahora
+la cantidad prevista junto al nombre del pueblo o ciudad correspondiente. Las
+etiquetas se separan automáticamente para que se pueda identificar dónde va a
+llover sin cubrir la cartografía ni convertir el mapa en una pared de texto.
+El campo mundial, los colores de lluvia y el recorte de MUCIN por MUCAPE se
+mantienen igual.
+
+La caché de la aplicación sube a v10.90.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.89 · lluvia mundial y MUCIN por zonas
 Fecha: 2026-08-10
 
