@@ -83,9 +83,14 @@ function grid(bounds, minimumRows, resolution) {
   // sus bordes. El límite mantiene acotado el tamaño de la respuesta cuando
   // el usuario abre una vista continental.
   const nativeSteps = 1 / resolution.degrees;
-  const rowLimit = resolution.degrees >= 1 ? 48 : 49;
+  // En la panorámica mundial se conservan celdas visuales de ~2°. El límite
+  // anterior (48 × 96) llegaba a casi 4°: una tormenta de Castellón podía
+  // quedar absorbida por una celda enorme aun usando la fuente GFS de 1°.
+  // Esta densidad coincide con la usada por Lluvia 3 h y sigue siendo apta
+  // para la película mundial de CAPE/CIN.
+  const rowLimit = resolution.degrees >= 1 ? 84 : 49;
   const rows = Math.max(minimumRows, Math.min(rowLimit, Math.round((bounds.north - bounds.south) * nativeSteps) + 1));
-  const columnLimit = resolution.degrees >= 1 ? 96 : 81;
+  const columnLimit = resolution.degrees >= 1 ? 181 : 81;
   const columns = Math.max(8, Math.min(columnLimit, Math.round((bounds.east - bounds.west) * nativeSteps) + 1));
   const points = [];
   for (let row = 0; row < rows; row += 1) {
