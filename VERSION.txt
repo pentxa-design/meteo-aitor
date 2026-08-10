@@ -1,3 +1,29 @@
+Warning: truncated output (original token count: 5955)
+Total output lines: 485
+
+Meteo Aitor Bermeo v10.88 · lluvia visible desde Europa y acumulación NOAA
+Fecha: 2026-08-10
+
+Lluvia en 3 horas deja de depender de la cuota de ECMWF, ICON o Open-Meteo:
+usa exclusivamente el acumulado APCP oficial de NOAA GFS. Desde la vista EU
+se solicita ya la fuente de 0,25° y se dibuja una superficie continua de 0,5°
+que cubre Península, Francia, Mediterráneo occidental y Europa central. Al
+acercar se conserva cada nodo de 0,25°. La vista mundial de 1° continúa
+identificada como panorámica y no inventa detalle.
+
+Se añade la capa independiente "Precipitación acumulada", calculada con el
+campo acumulado oficial desde el inicio de la misma pasada GFS hasta la hora
+seleccionada. Lluvia 3 h y acumulada comparten una sola descarga y su caché.
+
+La hora de Lluvia 3 h representa las tres horas anteriores que terminan en la
+marca temporal visible. El cero permanece transparente; la lluvia débil se ve
+en azul y cian, la moderada en verde y las intensidades fuertes en colores
+cálidos. No se mezclan modelos ni se rellenan huecos sin datos.
+
+La caché de la aplicación sube a v10.88.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.87 · película horaria y lluvia GFS de 3 horas
 Fecha: 2026-08-10
 
@@ -146,182 +172,7 @@ Al avanzar por sus 192 intervalos, el visor dibuja primero una imagen ligera y
 solo calcula el acabado completo al detenerse. El cálculo específico de AROME
 reutiliza la malla numérica y evita repetir interpolaciones por cada píxel.
 
-Las partículas de viento ya no interpolan 359° y 1° como si el punto medio
-fuera 180°. La dirección se compone como vector, se suaviza entre celdas y se
-reinicia limpiamente al cambiar de hora, evitando giros visuales falsos.
-
-No se elimina ninguna capa ni se alteran lluvia horaria, nubes, radar, presión,
-MUCAPE, MUCIN o mar. La caché de la aplicación sube a v10.80.
-
-VERSIÓN ANTERIOR
-
-Meteo Aitor Bermeo v10.79 · rayos AEMET y lluvia AROME cada 15 minutos
-Fecha: 2026-08-09
-
-Se añaden dos capas nuevas e independientes al visor: el mapa oficial de rayos
-observados del último período estándar de AEMET OpenData y la precipitación
-nativa de Météo-France AROME HD en intervalos reales de 15 minutos. La capa
-AROME muestra milímetros por cada cuarto de hora y no divide ni interpola la
-lluvia horaria. Se limita al dominio oficial 37,5–55,4° N y 12° O–16° E.
-
-No se elimina ni sustituye ninguna capa anterior. Radar, RainViewer, lluvia
-horaria y acumulada, nubes, viento, presión, MUCAPE, MUCIN y mar permanecen.
-La caché de la aplicación sube a v10.79.
-
-VERSIÓN ANTERIOR
-
-Meteo Aitor Bermeo v10.78 · valores MUCAPE/MUCIN en puntos NOAA nativos
-Fecha: 2026-08-08
-
-Las etiquetas locales de MUCAPE y MUCIN dejan de promediar celdas separadas.
-Ahora muestran el valor del punto NOAA GFS 0,25° más próximo y la malla regional
-mantiene aproximadamente la resolución nativa. Esto evita diferencias grandes
-en bordes convectivos, donde CAPE y CIN pueden variar mucho en pocos kilómetros.
-
-Solo cambian MUCAPE y MUCIN. Lluvia, nubes, radar, viento, presión y las demás
-capas permanecen intactas. La caché de la aplicación sube a v10.78.
-
-VERSIÓN ANTERIOR
-
-Meteo Aitor Bermeo v10.77 · MUCAPE y MUCIN oficiales NOAA GFS 0,25°
-Fecha: 2026-08-08
-
-Las dos capas convectivas del visor dejan de usar el CAPE y CIN genéricos.
-Ahora descargan directamente de NOAA NOMADS la pareja GFS de 255–0 mb sobre
-el suelo: MUCAPE y MUCIN de la parcela más inestable, siempre del mismo campo,
-pasada y hora válida. Se ofrecen la hora actual y las 24 horas siguientes.
-
-Al seleccionar cualquiera de las dos capas, el modelo queda fijado y rotulado
-como NOAA GFS 0,25°. Si NOAA no responde, no se sustituye silenciosamente por
-otro CAPE/CIN. Lluvia, nubes, radar, viento, presión y las demás capas no se
-modifican. La caché de la aplicación sube a v10.77 para que baste con refrescar.
-
-VERSIÓN ANTERIOR
-
-Meteo Aitor Bermeo v10.76 · lluvia de 3 horas limpia y CIN con valores en Android
-Fecha: 2026-08-08
-
-La lluvia acumulada de tres horas ya no rellena huecos cuando la fuente solo
-puede entregar una malla parcial o demasiado separada. En ese caso presenta
-los milímetros reales como puntos compactos y coloreados; el campo continuo
-solo se dibuja cuando hay resolución suficiente.
-
-La consulta normal de esta capa usa más puntos al acercar el mapa. También se
-ha retirado el bloque largo de fuentes situado bajo el visor; la atribución
-cartográfica obligatoria continúa visible dentro del propio mapa.
-
-Las cifras de CAPE y CIN se leen ahora de la misma tesela espacial que pinta
-la capa. Así aparecen también en Android aunque falle o se limite la consulta
-auxiliar de puntos; colores, valores, modelo y hora no se sustituyen.
-
-VERSIÓN ANTERIOR
-
-Meteo Aitor Bermeo v10.75 · controles del mapa compactos en móvil
-Fecha: 2026-08-08
-
-Los controles flotantes del visor ocupan menos mapa en teléfonos: selector de
-capas, modelos y línea temporal son más bajos, manteniendo las 17 capas, los
-cuatro modelos y todos los botones. Las opciones se distribuyen en dos filas
-deslizables y el bloque previo al mapa también es mucho más corto.
-
-Al desplazar o ampliar el mapa, los controles flotantes se atenúan y se apartan
-ligeramente; reaparecen 140 ms después de terminar el gesto. Así no tapan la
-zona meteorológica que se está consultando y siguen disponibles al detenerse.
-
-VERSIÓN ANTERIOR
-
-Meteo Aitor Bermeo v10.74 · menú móvil no flotante
-Fecha: 2026-08-08
-
-En móvil, el menú de accesos «Ahora», «Mareas», «24 horas», «Radar y mapas»,
-«Avisos AEMET» y «Actualizar tiempo» deja de quedar fijado al desplazar la
-página. Se mueve con el contenido y ya no tapa la previsión horaria, diaria ni
-las mareas. En escritorio conserva el comportamiento fijo anterior.
-
-VERSIÓN ANTERIOR
-
-Meteo Aitor Bermeo v10.73 · resumen móvil compacto
-Fecha: 2026-08-08
-
-En móvil, los diez datos actuales se organizan en una banda horizontal de dos
-filas y 46 px de alto por tarjeta. Se mantienen todos los valores y el usuario
-puede desplazarlos lateralmente. El aviso de viento reduce altura, espacios y
-tipografía sin ocultar su nivel, velocidad, rachas ni dirección. El diseño de
-escritorio no cambia.
-
-VERSIÓN ANTERIOR
-
-Meteo Aitor Bermeo v10.72 · visor horario fluido
-Fecha: 2026-08-08
-
-El cursor temporal prioriza siempre la hora que se está señalando, cancela la
-vista rápida que haya quedado rezagada y precarga las horas ligeras siguientes.
-Se conserva la tesela real de cada modelo y se afina a máxima resolución al
-detener el cursor. Aplicado a lluvia, nubosidad, reflectividad, viento y demás
-capas espaciales, sin retirar datos ni capas.
-
-VERSIÓN ANTERIOR
-
-Meteo Aitor Bermeo v10.71 · previsión ordenada y visor propio protagonista
-Fecha: 2026-08-08
-
-La previsión de los próximos siete días aparece inmediatamente después de
-las próximas 24 horas. Se elimina el bloque redundante «Modelos y herramientas»;
-el visor Aitor Meteo Maps, sus modelos y todas sus capas se mantienen intactos.
-
-VERSIÓN ANTERIOR
-
-Meteo Aitor Bermeo v10.70 · franjas y datos más compactos
-Fecha: 2026-08-08
-
-Las tarjetas de Mañana, Tarde y Noche reducen altura y espacios, conservando
-todos los símbolos, temperaturas y avisos. En móvil se elimina únicamente el
-detalle numérico repetido que ya aparece completo en Próximas 24 horas.
-
-Meteo Aitor Bermeo v10.69 · tarjetas de datos más compactas
-
-Las diez tarjetas de datos actuales ocupan menos altura en escritorio:
-se reducen el relleno, la separación y el tamaño tipográfico sin eliminar
-ningún dato. En móvil se conserva la disposición compacta ya existente. La
-previsión de las próximas 24 horas aparece justo después de Hoy por franjas;
-mareas, datos actuales y el resto del contenido continúan debajo.
-
-Meteo Aitor Bermeo v10.68 · franjas visibles dentro de la portada
-
-La fotografía principal muestra directamente la evolución real de hoy como
-Mañana, Tarde y Noche. Cada franja enseña únicamente los símbolos derivados
-de sus horas publicadas: sol, nubes, precipitación, rayos y viento pueden
-combinarse cuando los datos ECMWF/Open-Meteo así lo indican. El icono grande
-sigue reservado al estado actual para no confundir observación y previsión.
-
-VERSIÓN ANTERIOR
-
-Meteo Aitor Bermeo v10.67 · resumen real por franjas
-Fecha: 2026-08-08
-
-La portada resume mañana, tarde y noche usando exclusivamente los códigos WMO,
-temperaturas, precipitación, CAPE, chubascos y rachas de las horas realmente
-publicadas. No interpola descripciones. Cuando las rachas alcanzan el nivel
-relevante ya utilizado por la app, el icono de viento se suma al fenómeno
-meteorológico tanto en portada como en cada uno de los siete días.
-
-VERSIÓN ANTERIOR
-
-Meteo Aitor Bermeo v10.66 · hoy visible en la portada
-Fecha: 2026-08-08
-
-La tarjeta principal incorpora «Hoy» en su resumen de cuatro días. De esta
-forma, la evolución horaria real del día —por ejemplo sol → tormenta— también
-queda visible en la portada, manteniendo el símbolo grande reservado para el
-tiempo observado en ese momento.
-
-VERSIÓN ANTERIOR
-
-Meteo Aitor Bermeo v10.65 · riesgo convectivo en los símbolos
-Fecha: 2026-08-08
-
-La previsión de Bermeo incorpora los campos horarios CAPE y chubascos del
-ECMWF. Cuando coinciden precipitación convectiva, probabilidad suficiente e
+Las partículas de viento ya no interpol…1955 tokens truncated…iva, probabilidad suficiente e
 inestabilidad, las tarjetas muestran agua y rayo con la indicación «Riesgo
 convectivo». Los códigos WMO 95, 96 y 99 continúan reservados para tormenta
 publicada explícitamente por la fuente.
