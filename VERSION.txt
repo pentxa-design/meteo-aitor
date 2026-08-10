@@ -1,3 +1,27 @@
+Meteo Aitor Bermeo v10.87 · película horaria y lluvia GFS de 3 horas
+Fecha: 2026-08-10
+
+Lluvia, reflectividad, nubosidad, temperatura, humedad, viento, presión y
+temperatura a 850 hPa cargan una película horaria ligera junto con la tesela
+nativa. Al mover el cursor se dibuja inmediatamente el último fotograma pedido;
+al soltar, la tesela exacta se afina en segundo plano sin detener los controles.
+
+La lluvia GFS de las próximas tres horas se obtiene directamente de los campos
+APCP oficiales NOAA NOMADS de 0,25°. Se restan acumulados consecutivos de la
+misma pasada para formar intervalos exactos de tres horas. En vista regional se
+representan 8.833 puntos como una superficie continua con valores encima; la
+vista mundial se reduce y se identifica para no inventar detalle.
+
+La reflectividad estimada usa verde, amarillo, naranja, rojo y magenta según la
+intensidad, dejando el cero transparente. La nubosidad forma masas grises y
+carbón sobre el mapa azul. El selector horizontal de modelos se sustituye por
+un desplegable vertical compacto en la esquina inferior izquierda.
+
+No se elimina ni sustituye ninguna capa. La caché de la aplicación sube a
+v10.87.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.86 · horas mundiales más rápidas y MUCIN legible
 Fecha: 2026-08-10
 
