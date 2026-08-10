@@ -1,3 +1,17 @@
+Meteo Aitor Bermeo v10.85 · línea temporal disponible durante la carga
+Fecha: 2026-08-10
+
+Los controles de horas y días permanecen activos cuando una tesela nativa está
+terminando de cargar. El usuario puede pedir inmediatamente la hora siguiente y
+el visor salta al último destino solicitado sin quedar bloqueado por una carga
+anterior. La selección inicial de modelo y capa sigue protegida hasta disponer
+de una línea temporal válida.
+
+No se elimina ni sustituye ninguna capa. La caché de la aplicación sube a
+v10.85.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.84 · visor fluido y capas meteorológicas legibles
 Fecha: 2026-08-10
 

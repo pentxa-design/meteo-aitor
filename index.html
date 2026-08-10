@@ -3383,7 +3383,8 @@ function setMapLightning(){
 }
 function setMapBusy(busy,message=''){
   mapAitorState.loading=busy;$('mapRefresh').disabled=busy;$('mapAitorStudio')?.classList.toggle('isBusy',busy);
-  ['mapPrev','mapPlay','mapNext','mapSpeed','mapTimeRange'].forEach(id=>{if($(id))$(id).disabled=busy});
+  const timelineLocked=busy&&(!mapUsesNativeTiles()||!mapAitorState.nativeSource?.timeline?.length);
+  ['mapPrev','mapPlay','mapNext','mapSpeed','mapTimeRange'].forEach(id=>{if($(id))$(id).disabled=timelineLocked});
   if(busy){$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Cargando '+mapLayerConfig().title+'…';}
   if(message)$('mapStatus').textContent=message;
 }
@@ -3888,7 +3889,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.84',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.85',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
