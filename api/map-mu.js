@@ -1,4 +1,5 @@
 const GRIB2CLASS = require('grib2class');
+const rain3hHandler = require('../lib/map-rain3h');
 
 const NOAA_FILTER_ROOT = 'https://nomads.ncep.noaa.gov/cgi-bin';
 const HOUR_MS = 60 * 60 * 1000;
@@ -283,6 +284,9 @@ function trimCache() {
 }
 
 module.exports = async function handler(req, res) {
+  if (String(req.query?.route || '') === 'rain3h') {
+    return rain3hHandler(req, res);
+  }
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
