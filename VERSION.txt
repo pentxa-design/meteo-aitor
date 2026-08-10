@@ -1,3 +1,21 @@
+Meteo Aitor Bermeo v10.92 · CAPE y CIN más inestables, legibles
+Fecha: 2026-08-10
+
+La panorámica mundial de MUCAPE/MUCIN aumenta de 4° a aproximadamente 2° por
+celda. Al pulsar «ES», el visor solicita automáticamente la malla NOAA GFS
+de 0,25° y las horas intermedias: así una célula convectiva como la situada
+al norte de Castellón no queda diluida por una celda continental.
+
+MUCIN vuelve a cubrir todos los valores de su propia capa, igual que MUCAPE:
+no se elimina una cifra de CIN por tener CAPE bajo. El signo menos se presenta
+como «−» tanto en la leyenda como en cada valor; en la panorámica se antepone
+«≈» porque procede de la muestra mundial reducida. En España, los valores son
+los nodos NOAA GFS de 0,25° de la parcela más inestable 255–0 mb.
+
+La caché de la aplicación sube a v10.92.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.90 · pueblos identificados en lluvia
 Fecha: 2026-08-10
 
