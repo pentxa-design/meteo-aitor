@@ -27,6 +27,9 @@
     "api/aemet-radar.js": {
       "maxDuration": 20
     },
+    "api/euskalmet-map.js": {
+      "maxDuration": 30
+    },
     "api/map-arome-15m.js": {
       "maxDuration": 30
     },

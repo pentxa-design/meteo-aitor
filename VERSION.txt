@@ -1,3 +1,32 @@
+Meteo Aitor Bermeo v10.93 · mapas oficiales, cursor fluido y cámaras
+Fecha: 2026-08-11
+
+El producto nacional de rayos AEMET vuelve a verse completo: el marco reserva
+su espacio para la imagen, la leyenda y el cursor sin recortar la Península.
+Se añaden dos observaciones oficiales regionales de Euskalmet: reflectividad
+máxima del radar de Kapildui y rayos. Los fotogramas se buscan en las tres
+últimas horas, se descarta expresamente la imagen oficial de «Sin datos» y
+nunca se sustituye una capa por otra distinta.
+
+El cursor horario de las capas ECMWF agrupa los movimientos rápidos, reutiliza
+el mismo raster y pospone cifras, isobaras y barbas hasta soltar. La última hora
+seleccionada se pinta de forma exacta y después recupera el detalle nativo.
+
+Se estrena el apartado Cámaras web de la costa. Bakio muestra la señal MJPEG
+pública enlazada por su Ayuntamiento, con estado y reconexión. Bermeo, Getxo y
+el directorio de playas de Bizkaia se ofrecen como enlaces oficiales porque
+sus flujos directos no están publicados o no son verificables para incrustar.
+
+MUCAPE y MUCIN conservan la pareja NOAA GFS más inestable de 255–0 mb, malla
+regional real de 0,25° y el signo negativo visible en CIN. Lluvia 3 h y
+precipitación acumulada mantienen sus campos oficiales NOAA y las etiquetas
+de localidades. No se alteran valores para hacerlos coincidir con otros
+visores o modelos.
+
+La caché de la aplicación sube a v10.93.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.92 · CAPE y CIN más inestables, legibles
 Fecha: 2026-08-10
 
