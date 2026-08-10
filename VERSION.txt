@@ -1,3 +1,22 @@
+Meteo Aitor Bermeo v10.86 · horas mundiales más rápidas y MUCIN legible
+Fecha: 2026-08-10
+
+Las capas nativas mundiales —lluvia, reflectividad, nubosidad, temperatura,
+punto de rocío, humedad, viento, presión y temperatura a 850 hPa— muestran
+primero una tesela real aligerada y afinan después. En pausa ya no se decodifica
+una hora oculta que bloquee el cursor; la red anticipa de forma serial las horas
+siguientes solo después de completar la hora visible y respeta ahorro de datos,
+pestañas ocultas y cancelaciones.
+
+MUCIN mantiene los valores oficiales negativos de NOAA GFS, pero emplea una
+paleta más saturada y una opacidad que aumenta con la inhibición para que sus
+zonas sean visibles. MUCAPE no cambia.
+
+No se elimina ni sustituye ninguna capa. La caché de la aplicación sube a
+v10.86.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.85 · línea temporal disponible durante la carga
 Fecha: 2026-08-10
 
