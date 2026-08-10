@@ -24,9 +24,6 @@
     "api/map-mu.js": {
       "maxDuration": 30
     },
-    "api/map-rain3h.js": {
-      "maxDuration": 30
-    },
     "api/aemet-radar.js": {
       "maxDuration": 20
     },
@@ -40,6 +37,12 @@
       "maxDuration": 10
     }
   },
+  "rewrites": [
+    {
+      "source": "/api/map-rain3h",
+      "destination": "/api/map-mu?route=rain3h"
+    }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
