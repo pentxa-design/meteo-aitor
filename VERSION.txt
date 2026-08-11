@@ -1,3 +1,23 @@
+Meteo Aitor Bermeo v10.100 · nubes legibles, cursor ágil y lluvia mundial
+Fecha: 2026-08-11
+
+La nubosidad conserva el dato real de cada modelo con una lectura más clara:
+mar azul, mapa visible, nube seca de gris suave a gris medio y núcleos oscuros
+solo donde la precipitación de la misma hora aporta agua. En Mapa limpio se
+retira la batimetría que podía confundirse con un borde nuboso fuera de costa.
+
+El cursor incluye hasta 24 horas publicadas anteriores y seis días futuros.
+Durante el arrastre no abre peticiones intermedias; al soltar carga una única
+hora exacta, conserva el último fotograma correcto y precarga como máximo una
+hora adyacente. Las cifras de nubes, lluvia y reflectividad se leen de la misma
+tesela visible y ya no compiten mediante peticiones multipunto.
+
+Lluvia 3 h y acumulada mantienen sus 56 intervalos hasta +168 h. Al alejar a
+Mundo, un recorte regional ya no puede hacerse pasar por cobertura completa:
+se oculta y se solicita la malla NOAA global continua.
+
+MUCAPE permanece intacto. La caché de la aplicación sube a v10.100.
+
 Meteo Aitor Bermeo v10.99 · hora exacta sin carrera de carga
 Fecha: 2026-08-11
 
