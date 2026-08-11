@@ -1,3 +1,41 @@
+Meteo Aitor Bermeo v10.97 · mapas precisos, lluvia a siete días y Mediterráneo
+Fecha: 2026-08-11
+
+El deslizador de los campos nativos conserva siempre el último fotograma exacto
+mientras carga la hora elegida. Se eliminan las mallas rápidas de baja densidad
+que producían manchones provisionales; los fotogramas completos adyacentes se
+precargan de uno en uno y las capas compuestas solo cambian cuando han cargado
+todos sus componentes. Así la nubosidad no aparece sin su sombreado de lluvia.
+
+La nubosidad adopta una gradación blanca y gris según cobertura y solo se vuelve
+oscura donde la precipitación del mismo modelo indica nube cargada. Temperatura
+en superficie, presión y temperatura a 850 hPa estrenan escalas continuas y una
+cartografía limpia. Las barbas de viento usan la notación meteorológica estándar
+de 5, 10 y 50 nudos, con dirección de procedencia y punto geográfico fijo.
+
+MUCAPE permanece intacto. MUCIN conserva el valor NOAA GFS más inestable y su
+signo negativo; su superficie de color se limita a los nodos donde la misma
+parcela tiene MUCAPE superior a 100 J/kg para no oscurecer el mapa completo.
+Se añade «Lluvia y truenos» con densidad total de destellos ECMWF IFS HRES y la
+precipitación ECMWF de la misma hora, sin sustituirla por CAPE ni por simulación.
+
+Lluvia de 3 horas y acumulada NOAA GFS recorren ahora 168 horas mediante siete
+páginas de 24 horas. La primera aparece de inmediato y el resto se incorpora en
+segundo plano, conservando la pasada, la malla y el acumulado APCP oficiales.
+El radar de Euskalmet rechaza el fotograma técnico vacío y mantiene el último
+producto útil cuando la fuente no entrega una imagen nueva válida.
+
+El desplegable de cámaras suma hoy 119 accesos integrados: 24 cámaras ya
+seleccionadas y 95 más desde los catálogos de Galicia, Cataluña, Comunitat
+Valenciana y Cádiz. Se incorporan Alicante, Callosa d’en Sarrià, Guadalest,
+Pilar de la Horadada, Forcall y Vinaròs. Benicàssim no se publica porque hoy
+fallan tanto su imagen como su directo oficial. Las emisiones permitidas se
+reproducen dentro de la app y las fuentes
+que solo publican DASH muestran su imagen actual con acceso al directo original.
+La caché de la aplicación sube a v10.97.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.96 · todas las cámaras en un desplegable
 Fecha: 2026-08-11
 

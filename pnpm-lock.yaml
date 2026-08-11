@@ -11,12 +11,21 @@ importers:
       grib2class:
         specifier: 1.0.7
         version: 1.0.7
+      pngjs:
+        specifier: 7.0.0
+        version: 7.0.0
 
 packages:
 
   grib2class@1.0.7:
     resolution: {integrity: sha512-r9ZML6c7VIL+K5qaig/pzaHFS0CQXMaiZaEg2RjC4zbgY9dah3amyut8tMtAm+A1labNLB9f3hVg+RAiMxcxGA==}
 
+  pngjs@7.0.0:
+    resolution: {integrity: sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow==}
+    engines: {node: '>=14.19.0'}
+
 snapshots:
 
   grib2class@1.0.7: {}
+
+  pngjs@7.0.0: {}

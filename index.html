@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.45" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.97" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -308,8 +308,8 @@
     /* v10.26 · Mapa claro: océano azul limpio y nube neutra. El filtro solo
        afecta a este fondo; topográfico y oscuro conservan su aspecto. */
     .mapAitor.mapBaseStandard .leaflet-container{background:#9edbf1}
-    .mapAitor.mapBaseStandard .leaflet-map-pane .leaflet-tile-pane{filter:saturate(1.38) contrast(1.08) brightness(1.06) hue-rotate(-5deg)}
-    .mapAitor.mapBaseStandard .mapReliefOverlay{filter:saturate(.82) contrast(1.08) brightness(1.05);mix-blend-mode:soft-light}
+    .mapAitor.mapBaseStandard .leaflet-map-pane .leaflet-tile-pane{filter:saturate(1.05) contrast(1.04) brightness(1.03)}
+    .mapAitor.mapBaseStandard .mapReliefOverlay{filter:grayscale(.28) saturate(.55) contrast(1.03) brightness(1.04);mix-blend-mode:soft-light;opacity:.16!important}
     .mapAitor.mapBaseStandard[data-map-layer="cloud"] .mapFieldOverlay{filter:saturate(.24) contrast(1.42) brightness(1.02)}
     .mapAitor.mapBaseStandard[data-map-layer="cloud"] .leaflet-map-pane .leaflet-tile-pane{filter:saturate(1.48) contrast(1.10) brightness(1.07) hue-rotate(-6deg)}
     .mapPickerHint{position:absolute;z-index:710;top:54px;left:58px;display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:rgba(20,25,31,.80);border:1px solid rgba(255,255,255,.14);box-shadow:0 8px 24px rgba(0,0,0,.27);backdrop-filter:blur(14px);color:#f2f7fa;font-size:9px;font-weight:850;pointer-events:none;transition:opacity .2s ease,transform .2s ease}.mapPickerHint.isHidden{opacity:0;transform:translateY(-5px)}
@@ -338,9 +338,9 @@
     .mapAitor.mapBaseTopographic[data-map-layer="cloud"] .mapReliefOverlay,.mapAitor.mapBaseTopographic[data-map-layer="precipitation"] .mapReliefOverlay,.mapAitor.mapBaseTopographic[data-map-layer="precipitation_15m"] .mapReliefOverlay,.mapAitor.mapBaseTopographic[data-map-layer="forecast_reflectivity"] .mapReliefOverlay{filter:saturate(1.32) contrast(1.18) brightness(1.00);mix-blend-mode:normal}
     .mapAitor.mapDaylight.mapBaseTopographic[data-map-layer="cloud"] .mapFieldOverlay{filter:saturate(.92) contrast(1.12) brightness(1.03)}
     .mapAitor.mapDaylight.mapBaseTopographic[data-map-layer="precipitation"] .mapFieldOverlay,.mapAitor.mapDaylight.mapBaseTopographic[data-map-layer="precipitation_15m"] .mapFieldOverlay,.mapAitor.mapDaylight.mapBaseTopographic[data-map-layer="forecast_reflectivity"] .mapFieldOverlay{filter:saturate(1.94) contrast(1.48) brightness(1.02)}
-    .mapAitor .mapNativeWeatherTile-cloud{filter:contrast(1.28) brightness(1.02)}
+    .mapAitor .mapNativeWeatherTile-cloud{filter:saturate(.58) contrast(1.08) brightness(1.03)}
     .mapAitor .mapNativeWeatherTile{transition:opacity .18s linear}
-    .mapAitor .mapNativeWeatherTileKind-cloud_rain{filter:grayscale(1) contrast(1.22) brightness(.78)}
+    .mapAitor .mapNativeWeatherTileKind-cloud_rain{filter:grayscale(1) contrast(1.10) brightness(.86)}
     .mapAitor .mapNativePreviewOverlay{transition:opacity .12s linear;image-rendering:auto}
     .mapAitor .mapNativeWeatherTile-precipitation{filter:saturate(1.20) contrast(1.14) brightness(.99)}
     .mapAitor .mapNativeWeatherTile-forecast_reflectivity{filter:saturate(1.21) contrast(1.14) brightness(1.01)}
@@ -396,8 +396,8 @@
     .mapSelect:disabled{opacity:.58;cursor:not-allowed}
     .mapFooter a{color:#9beeff;text-decoration:underline;text-decoration-color:rgba(155,238,255,.45);text-underline-offset:2px}
     .mapLegend{gap:8px;padding:9px 10px}.mapLegendBar{width:15px;min-height:126px;border:1px solid rgba(255,255,255,.28);box-shadow:0 2px 10px rgba(0,0,0,.32)}.mapLegendScale{font-size:8px;line-height:1;font-variant-numeric:tabular-nums}
-    .mapWindArrow{display:grid;place-items:center;width:40px;height:40px;color:var(--barb-color,#17212a);transform-origin:50% 50%;pointer-events:none;filter:drop-shadow(0 1px 0 rgba(255,255,255,.92)) drop-shadow(0 1px 1px rgba(0,0,0,.28))}
-    .mapWindArrow svg{width:40px;height:40px;overflow:visible;animation:none}.mapWindArrow .barbShaft,.mapWindArrow .barbFeather{fill:none;stroke:currentColor;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round}.mapWindArrow .barbPennant{fill:currentColor;stroke:currentColor;stroke-width:.55}.mapWindArrow .barbCalm{fill:none;stroke:currentColor;stroke-width:1.35}
+    .mapWindArrow{display:grid;place-items:center;width:40px;height:40px;color:var(--barb-color,#17212a);transform-origin:50% 85%;pointer-events:none;filter:drop-shadow(0 1px 0 rgba(255,255,255,.96)) drop-shadow(0 1px 1px rgba(0,0,0,.34))}
+    .mapWindArrow svg{width:40px;height:40px;overflow:visible;animation:none}.mapWindArrow .barbShaft,.mapWindArrow .barbFeather,.mapWindArrow .barbHalf{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.mapWindArrow .barbPennant{fill:currentColor;stroke:currentColor;stroke-width:.7}.mapWindArrow .barbStation{fill:currentColor;stroke:#fff;stroke-width:.8}.mapWindArrow .barbCalm{fill:none;stroke:currentColor;stroke-width:1.7}
     .mapPressureLabel{min-width:34px!important;height:16px!important;padding:2px 5px!important;color:#172028!important;background:rgba(247,244,211,.90)!important;border:1px solid rgba(40,48,52,.36)!important;border-radius:999px!important;font:900 9px/12px system-ui!important;text-align:center!important;text-shadow:none!important;box-shadow:0 2px 5px rgba(0,0,0,.24)!important}
     .mapPressureCenter{width:34px!important;height:42px!important;margin:-21px 0 0 -17px!important;background:transparent!important;border:0!important;text-align:center!important;text-shadow:0 1px 3px rgba(0,0,0,.75)!important}.mapPressureCenter:before{display:none!important}.mapPressureCenter strong{display:block;font:950 26px/27px system-ui}.mapPressureCenter span{display:block;color:#fff;font:900 9px/11px system-ui}.mapPressureCenter.low strong{color:#9edbff}.mapPressureCenter.high strong{color:#fff1a8}
     .mapStormMarker{width:22px!important;height:24px!important;margin:-12px 0 0 -11px!important;background:transparent!important;border:0!important;color:#fff29a!important;font:950 20px/24px system-ui!important;text-align:center!important;text-shadow:-1px -1px 0 #7b4b00,1px -1px 0 #7b4b00,-1px 1px 0 #7b4b00,1px 1px 0 #7b4b00,0 0 9px #ffb000}.mapStormMarker:before{display:none!important}
@@ -624,6 +624,7 @@
               <option value="lightning">Rayos observados · AEMET</option>
               <option value="euskalmet_lightning">Rayos observados · Euskalmet</option>
               <option value="precipitation" selected>Precipitación prevista · 1 h</option>
+              <option value="thunderstorms">Lluvia y truenos · ECMWF</option>
               <option value="precipitation_15m">Lluvia AROME HD · 15 min</option>
               <option value="precipitation_3h">Lluvia en 3 horas · NOAA</option>
               <option value="precipitation_accumulated">Precipitación acumulada · NOAA</option>
@@ -649,7 +650,7 @@
             <label class="mapToggle"><input id="mapValueLabels" type="checkbox" checked /> Valores</label>
             <label class="mapToggle"><input id="mapPressureLabels" type="checkbox" checked /> Isobaras reales</label>
             <label class="mapToggle"><input id="mapFollowPlace" type="checkbox" /> Seguir localidad</label>
-            <label class="mapToggle mapBaseControl">Fondo <select id="mapBase" aria-label="Fondo del mapa"><option value="topographic">Relieve topográfico</option><option value="dark">Oscuro profesional</option><option value="standard" selected>Mapa claro</option></select></label>
+            <label class="mapToggle mapBaseControl">Fondo <select id="mapBase" aria-label="Fondo del mapa"><option value="topographic">Relieve topográfico</option><option value="dark">Oscuro profesional</option><option value="standard" selected>Mapa limpio</option></select></label>
             <label class="mapOpacity">Capa <input id="mapOpacity" type="range" min="30" max="98" value="88" step="1" aria-label="Intensidad de la capa meteorológica" /><output id="mapOpacityValue" for="mapOpacity">88%</output></label>
             <button id="mapWorld" class="mapFullscreen mapWorld" type="button">🌍 Mundo</button>
             <button id="mapOfficialOpen" class="mapFullscreen mapOfficialButton" type="button">◉ Windy</button>
@@ -685,6 +686,7 @@
                 <button class="mapLayerButton" type="button" data-map-layer="lightning"><span class="mapLayerIcon">⚡</span><span>Rayos AEMET</span></button>
                 <button class="mapLayerButton" type="button" data-map-layer="euskalmet_lightning"><span class="mapLayerIcon">⚡</span><span>Rayos Euskalmet</span></button>
                 <button class="mapLayerButton active" type="button" data-map-layer="precipitation"><span class="mapLayerIcon">🌧</span><span>Lluvia prevista</span></button>
+                <button class="mapLayerButton" type="button" data-map-layer="thunderstorms"><span class="mapLayerIcon">⛈</span><span>Lluvia y truenos</span></button>
                 <button class="mapLayerButton" type="button" data-map-layer="precipitation_15m"><span class="mapLayerIcon">15m</span><span>AROME · 15 min</span></button>
                 <button class="mapLayerButton" type="button" data-map-layer="precipitation_3h"><span class="mapLayerIcon">3h</span><span>Lluvia · 3 h</span></button>
                 <button class="mapLayerButton" type="button" data-map-layer="precipitation_accumulated"><span class="mapLayerIcon">Σ</span><span>Acumulada total</span></button>
@@ -773,7 +775,7 @@
           <div class="webcamBody"><strong id="webcamViewerTitle">Bakio · playa · directo</strong><p id="webcamViewerDescription">Emisión pública enlazada desde la web municipal de Bakio. La imagen procede de la cámara.</p><div class="webcamActions"><a id="webcamViewerOriginal" class="webcamAction webcamActionPrimary" href="http://webcam.bakio.eus/viewer/live/es/live.html" target="_blank" rel="noopener">Abrir visor original</a><a id="webcamViewerSource" class="webcamAction" href="https://www.bakio.com/" target="_blank" rel="noopener">Fuente oficial</a></div></div>
         </article>
         <section class="webcamRegion webcamSelectorPanel" aria-labelledby="webcamSelectorTitle">
-          <div class="webcamRegionHead"><h3 id="webcamSelectorTitle">Elige una cámara</h3><span id="webcamTotalCount" class="webcamRegionCount">24 + red Galicia</span></div>
+          <div class="webcamRegionHead"><h3 id="webcamSelectorTitle">Elige una cámara</h3><span id="webcamTotalCount" class="webcamRegionCount">24 + redes oficiales</span></div>
           <p class="webcamRegionSub">Abre el desplegable: al seleccionar una cámara aparecerá directamente en el visor.</p>
           <label class="webcamMasterLabel" for="webcamAllSelect">Cámaras disponibles</label>
           <select id="webcamAllSelect" class="webcamMasterSelect" aria-describedby="webcamSelectStatus">
@@ -795,6 +797,18 @@
             </optgroup>
             <optgroup id="webcamGaliciaGroup" label="Galicia · MeteoGalicia" disabled>
               <option value="">Cargando cámaras oficiales…</option>
+            </optgroup>
+            <optgroup id="webcamCataloniaGroup" label="Cataluña · 3Cat" disabled>
+              <option value="">Cargando cámaras oficiales…</option>
+            </optgroup>
+            <optgroup id="webcamAmetllaGroup" label="Cataluña · l’Ametlla en directo" disabled>
+              <option value="">Cargando directos municipales…</option>
+            </optgroup>
+            <optgroup id="webcamValenciaGroup" label="Comunitat Valenciana · Turisme CV" disabled>
+              <option value="">Cargando vistas oficiales…</option>
+            </optgroup>
+            <optgroup id="webcamCadizGroup" label="Andalucía · Cádiz en directo" disabled>
+              <option value="">Cargando emisiones públicas…</option>
             </optgroup>
             <optgroup label="Madrid">
               <option value="madrid_alcala_goya">Madrid · Alcalá con Goya</option>
@@ -819,8 +833,8 @@
               <option value="izana_night">Izaña · cielo nocturno</option>
             </optgroup>
           </select>
-          <span id="webcamSelectStatus" class="webcamPickerStatus" aria-live="polite">Cargando la red oficial de Galicia…</span>
-          <div class="webcamSelectorHint"><strong>Bizkaia:</strong> Bakio y Sopela son vídeo continuo; Getxo es una imagen actual consultada cada dos minutos.</div>
+          <span id="webcamSelectStatus" class="webcamPickerStatus" aria-live="polite">Cargando Galicia, Cataluña, Comunitat Valenciana y Cádiz…</span>
+          <div class="webcamSelectorHint"><strong>Directo o imagen real:</strong> l’Ametlla y Cádiz reproducen vídeo; 3Cat muestra su última imagen y la Comunitat Valenciana una vista previa actual con acceso al directo original.</div>
           <details class="webcamSourceDetails">
             <summary>Otras fuentes de Bizkaia</summary>
             <div class="webcamLinks webcamCompactLinks">
@@ -900,7 +914,16 @@ let activeWebcam=WEBCAM_SOURCES.bakio;
 let webcamRequestId=0;
 let webcamWatchdog=null;
 let webcamAutoRefresh=null;
-const galiciaWebcams=new Map();
+let webcamCatalogTimer=null;
+let webcamCatalogPromise=null;
+const catalogWebcams=new Map();
+const WEBCAM_CATALOG_GROUPS=Object.freeze({
+  galicia:'webcamGaliciaGroup',
+  catalonia:'webcamCataloniaGroup',
+  ametlla:'webcamAmetllaGroup',
+  valencia:'webcamValenciaGroup',
+  cadiz:'webcamCadizGroup'
+});
 function setWebcamState(text,stateName=''){
   const badge=$('webcamViewerState');if(!badge)return;badge.classList.toggle('isLive',stateName==='live');badge.classList.toggle('isError',stateName==='error');const label=badge.querySelector('span');if(label)label.textContent=text;
 }
@@ -933,32 +956,50 @@ function renderActiveWebcam(announce=true){
 }
 function selectWebcam(source,{scroll=true}={}){
   if(!source)return;activeWebcam=source;clearInterval(webcamAutoRefresh);updateWebcamDetails(source);renderActiveWebcam();
-  if(source.refreshMs)webcamAutoRefresh=setInterval(()=>renderActiveWebcam(false),source.refreshMs);
+  if(source.refreshMs&&source.catalogId!=='catalonia')webcamAutoRefresh=setInterval(()=>renderActiveWebcam(false),source.refreshMs);
   if(scroll)$('webcamViewer')?.scrollIntoView({behavior:'smooth',block:'center'});
 }
 document.querySelectorAll('[data-webcam]').forEach(button=>{if(!button.hasAttribute('aria-pressed'))button.setAttribute('aria-pressed','false');button.addEventListener('click',()=>selectWebcam(WEBCAM_SOURCES[button.dataset.webcam]))});
-if($('webcamRefresh'))$('webcamRefresh').addEventListener('click',()=>renderActiveWebcam());
-if($('webcamAllSelect'))$('webcamAllSelect').addEventListener('change',event=>selectWebcam(WEBCAM_SOURCES[event.target.value]||galiciaWebcams.get(event.target.value)));
-async function loadGaliciaWebcams(){
-  const group=$('webcamGaliciaGroup');const status=$('webcamSelectStatus');if(!group||!status)return;
-  try{
-    const response=await fetch('/api/webcams',{headers:{Accept:'application/json'},cache:'no-store'});const payload=await response.json().catch(()=>null);
-    if(!response.ok||!payload?.ok||!Array.isArray(payload.cameras))throw new Error(payload?.error||'No se pudo cargar la red.');
-    galiciaWebcams.clear();group.replaceChildren();
-    payload.cameras.forEach((camera,index)=>{
-      const key=`galicia_${camera.id}_${index}`;const place=[camera.town,camera.province].filter(Boolean).join(' · ');
-      const source={key,mode:'snapshot',url:camera.imageUrl,refreshMs:60000,title:`Galicia · ${camera.name}`,description:`Imagen oficial de MeteoGalicia${place?' · '+place:''}.`,alt:`Cámara de ${camera.name}`,status:'Imagen MeteoGalicia actualizada',originalUrl:'https://www.meteogalicia.gal/web/observacion/camaras?request_locale=es',sourceUrl:'https://www.meteogalicia.gal/web/observacion/camaras?request_locale=es'};
-      galiciaWebcams.set(key,source);const option=document.createElement('option');option.value=key;option.textContent=place?`${camera.name} — ${place}`:camera.name;group.appendChild(option);
-    });
-    group.disabled=false;status.textContent=`${galiciaWebcams.size} cámaras oficiales de Galicia añadidas al desplegable`;
-    const count=$('webcamTotalCount');if(count)count.textContent=`${Object.keys(WEBCAM_SOURCES).length+galiciaWebcams.size} cámaras`;
-  }catch(error){group.replaceChildren(new Option('Red de Galicia temporalmente no disponible',''));group.disabled=true;status.textContent=error?.message||'No se pudo cargar MeteoGalicia.';status.style.color='#ffbdc8'}
+if($('webcamAllSelect'))$('webcamAllSelect').addEventListener('change',event=>selectWebcam(WEBCAM_SOURCES[event.target.value]||catalogWebcams.get(event.target.value)));
+function safeCatalogUrl(value,{embed=false}={}){
+  try{const url=new URL(String(value||''),location.href);if(url.protocol!=='https:')return'';if(embed&&url.hostname!=='www.youtube-nocookie.com')return'';return url.toString()}catch(_){return''}
 }
+function normalizeCatalogWebcam(camera,catalogId,catalog){
+  const key=String(camera?.key||'').trim();const mode=camera?.mode==='iframe'?'iframe':'snapshot';const url=safeCatalogUrl(camera?.url,{embed:mode==='iframe'});if(!key||!url)return null;
+  const originalUrl=safeCatalogUrl(camera?.originalUrl||catalog?.sourceUrl);const sourceUrl=safeCatalogUrl(camera?.sourceUrl||catalog?.sourceUrl);
+  return {key,catalogId,mode,url,refreshMs:Number(camera?.refreshMs)||0,title:String(camera?.title||camera?.name||'Cámara').slice(0,160),description:String(camera?.description||'Cámara pública seleccionada.').slice(0,300),alt:String(camera?.alt||camera?.title||camera?.name||'Cámara web').slice(0,180),status:String(camera?.status||'Cámara actualizada').slice(0,120),originalUrl:originalUrl||sourceUrl,sourceUrl:sourceUrl||originalUrl,sourceLabel:String(camera?.sourceLabel||catalog?.source||'Fuente original').slice(0,100),optionLabel:String(camera?.optionLabel||camera?.name||camera?.title||'Cámara').slice(0,180)};
+}
+function setCatalogGroupUnavailable(group,message){
+  const option=document.createElement('option');option.value='';option.textContent=message;group.replaceChildren(option);group.disabled=true;
+}
+async function loadWebcamCatalogs({silent=false,refreshActive=false}={}){
+  if(webcamCatalogPromise)return webcamCatalogPromise;
+  webcamCatalogPromise=(async()=>{
+    const status=$('webcamSelectStatus');if(!status)return;
+    if(!silent){status.style.color='';status.textContent='Cargando Galicia, Cataluña, Comunitat Valenciana y Cádiz…'}
+    try{
+      const response=await fetch('/api/webcams',{headers:{Accept:'application/json'},cache:'no-store'});const payload=await response.json().catch(()=>null);
+      if(!response.ok||!payload?.ok||!payload.catalogs)throw new Error(payload?.error||'No se pudo cargar el catálogo de cámaras.');
+      const previousKey=activeWebcam?.key;catalogWebcams.clear();const unavailable=[];
+      Object.entries(WEBCAM_CATALOG_GROUPS).forEach(([catalogId,groupId])=>{
+        const group=$(groupId);if(!group)return;const catalog=payload.catalogs[catalogId];group.replaceChildren();let added=0;
+        if(catalog?.ok&&Array.isArray(catalog.cameras))catalog.cameras.forEach(camera=>{const source=normalizeCatalogWebcam(camera,catalogId,catalog);if(!source)return;catalogWebcams.set(source.key,source);const option=document.createElement('option');option.value=source.key;option.textContent=source.optionLabel;group.appendChild(option);added+=1});
+        if(added){group.disabled=false}else{const reason=String(catalog?.error||'Temporalmente no disponible').slice(0,120);setCatalogGroupUnavailable(group,reason);unavailable.push(catalog?.label||catalogId)}
+      });
+      const refreshed=previousKey?catalogWebcams.get(previousKey):null;if(refreshed){activeWebcam=refreshed;updateWebcamDetails(refreshed);if(refreshActive)renderActiveWebcam(false)}
+      const total=Object.keys(WEBCAM_SOURCES).length+catalogWebcams.size;const count=$('webcamTotalCount');if(count)count.textContent=`${total} cámaras`;
+      status.style.color='';status.textContent=`${catalogWebcams.size} cámaras de redes añadidas · ${total} disponibles en total${unavailable.length?` · sin señal: ${unavailable.join(', ')}`:''}`;
+      if(!webcamCatalogTimer)webcamCatalogTimer=setInterval(()=>loadWebcamCatalogs({silent:true,refreshActive:true}),60000);
+    }catch(error){if(!catalogWebcams.size)Object.values(WEBCAM_CATALOG_GROUPS).forEach(groupId=>{const group=$(groupId);if(group)setCatalogGroupUnavailable(group,'Red temporalmente no disponible')});status.textContent=catalogWebcams.size?'No se pudo renovar ahora · se conserva el último catálogo cargado':(error?.message||'No se pudo cargar el catálogo de cámaras.');status.style.color='#ffbdc8'}
+  })();
+  try{return await webcamCatalogPromise}finally{webcamCatalogPromise=null}
+}
+if($('webcamRefresh'))$('webcamRefresh').addEventListener('click',async()=>{if(activeWebcam?.catalogId==='catalonia')await loadWebcamCatalogs({silent:true,refreshActive:true});else renderActiveWebcam()});
 if($('webcamViewerImage')){
   const viewerImage=$('webcamViewerImage');
   if(viewerImage.complete&&viewerImage.naturalWidth>0)setWebcamState('Directo conectado','live');
-  if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{if(!entries.some(entry=>entry.isIntersecting))return;renderActiveWebcam();loadGaliciaWebcams();observer.disconnect()},{rootMargin:'280px'});observer.observe($('webcams'))}
-  else{renderActiveWebcam();loadGaliciaWebcams()}
+  if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{if(!entries.some(entry=>entry.isIntersecting))return;renderActiveWebcam();loadWebcamCatalogs();observer.disconnect()},{rootMargin:'280px'});observer.observe($('webcams'))}
+  else{renderActiveWebcam();loadWebcamCatalogs()}
 }
 const WEATHER_CACHE_KEY='meteo-aitor-weather-last-v10-17';
 const WEATHER_CACHE_LEGACY_KEY='meteo-aitor-weather-last-v10-16';
@@ -2227,11 +2268,12 @@ setInterval(()=>{if(!document.hidden&&state.location&&isBermeoLocation(state.loc
    sus nodos reales sin inventar continuidad. Los valores auxiliares no
    sustituyen nunca el modelo seleccionado.
 --------------------------------------------------------------------------- */
-const mapAitorState={map:null,grid:null,labels:null,values:null,windArrows:null,isobars:null,field:null,nativeField:null,nativePendingField:null,nativePrefetchField:null,nativePrefetchTimer:null,nativePrefetchCleanupTimer:null,nativePrefetchKey:null,nativePrefetchReady:false,nativeFrameCache:new Map(),nativePrefetchTimers:new Map(),nativePrefetchGeneration:0,nativePrefetchDirection:1,nativeFrameTimer:null,nativeRefineTimer:null,nativeDesiredTimeIndex:null,nativeDragging:false,nativeCloudShadeTimer:null,nativePreviewField:null,nativePreviewTimer:null,nativePreviewCache:new Map(),nativePreviewTimers:new Map(),nativePreviewGeneration:0,nativeCacheIdentity:null,nativeCacheFrames:0,nativeCacheTrimTimer:null,nativeSource:null,nativeVectorSource:null,nativeWindSampleUrl:null,nativeGustSampleUrl:null,nativeWindSampleTimer:null,nativeWindSampleRequestId:0,nativeAdapters:new Map(),nativeMetaCache:new Map(),nativeWarmFiles:new Map(),nativeWarmUrls:new Set(),nativeWarmGeneration:0,nativeDerivedDewpointStates:new Map(),nativeRequestId:0,nativeRetryKey:null,nativeRetryCount:0,nativeRetryTimer:null,nativeAnnotationController:null,nativeAnnotationRequestId:0,nativeAnnotationTimer:null,nativeAnnotationKey:null,nativeMovieData:null,nativeMovieIdentity:null,nativeMovieField:null,nativeMovieController:null,nativeMovieRequestId:0,nativeMovieTimer:null,nativeMovieRenderFrame:null,nativeMovieRenderIndex:null,nativeMovieThrottleTimer:null,nativeMovieLastRenderAt:0,nativeMovieAnnotationsHidden:false,marker:null,pickerMarker:null,pickerLocation:null,data:null,layer:'precipitation',model:'ecmwf',renderedLayer:null,renderedModel:null,timeIndex:0,selectedForecastTime:null,playing:false,playTimer:null,playbackSpeed:1,lastPlaybackToggleAt:0,loading:false,requestController:null,requestId:0,radarRequestId:0,radarTimer:null,renderFrame:null,gridRefineTimer:null,gridTimelineDragging:false,cache:new Map(),fieldCache:new Map(),lastGood:new Map(),lastError:null,windCanvas:null,windFrame:null,windFlowKey:null,windNeedsClear:false,particles:[],viewportTimer:null,selectionTimer:null,retryTimer:null,retryTick:null,retryRequest:null,retryAttempt:0,baseLayers:null,baseLabelLayers:null,baseReliefLayers:null,activeBaseLabel:null,activeBaseRelief:null,baseStyle:'standard',daylight:false,rainviewerLayer:null,rainviewerData:null,aemetRadarLayer:null,officialEmbedLayer:null,officialEmbedDismissed:false,location:{...BERMEO}};
+const mapAitorState={map:null,grid:null,labels:null,values:null,windArrows:null,isobars:null,field:null,nativeField:null,nativePendingField:null,nativePrefetchField:null,nativePrefetchTimer:null,nativePrefetchCleanupTimer:null,nativePrefetchKey:null,nativePrefetchReady:false,nativeFrameCache:new Map(),nativePrefetchTimers:new Map(),nativePrefetchGeneration:0,nativePrefetchDirection:1,nativeFrameTimer:null,nativeRefineTimer:null,nativeDesiredTimeIndex:null,nativeDragging:false,nativeCloudShadeTimer:null,nativePreviewField:null,nativePreviewTimer:null,nativePreviewCache:new Map(),nativePreviewTimers:new Map(),nativePreviewGeneration:0,nativeCacheIdentity:null,nativeCacheFrames:0,nativeCacheTrimTimer:null,nativeSource:null,nativeVectorSource:null,nativeWindSampleUrl:null,nativeGustSampleUrl:null,nativeWindSampleTimer:null,nativeWindSampleRequestId:0,nativeAdapters:new Map(),nativeMetaCache:new Map(),nativeWarmFiles:new Map(),nativeWarmUrls:new Set(),nativeWarmGeneration:0,nativeDerivedDewpointStates:new Map(),nativeRequestId:0,nativeRetryKey:null,nativeRetryCount:0,nativeRetryTimer:null,nativeAnnotationController:null,nativeAnnotationRequestId:0,nativeAnnotationTimer:null,nativeAnnotationKey:null,nativeMovieData:null,nativeMovieIdentity:null,nativeMovieField:null,nativeMovieController:null,nativeMovieRequestId:0,nativeMovieTimer:null,nativeMovieRenderFrame:null,nativeMovieRenderIndex:null,nativeMovieThrottleTimer:null,nativeMovieLastRenderAt:0,nativeMovieAnnotationsHidden:false,marker:null,pickerMarker:null,pickerLocation:null,data:null,layer:'precipitation',model:'ecmwf',renderedLayer:null,renderedModel:null,timeIndex:0,selectedForecastTime:null,playing:false,playTimer:null,playbackSpeed:1,lastPlaybackToggleAt:0,loading:false,requestController:null,requestId:0,rainPageController:null,rainPageRequestId:0,radarRequestId:0,radarTimer:null,euskalmetController:null,euskalmetLastGood:new Map(),renderFrame:null,gridRefineTimer:null,gridTimelineDragging:false,cache:new Map(),fieldCache:new Map(),lastGood:new Map(),lastError:null,windCanvas:null,windFrame:null,windFlowKey:null,windNeedsClear:false,particles:[],viewportTimer:null,selectionTimer:null,retryTimer:null,retryTick:null,retryRequest:null,retryAttempt:0,baseLayers:null,baseLabelLayers:null,baseReliefLayers:null,activeBaseLabel:null,activeBaseRelief:null,baseStyle:'standard',daylight:false,rainviewerLayer:null,rainviewerData:null,aemetRadarLayer:null,officialEmbedLayer:null,officialEmbedDismissed:false,location:{...BERMEO}};
 const MAP_LAYERS={
   euskalmet_radar:{key:'observed_reflectivity',title:'Radar Kapildui · Euskalmet',unit:'dBZ',scale:[0,20,40,60],colors:['#8bd8ff','#4bd56e','#ffd63d','#e63a48'],legend:['0','20','40','60+'],detail:'Máxima reflectividad observada por el radar de Kapildui. Es un producto regional oficial de Euskalmet y se muestra completo, sin deformar.'},
   euskalmet_lightning:{key:'observed_lightning',title:'Rayos observados · Euskalmet',unit:'descargas',scale:[0,1],colors:['#1b2430','#ffe34b'],legend:['0','observadas'],detail:'Descargas observadas en el producto regional oficial de Euskalmet. La imagen se muestra completa, sin reinterpretar sus colores.'},
   precipitation:{key:'precipitation',title:'Precipitación prevista',unit:'mm/h',scale:[.02,.05,.1,.2,.5,1,2,4,6,8,10,15,20,30,50],colors:['#7cddf6','#3ac2ea','#1aa8d8','#17bd71','#0bac50','#4ac832','#a7da30','#f7df35','#ffb326','#ff7c22','#f14a22','#e52f23','#ca1f22','#a41620','#741019'],legend:['0,02','0,05','0,1','0,2','0,5','1','2','4','6','8','10','15','20','30','50+'],detail:'Precipitación horaria prevista: azul solo en lluvia débil; verde al ganar intensidad; después amarillo, naranja y rojo. El cero queda completamente transparente y no se usan tonos violetas.'},
+  thunderstorms:{key:'lightning_density',title:'Lluvia y truenos · ECMWF',unit:'destellos/km²/día',scale:[.1,.5,1,2,5,10,20,50,100,200,500],colors:['#65d93b','#b5e62e','#f2e72c','#ffd126','#ff9d20','#ff5b22','#f1262d','#cf174c','#aa176d','#7a145e','#4d124d'],legend:['0,1','0,5','1','2','5','10','20','50','100','200','500+'],detail:'Densidad total de destellos prevista por ECMWF IFS: incluye descargas nube‑tierra e intranube y está promediada sobre el intervalo precedente del modelo. Es el campo oficial lightning_density (LITOTA), no CAPE, una probabilidad inventada ni rayos observados. El color solo aparece donde ECMWF prevé actividad eléctrica; al pulsar un punto se muestra también la precipitación horaria del mismo modelo.'},
   precipitation_15m:{key:'precipitation_15m',title:'Lluvia AROME HD · 15 min',unit:'mm / 15 min',scale:[.01,.02,.05,.1,.2,.4,.7,1,1.5,2.5,4,6,10,15],colors:['#8de8ff','#4bd5f2','#1ab8e5','#16a1cf','#19bd79','#19a85c','#65c83d','#bad737','#f7df35','#ffb326','#ff7c22','#f14a22','#ca1f22','#8b1020'],legend:['0,01','0,02','0,05','0,1','0,2','0,4','0,7','1','1,5','2,5','4','6','10','15+'],detail:'Precipitación nativa acumulada durante cada intervalo real de 15 minutos de Météo‑France AROME HD. No se divide ni se interpola desde la lluvia horaria. Disponible dentro del dominio AROME France HD y hasta 48 horas.'},
   precipitation_3h:{key:'precipitation_3h',title:'Lluvia en las últimas 3 h',unit:'mm / 3 h',scale:[.1,.25,.5,1,2,3,5,8,12,18,25,40],colors:['#bfefff','#77ddff','#35c3f1','#168ddd','#1767c7','#1250ad','#20a35a','#87ce3d','#f0dc32','#ff9f24','#ef3e25','#8d1b57'],legend:['0,1','0,25','0,5','1','2','3','5','8','12','18','25','40+'],detail:'Precipitación oficial NOAA GFS acumulada en el intervalo de tres horas que termina en la hora seleccionada. En Europa y España se solicita automáticamente la malla real de 0,25° y se pinta una superficie continua: azul para lluvia débil, verde para moderada y colores cálidos para los máximos.'},
   precipitation_accumulated:{key:'precipitation_accumulated',title:'Precipitación acumulada desde la pasada',unit:'mm acumulados',scale:[.1,.5,1,2,5,10,20,30,50,75,100,150],colors:['#c7f3ff','#81e1ff','#3bc5f3','#168fdd','#1765c6','#1549a8','#20a55d','#8dce3e','#f2d735','#ff9c25','#ee4028','#8d1c59'],legend:['0,1','0,5','1','2','5','10','20','30','50','75','100','150+'],detail:'Acumulación oficial NOAA GFS desde el inicio de la pasada hasta la hora válida seleccionada. Usa la misma malla regional real de 0,25° que la lluvia de 3 horas; no suma modelos ni rellena zonas sin dato.'},
@@ -2244,23 +2286,25 @@ const MAP_LAYERS={
   precipitation_probability:{key:'precipitation_probability',title:'Probabilidad de precipitación',unit:'%',scale:[5,15,30,45,60,75,90,100],colors:['#c5efff','#85d9ff','#4ab8f2','#328ddf','#3d69cc','#594dbc','#7b42ad','#a23c9f'],legend:['5','15','30','45','60','75','90','100'],detail:'Probabilidad de que se produzca precipitación durante la hora seleccionada según el modelo. Azul claro para probabilidad baja y azul-violeta para alta.'},
   forecast_reflectivity:{key:'reflectivity_estimated',title:'Precipitación tipo reflectividad · estimada',unit:'dBZ',scale:[5,10,15,20,25,30,35,40,45,50,55,60,65,75],colors:['#70e85a','#38d642','#16bc31','#078b25','#cbe53b','#ffe52c','#ffb21f','#ff7418','#f52f1d','#d50d1f','#9b1235','#70246f','#b32aa5','#ff43d7'],legend:['5','10','15','20','25','30','35','40','45','50','55','60','65','75+'],detail:'Reflectividad estimada desde la tasa horaria real mediante la relación meteorológica Z–R: verde para ecos débiles, amarillo y naranja para precipitación moderada, rojo para núcleos fuertes y magenta para los máximos. El cero queda transparente. No sustituye al radar observado.'},
   cloud:{key:'cloud_cover',title:'Nubosidad · lluvia integrada',unit:'%',scale:[0,12,25,40,55,70,85,100],colors:['#ffffff','#ffffff','#ffffff','#f8f9fa','#eceff1','#cfd4d8','#969da4','#545c63'],legend:['0','12','25','40','55','70','85','100'],detail:'La nubosidad prevista aparece blanca o gris suave. Cuando el modelo marca precipitación, la nube se vuelve más oscura de forma gradual, sin bloques negros ni bordes cuadrados. Las zonas despejadas permanecen transparentes.'},
-  temperature:{key:'temperature_2m',title:'Temperatura a 2 m',unit:'°C',scale:[-50,-35,-25,-15,-5,0,5,10,12,14,16,18,20,22,24,28,32,36,50],colors:['#5a155f','#8a3494','#595ca8','#3d58a0','#4f83b2','#68a8c8','#92cbd4','#c1dce2','#9caed0','#7d82b7','#c5c0b2','#fff0a0','#f6d35e','#f1a43e','#e47730','#bd3c27','#86251b','#50170f','#1d0805'],legend:['-50','-35','-25','-15','-5','0','5','10','12','14','16','18','20','22','24','28','32','36','50'],detail:'Temperatura del aire a dos metros con escala meteorológica de alto contraste, sin alterar el dato: violeta y azul para aire frío o fresco, transición neutra alrededor de 16 °C, amarillo desde 18 °C, naranja desde 22 °C y rojo para el calor más intenso.'},
+  temperature:{key:'temperature_2m',title:'Temperatura a 2 m',unit:'°C',scale:[-40,-30,-20,-10,0,5,10,15,20,25,30,35,40,45],colors:['#54216f','#53429a','#3d65ad','#2d8aba','#34b0bd','#58c49f','#87cf72','#c4d657','#ead03b','#f3b62c','#f28b24','#ea5d25','#ce382b','#8d222f'],legend:['−40','−30','−20','−10','0','5','10','15','20','25','30','35','40','45+'],detail:'Temperatura real del modelo, representada con una gradación continua: violeta y azul para frío, verde en valores templados, amarillo alrededor de 20 °C, naranja desde 25 °C y rojo para el calor fuerte. La paleta cambia el aspecto, nunca los grados.'},
   dewpoint:{key:'dew_point_2m',title:'Punto de rocío a 2 m',unit:'°C',scale:[-15,-5,0,6,12,17,23],colors:['#4530a4','#236fe8','#16bde7','#24d39c','#a9e63f','#f6b83c','#e95b3d'],legend:['-15','-5','0','6','12','17','23+'],detail:'Cuanto más se acerca a la temperatura, mayor sensación de bochorno.'},
   humidity:{key:'relative_humidity_2m',title:'Humedad relativa a 2 m',unit:'%',scale:[0,15,30,45,60,75,88,100],colors:['#a63d2f','#b75e50','#6e6875','#aeb7bf','#d9ef69','#5ed466','#00b89b','#138be7'],legend:['0','15','30','45','60','75','88','100'],detail:'Humedad relativa real prevista por el modelo a dos metros, sin ajustes artificiales. La ubicación marcada utiliza el punto exacto y la mejor resolución disponible.'},
   wind:{key:'wind_speed_10m',title:'Viento a 10 m',unit:'km/h',scale:[0,5,10,20,30,40,55,70,90,120],colors:['#354a78','#3379ac','#2ca8c5','#38cfc9','#65d49c','#b8db58','#f0d348','#f29a3d','#df5262','#8a2d75'],legend:['0','5','10','20','30','40','55','70','90','120+'],detail:'Viento medio previsto. El flujo animado muestra el desplazamiento y las barbas meteorológicas indican dirección y fuerza.'},
   gust:{key:'wind_gusts_10m',title:'Rachas a 10 m',unit:'km/h',scale:[0,10,20,35,50,65,80,100,125,150],colors:['#354a78','#3379ac','#2ca8c5','#38cfc9','#65d49c','#d1d94c','#f0b53e','#ec6b45','#d43f68','#762b78'],legend:['0','10','20','35','50','65','80','100','125','150+'],detail:'Racha máxima prevista en el intervalo, con color de intensidad y barbas de viento normalizadas.'},
-  pressure:{key:'pressure_msl',title:'Presión a nivel del mar',unit:'hPa',scale:[960,975,985,995,1005,1013,1020,1030,1040,1050],colors:['#392767','#344f9b','#337fb6','#4eb7c0','#8bcda5','#d6d6a1','#ead06e','#e6a34f','#d96a46','#9f3b48'],legend:['960','975','985','995','1005','1013','1020','1030','1040','1050+'],detail:'Presión reducida al nivel del mar con isobaras reales cada 4 hPa, calculadas sobre la malla del modelo.'},
-  t850:{key:'temperature_850hPa',title:'Temperatura a 850 hPa',unit:'°C',scale:[-50,-35,-25,-15,-5,0,5,10,12,14,16,18,20,22,24,28,32,36,50],colors:['#5a155f','#8a3494','#595ca8','#3d58a0','#4f83b2','#68a8c8','#92cbd4','#c1dce2','#9caed0','#7d82b7','#c5c0b2','#fff0a0','#f6d35e','#f1a43e','#e47730','#bd3c27','#86251b','#50170f','#1d0805'],legend:['-50','-35','-25','-15','-5','0','5','10','12','14','16','18','20','22','24','28','32','36','50'],detail:'Temperatura aproximada a 1.500 m. La escala de 850 hPa aumenta el contraste sinóptico sin alterar los datos: violeta y azul destacan las entradas frías y vaguadas; tonos neutros separan 16 °C; amarillo y naranja muestran el aire cálido desde 18–20 °C y rojo los valores más altos.'},
+  pressure:{key:'pressure_msl',title:'Presión a nivel del mar',unit:'hPa',scale:[960,970,980,990,1000,1010,1020,1030,1040,1050],colors:['#143854','#155b73','#197b89','#3f9ca2','#83b9b2','#c7d0c5','#d2c49f','#bc9569','#9c6647','#6f4033'],legend:['960','970','980','990','1000','1010','1020','1030','1040','1050+'],detail:'Presión reducida al nivel del mar con isobaras reales cada 4 hPa. Las bajas presiones aparecen en azul y turquesa, la presión media en gris beige y las altas en ocre y marrón; los hPa no se modifican.'},
+  t850:{key:'temperature_850hPa',title:'Temperatura a 850 hPa',unit:'°C',scale:[-50,-35,-25,-14,-8,-4,0,4,8,14,18,22,26,32,40,50],colors:['#3a073f','#71106f','#6d2a91','#4f3ca6','#315cb6','#1d7bc7','#20a5d1','#28c9c2','#31d783','#55dd43','#b9e72c','#f5e62b','#ffac21','#ff5d20','#c51b48','#74204f'],legend:['−50','−35','−25','−14','−8','−4','0','4','8','14','18','22','26','32','40','50+'],detail:'Temperatura real prevista a unos 1.500 m: violeta y azul para aire frío, cian y verde al templarse, amarillo alrededor de 18–22 °C, naranja y rojo en masas muy cálidas. La paleta es continua y no altera ningún valor.'},
   cape:{key:'cape',title:'MUCAPE · más inestable',unit:'J/kg',scale:[100,250,500,750,1000,1500,2000,3000,4000,5000,6000],colors:['#49364f','#274d6c','#08788d','#009c98','#29b879','#78c94f','#d0d62d','#ffb520','#f2692f','#b93058','#5b1b62'],legend:['100','250','500','750','1000','1500','2000','3000','4000','5000','6000+'],detail:'MUCAPE oficial de NOAA GFS para la parcela más inestable de la capa 255–0 mb: fuente mundial de 1° en una panorámica reducida y detalle regional real de 0,25° al acercar. El símbolo ≈ solo identifica una cifra aproximada de la panorámica mundial; al acercar desaparece y se muestra el nodo NOAA de 0,25°. Menos de 100 J/kg queda transparente; cuanto mayor es el valor, más energía potencial tiene la convección si logra iniciarse. CAPE no confirma un tornado por sí solo: hay que contrastarlo con radar, viento, cizalladura y avisos oficiales.'},
-  cin:{key:'convective_inhibition',title:'MUCIN · inhibición más inestable',unit:'J/kg',scale:[-1000,-700,-500,-400,-300,-200,-150,-100,-50,-20,-5,0],colors:['#29103f','#482054','#67244f','#872846','#a92f40','#cb3b3b','#e64c35','#f76131','#ff7f32','#ffa13d','#ffc65c','#fff0b5'],legend:['−1000','−700','−500','−400','−300','−200','−150','−100','−50','−20','−5','0'],detail:'MUCIN oficial de NOAA GFS para la misma parcela más inestable de 255–0 mb: fuente mundial de 1° en una panorámica reducida y detalle regional real de 0,25° al acercar. El símbolo ≈ solo identifica una cifra aproximada de la panorámica mundial; al acercar desaparece. El signo − pertenece al valor de CIN: cerca de 0 J/kg significa poca tapa y cuanto más negativo, mayor inhibición. Se muestra con la misma cobertura que MUCAPE, sin ocultar valores por tener CAPE bajo. Es una previsión; radar y rayos confirman la tormenta o el granizo que ya están ocurriendo.'},
+  cin:{key:'convective_inhibition',title:'MUCIN · inhibición más inestable',unit:'J/kg',scale:[-1000,-700,-500,-400,-300,-250,-200,-150,-100,-75,-50,-20,-5,0],colors:['#42354f','#574353','#68515d','#775464','#874d62','#98485d','#ad474f','#c45443','#dc623a','#ec7138','#f1843e','#f5a45a','#f5c98c','#fff4dc'],legend:['−1000','−700','−500','−400','−300','−250','−200','−150','−100','−75','−50','−20','−5','0'],detail:'MUCIN oficial de NOAA GFS para la misma parcela más inestable de 255–0 mb. Los tonos naranja indican una tapa débil, el rojo una inhibición mayor y el gris púrpura los valores más negativos. El signo − pertenece al dato real. Para mantener el mapa limpio, la superficie solo se colorea donde el mismo nodo y hora tienen MUCAPE superior a 100 J/kg; la consulta puntual conserva siempre el MUCIN original.'},
   sea_temperature:{key:'sea_surface_temperature',title:'Temperatura superficial del mar',unit:'°C',scale:[-2,0,5,10,14,17,20,23,26,29,32,35],colors:['#35156e','#2939a5','#176bd2','#159fcf','#20c5b7','#70d37d','#d7df48','#ffe03d','#ffad32','#f26e2c','#ce3428','#721b36'],legend:['-2','0','5','10','14','17','20','23','26','29','32','35+'],detail:'Temperatura de la superficie del agua prevista por Open‑Meteo Marine. La capa se recorta al mar y no colorea la tierra.'},
   waves:{key:'wave_height',title:'Altura de las olas',unit:'m',scale:[0,.25,.5,.75,1,1.5,2,3,4,6,8,12],colors:['#284675','#2c78a9','#24a8c1','#25cdc5','#64d495','#b7dc5c','#e7da49','#f4b141','#ed7c3c','#dd4f4f','#a93969','#622a72'],legend:['0','0,25','0,5','0,75','1','1,5','2','3','4','6','8','12+'],detail:'Altura significativa de las olas prevista por Open‑Meteo Marine. Al pulsar un punto también se indica la dirección y el período cuando están publicados.'}
 };
 
-const MAP_WINDY_LAYERS={reflectivity:'radar',euskalmet_radar:'radar',rainviewer:'radar',lightning:'radar',euskalmet_lightning:'radar',precipitation:'rain',precipitation_15m:'rain',precipitation_3h:'rain',precipitation_accumulated:'rain',precipitation_6h:'rain',precipitation_12h:'rain',precipitation_24h:'rain',rain:'rain',showers:'rain',snowfall:'snow',precipitation_probability:'rain',forecast_reflectivity:'rain',cloud:'clouds',temperature:'temp',dewpoint:'dewpoint',humidity:'rh',wind:'wind',gust:'gust',pressure:'pressure',t850:'temp',cape:'cape',cin:'cape',sea_temperature:'sst',waves:'waves'};
+const MAP_WINDY_LAYERS={reflectivity:'radar',euskalmet_radar:'radar',rainviewer:'radar',lightning:'radar',euskalmet_lightning:'radar',precipitation:'rain',thunderstorms:'thunder',precipitation_15m:'rain',precipitation_3h:'rain',precipitation_accumulated:'rain',precipitation_6h:'rain',precipitation_12h:'rain',precipitation_24h:'rain',rain:'rain',showers:'rain',snowfall:'snow',precipitation_probability:'rain',forecast_reflectivity:'rain',cloud:'clouds',temperature:'temp',dewpoint:'dewpoint',humidity:'rh',wind:'wind',gust:'gust',pressure:'pressure',t850:'temp',cape:'cape',cin:'cape',sea_temperature:'sst',waves:'waves'};
 const MAP_GFS_ONLY_LAYERS=new Set(['cape','cin']);
+const MAP_ECMWF_ONLY_LAYERS=new Set(['thunderstorms']);
 const MAP_NOAA_RAIN_LAYERS=new Set(['precipitation_3h','precipitation_accumulated']);
 function mapLayerForcesGfs(layer){return MAP_GFS_ONLY_LAYERS.has(layer)||MAP_NOAA_RAIN_LAYERS.has(layer)}
+function mapLayerForcesEcmwf(layer){return MAP_ECMWF_ONLY_LAYERS.has(layer)}
 const MAP_AROME_ONLY_LAYERS=new Set(['precipitation_15m']);
 const MAP_AROME_DOMAIN={south:37.5,north:55.4,west:-12,east:16};
 const MAP_MARINE_LAYERS=new Set(['sea_temperature','waves']);
@@ -2347,7 +2391,7 @@ function mapCurrentForecastTime(){
 }
 function mapColor(config,value){const v=mapNumber(value),scale=config.scale,colors=config.colors;let index=0;while(index<scale.length-1&&v>=scale[index+1])index+=1;return colors[Math.min(index,colors.length-1)]}
 function mapHexRgb(hex){const value=String(hex||'#000').replace('#','');return{r:parseInt(value.slice(0,2),16)||0,g:parseInt(value.slice(2,4),16)||0,b:parseInt(value.slice(4,6),16)||0}}
-function mapModelSupportsLayer(model,layer){return mapLayerForcesGfs(layer)||model!=='arome'||MAP_AROME_LAYERS.has(layer)}
+function mapModelSupportsLayer(model,layer){return mapLayerForcesGfs(layer)||mapLayerForcesEcmwf(layer)||model!=='arome'||MAP_AROME_LAYERS.has(layer)}
 function mapAromeCoversCoordinates(latitude,longitude){return Number(latitude)>=MAP_AROME_DOMAIN.south&&Number(latitude)<=MAP_AROME_DOMAIN.north&&Number(longitude)>=MAP_AROME_DOMAIN.west&&Number(longitude)<=MAP_AROME_DOMAIN.east}
 function mapModelLayerAvailabilityText(model,layer){return model==='arome'&&!mapModelSupportsLayer(model,layer)?'AROME HD no publica esta capa en la salida espacial utilizada. Elige lluvia, reflectividad estimada, nubes, temperatura, humedad, viento o rachas; MUCAPE y MUCIN usan siempre NOAA GFS.':''}
 function mapUsesNativeTiles(layer=mapAitorState.layer,model=mapAitorState.model){return MAP_NATIVE_TILE_LAYERS.has(layer)&&mapModelSupportsLayer(model,layer)&&!(layer==='cin'&&model==='icon')}
@@ -2363,12 +2407,16 @@ function mapNativeAdapter(kind='standard'){
     settings.colorScales.precipitation={type:'breakpoint',unit:'dBZ',breakpoints:[0,...config.scale],colors:[[0,0,0,0],...config.colors.map((color,index)=>mapNativeRgba(color,Math.min(1,.68+index*.025)))]};
     settings.postReadCallback=(_reader,data)=>{if(data?.values)data.values=data.values.map(value=>{const rain=Math.max(0,Number(value)||0),dbz=rain<=.002?0:Math.max(0,10*Math.log10(200*Math.pow(rain,1.6)));return dbz<5?0:dbz})};
   }else if(kind==='cloud'){
-    // Nube total en gris neutro, como un producto de cobertura meteorológica:
-    // el despejado queda transparente y la masa se oscurece con el porcentaje.
-    settings.colorScales.cloud_cover={type:'breakpoint',unit:'%',breakpoints:[0,10,20,35,50,65,80,100],colors:[[255,255,255,0],[255,255,255,0],[210,214,218,.22],[174,179,184,.40],[137,142,147,.58],[99,104,109,.72],[63,68,73,.84],[28,32,36,.93]]};
-    settings.colorScales.cloud_cover_low={type:'breakpoint',unit:'%',breakpoints:[0,12,22,36,52,68,84,100],colors:[[170,179,187,0],[170,179,187,0],[164,173,181,.14],[160,169,177,.24],[156,165,173,.34],[152,161,169,.45],[148,157,165,.56],[144,153,161,.66]]};
-    settings.colorScales.cloud_cover_mid={type:'breakpoint',unit:'%',breakpoints:[0,12,22,36,52,68,84,100],colors:[[220,225,229,0],[220,225,229,0],[218,223,227,.15],[220,225,229,.27],[224,229,232,.39],[230,234,237,.50],[236,239,241,.60],[242,244,246,.70]]};
-    settings.colorScales.cloud_cover_high={type:'breakpoint',unit:'%',breakpoints:[0,12,22,36,52,68,84,100],colors:[[255,255,255,0],[255,255,255,0],[250,251,252,.13],[251,252,253,.24],[252,253,254,.34],[253,254,255,.44],[254,255,255,.53],[255,255,255,.62]]};
+    // Aspecto satelital: la cobertura seca se representa blanca o gris muy
+    // clara, con más opacidad al aumentar el porcentaje. La precipitación se
+    // añade en una segunda tesela y es la única que oscurece la masa nubosa.
+    // Acabado meteorológico: los bordes finos nacen en gris azulado y el
+    // cuerpo se vuelve blanco cuanto mayor es la cobertura. La segunda capa
+    // de precipitación de la misma hora aporta el gris oscuro de nube cargada.
+    settings.colorScales.cloud_cover={type:'breakpoint',unit:'%',breakpoints:[0,10,20,35,50,65,80,100],colors:[[255,255,255,0],[255,255,255,0],[157,178,199,.18],[177,196,214,.32],[202,216,229,.47],[226,235,243,.62],[244,248,251,.77],[255,255,255,.91]]};
+    settings.colorScales.cloud_cover_low={type:'breakpoint',unit:'%',breakpoints:[0,12,22,36,52,68,84,100],colors:[[255,255,255,0],[255,255,255,0],[151,174,197,.17],[172,193,212,.30],[199,215,228,.45],[224,235,243,.59],[243,248,251,.74],[255,255,255,.89]]};
+    settings.colorScales.cloud_cover_mid={type:'breakpoint',unit:'%',breakpoints:[0,12,22,36,52,68,84,100],colors:[[255,255,255,0],[255,255,255,0],[169,187,205,.15],[190,205,219,.28],[213,225,235,.42],[233,241,247,.56],[247,250,253,.71],[255,255,255,.86]]};
+    settings.colorScales.cloud_cover_high={type:'breakpoint',unit:'%',breakpoints:[0,12,22,36,52,68,84,100],colors:[[255,255,255,0],[255,255,255,0],[185,199,214,.14],[205,217,229,.26],[224,233,241,.40],[240,246,250,.54],[250,253,255,.69],[255,255,255,.84]]};
   }else if(kind==='cloud_rain_arome'){
     // AROME publica las nubes por niveles. La lluvia se integra con una
     // gradación gris-azulada suave para no crear parches negros aislados.
@@ -2397,6 +2445,9 @@ function mapNativeAdapter(kind='standard'){
   }else if(kind==='t850'){
     const config=MAP_LAYERS.t850;
     settings.colorScales.temperature={type:'breakpoint',unit:'°C',breakpoints:config.scale,colors:config.colors.map(color=>mapNativeRgba(color,.96))};
+  }else if(kind==='pressure'){
+    const config=MAP_LAYERS.pressure;
+    settings.colorScales.pressure={type:'breakpoint',unit:'hPa',breakpoints:config.scale,colors:config.colors.map(color=>mapNativeRgba(color,.96))};
   }else if(kind==='cin'){
     const config=MAP_LAYERS.cin;
     settings.colorScales.convective_inhibition={type:'breakpoint',unit:'J/kg',breakpoints:config.scale,colors:config.colors.map((color,index)=>mapNativeRgba(color,index===config.colors.length-1?0:.82))};
@@ -2427,10 +2478,11 @@ function mapNativeTimeline(metadata){
 function mapNativeLayerSpecs(layer,model=mapAitorState.model){
   if(layer==='cloud'&&model==='arome')return[{variable:'cloud_cover_low',factor:.78,kind:'cloud'},{variable:'precipitation',factor:.64,kind:'cloud_rain_arome'}];
   if(layer==='cloud')return[{variable:'cloud_cover',factor:.86,kind:'cloud'},{variable:'precipitation',factor:.92,kind:'cloud_rain'}];
-  if(layer==='temperature')return[{variable:'temperature_2m',factor:.82,kind:'temperature'}];
+  if(layer==='temperature')return[{variable:'temperature_2m',factor:.96,kind:'temperature'}];
   if(layer==='dewpoint'&&model==='ecmwf')return[{variable:'dew_point_2m',factor:.82,kind:'dewpoint'}];
   if(layer==='dewpoint')return[{variable:'relative_humidity_2m',factor:0,kind:'standard',support:true,dewpointSupport:true},{variable:'temperature_2m',factor:.82,kind:'dewpoint_derived',derived:true}];
-  if(layer==='t850')return[{variable:'temperature_850hPa',factor:.76,kind:'t850'}];
+  if(layer==='t850')return[{variable:'temperature_850hPa',factor:.94,kind:'t850'}];
+  if(layer==='pressure')return[{variable:'pressure_msl',factor:.92,kind:'pressure'}];
   const factor=layer==='cape'?.60:layer==='cin'?.55:1;
   return[{variable:MAP_NATIVE_VARIABLES[layer],factor,kind:layer==='precipitation'?'rain':layer==='forecast_reflectivity'?'reflectivity':layer==='cin'?'cin':layer==='wind'?'wind':'standard'}];
 }
@@ -2463,7 +2515,7 @@ function warmMapNativeCdn(center=mapAitorState.timeIndex,count=2,direction=1){
   void(async()=>{for(let step=1;step<=count;step+=1){const currentConnection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;if(generation!==mapAitorState.nativeWarmGeneration||source!==mapAitorState.nativeSource||document.hidden||currentConnection?.saveData||/2g/.test(String(currentConnection?.effectiveType||'')))return;let index=center+forward*step;if(mapAitorState.playing)index=((index%(maximum+1))+(maximum+1))%(maximum+1);else if(index<0||index>maximum)continue;const warmed=await warmMapNativeFile(index);if(!warmed)return}})().catch(()=>{})
 }
 function mapNativeTileUrl(base,spec,quick=false){
-  const smoothKinds=['cloud','cloud_rain','cloud_rain_arome','rain','wind','temperature','dewpoint','dewpoint_derived','t850'],smooth=smoothKinds.includes(spec.kind),parameters=new URLSearchParams({variable:spec.variable,interpolation:quick?'linear':smooth?'monotone':'linear',tile_size:quick?'128':'256'});if(smooth&&!quick)parameters.set('color_blend','true');return'om://'+base+'?'+parameters.toString();
+  const smoothKinds=['cloud','cloud_rain','cloud_rain_arome','rain','wind','temperature','dewpoint','dewpoint_derived','pressure','t850'],smooth=smoothKinds.includes(spec.kind),parameters=new URLSearchParams({variable:spec.variable,interpolation:quick?'linear':smooth?'monotone':'linear',tile_size:quick?'128':'256'});if(smooth&&!quick)parameters.set('color_blend','true');return'om://'+base+'?'+parameters.toString();
 }
 function updateMapNativeReadBounds(){
   const map=mapAitorState.map,library=window.OMWeatherMapLayer;if(!map||!library?.updateCurrentBounds)return;
@@ -2585,13 +2637,13 @@ function mapNativeFrameCacheLimit(){
   const compact=window.matchMedia?.('(max-width:820px)').matches,lowMemory=Number(navigator.deviceMemory||8)<=4;
   // Cada fotograma completo crea varios lienzos Leaflet. Una caché grande
   // termina compitiendo con el puntero y retrasa el propio evento input.
-  // Conservamos el actual y solo unas vecinas: la película rápida cubre el
-  // movimiento y la malla completa se afina al detenerse.
+  // Conservamos el actual y sus fotogramas completos adyacentes; nunca una
+  // película aproximada con otra resolución espacial.
   return compact||lowMemory?3:4
 }
 function mapNativeRemoveFrameEntry(key,entry=mapAitorState.nativeFrameCache.get(key)){
   if(!entry||entry.field===mapAitorState.nativeField)return false;
-  try{entry.field?.remove?.()}catch(_){ }mapAitorState.nativeFrameCache.delete(key);return true
+  clearTimeout(entry.watchdog);entry.watchdog=null;try{entry.field?.remove?.()}catch(_){ }mapAitorState.nativeFrameCache.delete(key);return true
 }
 function mapNativeTrimFrameCache(center=mapNativeDesiredIndex()){
   const limit=mapNativeFrameCacheLimit(),entries=[...mapAitorState.nativeFrameCache.entries()];if(entries.length<=limit)return;
@@ -2602,8 +2654,8 @@ function mapNativeTrimFrameCache(center=mapNativeDesiredIndex()){
 }
 function mapNativeRememberFrame(key,index,field,ready=true){
   if(!key||!field)return null;field._mapNativeFrameKey=key;field._mapNativeFrameIndex=index;
-  const previous=mapAitorState.nativeFrameCache.get(key);if(previous&&previous.field!==field&&previous.field!==mapAitorState.nativeField)previous.field.remove();
-  const entry={key,index,field,ready,identity:mapAitorState.nativeCacheIdentity,touched:Date.now()};mapAitorState.nativeFrameCache.set(key,entry);mapNativeTrimFrameCache(index);return entry
+  const previous=mapAitorState.nativeFrameCache.get(key);if(previous&&previous.field!==field&&previous.field!==mapAitorState.nativeField){clearTimeout(previous.watchdog);previous.field.remove()}
+  const entry={key,index,field,ready,identity:mapAitorState.nativeCacheIdentity,touched:Date.now(),watchdog:null};mapAitorState.nativeFrameCache.set(key,entry);mapNativeTrimFrameCache(index);return entry
 }
 function clearMapNativePrefetch(keepCurrent=true){
   clearTimeout(mapAitorState.nativePrefetchTimer);mapAitorState.nativePrefetchTimer=null;
@@ -2615,7 +2667,11 @@ function clearMapNativePrefetch(keepCurrent=true){
   if(!keepCurrent)clearMapNativePreviewCache();
 }
 function pauseMapNativePrefetchTimers(keepKey=null){
-  mapAitorState.nativePrefetchTimers.forEach((timer,key)=>{if(key===keepKey)return;clearTimeout(timer);mapAitorState.nativePrefetchTimers.delete(key)})
+  clearTimeout(mapAitorState.nativePrefetchTimer);mapAitorState.nativePrefetchTimer=null;
+  mapAitorState.nativePrefetchTimers.forEach((timer,key)=>{if(key===keepKey)return;clearTimeout(timer);mapAitorState.nativePrefetchTimers.delete(key)});
+  // Un arrastre nuevo tiene prioridad sobre una precarga oculta incompleta.
+  // Retirarla evita que el decodificador termine una hora que ya no se pidió.
+  [...mapAitorState.nativeFrameCache.entries()].forEach(([key,entry])=>{if(key!==keepKey&&!entry.ready)mapNativeRemoveFrameEntry(key,entry)})
 }
 async function clearMapNativeLibraryCache(){
   clearTimeout(mapAitorState.nativeCacheTrimTimer);mapAitorState.nativeCacheTrimTimer=null;mapAitorState.nativeCacheFrames=0;mapNativeRestoreDerivedDewpointStates();
@@ -2632,20 +2688,13 @@ function scheduleMapNativeCacheTrim(){
   mapAitorState.nativeCacheTrimTimer=setTimeout(trim,12000);return true;
 }
 function mapNativeFrameSpecs(source,layerName,entry){
-  let specs=[...(source.layerSpecs||mapNativeLayerSpecs(layerName))];if(layerName==='cloud'&&mapAitorState.model==='arome')specs=specs.filter(spec=>spec.kind!=='cloud_rain_arome');const vectorSource=mapAitorState.nativeVectorSource,vectorEntry=layerName==='gust'?mapNearestNativeEntry(vectorSource,entry.time):null;
+  const specs=[...(source.layerSpecs||mapNativeLayerSpecs(layerName))],vectorSource=mapAitorState.nativeVectorSource,vectorEntry=layerName==='gust'?mapNearestNativeEntry(vectorSource,entry.time):null;
   if(layerName==='gust'&&vectorSource&&vectorEntry)specs.push({variable:'wind_u_component_10m',factor:0,kind:'wind',support:true,base:mapNativeOmFile(vectorSource,vectorEntry)});
   return specs;
 }
-function queueMapNativeAromeRainShade(source,entry,group,delay=140){
-  clearTimeout(mapAitorState.nativeCloudShadeTimer);mapAitorState.nativeCloudShadeTimer=null;if(mapAitorState.model!=='arome'||mapAitorState.layer!=='cloud'||!source||!entry||!group)return;
-  const sourceIndex=entry.index;mapAitorState.nativeCloudShadeTimer=setTimeout(()=>{
-    mapAitorState.nativeCloudShadeTimer=null;if(mapAitorState.model!=='arome'||mapAitorState.layer!=='cloud'||mapAitorState.nativeSource!==source||mapAitorState.nativeSource?.timeline?.[mapAitorState.timeIndex]?.index!==sourceIndex||mapAitorState.nativeField!==group)return;
-    const spec=(source.layerSpecs||[]).find(item=>item.kind==='cloud_rain_arome');if(!spec)return;const base=mapNativeOmFile(source,entry),url=mapNativeTileUrl(spec.base||base,spec),targetOpacity=Math.max(.08,Math.min(1,mapFieldOpacity()*spec.factor)),tile=mapNativeAdapter(spec.kind).createTileLayer(url,{pane:'mapWeatherRadar',opacity:0,tileSize:256,maxZoom:12,maxNativeZoom:12,keepBuffer:1,updateWhenIdle:true,className:'mapNativeWeatherTile mapNativeWeatherTile-cloud mapNativeWeatherTileKind-cloud_rain_arome mapNativeWeatherSecondary',attribution:'Datos meteorológicos © Open‑Meteo'});tile.options.nativeOpacityFactor=spec.factor;tile.options.nativeTargetOpacity=targetOpacity;tile.once('load',()=>{if(mapAitorState.nativeField===group)tile.setOpacity(targetOpacity)});group.addLayer(tile)
-  },Math.max(0,delay))
-}
 function finalizeMapNativeTimelineUi(){
   const source=mapAitorState.nativeSource,entry=source?.timeline?.[mapAitorState.timeIndex];if(!source||!entry)return;
-  updateMapLabels();updateMapInfo();renderMapNativeAnnotations();queueMapNativeAromeRainShade(source,entry,mapAitorState.nativeField,80);
+  updateMapLabels();updateMapInfo();renderMapNativeAnnotations();
   if(mapNativeUsesDirectSamples()){if(['wind','gust'].includes(mapAitorState.layer))queueMapNativeWindSamples(35);else queueMapNativeScalarSamples(mapNativeSampleVariable(),mapLayerConfig().key,35)}
 }
 function activateMapNativeCachedFrame(cached){
@@ -2679,22 +2728,22 @@ function prefetchMapNativeFrame(index,delay=70){
   if(mapAitorState.nativePrefetchTimers.has(key))return null;const generation=mapAitorState.nativePrefetchGeneration;
   const timer=setTimeout(()=>{
     mapAitorState.nativePrefetchTimers.delete(key);if(generation!==mapAitorState.nativePrefetchGeneration||layerName!==mapAitorState.layer||model!==mapAitorState.model||source!==mapAitorState.nativeSource)return;updateMapNativeReadBounds();
-    const specs=mapNativeFrameSpecs(source,layerName,entry),derivedDewpoint=specs.some(spec=>spec.derived),base=mapNativeOmFile(source,entry),visibleCount=Math.max(1,specs.filter(spec=>!spec.support).length),cloudCount=Math.max(1,specs.filter(spec=>!spec.support&&spec.kind==='cloud').length),tiles=specs.map(spec=>{const url=mapNativeTileUrl(spec.base||base,spec),targetOpacity=spec.support?.001:Math.max(.12,Math.min(1,mapFieldOpacity()*spec.factor)),tile=mapNativeAdapter(spec.kind).createTileLayer(url,{pane:'mapWeatherRadar',opacity:0,tileSize:256,maxZoom:12,maxNativeZoom:12,keepBuffer:0,updateWhenIdle:false,className:'mapNativeWeatherTile mapNativeWeatherTile-'+layerName+' mapNativeWeatherTileKind-'+spec.kind+(spec.support?' mapNativeWeatherSupport':'')+' mapNativeWeatherPrefetch mapNativeWeatherFrame-'+index,attribution:'Datos meteorológicos © Open‑Meteo'});tile.options.nativeOpacityFactor=spec.factor;tile.options.nativeTargetOpacity=targetOpacity;tile.options.nativeFrameVisible=false;tile.options.nativeSourceUrl=url;tile.options.nativeVariable=spec.variable;tile.options.nativeKind=spec.kind;tile.options.nativeSupport=!!spec.support;tile.options.nativeDerivedDewpoint=!!spec.derived;tile.options.nativeDewpointSupport=!!spec.dewpointSupport;return tile}),field=L.layerGroup(tiles),cached=mapNativeRememberFrame(key,index,field,false);let ready=0;
-    const markReady=()=>{if(mapAitorState.nativeFrameCache.get(key)!==cached)return;cached.ready=true;cached.touched=Date.now();if(mapNativeDesiredIndex()===index)activateMapNativeCachedFrame(cached);else if(mapAitorState.nativeDesiredTimeIndex!==null&&mapNativeDesiredIndex()!==mapAitorState.timeIndex&&!mapAitorState.nativeDragging)queueMapNativeLiveFrame(0)};
-    const failDerived=()=>{if(mapAitorState.nativeFrameCache.get(key)!==cached)return;try{field.remove()}catch(_){ }mapAitorState.nativeFrameCache.delete(key);if(mapNativeDesiredIndex()===index&&mapAitorState.playing)scheduleMapNativePlayback()};
-    if(derivedDewpoint)mapNativePrepareDerivedDewpoint(tiles,markReady,failDerived);else tiles.forEach(tile=>tile.once('load',()=>{if(tile.options.nativeSupport||layerName==='cloud'&&tile.options.nativeKind!=='cloud')return;ready+=1;const required=layerName==='cloud'?cloudCount:visibleCount;if(ready>=required)markReady()}));field.addTo(map);mapNativeTrimFrameCache(mapNativeDesiredIndex());
+    const specs=mapNativeFrameSpecs(source,layerName,entry),derivedDewpoint=specs.some(spec=>spec.derived),base=mapNativeOmFile(source,entry),visibleCount=Math.max(1,specs.filter(spec=>!spec.support).length),tiles=specs.map(spec=>{const url=mapNativeTileUrl(spec.base||base,spec),targetOpacity=spec.support?.001:Math.max(.12,Math.min(1,mapFieldOpacity()*spec.factor)),tile=mapNativeAdapter(spec.kind).createTileLayer(url,{pane:'mapWeatherRadar',opacity:0,tileSize:256,maxZoom:12,maxNativeZoom:12,keepBuffer:0,updateWhenIdle:false,className:'mapNativeWeatherTile mapNativeWeatherTile-'+layerName+' mapNativeWeatherTileKind-'+spec.kind+(spec.support?' mapNativeWeatherSupport':'')+' mapNativeWeatherPrefetch mapNativeWeatherFrame-'+index,attribution:'Datos meteorológicos © Open‑Meteo'});tile.options.nativeOpacityFactor=spec.factor;tile.options.nativeTargetOpacity=targetOpacity;tile.options.nativeFrameVisible=false;tile.options.nativeSourceUrl=url;tile.options.nativeVariable=spec.variable;tile.options.nativeKind=spec.kind;tile.options.nativeSupport=!!spec.support;tile.options.nativeDerivedDewpoint=!!spec.derived;tile.options.nativeDewpointSupport=!!spec.dewpointSupport;return tile}),field=L.layerGroup(tiles),cached=mapNativeRememberFrame(key,index,field,false);let ready=0;
+    const markReady=()=>{if(mapAitorState.nativeFrameCache.get(key)!==cached)return;clearTimeout(cached.watchdog);cached.watchdog=null;cached.ready=true;cached.touched=Date.now();if(mapNativeDesiredIndex()===index)activateMapNativeCachedFrame(cached);else if(mapAitorState.nativeDesiredTimeIndex!==null&&mapNativeDesiredIndex()!==mapAitorState.timeIndex&&!mapAitorState.nativeDragging)queueMapNativeLiveFrame(0)};
+    const failDerived=()=>{if(mapAitorState.nativeFrameCache.get(key)!==cached)return;mapNativeRemoveFrameEntry(key,cached);if(mapNativeDesiredIndex()===index&&mapAitorState.playing)scheduleMapNativePlayback()};
+    if(derivedDewpoint)mapNativePrepareDerivedDewpoint(tiles,markReady,failDerived);else tiles.forEach(tile=>tile.once('load',()=>{if(tile.options.nativeSupport)return;ready+=1;if(ready>=visibleCount)markReady()}));field.addTo(map);cached.watchdog=setTimeout(()=>{if(mapAitorState.nativeFrameCache.get(key)!==cached||cached.ready)return;mapNativeRemoveFrameEntry(key,cached);if(mapNativeDesiredIndex()!==index||mapAitorState.nativeDesiredTimeIndex===null)return;if(mapAitorState.nativeRetryKey!==key){mapAitorState.nativeRetryKey=key;mapAitorState.nativeRetryCount=0}if(mapAitorState.nativeRetryCount<2){mapAitorState.nativeRetryCount+=1;$('mapStatus').textContent='Se conserva el último fotograma correcto · reintentando la hora exacta '+mapAitorState.nativeRetryCount+'/2';queueMapNativeLiveFrame(450)}else{mapAitorState.lastError=new Error('El fotograma nativo exacto no terminó de cargar.');$('mapLayerBadge').classList.add('mapLoadError');$('mapStatus').textContent='Se conserva el último fotograma correcto · pulsa Actualizar mapa para reintentar'}},15000);mapNativeTrimFrameCache(mapNativeDesiredIndex());
   },Math.max(0,delay));mapAitorState.nativePrefetchTimers.set(key,timer);return null
 }
 function prefetchMapNativeWindow(center=mapAitorState.timeIndex,direction=1){
-  const timeline=mapAitorState.nativeSource?.timeline||[];if(!timeline.length||!mapUsesNativeTiles())return;const maximum=timeline.length-1,forward=direction<0?-1:1;let next=center+forward;
-  // La reproducción es circular: desde la última hora debe quedar preparada
-  // la hora 0. Los saltos manuales, en cambio, respetan los extremos.
-  if(mapAitorState.playing){if(next>maximum)next=0;else if(next<0)next=maximum}else if(next<0||next>maximum)return;
-  // En pausa solo se anticipa la red: crear una tesela OM oculta ejecutaba su
-  // decodificador síncrono y congelaba el cursor durante varios segundos.
-  // En reproducción la vista real siguiente tiene prioridad y la red anticipa
-  // únicamente la hora posterior, sin duplicar la petición del fotograma.
-  if(mapAitorState.playing){prefetchMapNativePreviewWindow(next,forward);warmMapNativeCdn(next,1,forward)}else warmMapNativeCdn(center,2,forward)
+  const source=mapAitorState.nativeSource,timeline=source?.timeline||[],connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;if(!timeline.length||!mapUsesNativeTiles()||document.hidden||mapAitorState.nativeDragging||connection?.saveData||/2g/.test(String(connection?.effectiveType||'')))return;
+  const maximum=timeline.length-1,forward=direction<0?-1:1,wrap=index=>mapAitorState.playing?((index%(maximum+1))+(maximum+1))%(maximum+1):index,primary=wrap(center+forward),opposite=wrap(center-forward),lowMemory=Number(navigator.deviceMemory||8)<=4||window.matchMedia?.('(max-width:820px)').matches,targets=[];
+  if(primary>=0&&primary<=maximum&&primary!==center)targets.push(primary);if(!mapAitorState.playing&&!lowMemory&&opposite>=0&&opposite<=maximum&&opposite!==center&&!targets.includes(opposite))targets.push(opposite);if(!targets.length)return;
+  clearTimeout(mapAitorState.nativePrefetchTimer);mapAitorState.nativePrefetchTimer=null;const identity=mapAitorState.nativeCacheIdentity,generation=mapAitorState.nativePrefetchGeneration;
+  // Solo se decodifica un fotograma completo cada vez. Al quedar listo el
+  // adyacente prioritario se prepara el del lado opuesto, sin competir con el
+  // cursor ni sustituir la imagen visible.
+  const launch=position=>{if(position>=targets.length||generation!==mapAitorState.nativePrefetchGeneration||source!==mapAitorState.nativeSource||identity!==mapAitorState.nativeCacheIdentity||mapAitorState.nativeDragging||mapAitorState.nativeDesiredTimeIndex!==null)return;const index=targets[position],key=mapNativeFrameKey(index),existing=mapAitorState.nativeFrameCache.get(key);if(!existing)prefetchMapNativeFrame(index,0);if(position+1>=targets.length)return;const started=Date.now(),wait=()=>{if(generation!==mapAitorState.nativePrefetchGeneration||source!==mapAitorState.nativeSource||identity!==mapAitorState.nativeCacheIdentity||mapAitorState.nativeDragging||mapAitorState.nativeDesiredTimeIndex!==null)return;const entry=mapAitorState.nativeFrameCache.get(key);if(entry?.ready||Date.now()-started>6000){mapAitorState.nativePrefetchTimer=null;launch(position+1);return}mapAitorState.nativePrefetchTimer=setTimeout(wait,250)};mapAitorState.nativePrefetchTimer=setTimeout(wait,300)};
+  mapAitorState.nativePrefetchTimer=setTimeout(()=>{mapAitorState.nativePrefetchTimer=null;launch(0)},160);warmMapNativeCdn(center,mapAitorState.playing?1:2,forward)
 }
 function queueMapNativeFrame(delay=170){
   clearTimeout(mapAitorState.nativeFrameTimer);mapAitorState.nativeFrameTimer=setTimeout(()=>{mapAitorState.nativeFrameTimer=null;renderMapNativeFrame()},Math.max(0,delay));
@@ -2711,8 +2760,10 @@ function updateMapNativeTimelineOnly(time){
   const config=mapLayerConfig(),daylight=updateMapLightTheme(time);mapRememberForecastTime(time);$('mapTimeBadge').textContent=config.unit+' · '+source.label+' · '+(daylight?'☀ Día':'☾ Noche');$('mapTimelineLabel').textContent=mapTimeText(time)
 }
 function previewMapNativeTime(index){
-  const entry=mapAitorState.nativeSource?.timeline?.[index],time=String(entry?.time||'').replace(/Z$/,'');if(!time)return;
-  updateMapNativeTimelineOnly(time);$('mapStatus').textContent='Avanzando en directo · '+$('mapTimelineLabel').textContent
+  const source=mapAitorState.nativeSource,entry=source?.timeline?.[index],visible=source?.timeline?.[mapAitorState.timeIndex],time=String(entry?.time||'').replace(/Z$/,''),visibleTime=String(visible?.time||'').replace(/Z$/,'');if(!time)return;
+  // El deslizador expresa la hora solicitada, pero la etiqueta del mapa y el
+  // ciclo día/noche solo cambian cuando ese fotograma exacto se ha activado.
+  mapRememberForecastTime(time);$('mapTimelineLabel').textContent=mapTimeText(time);$('mapStatus').textContent='Hora seleccionada '+mapTimeText(time)+(visibleTime&&visibleTime!==time?' · se mantiene visible '+mapTimeText(visibleTime)+' hasta cargar el fotograma exacto':' · fotograma exacto visible')
 }
 function scheduleMapNativeRefine(index=mapAitorState.timeIndex,delay=520){
   clearTimeout(mapAitorState.nativeRefineTimer);mapAitorState.nativeRefineTimer=null;
@@ -2730,6 +2781,14 @@ function scheduleMapNativeRefine(index=mapAitorState.timeIndex,delay=520){
 }
 function queueMapNativeLiveFrame(delay=90){
   if(!mapUsesNativeTiles()||!mapAitorState.nativeSource)return;
+  if(mapNativeRequiresAccurateTransition()){
+    const desired=mapNativeDesiredIndex(),cached=mapAitorState.nativeFrameCache.get(mapNativeFrameKey(desired));
+    if(cached?.ready){activateMapNativeCachedFrame(cached);return}
+    if(desired===mapAitorState.timeIndex&&!mapAitorState.nativePreviewField){if(!mapAitorState.nativeDragging)mapAitorState.nativeDesiredTimeIndex=null;if(mapAitorState.playing)scheduleMapNativePlayback();return}
+    if(mapAitorState.nativeFrameTimer)return;
+    mapAitorState.nativeFrameTimer=setTimeout(()=>{mapAitorState.nativeFrameTimer=null;if(!mapUsesNativeTiles()||!mapNativeRequiresAccurateTransition())return;const target=mapNativeDesiredIndex(),ready=mapAitorState.nativeFrameCache.get(mapNativeFrameKey(target));if(ready?.ready){activateMapNativeCachedFrame(ready);return}prefetchMapNativeFrame(target,0);$('mapStatus').textContent='Se conserva la última imagen correcta · cargando '+mapTimeText(String(mapAitorState.nativeSource?.timeline?.[target]?.time||'').replace(/Z$/,''))+'…'},Math.max(0,delay));
+    return
+  }
   const desired=mapNativeDesiredIndex(),cached=mapAitorState.nativeFrameCache.get(mapNativeFrameKey(desired));if(cached?.ready){activateMapNativeCachedFrame(cached);return}
   const quick=mapAitorState.nativePreviewCache.get(mapNativePreviewKey(desired));if(quick?.ready){activateMapNativePreview(quick);if(mapAitorState.playing)scheduleMapNativePlayback();else if(!mapAitorState.nativeDragging)scheduleMapNativeRefine(desired);return}
   if(desired===mapAitorState.timeIndex&&!mapAitorState.nativePreviewField){if(!mapAitorState.nativeDragging)mapAitorState.nativeDesiredTimeIndex=null;if(mapAitorState.playing)scheduleMapNativePlayback();return}
@@ -2760,17 +2819,17 @@ function renderMapNativeFrame(retrying=false){
   const frameIndex=mapAitorState.timeIndex,layerName=mapAitorState.layer,model=mapAitorState.model,retryKey=[layerName,model,source.domain,entry.index].join('|'),cached=mapAitorState.nativeFrameCache.get(retryKey);if(cached?.ready&&cached.field!==mapAitorState.nativeField){activateMapNativeCachedFrame(cached);return}
   const previousField=mapAitorState.nativeField,keepPrevious=!!(previousField&&mapAitorState.renderedLayer===layerName&&mapAitorState.renderedModel===model),requestId=++mapAitorState.nativeRequestId;
   if(!retrying||mapAitorState.nativeRetryKey!==retryKey){mapAitorState.nativeRetryKey=retryKey;mapAitorState.nativeRetryCount=0}clearTimeout(mapAitorState.nativeRetryTimer);clearMapNativePending();if(!keepPrevious)clearMapLayers();unsetMapRadar();stopMapWind();if(mapAitorState.values)mapAitorState.values.clearLayers();if(mapAitorState.windArrows)mapAitorState.windArrows.clearLayers();if(mapAitorState.isobars)mapAitorState.isobars.clearLayers();if(mapAitorState.labels)mapAitorState.labels.clearLayers();
-  const layers=[],base=mapNativeOmFile(source,entry),specs=mapNativeFrameSpecs(source,layerName,entry),derivedDewpoint=specs.some(spec=>spec.derived),visibleLayerCount=Math.max(1,specs.filter(spec=>!spec.support).length),cloudLayerCount=Math.max(1,specs.filter(spec=>!spec.support&&spec.kind==='cloud').length);let readyLayers=0,readyCloudLayers=0,loaded=0,errors=0,finished=false,activated=!keepPrevious&&!derivedDewpoint,softUnlock=null,swapTimeout=null,hardTimeout=null,nextField=null;
+  const layers=[],base=mapNativeOmFile(source,entry),specs=mapNativeFrameSpecs(source,layerName,entry),derivedDewpoint=specs.some(spec=>spec.derived),visibleLayerCount=Math.max(1,specs.filter(spec=>!spec.support).length);let readyLayers=0,loaded=0,errors=0,finished=false,activated=false,softUnlock=null,swapTimeout=null,hardTimeout=null,nextField=null;
   const activate=()=>{if(activated||requestId!==mapAitorState.nativeRequestId||mapNativeDesiredIndex()!==frameIndex)return;activated=true;clearTimeout(swapTimeout);clearMapNativePreview(false);clearMapNativeMovie(false,false);mapNativeSetFrameVisibility(nextField,true);if(previousField){mapNativeSetFrameVisibility(previousField,false);const previousKey=previousField._mapNativeFrameKey,previousIndex=previousField._mapNativeFrameIndex;if(previousKey&&Number.isInteger(previousIndex))mapNativeRememberFrame(previousKey,previousIndex,previousField,true);else previousField.remove()}mapAitorState.nativeField=nextField;mapAitorState.nativePendingField=null;mapAitorState.renderedLayer=layerName;mapAitorState.renderedModel=model;updateMapLabels();updateMapInfo();renderMapNativeAnnotations()};
-  const finish=()=>{if(finished||requestId!==mapAitorState.nativeRequestId)return;finished=true;clearTimeout(hardTimeout);clearTimeout(softUnlock);clearTimeout(swapTimeout);if(mapNativeDesiredIndex()!==frameIndex){mapNativeSetFrameVisibility(nextField,false);if(mapAitorState.nativePendingField===nextField)mapAitorState.nativePendingField=null;mapNativeRememberFrame(retryKey,frameIndex,nextField,true);continueMapNativeLiveFrame(0);return}activate();mapNativeRememberFrame(retryKey,frameIndex,nextField,true);mapAitorState.nativeRetryCount=0;mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapStatus').dataset.transport='open-meteo-spatial';$('mapStatus').textContent=mapAitorState.nativeFallbackNotice||('Teselas nativas '+source.label+(mapAitorState.data?' · valores y vectores activos':' · fijas y continuas'));setMapBusy(false);updateMapLabels();updateMapInfo();renderMapNativeAnnotations();queueMapNativeAromeRainShade(source,entry,mapAitorState.nativeField,120);const continuing=continueMapNativeLiveFrame(70);if(mapNativeUsesDirectSamples(layerName,model)){if(!continuing){if(['wind','gust'].includes(layerName))queueMapNativeWindSamples(60);else queueMapNativeScalarSamples(mapNativeSampleVariable(layerName,model),mapLayerConfig().key,60)}}if(!continuing&&!scheduleMapNativeCacheTrim())prefetchMapNativeWindow(mapAitorState.timeIndex,mapAitorState.nativePrefetchDirection);if(mapAitorState.playing)scheduleMapNativePlayback()};
+  const finish=()=>{if(finished||requestId!==mapAitorState.nativeRequestId)return;finished=true;clearTimeout(hardTimeout);clearTimeout(softUnlock);clearTimeout(swapTimeout);if(mapNativeDesiredIndex()!==frameIndex){mapNativeSetFrameVisibility(nextField,false);if(mapAitorState.nativePendingField===nextField)mapAitorState.nativePendingField=null;mapNativeRememberFrame(retryKey,frameIndex,nextField,true);continueMapNativeLiveFrame(0);return}activate();mapNativeRememberFrame(retryKey,frameIndex,nextField,true);mapAitorState.nativeRetryCount=0;mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapStatus').dataset.transport='open-meteo-spatial';$('mapStatus').textContent=mapAitorState.nativeFallbackNotice||('Teselas nativas '+source.label+(mapAitorState.data?' · valores y vectores activos':' · fijas y continuas'));setMapBusy(false);updateMapLabels();updateMapInfo();renderMapNativeAnnotations();const continuing=continueMapNativeLiveFrame(70);if(mapNativeUsesDirectSamples(layerName,model)){if(!continuing){if(['wind','gust'].includes(layerName))queueMapNativeWindSamples(60);else queueMapNativeScalarSamples(mapNativeSampleVariable(layerName,model),mapLayerConfig().key,60)}}if(!continuing&&!scheduleMapNativeCacheTrim())prefetchMapNativeWindow(mapAitorState.timeIndex,mapAitorState.nativePrefetchDirection);if(mapAitorState.playing)scheduleMapNativePlayback()};
   specs.forEach((spec,index)=>{
-    const adapter=mapNativeAdapter(spec.kind),url=mapNativeTileUrl(spec.base||base,spec),targetOpacity=spec.support?.001:Math.max(.12,Math.min(1,mapFieldOpacity()*spec.factor)),tile=adapter.createTileLayer(url,{pane:'mapWeatherRadar',opacity:keepPrevious||spec.derived?0:targetOpacity,tileSize:256,maxZoom:12,maxNativeZoom:12,keepBuffer:1,updateWhenIdle:false,className:'mapNativeWeatherTile mapNativeWeatherTile-'+layerName+' mapNativeWeatherTileKind-'+spec.kind+(spec.support?' mapNativeWeatherSupport':'')+' mapNativeWeatherFrame-'+frameIndex,attribution:'Datos meteorológicos © Open‑Meteo'});if(spec.variable==='wind_u_component_10m')mapAitorState.nativeWindSampleUrl=url;if(spec.variable==='wind_gusts_10m')mapAitorState.nativeGustSampleUrl=url;tile.options.nativeOpacityFactor=spec.factor;tile.options.nativeTargetOpacity=targetOpacity;tile.options.nativeFrameVisible=!keepPrevious;tile.options.nativeSourceUrl=url;tile.options.nativeVariable=spec.variable;tile.options.nativeKind=spec.kind;tile.options.nativeSupport=!!spec.support;tile.options.nativeDerivedDewpoint=!!spec.derived;tile.options.nativeDewpointSupport=!!spec.dewpointSupport;tile.once('tileload',()=>{loaded+=1});if(!derivedDewpoint)tile.once('load',()=>{if(spec.support)return;readyLayers+=1;if(layerName==='cloud'&&spec.kind==='cloud'){readyCloudLayers+=1;if(readyCloudLayers>=cloudLayerCount){activate();setMapBusy(false);$('mapStatus').textContent='Nubosidad visible · completando únicamente el sombreado de precipitación…'}}if(readyLayers>=visibleLayerCount)finish()});tile.on('tileerror',()=>{errors+=1});layers.push(tile);
+    const adapter=mapNativeAdapter(spec.kind),url=mapNativeTileUrl(spec.base||base,spec),targetOpacity=spec.support?.001:Math.max(.12,Math.min(1,mapFieldOpacity()*spec.factor)),tile=adapter.createTileLayer(url,{pane:'mapWeatherRadar',opacity:0,tileSize:256,maxZoom:12,maxNativeZoom:12,keepBuffer:1,updateWhenIdle:false,className:'mapNativeWeatherTile mapNativeWeatherTile-'+layerName+' mapNativeWeatherTileKind-'+spec.kind+(spec.support?' mapNativeWeatherSupport':'')+' mapNativeWeatherFrame-'+frameIndex,attribution:'Datos meteorológicos © Open‑Meteo'});if(spec.variable==='wind_u_component_10m')mapAitorState.nativeWindSampleUrl=url;if(spec.variable==='wind_gusts_10m')mapAitorState.nativeGustSampleUrl=url;tile.options.nativeOpacityFactor=spec.factor;tile.options.nativeTargetOpacity=targetOpacity;tile.options.nativeFrameVisible=false;tile.options.nativeSourceUrl=url;tile.options.nativeVariable=spec.variable;tile.options.nativeKind=spec.kind;tile.options.nativeSupport=!!spec.support;tile.options.nativeDerivedDewpoint=!!spec.derived;tile.options.nativeDewpointSupport=!!spec.dewpointSupport;tile.once('tileload',()=>{loaded+=1});if(!derivedDewpoint)tile.once('load',()=>{if(spec.support)return;readyLayers+=1;if(readyLayers>=visibleLayerCount)finish()});tile.on('tileerror',()=>{errors+=1});layers.push(tile);
   });
   if(derivedDewpoint)mapNativePrepareDerivedDewpoint(layers,finish);
   nextField=L.layerGroup(layers).addTo(map);nextField._mapNativeFrameKey=retryKey;nextField._mapNativeFrameIndex=frameIndex;const previewActive=!!mapAitorState.nativePreviewField;if(keepPrevious){mapAitorState.nativePendingField=nextField}else{mapAitorState.nativeField=nextField;mapAitorState.renderedLayer=layerName;mapAitorState.renderedModel=model}const range=$('mapTimeRange');range.max=Math.max(0,source.timeline.length-1);range.value=mapAitorState.nativeDesiredTimeIndex??frameIndex;hideMapPickerMarker();$('mapPickerHint')?.classList.add('isHidden');updateMapLabels();updateMapInfo();renderMapNativeAnnotations();
   if(retrying||keepPrevious){setMapBusy(false,previewActive?'Vista inmediata activa · afinando '+source.label+'…':(retrying?'Reintentando ':'Cargando la hora seleccionada · ')+source.label+'…');$('mapLayerBadge').innerHTML='<span></span>'+mapLayerConfig().title+(previewActive?' · vista inmediata':retrying?' · reintentando':' · cambiando hora');}
   else{setMapBusy(true,'Cargando teselas nativas '+source.label+'…');softUnlock=setTimeout(()=>{if(finished||requestId!==mapAitorState.nativeRequestId)return;setMapBusy(false);$('mapLayerBadge').innerHTML='<span></span>'+mapLayerConfig().title+' · completando capa';$('mapStatus').textContent='La conexión móvil está tardando · puedes seguir usando el visor mientras se completa.';},6000)}
-  hardTimeout=setTimeout(()=>{if(finished||requestId!==mapAitorState.nativeRequestId)return;if(layerName==='cloud'&&activated){mapAitorState.nativeFallbackNotice='Nubosidad '+source.label+' visible · sombreado de precipitación auxiliar incompleto';finish();return}finished=true;clearTimeout(softUnlock);clearTimeout(swapTimeout);if(mapAitorState.nativePendingField===nextField){nextField.remove();mapAitorState.nativePendingField=null}if(mapAitorState.nativeRetryCount<2){mapAitorState.nativeRetryCount+=1;const attempt=mapAitorState.nativeRetryCount;setMapBusy(false);$('mapLayerBadge').innerHTML='<span></span>'+mapLayerConfig().title+' · reintento '+attempt+'/2';$('mapStatus').textContent=(keepPrevious?'Se conserva la hora anterior · ':'')+'reintentando conexión '+attempt+'/2 · '+source.label+'…';mapAitorState.nativeRetryTimer=setTimeout(()=>{if(requestId===mapAitorState.nativeRequestId)renderMapNativeFrame(true)},attempt===1?750:1600);return}mapAitorState.lastError=new Error('Las teselas meteorológicas no respondieron tras tres intentos.');$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+mapLayerConfig().title+' · conexión temporalmente no disponible';$('mapStatus').textContent=(keepPrevious?'Se conserva la última hora visible. ':'')+'Pulsa Actualizar mapa; Windy permanece como opción secundaria.';$('mapInfo').innerHTML='<strong>'+mapLayerConfig().title+' temporalmente sin datos nuevos</strong>Se realizaron tres intentos sin sustituir la capa por otra fuente.';setMapBusy(false)},18000);
+  hardTimeout=setTimeout(()=>{if(finished||requestId!==mapAitorState.nativeRequestId)return;finished=true;clearTimeout(softUnlock);clearTimeout(swapTimeout);if(mapAitorState.nativePendingField===nextField)mapAitorState.nativePendingField=null;if(mapAitorState.nativeField===nextField)mapAitorState.nativeField=null;nextField.remove();if(mapAitorState.nativeRetryCount<2){mapAitorState.nativeRetryCount+=1;const attempt=mapAitorState.nativeRetryCount;setMapBusy(false);$('mapLayerBadge').innerHTML='<span></span>'+mapLayerConfig().title+' · reintento '+attempt+'/2';$('mapStatus').textContent=(keepPrevious?'Se conserva la hora anterior · ':'')+'reintentando conexión '+attempt+'/2 · '+source.label+'…';mapAitorState.nativeRetryTimer=setTimeout(()=>{if(requestId===mapAitorState.nativeRequestId)renderMapNativeFrame(true)},attempt===1?750:1600);return}mapAitorState.lastError=new Error('Las teselas meteorológicas no respondieron tras tres intentos.');$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+mapLayerConfig().title+' · conexión temporalmente no disponible';$('mapStatus').textContent=(keepPrevious?'Se conserva la última hora visible. ':'')+'Pulsa Actualizar mapa; Windy permanece como opción secundaria.';$('mapInfo').innerHTML='<strong>'+mapLayerConfig().title+' temporalmente sin datos nuevos</strong>Se realizaron tres intentos sin sustituir la capa por otra fuente.';setMapBusy(false)},18000);
 }
 async function loadMapNativeLayer(force=false,preserveTime=false,targetTime=null){
   if(!mapUsesNativeTiles()||!mapAitorState.map)return;clearMapViewportTimer();clearMapNativeWarmRequests();clearMapNativeMovie(true,false);if(mapAitorState.requestController){mapAitorState.requestController.abort();mapAitorState.requestController=null}clearMapNativePending();clearMapNativePrefetch(false);clearMapNativePreview(false);clearMapRetry();if($('mapOfficialEmbed')?.dataset.automatic==='1')closeMapOfficial(false);
@@ -2797,7 +2856,16 @@ function mapNativeAlignedData(response,timeline){
   const alignPoint=point=>{if(!point)return point;const hourly={};Object.entries(point.hourly||{}).forEach(([key,values])=>{hourly[key]=Array.isArray(values)?indexes.map(index=>index>=0?values[index]??null:null):values});return{...point,hourly}};
   return{...response,times:timeline.map(entry=>String(entry.time||'').replace(/Z$/,'')),points:(response.points||[]).map(alignPoint),focusPoint:alignPoint(response.focusPoint)};
 }
+// Todas las capas nativas cambian únicamente entre fotogramas completos de la
+// misma variable, modelo y hora. Se desactivan las películas y vistas rápidas
+// de resolución reducida para que nunca aparezca una aproximación transitoria.
+function mapNativeRequiresAccurateTransition(){return true}
 function mapNativeMovieReady(){
+  // Lluvia, reflectividad y nubes no aceptan la película de puntos reducida:
+  // a escala peninsular generaba discos de 150–250 km durante unos segundos.
+  // En estas capas se conserva el último fotograma correcto hasta que llega la
+  // vista rápida de tesela real y, después, la tesela nativa de 256 px.
+  if(mapNativeRequiresAccurateTransition())return false;
   const data=mapAitorState.nativeMovieData,map=mapAitorState.map,source=mapAitorState.nativeSource;if(!data||!map||!source||mapAitorState.nativeMovieIdentity!==mapAitorState.nativeCacheIdentity)return false;
   const bounds=data.bounds,view=map.getBounds();return Boolean(bounds&&view.getSouth()>=bounds.south&&view.getNorth()<=bounds.north&&view.getWest()>=bounds.west&&view.getEast()<=bounds.east)
 }
@@ -2832,6 +2900,7 @@ function queueMapNativeMovieFrame(index=mapNativeDesiredIndex()){
   mapAitorState.nativeMovieRenderFrame=requestAnimationFrame(()=>{mapAitorState.nativeMovieRenderFrame=null;const target=mapAitorState.nativeMovieRenderIndex;mapAitorState.nativeMovieRenderIndex=null;mapAitorState.nativeMovieLastRenderAt=performance.now();if(renderMapNativeMovie(target)&&mapAitorState.playing)scheduleMapNativePlayback()})
 }
 function queueMapNativeMovie(force=false,delay=80){
+  if(mapNativeRequiresAccurateTransition()){clearMapNativeMovie(true,true);return}
   clearTimeout(mapAitorState.nativeMovieTimer);mapAitorState.nativeMovieTimer=setTimeout(()=>{mapAitorState.nativeMovieTimer=null;loadMapNativeMovie(force)},Math.max(0,delay))
 }
 async function loadMapNativeMovie(force=false){
@@ -2948,8 +3017,8 @@ function mapApplyLandMask(context,width,height,bounds,northY,southY,invert=false
   return true;
 }
 const MAP_RAIN_FIELD_KEYS=new Set(['precipitation','precipitation_15m','precipitation_3h','precipitation_accumulated','precipitation_6h','precipitation_12h','precipitation_24h','rain','showers','snowfall']);
-function mapFormatValue(config,value){const v=mapNumber(value);if(MAP_RAIN_FIELD_KEYS.has(config.key)||config.key==='wave_height')return (v<1?v.toFixed(2):v.toFixed(1))+' '+config.unit;if(config.key==='sea_surface_temperature')return v.toFixed(1)+' '+config.unit;return Math.round(v)+' '+config.unit}
-function mapShortValue(config,value){const v=mapNumber(value);if(['temperature_2m','dew_point_2m','temperature_850hPa'].includes(config.key))return Math.round(v)+'°';if(config.key==='sea_surface_temperature')return v.toFixed(1)+'°';if(config.key==='wave_height')return (v<1?v.toFixed(2):v.toFixed(1))+'m';if(MAP_RAIN_FIELD_KEYS.has(config.key))return v<1?v.toFixed(1):String(Math.round(v*10)/10);if(['cloud_cover','relative_humidity_2m','precipitation_probability'].includes(config.key))return Math.round(v)+'%';if(config.key==='convective_inhibition')return '−'+Math.abs(Math.round(v));return String(Math.round(v))}
+function mapFormatValue(config,value){const v=mapNumber(value);if(MAP_RAIN_FIELD_KEYS.has(config.key)||config.key==='wave_height')return (v<1?v.toFixed(2):v.toFixed(1))+' '+config.unit;if(config.key==='lightning_density')return (v<1?v.toFixed(2):v<10?v.toFixed(1):String(Math.round(v)))+' '+config.unit;if(config.key==='sea_surface_temperature')return v.toFixed(1)+' '+config.unit;return Math.round(v)+' '+config.unit}
+function mapShortValue(config,value){const v=mapNumber(value);if(['temperature_2m','dew_point_2m','temperature_850hPa'].includes(config.key))return Math.round(v)+'°';if(config.key==='sea_surface_temperature')return v.toFixed(1)+'°';if(config.key==='wave_height')return (v<1?v.toFixed(2):v.toFixed(1))+'m';if(config.key==='lightning_density')return v<1?v.toFixed(2):v<10?v.toFixed(1):String(Math.round(v));if(MAP_RAIN_FIELD_KEYS.has(config.key))return v<1?v.toFixed(1):String(Math.round(v*10)/10);if(['cloud_cover','relative_humidity_2m','precipitation_probability'].includes(config.key))return Math.round(v)+'%';if(config.key==='convective_inhibition')return '−'+Math.abs(Math.round(v));return String(Math.round(v))}
 const MAP_TIME_FORMATTER=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false});
 function mapTimeText(time){if(!time)return '—';try{return MAP_TIME_FORMATTER.format(new Date(time+'Z'))}catch(_){return time.replace('T',' ')}}
 function mapEpochText(time){if(!time)return '—';try{return MAP_TIME_FORMATTER.format(new Date(Number(time)*1000))}catch(_){return 'Radar mundial'}}
@@ -2968,11 +3037,11 @@ function mapValue(point,key,index=mapAitorState.timeIndex){const value=point?.ho
 function mapHasLayerData(){const data=mapAitorState.data,key=mapLayerConfig().key,index=mapAitorState.timeIndex;return !!data?.points?.some(point=>mapValidNumber(point?.hourly?.[key]?.[index]))}
 function mapResponseHasLayerData(data,layer,index){const key=layer===mapAitorState.layer?mapLayerConfig().key:(MAP_LAYERS[layer]||MAP_LAYERS.precipitation).key;return !!data?.points?.some(point=>mapValidNumber(point?.hourly?.[key]?.[index]))}
 function mapHasWindData(){const data=mapAitorState.data,index=mapAitorState.timeIndex;return !!data?.points?.some(point=>mapValidNumber(point?.hourly?.wind_speed_10m?.[index])&&mapValidNumber(point?.hourly?.wind_direction_10m?.[index]))}
-function mapPhenomenonThreshold(config){const zoom=mapAitorState.map?.getZoom()||5;if(config.key==='precipitation_15m')return zoom<=3?.03:zoom<=5?.02:zoom<=7?.008:.003;if(['precipitation','rain','showers'].includes(config.key))return zoom<=3?.04:zoom<=5?.025:zoom<=7?.012:.005;if(config.key==='precipitation_3h')return zoom<=3?.30:zoom<=5?.12:zoom<=7?.06:.03;if(config.key==='precipitation_accumulated')return zoom<=3?.5:zoom<=5?.25:zoom<=7?.12:.06;if(config.key==='precipitation_6h')return zoom<=3?.10:zoom<=5?.06:zoom<=7?.03:.015;if(config.key==='precipitation_12h')return zoom<=3?.16:zoom<=5?.10:zoom<=7?.05:.025;if(config.key==='precipitation_24h')return zoom<=3?.25:zoom<=5?.15:zoom<=7?.08:.04;if(config.key==='snowfall')return zoom<=3?.02:zoom<=5?.01:.005;if(config.key==='precipitation_probability')return 4;if(config.key==='reflectivity_estimated')return 7;if(config.key==='cloud_cover')return zoom<=3?65:zoom<=5?52:zoom<=7?38:24;if(config.key==='cape')return 100;return-Infinity}
-function mapPhenomenonVisible(config,value){if(!mapValidNumber(value))return false;if([...MAP_RAIN_FIELD_KEYS,'precipitation_probability','reflectivity_estimated','cloud_cover','cape'].includes(config.key))return Number(value)>mapPhenomenonThreshold(config);if(config.key==='convective_inhibition')return Number(value)<-.5;return true}
+function mapPhenomenonThreshold(config){const zoom=mapAitorState.map?.getZoom()||5;if(config.key==='precipitation_15m')return zoom<=3?.03:zoom<=5?.02:zoom<=7?.008:.003;if(['precipitation','rain','showers'].includes(config.key))return zoom<=3?.04:zoom<=5?.025:zoom<=7?.012:.005;if(config.key==='lightning_density')return zoom<=3?.5:zoom<=5?.25:.1;if(config.key==='precipitation_3h')return zoom<=3?.30:zoom<=5?.12:zoom<=7?.06:.03;if(config.key==='precipitation_accumulated')return zoom<=3?.5:zoom<=5?.25:zoom<=7?.12:.06;if(config.key==='precipitation_6h')return zoom<=3?.10:zoom<=5?.06:zoom<=7?.03:.015;if(config.key==='precipitation_12h')return zoom<=3?.16:zoom<=5?.10:zoom<=7?.05:.025;if(config.key==='precipitation_24h')return zoom<=3?.25:zoom<=5?.15:zoom<=7?.08:.04;if(config.key==='snowfall')return zoom<=3?.02:zoom<=5?.01:.005;if(config.key==='precipitation_probability')return 4;if(config.key==='reflectivity_estimated')return 7;if(config.key==='cloud_cover')return zoom<=3?65:zoom<=5?52:zoom<=7?38:24;if(config.key==='cape')return 100;return-Infinity}
+function mapPhenomenonVisible(config,value){if(!mapValidNumber(value))return false;if([...MAP_RAIN_FIELD_KEYS,'lightning_density','precipitation_probability','reflectivity_estimated','cloud_cover','cape'].includes(config.key))return Number(value)>mapPhenomenonThreshold(config);if(config.key==='convective_inhibition')return Number(value)<-.5;return true}
 function mapSmoothstep(start,end,value){const t=Math.max(0,Math.min(1,(Number(value)-start)/Math.max(.0001,end-start)));return t*t*(3-2*t)}
 function mapLayerOpacity(config,value,settings={}){
-  let opacity=1;const factor={temperature:.99,wind:.92,gust:.94,pressure:.84,cloud:.95,precipitation:.99,precipitation_15m:.99,precipitation_3h:.99,precipitation_accumulated:.99,precipitation_6h:.97,precipitation_12h:.97,precipitation_24h:.97,rain:.98,showers:.98,snowfall:.98,precipitation_probability:.88,forecast_reflectivity:.99,dewpoint:.98,humidity:.90,t850:.99,cape:.97,cin:.90,sea_temperature:.96,waves:.94}[mapAitorState.layer]??.94;opacity*=factor;
+  let opacity=1;const factor={temperature:.99,wind:.92,gust:.94,pressure:.84,cloud:.95,precipitation:.99,thunderstorms:.98,precipitation_15m:.99,precipitation_3h:.99,precipitation_accumulated:.99,precipitation_6h:.97,precipitation_12h:.97,precipitation_24h:.97,rain:.98,showers:.98,snowfall:.98,precipitation_probability:.88,forecast_reflectivity:.99,dewpoint:.98,humidity:.90,t850:.99,cape:.97,cin:.90,sea_temperature:.96,waves:.94}[mapAitorState.layer]??.94;opacity*=factor;
   if(MAP_RAIN_FIELD_KEYS.has(config.key)){
     const threshold=settings.threshold??mapPhenomenonThreshold(config),rain=Math.max(0,mapNumber(value));if(rain<=threshold)return 0;
     const zoom=settings.zoom??mapAitorState.map?.getZoom()??5,ramp=zoom<=3?.18:zoom<=4?.14:zoom<=6?.09:.06;
@@ -2998,6 +3067,10 @@ function mapLayerOpacity(config,value,settings={}){
     // desde el principio y se refuerzan rapidamente sin contaminar las zonas
     // cuya reflectividad queda por debajo del umbral.
     opacity*=.68+.32*mapSmoothstep(threshold,threshold+8,dbz);
+  }
+  if(config.key==='lightning_density'){
+    const threshold=settings.threshold??mapPhenomenonThreshold(config),density=Math.max(0,mapNumber(value));if(density<=threshold)return 0;
+    opacity*=.58+.42*mapSmoothstep(threshold,20,density);
   }
   if(config.key==='cloud_cover'){
     const cover=Math.max(0,Math.min(100,mapNumber(value))),threshold=settings.threshold??mapPhenomenonThreshold(config);if(cover<=threshold)return 0;
@@ -3050,7 +3123,7 @@ function mapPhenomenonActiveCorners(rowFloat,columnFloat,key,threshold){
   return mapGridSamples(rowFloat,columnFloat,key).reduce((total,[value])=>total+(mapValidNumber(value)&&(key==='convective_inhibition'?Number(value)<-.5:Number(value)>threshold)?1:0),0);
 }
 function mapFeatureFade(coverage,key){
-  const zoom=mapAitorState.map?.getZoom()||5,rainLike=MAP_RAIN_FIELD_KEYS.has(key)||key==='precipitation_probability'||key==='reflectivity_estimated',convective=key==='cape'||key==='convective_inhibition',minimum=key==='precipitation_15m'?(zoom<=3?.34:zoom<=6?.24:zoom<=7?.12:.05):MAP_NOAA_RAIN_LAYERS.has(key)?(zoom<=3?.30:zoom<=6?.12:.06):rainLike?(zoom<=3?.08:zoom<=6?.055:.03):convective?(zoom<=2?.64:zoom<=3?.56:zoom<=4?.48:zoom<=6?.36:.20):key==='cloud_cover'?(zoom<=3?.06:zoom<=6?.04:.025):(zoom<=2?.56:zoom<=3?.45:zoom<=4?.34:zoom<=6?.20:.08);
+  const zoom=mapAitorState.map?.getZoom()||5,rainLike=MAP_RAIN_FIELD_KEYS.has(key)||key==='lightning_density'||key==='precipitation_probability'||key==='reflectivity_estimated',convective=key==='cape'||key==='convective_inhibition',minimum=key==='precipitation_15m'?(zoom<=3?.34:zoom<=6?.24:zoom<=7?.12:.05):MAP_NOAA_RAIN_LAYERS.has(key)?(zoom<=3?.30:zoom<=6?.12:.06):rainLike?(zoom<=3?.08:zoom<=6?.055:.03):convective?(zoom<=2?.64:zoom<=3?.56:zoom<=4?.48:zoom<=6?.36:.20):key==='cloud_cover'?(zoom<=3?.06:zoom<=6?.04:.025):(zoom<=2?.56:zoom<=3?.45:zoom<=4?.34:zoom<=6?.20:.08);
   if(coverage<minimum)return 0;
   // Lluvia, reflectividad y nubes deben formar un campo continuo como una
   // capa de radar, no discos alrededor de cada punto de la consulta. El corte
@@ -3058,7 +3131,7 @@ function mapFeatureFade(coverage,key){
   const exponent=key==='precipitation_15m'?(zoom<=6?1.18:.86):MAP_NOAA_RAIN_LAYERS.has(key)?1.05:rainLike?.72:key==='cloud_cover'?.78:1.18;
   return Math.pow((coverage-minimum)/Math.max(.001,1-minimum),exponent);
 }
-const MAP_SPARSE_FIELD_KEYS=new Set(['precipitation','precipitation_15m','precipitation_3h','precipitation_accumulated','precipitation_6h','precipitation_12h','precipitation_24h','rain','showers','snowfall','precipitation_probability','reflectivity_estimated','cape','convective_inhibition']);
+const MAP_SPARSE_FIELD_KEYS=new Set(['precipitation','lightning_density','precipitation_15m','precipitation_3h','precipitation_accumulated','precipitation_6h','precipitation_12h','precipitation_24h','rain','showers','snowfall','precipitation_probability','reflectivity_estimated','cape','convective_inhibition']);
 function mapSparseSampleActive(key,value,threshold){
   if(!mapValidNumber(value))return false;
   const numeric=Number(value);return key==='convective_inhibition'?numeric<-.5:numeric>threshold;
@@ -3149,6 +3222,11 @@ function renderMapPicker(){
     if(snow!==null&&snow>=.03)extra.push('Tipo: nieve · '+snow.toFixed(1)+' cm/h');else if(showers!==null&&showers>.05)extra.push('Tipo: chubascos');else if(available&&Number(value)>0)extra.push('Tipo: lluvia');
     if(cape!==null&&cape>=500)extra.push('Entorno convectivo · CAPE '+Math.round(cape)+' J/kg');
   }
+  if(mapAitorState.layer==='thunderstorms'){
+    const rain=mapValueAtCoordinates(latitude,longitude,'precipitation');
+    if(rain!==null)extra.push('Precipitación ECMWF de la misma hora: '+(rain<1?Number(rain).toFixed(2):Number(rain).toFixed(1))+' mm/h');
+    extra.push('Diagnóstico previsto · no son rayos observados');
+  }
   if(mapAitorState.layer==='waves'){
     const waveDirection=mapValueAtCoordinates(latitude,longitude,'wave_direction'),wavePeriod=mapValueAtCoordinates(latitude,longitude,'wave_period');
     if(waveDirection!==null)extra.push('Oleaje de '+mapDirectionLabel(waveDirection));
@@ -3180,7 +3258,7 @@ function mapFieldOpacity(){
   // vivo, pero países, costas, carreteras y nombres permanecen legibles. Las
   // capas de fenómeno (lluvia, reflectividad y nubes) conservan más contraste
   // porque sus valores nulos ya son completamente transparentes.
-  const factor={temperature:.86,t850:.82,dewpoint:.76,humidity:.62,wind:.68,gust:.70,pressure:.58,cloud:.93,precipitation:.90,precipitation_15m:.92,forecast_reflectivity:.92,cape:.90,cin:.90,sea_temperature:.82,waves:.84}[mapAitorState.layer]??1;
+  const factor={temperature:.98,t850:.96,dewpoint:.76,humidity:.62,wind:.68,gust:.70,pressure:.80,cloud:.93,precipitation:.90,precipitation_15m:.92,forecast_reflectivity:.92,cape:.90,cin:.90,sea_temperature:.82,waves:.84}[mapAitorState.layer]??1;
   return requested*factor;
 }
 function mapRainViewerOpacity(){
@@ -3269,6 +3347,19 @@ function buildMapField(quick=false){
             const support=mapSparseSupport(rowFloat,columnFloat,config.key,threshold);alpha=Math.round(alpha*support.fade);
           }
         }
+        // CIN puede ser muy negativo incluso donde no existe energía para
+        // convección. Es un dato válido para la consulta puntual, pero pintar
+        // esos nodos formaba un rectángulo oscuro sobre todo el dominio. La
+        // superficie MUCIN se limita al soporte MUCAPE de la misma parcela,
+        // nodo y hora; MUCAPE y las cifras originales no se modifican.
+        if(config.key==='convective_inhibition'&&alpha>0){
+          const cape=mapInterpolatedValue(rowFloat,columnFloat,'cape'),capeThreshold=100;
+          if(!mapValidNumber(cape)||Number(cape)<=capeThreshold)alpha=0;
+          else{
+            const capeSupport=mapSparseSupport(rowFloat,columnFloat,'cape',capeThreshold),capeStrength=mapSmoothstep(capeThreshold,700,Number(cape));
+            alpha=Math.round(alpha*capeSupport.fade*(.38+.62*capeStrength));
+          }
+        }
         // Solo las respuestas excepcionalmente pequeñas quedan en modo de
         // muestras; las mallas normales conservan tanto campo como cifras.
         if(exactAccumulation)alpha=0;
@@ -3334,7 +3425,7 @@ function prefetchMapNativePreview(index,delay=30,anchor=false){
   },Math.max(0,delay));mapAitorState.nativePreviewTimers.set(key,timer);return null
 }
 function prefetchMapNativePreviewWindow(center=mapAitorState.timeIndex,direction=1){
-  const timeline=mapAitorState.nativeSource?.timeline||[];if(!timeline.length||!mapUsesNativeTiles())return;const maximum=timeline.length-1;if(center<0||center>maximum)return;
+  const timeline=mapAitorState.nativeSource?.timeline||[];if(!timeline.length||!mapUsesNativeTiles()||mapNativeRequiresAccurateTransition())return;const maximum=timeline.length-1;if(center<0||center>maximum)return;
   const targetKey=mapNativePreviewKey(center),visible=mapAitorState.nativePreviewField,loading=[...mapAitorState.nativePreviewCache.entries()].filter(([,entry])=>!entry.ready).sort((a,b)=>a[1].touched-b[1].touched);let inFlight=loading[0]||null;
   if(inFlight&&Date.now()-inFlight[1].touched>12500){mapNativeRemovePreviewEntry(inFlight[0],inFlight[1]);inFlight=null}
   // El worker decodifica una tesela de forma síncrona: retirar la capa no
@@ -3551,15 +3642,19 @@ function renderMapValueLabels(){
   const rows=data.grid.rows,columns=data.grid.columns,rowStep=exactAccumulation?1:continuousAccumulation?2:zoom>=8?1:(rows>7?2:1),columnStep=exactAccumulation?1:continuousAccumulation?2:zoom>=8?2:(columns>9?2:1),placed=[],size=map?.getSize?.()||{x:1200,y:700},spacing=exactAccumulation?44:continuousAccumulation?62:zoom>=8?56:zoom>=6?72:90,maxLabels=exactAccumulation?80:continuousAccumulation?34:zoom>=8?48:zoom>=6?30:18;
   for(let row=0;row<rows&&placed.length<maxLabels;row+=rowStep){for(let column=0;column<columns&&placed.length<maxLabels;column+=columnStep){const point=data.points[row*columns+column],value=mapValue(point,config.key);if(!mapPhenomenonVisible(config,value))continue;const pixel=map?.latLngToContainerPoint?.([point.latitude,point.longitude]);if(!pixel||pixel.x<-20||pixel.y<-20||pixel.x>size.x+20||pixel.y>size.y+20||placed.some(other=>pixel.distanceTo(other)<spacing))continue;placed.push(pixel);const color=exactAccumulation?mapColor(config,value):'',icon=L.divIcon({className:'mapValueLabel'+(exactAccumulation?' mapAccumulationPoint':'')+(config.key==='convective_inhibition'?' mapNegativeValue':''),html:'<span'+(exactAccumulation?' style="--map-value-color:'+color+'"':'')+'>'+mapShortValue(config,value)+'</span>',iconSize:[40,24],iconAnchor:[20,12]});mapAitorState.values.addLayer(L.marker([point.latitude,point.longitude],{icon,interactive:false,keyboard:false}))}}
 }
+function mapWindBarbKnots(speedKmh){return Math.max(0,Math.round((mapNumber(speedKmh)/1.852)/5)*5)}
+function mapWindBarbAngle(fromDegrees){return((Number(fromDegrees)%360)+360)%360}
 function mapWindBarbSvg(speedKmh){
-  let knots=Math.max(0,Math.round((mapNumber(speedKmh)/1.852)/5)*5);if(knots<5)return'<svg viewBox="0 0 40 40" aria-hidden="true"><circle class="barbCalm" cx="20" cy="20" r="4.5"/></svg>';
-  let remaining=knots,y=6,marks='';while(remaining>=50){marks+='<path class="barbPennant" d="M20 '+y+' L7 '+(y+5)+' L20 '+(y+10)+' Z"/>';y+=8;remaining-=50}while(remaining>=10){marks+='<path class="barbFeather" d="M20 '+y+' L8 '+(y+5)+'"/>';y+=5.4;remaining-=10}if(remaining>=5)marks+='<path class="barbFeather" d="M20 '+y+' L13 '+(y+3)+'"/>';
-  return'<svg viewBox="0 0 40 40" aria-hidden="true"><path class="barbShaft" d="M20 34 V5"/>'+marks+'</svg>';
+  let remaining=mapWindBarbKnots(speedKmh);if(remaining<5)return'<svg viewBox="0 0 40 40" aria-hidden="true"><circle class="barbCalm" cx="20" cy="34" r="4.2"/><circle class="barbStation" cx="20" cy="34" r="1.7"/></svg>';
+  let y=4,marks='';while(remaining>=50){marks+='<path class="barbPennant" d="M20 '+y+' L7 '+(y+5.5)+' L20 '+(y+10.5)+' Z"/>';y+=9.5;remaining-=50}while(remaining>=10){marks+='<path class="barbFeather" d="M20 '+y+' L7 '+(y+5.5)+'"/>';y+=5.5;remaining-=10}if(remaining>=5)marks+='<path class="barbHalf" d="M20 '+y+' L13 '+(y+3.2)+'"/>';
+  return'<svg viewBox="0 0 40 40" aria-hidden="true"><path class="barbShaft" d="M20 34 L20 4"/>'+marks+'<circle class="barbStation" cx="20" cy="34" r="1.7"/></svg>';
 }
 function renderMapWindArrows(){
   const data=mapAitorState.data;if(!data||!$('mapWindFlow').checked||mapAitorState.layer==='reflectivity'||!mapHasWindData())return;
-  const rows=data.grid.rows,columns=data.grid.columns,zoom=mapAitorState.map?.getZoom()||5,windLayer=['wind','gust'].includes(mapAitorState.layer),targetRows=windLayer?(zoom>=8?12:zoom>=6?10:8):(zoom>=8?9:zoom>=6?8:6),targetColumns=windLayer?(zoom>=8?18:zoom>=6?16:13):(zoom>=8?14:zoom>=6?12:10),rowStep=Math.max(1,Math.ceil(rows/targetRows)),columnStep=Math.max(1,Math.ceil(columns/targetColumns));
-  const speedKey=mapAitorState.layer==='gust'?'wind_gusts_10m':'wind_speed_10m';for(let row=0;row<rows;row+=rowStep){for(let column=0;column<columns;column+=columnStep){const point=data.points[row*columns+column],speed=mapValue(point,speedKey),from=mapValue(point,'wind_direction_10m');if(!mapValidNumber(speed)||!mapValidNumber(from))continue;const alpha=Math.max(.78,Math.min(1,.76+speed/120)),angle=Math.round(from),icon=L.divIcon({className:'',html:'<div class="mapWindArrow" style="transform:rotate('+angle+'deg);opacity:'+alpha+';--barb-color:#17212a">'+mapWindBarbSvg(speed)+'</div>',iconSize:[40,40],iconAnchor:[20,20]});mapAitorState.windArrows.addLayer(L.marker([point.latitude,point.longitude],{icon,interactive:false,keyboard:false}))}}
+  const rows=data.grid.rows,columns=data.grid.columns,zoom=mapAitorState.map?.getZoom()||5,windLayer=['wind','gust'].includes(mapAitorState.layer),targetRows=windLayer?(zoom>=8?12:zoom>=6?10:8):(zoom>=8?9:zoom>=6?8:6),targetColumns=windLayer?(zoom>=8?18:zoom>=6?16:13):(zoom>=8?14:zoom>=6?12:10),rowStep=Math.max(1,Math.ceil(rows/targetRows)),columnStep=Math.max(1,Math.ceil(columns/targetColumns)),barbSize=window.innerWidth<=820?32:40,barbAnchor=[barbSize/2,barbSize*.85];
+  // El asta base apunta al norte. Girarla exactamente el rumbo meteorológico
+  // FROM hace que señale de dónde viene el viento (N=0°, E=90°).
+  const speedKey=mapAitorState.layer==='gust'?'wind_gusts_10m':'wind_speed_10m';for(let row=0;row<rows;row+=rowStep){for(let column=0;column<columns;column+=columnStep){const point=data.points[row*columns+column],speed=mapValue(point,speedKey),from=mapValue(point,'wind_direction_10m');if(!mapValidNumber(speed)||!mapValidNumber(from))continue;const alpha=Math.max(.78,Math.min(1,.76+speed/120)),angle=mapWindBarbAngle(from),icon=L.divIcon({className:'',html:'<div class="mapWindArrow" style="transform:rotate('+angle+'deg);opacity:'+alpha+';--barb-color:#17212a">'+mapWindBarbSvg(speed)+'</div>',iconSize:[barbSize,barbSize],iconAnchor:barbAnchor});mapAitorState.windArrows.addLayer(L.marker([point.latitude,point.longitude],{icon,interactive:false,keyboard:false}))}}
 }
 function renderMapGrid(quick=false){
   const data=mapAitorState.data,map=mapAitorState.map;if(!data||!map||mapAitorState.layer==='reflectivity')return;
@@ -3679,7 +3774,7 @@ function setMapRadar(){
   image.onload=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(candidateTimer);clearTimeout(mapAitorState.radarTimer);image.style.visibility='hidden';if(mapAitorState.aemetRadarLayer)mapAitorState.aemetRadarLayer.remove();mapAitorState.aemetRadarLayer=L.imageOverlay(image.currentSrc||image.src,MAP_AEMET_IMAGE_BOUNDS,{pane:'mapWeatherRadar',opacity:Math.max(.58,mapFieldOpacity()),interactive:false,className:'aemetRadarOverlay',attribution:'Radar © AEMET'}).addTo(mapAitorState.map);mapAitorState.map.fitBounds(MAP_AEMET_VIEW_BOUNDS,{animate:false,padding:[18,18]});mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapTimelineLabel').textContent='Último producto nacional';$('mapStatus').textContent='Radar AEMET actualizado · '+(image.dataset.radarSource==='api'?'API oficial':'visor oficial de respaldo')+' · georreferenciado sobre el mapa';renderMapLocation();};
   image.onerror=loadNext;loadNext();updateMapInfo();
 }
-function unsetMapRadar(){clearTimeout(mapAitorState.radarTimer);mapAitorState.radarRequestId+=1;const image=$('mapRadarImage');if(image){image.onload=null;image.onerror=null;image.style.visibility='hidden'}if(mapAitorState.aemetRadarLayer){mapAitorState.aemetRadarLayer.remove();mapAitorState.aemetRadarLayer=null}$('mapRadarStage').classList.remove('active');$('mapLegend').style.display='flex'}
+function unsetMapRadar(){clearTimeout(mapAitorState.radarTimer);mapAitorState.radarRequestId+=1;if(mapAitorState.euskalmetController){mapAitorState.euskalmetController.abort();mapAitorState.euskalmetController=null}const image=$('mapRadarImage');if(image){image.onload=null;image.onerror=null;image.style.visibility='hidden'}if(mapAitorState.aemetRadarLayer){mapAitorState.aemetRadarLayer.remove();mapAitorState.aemetRadarLayer=null}$('mapRadarStage').classList.remove('active');$('mapLegend').style.display='flex'}
 function setMapLightning(){
   if(mapAitorState.requestController)mapAitorState.requestController.abort();
   unsetMapRadar();clearMapNativeAnnotations();clearMapLayers();stopMapWind();mapAitorState.data=null;mapAitorState.rainviewerData=null;mapAitorState.loading=false;mapAitorState.lastError=null;
@@ -3693,15 +3788,13 @@ function setMapLightning(){
   image.onload=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(mapAitorState.radarTimer);image.style.visibility='visible';mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Rayos observados · AEMET';$('mapTimeBadge').textContent='Observación oficial · último período';$('mapTimelineLabel').textContent='AEMET OpenData';$('mapStatus').textContent='Mapa de rayos AEMET actualizado · producto oficial sin deformar';updateMapInfo()};
   image.onerror=lightningError;mapAitorState.radarTimer=setTimeout(lightningError,18000);image.src='/api/aemet-radar?product=lightning&frame='+Math.floor(Date.now()/300000);
 }
-function mapEuskalmetDirectUrls(product='radar',count=18){
-  const path=product==='lightning'?'radar_ray/lightning':'radar_reflectivity/max_reflect',rounded=Math.floor(Date.now()/600000)*600000-600000,pad=value=>String(value).padStart(2,'0');
-  return Array.from({length:count},(_,index)=>{const date=new Date(rounded-index*600000),filename='webmet00-'+pad(date.getUTCHours())+pad(date.getUTCMinutes())+'.png';return'https://www.euskalmet.euskadi.eus/vamet/'+path+'/'+filename});
-}
 function mapEuskalmetFrameLabel(source=''){
-  const match=String(source).match(/webmet00-(\d{2})(\d{2})\.png/i);return match?match[1]+':'+match[2]+' UTC':'Último fotograma oficial utilizable';
+  const match=String(source).match(/webmet00-(\d{2})(\d{2})\.png/i);if(match)return match[1]+':'+match[2]+' UTC';
+  const date=new Date(source);return Number.isNaN(date.getTime())?'Último fotograma oficial útil':String(date.getUTCHours()).padStart(2,'0')+':'+String(date.getUTCMinutes()).padStart(2,'0')+' UTC';
 }
 function setMapEuskalmet(product='radar'){
   const layer=product==='lightning'?'euskalmet_lightning':'euskalmet_radar',isLightning=product==='lightning';
+  const retained=mapAitorState.euskalmetLastGood.get(product)||null;
   if(mapAitorState.requestController)mapAitorState.requestController.abort();
   unsetMapRadar();clearMapNativeAnnotations();clearMapLayers();stopMapWind();mapAitorState.data=null;mapAitorState.rainviewerData=null;mapAitorState.loading=false;mapAitorState.lastError=null;
   const requestId=++mapAitorState.radarRequestId,image=$('mapRadarImage'),stage=$('mapRadarStage');
@@ -3709,12 +3802,16 @@ function setMapEuskalmet(product='radar'){
   if($('mapRadarProductTag'))$('mapRadarProductTag').textContent=(isLightning?'Rayos':'Radar Kapildui')+' · Euskalmet';
   if($('mapRadarCaption'))$('mapRadarCaption').innerHTML='<strong>'+(isLightning?'Rayos observados':'Radar de Kapildui · máxima reflectividad')+' · Euskalmet</strong><br />Último fotograma oficial utilizable de las tres horas recientes, completo y sin deformar. <a href="https://www.euskalmet.euskadi.eus/observacion/radar-kapildui-precipitaciones/" target="_blank" rel="noopener">Abrir fuente oficial</a>.';
   $('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Cargando '+(isLightning?'rayos':'radar de Kapildui')+' Euskalmet…';$('mapTimeBadge').textContent='Observación oficial';$('mapTimelineLabel').textContent='Último fotograma disponible';$('mapStatus').textContent='Consultando los fotogramas públicos de Euskalmet…';
-  const candidates=['/api/euskalmet-map?product='+product+'&frame='+Math.floor(Date.now()/300000),...mapEuskalmetDirectUrls(product)];
-  let resolved=false,candidateIndex=0,candidateTimer=null,candidateToken=0,currentSource='';const validRequest=()=>requestId===mapAitorState.radarRequestId&&mapAitorState.layer===layer;
-  const imageError=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(candidateTimer);clearTimeout(mapAitorState.radarTimer);image.style.visibility='hidden';mapAitorState.lastError=new Error('Euskalmet no publicó un fotograma utilizable durante las tres últimas horas.');$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Euskalmet · sin fotograma reciente';$('mapTimeBadge').textContent='Fuente temporalmente sin datos';$('mapTimelineLabel').textContent='Pulsa para reintentar';$('mapStatus').textContent='Euskalmet no tiene ahora un fotograma reciente utilizable. No se muestra otra capa como sustitución.';updateMapInfo()};
-  const acceptImage=token=>{if(token!==candidateToken||resolved||!validRequest())return;const noDataPlaceholder=image.dataset.euskalmetSource==='directa'&&image.naturalWidth===800&&image.naturalHeight===800;if(noDataPlaceholder){loadNext();return}resolved=true;clearTimeout(candidateTimer);clearTimeout(mapAitorState.radarTimer);image.style.visibility='visible';mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(isLightning?'Rayos observados':'Radar Kapildui')+' · Euskalmet';$('mapTimeBadge').textContent='Observación oficial · Euskalmet';$('mapTimelineLabel').textContent=mapEuskalmetFrameLabel(currentSource);$('mapStatus').textContent=(isLightning?'Rayos Euskalmet':'Radar de Kapildui')+' actualizado · producto oficial completo'+(image.dataset.euskalmetSource==='directa'?' · conexión directa':'');updateMapInfo()};
-  const loadNext=()=>{if(resolved||!validRequest())return;clearTimeout(candidateTimer);if(candidateIndex>=candidates.length){imageError();return}const token=++candidateToken;currentSource=candidates[candidateIndex++];image.dataset.euskalmetSource=currentSource.startsWith('/api/')?'api':'directa';image.onload=()=>acceptImage(token);image.onerror=()=>{if(token===candidateToken)loadNext()};candidateTimer=setTimeout(()=>{if(token===candidateToken)loadNext()},2200);image.src=currentSource};
-  mapAitorState.radarTimer=setTimeout(imageError,45000);loadNext();
+  let resolved=false;const validRequest=()=>requestId===mapAitorState.radarRequestId&&mapAitorState.layer===layer;
+  const showRetained=()=>{if(!retained||Date.now()-retained.savedAt>3*60*60*1000)return false;image.src=retained.url;image.style.visibility='visible';mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(isLightning?'Rayos observados':'Radar Kapildui')+' · último útil';$('mapTimeBadge').textContent='Euskalmet · sin fotograma nuevo';$('mapTimelineLabel').textContent=mapEuskalmetFrameLabel(retained.observedAt);$('mapStatus').textContent='Sin fotograma oficial nuevo utilizable · se mantiene el último correcto';updateMapInfo();return true};
+  const imageError=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(mapAitorState.radarTimer);if(mapAitorState.euskalmetController){mapAitorState.euskalmetController.abort();mapAitorState.euskalmetController=null}if(showRetained())return;image.style.visibility='hidden';mapAitorState.lastError=new Error('Euskalmet no publicó un fotograma utilizable durante las tres últimas horas.');$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Euskalmet · sin fotograma reciente';$('mapTimeBadge').textContent='Fuente temporalmente sin datos';$('mapTimelineLabel').textContent='Pulsa para reintentar';$('mapStatus').textContent='Euskalmet no tiene ahora un fotograma reciente utilizable. No se muestra una lámina vacía ni otra capa como sustitución.';updateMapInfo()};
+  const controller=new AbortController();mapAitorState.euskalmetController=controller;mapAitorState.radarTimer=setTimeout(imageError,18000);
+  fetch('/api/euskalmet-map?product='+encodeURIComponent(product)+'&frame='+Math.floor(Date.now()/300000),{signal:controller.signal,cache:'no-store',headers:{Accept:'image/png'}}).then(async response=>{
+    if(!response.ok||!String(response.headers.get('content-type')||'').toLowerCase().includes('image'))throw new Error('Fotograma no utilizable');
+    const blob=await response.blob(),url=URL.createObjectURL(blob),observedAt=response.headers.get('x-meteo-aitor-time')||'',stale=response.headers.get('x-meteo-aitor-stale')==='1',probe=new Image();
+    probe.onload=()=>{if(!validRequest()){URL.revokeObjectURL(url);return}resolved=true;clearTimeout(mapAitorState.radarTimer);mapAitorState.euskalmetController=null;const previous=mapAitorState.euskalmetLastGood.get(product);mapAitorState.euskalmetLastGood.set(product,{url,observedAt,savedAt:Date.now()});image.src=url;image.style.visibility='visible';if(previous?.url&&previous.url!==url)setTimeout(()=>URL.revokeObjectURL(previous.url),1000);mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(isLightning?'Rayos observados':'Radar Kapildui')+' · Euskalmet';$('mapTimeBadge').textContent='Observación oficial · Euskalmet';$('mapTimelineLabel').textContent=mapEuskalmetFrameLabel(observedAt);$('mapStatus').textContent=(isLightning?'Rayos Euskalmet':'Radar de Kapildui')+(stale?' · se mantiene el último fotograma útil':' · último fotograma oficial útil');updateMapInfo()};
+    probe.onerror=()=>{URL.revokeObjectURL(url);imageError()};probe.src=url;
+  }).catch(error=>{if(error?.name!=='AbortError'||validRequest())imageError()});
 }
 function setMapBusy(busy,message=''){
   mapAitorState.loading=busy;$('mapRefresh').disabled=busy;$('mapAitorStudio')?.classList.toggle('isBusy',busy);
@@ -3743,9 +3840,10 @@ function mapFriendlyError(error,timedOut=false){
   return'No se pudieron actualizar ahora los datos del modelo.';
 }
 const MAP_DIRECT_MODELS={ecmwf:{label:'ECMWF IFS HRES · 9 km',candidate:'ecmwf_ifs'},arome:{label:'Météo‑France AROME HD · 1,5 km · 48 h',candidate:'meteofrance_arome_france_hd'},icon:{label:'DWD ICON Seamless · global/Europa según zona',candidate:'dwd_icon_seamless'},gfs:{label:'NOAA GFS Seamless',candidate:'ncep_gfs_seamless'}};
-function mapDirectModelFor(requested,layer){if(mapLayerForcesGfs(layer))return MAP_DIRECT_MODELS.gfs;const base=MAP_DIRECT_MODELS[requested]||MAP_DIRECT_MODELS.ecmwf;if(requested==='ecmwf'&&layer==='t850')return{label:'ECMWF IFS · 25 km · nivel 850 hPa',candidate:'ecmwf_ifs025'};return base}
-const MAP_DIRECT_FIELDS={thermo:['temperature_2m','dew_point_2m','relative_humidity_2m'],windbundle:['wind_speed_10m','wind_direction_10m','wind_gusts_10m'],precipitation:['precipitation','precipitation_probability','rain','showers','snowfall','pressure_msl'],precipitation_accumulation:['precipitation'],cloud:['cloud_cover','cloud_cover_low','cloud_cover_mid','cloud_cover_high','precipitation','pressure_msl'],pressure:['pressure_msl'],t850:['temperature_850hPa'],convection:['cape','convective_inhibition'],marine:['wave_height','wave_direction','wave_period','sea_surface_temperature']};
+function mapDirectModelFor(requested,layer){if(mapLayerForcesGfs(layer))return MAP_DIRECT_MODELS.gfs;if(mapLayerForcesEcmwf(layer))return{label:'ECMWF IFS HRES · densidad total de destellos · 9 km',candidate:'ecmwf_ifs'};const base=MAP_DIRECT_MODELS[requested]||MAP_DIRECT_MODELS.ecmwf;if(requested==='ecmwf'&&layer==='t850')return{label:'ECMWF IFS · 25 km · nivel 850 hPa',candidate:'ecmwf_ifs025'};return base}
+const MAP_DIRECT_FIELDS={thermo:['temperature_2m','dew_point_2m','relative_humidity_2m'],windbundle:['wind_speed_10m','wind_direction_10m','wind_gusts_10m'],precipitation:['precipitation','precipitation_probability','rain','showers','snowfall','pressure_msl'],precipitation_accumulation:['precipitation'],cloud:['cloud_cover','cloud_cover_low','cloud_cover_mid','cloud_cover_high','precipitation','pressure_msl'],pressure:['pressure_msl'],t850:['temperature_850hPa'],convection:['cape','convective_inhibition'],thunderstorms:['lightning_density','precipitation'],marine:['wave_height','wave_direction','wave_period','sea_surface_temperature']};
 function mapDirectFieldsForLayer(bundle,model='ecmwf',displayLayer=bundle){
+  if(mapLayerForcesEcmwf(displayLayer))return MAP_DIRECT_FIELDS.thunderstorms;
   if(model==='arome'){
     if(['precipitation','forecast_reflectivity'].includes(displayLayer))return['precipitation'];
     if(displayLayer==='cloud')return['cloud_cover_low','precipitation'];
@@ -3769,6 +3867,7 @@ function mapLayerDensity(layer,zoom=mapAitorState.map?.getZoom()||5){
   if(MAP_NOAA_RAIN_LAYERS.has(layer))return zoom<=3?16:28;
   if(['precipitation_6h','precipitation_12h','precipitation_24h'].includes(layer))return zoom<=6?8:10;
   if(layer==='precipitation_15m')return zoom<=3?14:zoom<=6?16:18;
+  if(layer==='thunderstorms')return zoom<=3?14:zoom<=6?16:18;
   if(['precipitation','rain','showers','snowfall','precipitation_probability','forecast_reflectivity'].includes(layer))return zoom<=3?14:zoom<=6?16:18;
   if(['pressure','t850'].includes(layer))return zoom<=6?6:9;
   if(['cape','cin'].includes(layer))return 18;
@@ -3780,7 +3879,7 @@ function mapLayerDensity(layer,zoom=mapAitorState.map?.getZoom()||5){
 function mapDirectGrid(south,north,west,east,density){const rows=density,aspect=Math.max(1,Math.min(1.8,(east-west)/Math.max(1,north-south))),columns=Math.max(8,Math.min(48,Math.round(density*aspect))),points=[];for(let row=0;row<rows;row+=1){const latitude=south+(north-south)*row/(rows-1);for(let column=0;column<columns;column+=1){const longitude=west+(east-west)*column/(columns-1);points.push({latitude:Number(latitude.toFixed(4)),longitude:Number(longitude.toFixed(4))})}}return{rows,columns,points}}
 function mapEstimatedReflectivity(values){return(Array.isArray(values)?values:[]).map(value=>{if(value===null||value===undefined||value==='')return null;const numeric=Number(value);if(!Number.isFinite(numeric))return null;const rain=Math.max(0,numeric);return rain<=.002?0:Math.max(0,10*Math.log10(200*Math.pow(rain,1.6)))})}
 function mapAccumulatedPrecipitation(values,hours){const series=Array.isArray(values)?values:[];return series.map((_,index)=>{let total=0;/* Open-Meteo: precipitation es la suma de la hora precedente. */for(let offset=1;offset<=hours;offset+=1){const value=Number(series[index+offset]);if(Number.isFinite(value))total+=Math.max(0,value)}return total})}
-function mapCompactDirectPoint(result,fallbackPoint){const hourly=result?.hourly||{},precipitation=hourly.precipitation||[],cin=Array.isArray(hourly.convective_inhibition)?hourly.convective_inhibition.map(value=>{if(value===null||value===undefined||value==='')return null;const numeric=Number(value);return Number.isFinite(numeric)?-Math.abs(numeric):null}):[],reflectivity=mapEstimatedReflectivity(precipitation);return{latitude:Number(result?.latitude??fallbackPoint.latitude),longitude:Number(result?.longitude??fallbackPoint.longitude),hourly:{precipitation,precipitation_3h:mapAccumulatedPrecipitation(precipitation,3),precipitation_6h:mapAccumulatedPrecipitation(precipitation,6),precipitation_12h:mapAccumulatedPrecipitation(precipitation,12),precipitation_24h:mapAccumulatedPrecipitation(precipitation,24),precipitation_probability:hourly.precipitation_probability||[],reflectivity_estimated:reflectivity,rain:hourly.rain||[],showers:hourly.showers||[],snowfall:hourly.snowfall||[],cloud_cover:hourly.cloud_cover||[],cloud_cover_low:hourly.cloud_cover_low||[],cloud_cover_mid:hourly.cloud_cover_mid||[],cloud_cover_high:hourly.cloud_cover_high||[],temperature_2m:hourly.temperature_2m||[],dew_point_2m:hourly.dew_point_2m||[],relative_humidity_2m:hourly.relative_humidity_2m||[],wind_speed_10m:hourly.wind_speed_10m||[],wind_direction_10m:hourly.wind_direction_10m||[],wind_gusts_10m:hourly.wind_gusts_10m||[],pressure_msl:hourly.pressure_msl||[],temperature_850hPa:hourly.temperature_850hPa||[],cape:hourly.cape||[],convective_inhibition:cin,wave_height:hourly.wave_height||[],wave_direction:hourly.wave_direction||[],wave_period:hourly.wave_period||[],sea_surface_temperature:hourly.sea_surface_temperature||[]}}}
+function mapCompactDirectPoint(result,fallbackPoint){const hourly=result?.hourly||{},precipitation=hourly.precipitation||[],cin=Array.isArray(hourly.convective_inhibition)?hourly.convective_inhibition.map(value=>{if(value===null||value===undefined||value==='')return null;const numeric=Number(value);return Number.isFinite(numeric)?-Math.abs(numeric):null}):[],reflectivity=mapEstimatedReflectivity(precipitation);return{latitude:Number(result?.latitude??fallbackPoint.latitude),longitude:Number(result?.longitude??fallbackPoint.longitude),hourly:{precipitation,precipitation_3h:mapAccumulatedPrecipitation(precipitation,3),precipitation_6h:mapAccumulatedPrecipitation(precipitation,6),precipitation_12h:mapAccumulatedPrecipitation(precipitation,12),precipitation_24h:mapAccumulatedPrecipitation(precipitation,24),precipitation_probability:hourly.precipitation_probability||[],reflectivity_estimated:reflectivity,rain:hourly.rain||[],showers:hourly.showers||[],snowfall:hourly.snowfall||[],cloud_cover:hourly.cloud_cover||[],cloud_cover_low:hourly.cloud_cover_low||[],cloud_cover_mid:hourly.cloud_cover_mid||[],cloud_cover_high:hourly.cloud_cover_high||[],temperature_2m:hourly.temperature_2m||[],dew_point_2m:hourly.dew_point_2m||[],relative_humidity_2m:hourly.relative_humidity_2m||[],wind_speed_10m:hourly.wind_speed_10m||[],wind_direction_10m:hourly.wind_direction_10m||[],wind_gusts_10m:hourly.wind_gusts_10m||[],pressure_msl:hourly.pressure_msl||[],temperature_850hPa:hourly.temperature_850hPa||[],cape:hourly.cape||[],lightning_density:hourly.lightning_density||[],convective_inhibition:cin,wave_height:hourly.wave_height||[],wave_direction:hourly.wave_direction||[],wave_period:hourly.wave_period||[],sea_surface_temperature:hourly.sea_surface_temperature||[]}}}
 async function mapFetchDirectBatch(points,fields,candidate,signal,marine=false){
   // Respaldo directo: seis días visibles y 24 h extra para acumulados.
   const parameters=new URLSearchParams({latitude:points.map(point=>point.latitude).join(','),longitude:points.map(point=>point.longitude).join(','),hourly:fields.join(','),forecast_hours:candidate==='meteofrance_arome_france_hd'?'48':'169',timezone:'UTC',cell_selection:marine?'sea':'nearest'});
@@ -3788,21 +3887,22 @@ async function mapFetchDirectBatch(points,fields,candidate,signal,marine=false){
   const endpoint=marine?'https://marine-api.open-meteo.com/v1/marine':'https://api.open-meteo.com/v1/forecast',response=await fetch(endpoint+'?'+parameters.toString(),{signal,headers:{Accept:'application/json'}}),payload=await response.json().catch(()=>null);if(!response.ok||!payload||payload.error){const error=new Error(payload?.reason||payload?.error||('Open‑Meteo HTTP '+response.status));error.status=response.status;error.dailyLimit=/daily api request limit|l[ií]mite diario/i.test(String(error.message));error.retryAfter=error.dailyLimit?3600:60;throw error}const locations=Array.isArray(payload)?payload:[payload];if(locations.length!==points.length)throw new Error('La malla directa llegó incompleta.');return locations;
 }
 async function mapFetchDirectCandidate(query,candidate,signal){
-  const south=Number(query.get('south')),north=Number(query.get('north')),west=Number(query.get('west')),east=Number(query.get('east')),density=Math.max(5,Math.min(28,Number(query.get('density'))||8)),bundle=query.get('layer')||'thermo',displayLayer=query.get('displayLayer')||bundle,requested=query.get('model')||'ecmwf',marine=MAP_MARINE_LAYERS.has(displayLayer),effectiveRequested=marine?'marine':MAP_GFS_ONLY_LAYERS.has(displayLayer)?'gfs':requested,model=marine?{label:'Open‑Meteo Marine'}:mapDirectModelFor(effectiveRequested,displayLayer),focus={latitude:Number(query.get('focusLat'))||BERMEO.latitude,longitude:Number(query.get('focusLon'))||BERMEO.longitude},grid=mapDirectGrid(south,north,west,east,density),requestPoints=[...grid.points,focus],fields=mapDirectFieldsForLayer(bundle,effectiveRequested,displayLayer),batches=[];for(let index=0;index<requestPoints.length;index+=80)batches.push(requestPoints.slice(index,index+80));
+  const south=Number(query.get('south')),north=Number(query.get('north')),west=Number(query.get('west')),east=Number(query.get('east')),density=Math.max(5,Math.min(28,Number(query.get('density'))||8)),bundle=query.get('layer')||'thermo',displayLayer=query.get('displayLayer')||bundle,requested=query.get('model')||'ecmwf',marine=MAP_MARINE_LAYERS.has(displayLayer),effectiveRequested=marine?'marine':mapLayerForcesEcmwf(displayLayer)?'ecmwf':MAP_GFS_ONLY_LAYERS.has(displayLayer)?'gfs':requested,model=marine?{label:'Open‑Meteo Marine'}:mapDirectModelFor(effectiveRequested,displayLayer),focus={latitude:Number(query.get('focusLat'))||BERMEO.latitude,longitude:Number(query.get('focusLon'))||BERMEO.longitude},grid=mapDirectGrid(south,north,west,east,density),requestPoints=[...grid.points,focus],fields=mapDirectFieldsForLayer(bundle,effectiveRequested,displayLayer),batches=[];for(let index=0;index<requestPoints.length;index+=80)batches.push(requestPoints.slice(index,index+80));
   const locations=[];for(const batch of batches)locations.push(...await mapFetchDirectBatch(batch,fields,candidate,signal,marine));
   const first=locations[0]?.hourly||{},times=Array.isArray(first.time)?first.time.slice(0,145):[];if(locations.length!==requestPoints.length||!times.length)throw new Error('La malla directa llegó incompleta.');
   const gridLocations=locations.slice(0,grid.points.length),exactLocation=locations[grid.points.length],cinAvailable=displayLayer==='cin'&&locations.some(location=>location?.hourly?.convective_inhibition?.some(value=>mapValidNumber(value)));
+  if(mapLayerForcesEcmwf(displayLayer)&&!locations.some(location=>location?.hourly?.lightning_density?.some(value=>mapValidNumber(value))))throw new Error('ECMWF no publicó densidad total de destellos para esta pasada; no se sustituye por CAPE ni por datos simulados.');
   const fallback=!marine&&candidate==='best_match',modelLabel=marine?model.label:fallback?'Modelo automático · respaldo':(displayLayer==='cin'?'NOAA GFS · CIN':model.label);
-  return{ok:true,generatedAt:new Date().toISOString(),transport:'direct',bundle,model:{requested:effectiveRequested,label:modelLabel,sourceModel:candidate,cinAvailable,fallback},bounds:{south,north,west,east},focus,grid:{rows:grid.rows,columns:grid.columns,stepLatitude:(north-south)/(grid.rows-1),stepLongitude:(east-west)/(grid.columns-1)},times,points:gridLocations.map((item,index)=>mapCompactDirectPoint(item,grid.points[index])),focusPoint:mapCompactDirectPoint(exactLocation,focus)};
+  return{ok:true,generatedAt:new Date().toISOString(),transport:'direct',bundle,displayLayer,model:{requested:effectiveRequested,label:modelLabel,sourceModel:candidate,cinAvailable,fallback},diagnostics:mapLayerForcesEcmwf(displayLayer)?{native:true,derived:false,sourceVariable:'lightning_density',sourceParameters:['LITOTA1','LITOTA3','LITOTA6'],interval:'preceding_model_period_mean',units:'flashes km^-2 day^-1',phenomenon:'total cloud-to-ground and intra-cloud lightning'}:null,bounds:{south,north,west,east},focus,grid:{rows:grid.rows,columns:grid.columns,stepLatitude:(north-south)/(grid.rows-1),stepLongitude:(east-west)/(grid.columns-1)},times,points:gridLocations.map((item,index)=>mapCompactDirectPoint(item,grid.points[index])),focusPoint:mapCompactDirectPoint(exactLocation,focus)};
 }
 async function mapFetchDirectForecast(query,signal){
-  const requested=query.get('model')||'ecmwf',bundle=query.get('layer')||'thermo',displayLayer=query.get('displayLayer')||bundle,marine=MAP_MARINE_LAYERS.has(displayLayer),gfsOnly=MAP_GFS_ONLY_LAYERS.has(displayLayer),model=marine?{candidate:'best_match'}:mapDirectModelFor(requested,displayLayer),candidate=marine?'best_match':gfsOnly?'ncep_gfs_seamless':model.candidate;
+  const requested=query.get('model')||'ecmwf',bundle=query.get('layer')||'thermo',displayLayer=query.get('displayLayer')||bundle,marine=MAP_MARINE_LAYERS.has(displayLayer),gfsOnly=MAP_GFS_ONLY_LAYERS.has(displayLayer),ecmwfOnly=mapLayerForcesEcmwf(displayLayer),model=marine?{candidate:'best_match'}:mapDirectModelFor(requested,displayLayer),candidate=marine?'best_match':gfsOnly?'ncep_gfs_seamless':ecmwfOnly?'ecmwf_ifs':model.candidate;
   try{
     const result=await mapFetchDirectCandidate(query,candidate,signal);if(displayLayer!=='cin'||result.model.cinAvailable)return result;
     throw new Error('CIN no está publicado para esta pasada.');
   }catch(error){
     if(error?.name==='AbortError'||Number(error?.status)===429||/minutely|rate limit|too many|l[ií]mite/i.test(String(error?.message||'')))throw error;
-    if(gfsOnly||marine||requested==='arome')throw error;
+    if(gfsOnly||ecmwfOnly||marine||requested==='arome')throw error;
     const status=Number(error?.status)||0,unsupported=[400,404,422].includes(status)||/model|variable|par[aá]metro|unsupported|not available/i.test(String(error?.message||''));if(candidate==='best_match'||!unsupported)throw error;
     const fallback=await mapFetchDirectCandidate(query,'best_match',signal);if(displayLayer!=='cin'||fallback.model.cinAvailable)return fallback;
     throw new Error('CIN no está publicado para esta pasada.');
@@ -3855,18 +3955,52 @@ async function mapFetchForecast(query,signal){
     return direct;
   }catch(error){if(error?.name==='AbortError')throw error;error.retryAfter=error.retryAfter||proxyError?.retryAfter||60;throw error}
 }
+const MAP_NOAA_RAIN_PAGE_KEYS=['precipitation_3h','precipitation_accumulated'];
+function clearMapNoaaRainPagination(){
+  mapAitorState.rainPageRequestId+=1;if(mapAitorState.rainPageController)mapAitorState.rainPageController.abort();mapAitorState.rainPageController=null
+}
+function mapSameNoaaRainGrid(current,page){
+  const bounds=['south','north','west','east'],grid=['rows','columns','stepLatitude','stepLongitude'];
+  return current?.points?.length===page?.points?.length&&bounds.every(key=>Number(current?.bounds?.[key])===Number(page?.bounds?.[key]))&&grid.every(key=>Number(current?.grid?.[key])===Number(page?.grid?.[key]))&&current.model?.run===page.model?.run&&current.model?.sourceModel===page.model?.sourceModel&&current.pagination?.run===page.pagination?.run&&current.pagination?.base===page.pagination?.base
+}
+function mapMergeNoaaRainPoint(current,page,expectedCurrentLength,expectedPageLength){
+  if(!current||!page||Math.abs(Number(current.latitude)-Number(page.latitude))>1e-5||Math.abs(Number(current.longitude)-Number(page.longitude))>1e-5)throw new Error('NOAA cambió los nodos entre páginas.');
+  const hourly={...(current.hourly||{})};
+  MAP_NOAA_RAIN_PAGE_KEYS.forEach(key=>{const before=current.hourly?.[key],after=page.hourly?.[key];if(!Array.isArray(before)||before.length!==expectedCurrentLength||!Array.isArray(after)||after.length!==expectedPageLength)throw new Error('NOAA devolvió una serie paginada incompleta.');hourly[key]=before.concat(after)});
+  return{...current,hourly}
+}
+function mapMergeNoaaRainPage(current,page){
+  const currentTimes=current?.times||[],pageTimes=page?.times||[],nextPage=Number(current?.pagination?.nextPage),receivedPage=Number(page?.pagination?.page),step=3*60*60*1000;
+  if(!mapSameNoaaRainGrid(current,page)||!Number.isInteger(nextPage)||receivedPage!==nextPage||pageTimes.length!==8||Number(page.pagination?.intervalsInPage)!==8)throw new Error('La página NOAA no pertenece a la misma malla o pasada.');
+  const chronology=currentTimes.concat(pageTimes).map(mapTimeMilliseconds);if(chronology.some(value=>!Number.isFinite(value)))throw new Error('NOAA devolvió una cronología no válida.');
+  for(let index=1;index<chronology.length;index+=1){if(chronology[index]-chronology[index-1]!==step)throw new Error('La cronología NOAA tiene un salto o un intervalo duplicado.');}
+  const points=current.points.map((point,index)=>mapMergeNoaaRainPoint(point,page.points[index],currentTimes.length,pageTimes.length));
+  let focusPoint=current.focusPoint||null;if(current.focusPoint||page.focusPoint){if(!current.focusPoint||!page.focusPoint)throw new Error('NOAA cambió el nodo de consulta entre páginas.');focusPoint=mapMergeNoaaRainPoint(current.focusPoint,page.focusPoint,currentTimes.length,pageTimes.length)}
+  const totalIntervals=Number(page.pagination?.totalIntervals)||56,complete=page.pagination?.complete===true&&chronology.length===totalIntervals&&Number(page.pagination?.pageEndHour)===Number(page.pagination?.forecastEndHour);
+  return{...current,partial:false,times:currentTimes.concat(pageTimes),points,focusPoint,pagination:{...page.pagination,loadedIntervals:chronology.length,loadedThroughPage:receivedPage,loadedThroughHour:Number(page.pagination?.pageEndHour),complete,nextPage:complete?null:page.pagination?.nextPage,lastPageGeneratedAt:page.generatedAt}}
+}
+function mapNoaaRainProgressText(data,failed=false){
+  const loaded=Number(data?.pagination?.loadedIntervals)||data?.times?.length||0,total=Number(data?.pagination?.totalIntervals)||56,through=Number(data?.pagination?.loadedThroughHour)||Number(data?.pagination?.pageEndHour)||loaded*3;
+  return failed?'NOAA GFS · '+loaded+'/'+total+' intervalos cargados hasta +'+through+' h · se conserva el último fotograma correcto':'NOAA GFS · '+loaded+'/'+total+' intervalos de 3 h'+(loaded<total?' · completando páginas hasta +168 h…':' · horizonte completo hasta +168 h')
+}
+function startMapNoaaRainPagination(initial,query,requestId,cacheKey){
+  if(!MAP_NOAA_RAIN_LAYERS.has(mapAitorState.layer)||!initial?.pagination||initial.pagination.complete||initial.pagination.nextPage===null)return;
+  clearMapNoaaRainPagination();const pageRequestId=mapAitorState.rainPageRequestId,controller=new AbortController();mapAitorState.rainPageController=controller;const fixedQuery=new URLSearchParams(query);fixedQuery.set('run',initial.pagination.run);fixedQuery.set('base',initial.pagination.base);
+  void(async()=>{let current=initial;try{while(current.pagination?.nextPage!==null&&current.pagination?.nextPage!==undefined){const pageNumber=Number(current.pagination.nextPage);fixedQuery.set('page',String(pageNumber));const timeout=setTimeout(()=>controller.abort('rain-page-timeout'),30000);let page;try{page=await mapFetchForecast(fixedQuery,controller.signal)}finally{clearTimeout(timeout)}if(controller.signal.aborted||pageRequestId!==mapAitorState.rainPageRequestId||requestId!==mapAitorState.requestId||!MAP_NOAA_RAIN_LAYERS.has(mapAitorState.layer))return;current=mapMergeNoaaRainPage(current,page);mapAitorState.data=current;mapAitorState.cache.set(cacheKey,current);rememberMapLastGood(mapAitorState.renderedLayer,mapAitorState.renderedModel,current,mapAitorState.timeIndex);const range=$('mapTimeRange');if(range){range.max=Math.max(0,current.times.length-1);range.value=mapAitorState.timeIndex}$('mapStatus').textContent=mapNoaaRainProgressText(current)}}catch(error){if(controller.signal.aborted&&controller.signal.reason!=='rain-page-timeout')return;if(pageRequestId===mapAitorState.rainPageRequestId&&requestId===mapAitorState.requestId&&MAP_NOAA_RAIN_LAYERS.has(mapAitorState.layer)){$('mapStatus').textContent=mapNoaaRainProgressText(current,true);mapAitorState.lastError=error}}finally{if(pageRequestId===mapAitorState.rainPageRequestId)mapAitorState.rainPageController=null}})()
+}
 function clearMapRetry(){clearTimeout(mapAitorState.retryTimer);clearInterval(mapAitorState.retryTick);mapAitorState.retryTimer=null;mapAitorState.retryTick=null;mapAitorState.retryRequest=null}
 function clearMapViewportTimer(){clearTimeout(mapAitorState.viewportTimer);mapAitorState.viewportTimer=null}
 function syncMapSelection(layer=mapAitorState.layer,model=mapAitorState.model){
   if(mapLayerForcesGfs(layer))model='gfs';
+  if(mapLayerForcesEcmwf(layer))model='ecmwf';
   if(MAP_AROME_ONLY_LAYERS.has(layer))model='arome';
   mapAitorState.layer=layer;mapAitorState.model=model;if($('mapLayer'))$('mapLayer').value=layer;if($('mapModel'))$('mapModel').value=model;
   if($('mapModelCurrent'))$('mapModelCurrent').textContent=String(model).toUpperCase();
-  if($('mapModel'))$('mapModel').disabled=MAP_OBSERVATION_LAYERS.has(layer)||mapLayerForcesGfs(layer)||MAP_AROME_ONLY_LAYERS.has(layer)||MAP_MARINE_LAYERS.has(layer);
+  if($('mapModel'))$('mapModel').disabled=MAP_OBSERVATION_LAYERS.has(layer)||mapLayerForcesGfs(layer)||mapLayerForcesEcmwf(layer)||MAP_AROME_ONLY_LAYERS.has(layer)||MAP_MARINE_LAYERS.has(layer);
   if($('mapAitorStudio'))$('mapAitorStudio').dataset.mapLayer=layer;
   if($('mapLayer'))[...$('mapLayer').options].forEach(option=>{const unavailable=!mapModelSupportsLayer(model,option.value);option.disabled=unavailable;option.title=unavailable?'AROME HD no publica esta capa':''});
   document.querySelectorAll('.mapLayerButton[data-map-layer]').forEach(button=>{const unavailable=!mapModelSupportsLayer(model,button.dataset.mapLayer);button.classList.toggle('active',button.dataset.mapLayer===layer);button.disabled=unavailable;button.title=unavailable?'AROME HD no publica esta capa en esta salida':' '});
-  document.querySelectorAll('.mapModelButton[data-map-model]').forEach(button=>{button.classList.toggle('active',button.dataset.mapModel===model);button.disabled=MAP_MARINE_LAYERS.has(layer)||(MAP_OBSERVATION_LAYERS.has(layer)||mapLayerForcesGfs(layer)||MAP_AROME_ONLY_LAYERS.has(layer))&&button.dataset.mapModel!==model});
+  document.querySelectorAll('.mapModelButton[data-map-model]').forEach(button=>{button.classList.toggle('active',button.dataset.mapModel===model);button.disabled=MAP_MARINE_LAYERS.has(layer)||(MAP_OBSERVATION_LAYERS.has(layer)||mapLayerForcesGfs(layer)||mapLayerForcesEcmwf(layer)||MAP_AROME_ONLY_LAYERS.has(layer))&&button.dataset.mapModel!==model});
 }
 function scheduleMapRetry(seconds,request){
   clearMapRetry();const backoff=[60,120,300,600][Math.min(3,Math.max(0,mapAitorState.retryAttempt-1))],wait=Math.max(backoff,Math.min(3600,Number(seconds)||60)),target=Date.now()+wait*1000;mapAitorState.retryRequest=request;
@@ -3875,6 +4009,7 @@ function scheduleMapRetry(seconds,request){
 }
 function queueMapLoad(force=false,delay=650,fit=false,targetTime=mapCurrentForecastTime()){
   clearTimeout(mapAitorState.selectionTimer);clearTimeout(mapAitorState.viewportTimer);
+  clearMapNoaaRainPagination();
   if(mapAitorState.requestController){mapAitorState.requestId+=1;mapAitorState.requestController.abort();mapAitorState.requestController=null}
   setMapBusy(true,'Preparando '+mapLayerConfig().title+' sin duplicar consultas…');
   mapAitorState.selectionTimer=setTimeout(()=>{mapAitorState.selectionTimer=null;loadMapForecast(fit,force,targetTime)},Math.max(0,delay));
@@ -3907,11 +4042,13 @@ function mapCanonicalRainWindow(raw,zoom,center){
 }
 async function loadMapForecast(fit=false,force=false,targetTime=mapCurrentForecastTime()){
   const map=mapAitorState.map;if(!map||MAP_OBSERVATION_LAYERS.has(mapAitorState.layer))return;
+  clearMapNoaaRainPagination();
   clearTimeout(mapAitorState.viewportTimer);clearTimeout(mapAitorState.selectionTimer);mapAitorState.selectionTimer=null;
   if(mapAitorState.requestController)mapAitorState.requestController.abort();
   const requestId=++mapAitorState.requestId,controller=new AbortController();mapAitorState.requestController=controller;
-  const requestedLayer=mapAitorState.layer,requestedBundle=mapRequestBundle(requestedLayer),requestedModel=mapLayerForcesGfs(requestedLayer)?'gfs':$('mapModel').value,requestedTitle=mapLayerConfig().title,zoom=map.getZoom(),sparseLayer=['precipitation','precipitation_15m','precipitation_3h','precipitation_accumulated','precipitation_6h','precipitation_12h','precipitation_24h','rain','showers','snowfall','precipitation_probability','forecast_reflectivity','cloud','cape','cin'].includes(requestedLayer),padding=sparseLayer?(zoom>=7?.08:zoom>=5?.12:zoom>=3?.14:.06):(zoom>=7?.14:zoom>=5?.20:.24),raw=map.getBounds().pad(padding),snap=zoom<=2?2:zoom<=3?.75:zoom<=5?.25:zoom>=8?.05:.10,density=mapLayerDensity(requestedLayer,zoom),focus=mapAitorState.location||BERMEO,viewCenter=map.getCenter(),muWindow=MAP_GFS_ONLY_LAYERS.has(requestedLayer)?mapCanonicalMuWindow(raw,zoom,viewCenter):null,rainWindow=MAP_NOAA_RAIN_LAYERS.has(requestedLayer)?mapCanonicalRainWindow(raw,zoom,viewCenter):null,requestWindow=muWindow||rainWindow,south=requestWindow?requestWindow.south:Math.max(-80,Math.floor(raw.getSouth()/snap)*snap),north=requestWindow?requestWindow.north:Math.min(85,Math.ceil(raw.getNorth()/snap)*snap),west=requestWindow?requestWindow.west:Math.max(-180,Math.floor(raw.getWest()/snap)*snap),east=requestWindow?requestWindow.east:Math.min(180,Math.ceil(raw.getEast()/snap)*snap),requestCenter=requestWindow?{lat:requestWindow.centerLat,lng:requestWindow.centerLon}:viewCenter,requestFocus=requestWindow?{latitude:requestCenter.lat,longitude:requestCenter.lng}:focus;
+  const requestedLayer=mapAitorState.layer,requestedBundle=mapRequestBundle(requestedLayer),requestedModel=mapLayerForcesGfs(requestedLayer)?'gfs':mapLayerForcesEcmwf(requestedLayer)?'ecmwf':$('mapModel').value,requestedTitle=mapLayerConfig().title,zoom=map.getZoom(),sparseLayer=['precipitation','thunderstorms','precipitation_15m','precipitation_3h','precipitation_accumulated','precipitation_6h','precipitation_12h','precipitation_24h','rain','showers','snowfall','precipitation_probability','forecast_reflectivity','cloud','cape','cin'].includes(requestedLayer),padding=sparseLayer?(zoom>=7?.08:zoom>=5?.12:zoom>=3?.14:.06):(zoom>=7?.14:zoom>=5?.20:.24),raw=map.getBounds().pad(padding),snap=zoom<=2?2:zoom<=3?.75:zoom<=5?.25:zoom>=8?.05:.10,density=mapLayerDensity(requestedLayer,zoom),focus=mapAitorState.location||BERMEO,viewCenter=map.getCenter(),muWindow=MAP_GFS_ONLY_LAYERS.has(requestedLayer)?mapCanonicalMuWindow(raw,zoom,viewCenter):null,rainWindow=MAP_NOAA_RAIN_LAYERS.has(requestedLayer)?mapCanonicalRainWindow(raw,zoom,viewCenter):null,requestWindow=muWindow||rainWindow,south=requestWindow?requestWindow.south:Math.max(-80,Math.floor(raw.getSouth()/snap)*snap),north=requestWindow?requestWindow.north:Math.min(85,Math.ceil(raw.getNorth()/snap)*snap),west=requestWindow?requestWindow.west:Math.max(-180,Math.floor(raw.getWest()/snap)*snap),east=requestWindow?requestWindow.east:Math.min(180,Math.ceil(raw.getEast()/snap)*snap),requestCenter=requestWindow?{lat:requestWindow.centerLat,lng:requestWindow.centerLon}:viewCenter,requestFocus=requestWindow?{latitude:requestCenter.lat,longitude:requestCenter.lng}:focus;
   const query=new URLSearchParams({south:south.toFixed(2),north:north.toFixed(2),west:west.toFixed(2),east:east.toFixed(2),model:requestedModel,layer:requestedBundle,displayLayer:muWindow?'mu':requestedLayer,density:String(density),focusLat:Number(requestFocus.latitude).toFixed(3),focusLon:Number(requestFocus.longitude).toFixed(3),viewLat:Number(requestCenter.lat).toFixed(3),viewLon:Number(requestCenter.lng).toFixed(3)});
+  if(MAP_NOAA_RAIN_LAYERS.has(requestedLayer))query.set('page','0');
   if(!muWindow&&requestedLayer==='cin')query.set('cin','1');
   const cacheKey=mapCacheKey(query),cached=!force?mapAitorState.cache.get(cacheKey):null;
   setMapBusy(true,'Cargando '+($('mapModel').selectedOptions[0]?.textContent||'modelo')+' · '+requestedTitle+'…');
@@ -3921,6 +4058,7 @@ async function loadMapForecast(fit=false,force=false,targetTime=mapCurrentForeca
     if(MAP_NOAA_RAIN_LAYERS.has(requestedLayer)&&sourceResponse?.model?.fallback){const identityError=new Error('NOAA no publicó la precipitación oficial solicitada; no se sustituye por un modelo automático.');identityError.retryAfter=120;throw identityError}
     if(!cached){mapAitorState.cache.set(cacheKey,sourceResponse);while(mapAitorState.cache.size>6)mapAitorState.cache.delete(mapAitorState.cache.keys().next().value)}
     const response={...sourceResponse,model:{...(sourceResponse.model||{})}};
+    if(MAP_NOAA_RAIN_LAYERS.has(requestedLayer)&&response.pagination)response.pagination={...response.pagination,loadedIntervals:Number(response.pagination.loadedIntervals)||response.times?.length||0,loadedThroughPage:Number.isInteger(Number(response.pagination.loadedThroughPage))?Number(response.pagination.loadedThroughPage):Number(response.pagination.page)||0,loadedThroughHour:Number(response.pagination.loadedThroughHour)||Number(response.pagination.pageEndHour)||24};
     const responseTimeIndex=Math.min(targetTime?mapNearestTimeIndex(response.times,targetTime):mapNearestIndex(response.times),Math.max(0,response.times.length-1));if(!mapResponseHasLayerData(response,requestedLayer,responseTimeIndex)){const unavailable=new Error('El modelo no publicó esta capa en su última pasada.');unavailable.retryAfter=120;throw unavailable}
     response.viewZoom=zoom;
     // Estas tres capas son exclusivamente GFS. La identidad visible no puede
@@ -3928,8 +4066,9 @@ async function loadMapForecast(fit=false,force=false,targetTime=mapCurrentForeca
     if(MAP_GFS_ONLY_LAYERS.has(requestedLayer))response.model={...(response.model||{}),requested:'gfs',label:mapForcedGfsLabel(requestedLayer,response.model?.resolutionDegrees,response.model?.overview),fallback:false};
     mapAitorState.data=response;mapAitorState.layer=requestedLayer;mapAitorState.model=requestedModel;mapAitorState.renderedLayer=requestedLayer;mapAitorState.renderedModel=requestedModel;mapAitorState.timeIndex=responseTimeIndex;mapAitorState.lastError=null;mapAitorState.retryAttempt=0;clearMapRetry();rememberMapLastGood(requestedLayer,requestedModel,response,mapAitorState.timeIndex);
     const range=$('mapTimeRange');range.max=Math.max(0,response.times.length-1);range.value=mapAitorState.timeIndex;
-    const exactAccumulation=mapAccumulationUsesExactSamples(MAP_LAYERS[requestedLayer]),continuousNoaaRain=MAP_NOAA_RAIN_LAYERS.has(requestedLayer)&&!exactAccumulation,displayStep=Number(response.model?.displayResolutionDegrees||response.model?.resolutionDegrees),approximateSurface=continuousNoaaRain&&response.transport==='direct-rain-detail';$('mapStatus').dataset.transport=response.transport||'server';$('mapStatus').textContent=(cached?'Caché rápida · ':response.partial?'Última malla parcial · ':response.stale?'Caché segura · ':'')+'Malla '+response.model.label+' · '+response.points.length+' puntos'+(continuousNoaaRain?' · superficie '+String(displayStep).replace('.',',')+'° activa':exactAccumulation?' · panorámica de muestras; usa EU o ES para superficie':approximateSurface?' · superficie interpolada aproximada':'');
+    const exactAccumulation=mapAccumulationUsesExactSamples(MAP_LAYERS[requestedLayer]),continuousNoaaRain=MAP_NOAA_RAIN_LAYERS.has(requestedLayer)&&!exactAccumulation,displayStep=Number(response.model?.displayResolutionDegrees||response.model?.resolutionDegrees),approximateSurface=continuousNoaaRain&&response.transport==='direct-rain-detail';$('mapStatus').dataset.transport=response.transport||'server';$('mapStatus').textContent=MAP_NOAA_RAIN_LAYERS.has(requestedLayer)?mapNoaaRainProgressText(response):(cached?'Caché rápida · ':response.partial?'Última malla parcial · ':response.stale?'Caché segura · ':'')+'Malla '+response.model.label+' · '+response.points.length+' puntos'+(continuousNoaaRain?' · superficie '+String(displayStep).replace('.',',')+'° activa':exactAccumulation?' · panorámica de muestras; usa EU o ES para superficie':approximateSurface?' · superficie interpolada aproximada':'');
     $('mapLayerBadge').classList.remove('mapLoadError');unsetMapRadar();renderMapGrid();if($('mapOfficialEmbed')?.dataset.automatic==='1')closeMapOfficial(false);
+    if(MAP_NOAA_RAIN_LAYERS.has(requestedLayer))startMapNoaaRainPagination(response,query,requestId,cacheKey);
     if(fit&&response?.focus)map.panTo([response.focus.latitude,response.focus.longitude],{animate:true});
   }catch(error){
     if(requestId!==mapAitorState.requestId||error?.name==='AbortError'&&controller.signal.reason!=='timeout')return;
@@ -3951,12 +4090,13 @@ async function loadMapForecast(fit=false,force=false,targetTime=mapCurrentForeca
 function setMapLayer(layer){
   if(!MAP_LAYERS[layer]&&!MAP_OBSERVATION_LAYERS.has(layer))return;
   if(!mapModelSupportsLayer(mapAitorState.model,layer)){const message=mapModelLayerAvailabilityText(mapAitorState.model,layer);$('mapStatus').textContent=message;$('mapInfo').innerHTML='<strong>Capa no publicada por AROME HD</strong>'+message;syncMapSelection(mapAitorState.layer,mapAitorState.model);return}
+  if(!(MAP_NOAA_RAIN_LAYERS.has(layer)&&MAP_NOAA_RAIN_LAYERS.has(mapAitorState.layer)))clearMapNoaaRainPagination();
   clearMapViewportTimer();clearMapNativeWarmRequests();clearTimeout(mapAitorState.selectionTimer);mapAitorState.selectionTimer=null;setMapBusy(false);
   if(layer!=='dewpoint')mapNativeRestoreDerivedDewpointStates();
   const targetTime=mapCurrentForecastTime();mapAitorState.nativeDesiredTimeIndex=null;mapAitorState.nativeDragging=false;mapAitorState.nativeFallbackNotice=null;clearTimeout(mapAitorState.gridRefineTimer);mapAitorState.gridRefineTimer=null;mapAitorState.gridTimelineDragging=false;
   if(mapAitorState.playing)stopMapPlayback();
   clearMapRetry();clearMapNativePending();clearMapNativePrefetch(false);clearMapNativePreview(false);clearMapNativeAnnotations();mapAitorState.retryAttempt=0;mapAitorState.nativeRequestId+=1;if(mapAitorState.requestController)mapAitorState.requestController.abort();
-  const selectedModel=mapLayerForcesGfs(layer)?'gfs':MAP_AROME_ONLY_LAYERS.has(layer)?'arome':$('mapModel').value;syncMapSelection(layer,selectedModel);updateMapReliefStrength();
+  const selectedModel=mapLayerForcesGfs(layer)?'gfs':mapLayerForcesEcmwf(layer)?'ecmwf':MAP_AROME_ONLY_LAYERS.has(layer)?'arome':$('mapModel').value;syncMapSelection(layer,selectedModel);updateMapReliefStrength();
   if($('mapOfficialEmbed')?.classList.contains('active'))setMapOfficialLayer(mapOfficialLayerFor(layer));
   if(MAP_OBSERVATION_LAYERS.has(layer))hideMapPickerMarker();
   if(layer==='reflectivity'){setMapRadar();return}
@@ -3967,13 +4107,15 @@ function setMapLayer(layer){
   unsetMapRadar();stopMapWind();mapAitorState.rainviewerData=null;if(mapAitorState.values)mapAitorState.values.clearLayers();if(mapAitorState.windArrows)mapAitorState.windArrows.clearLayers();
   if(mapUsesNativeTiles(layer)){mapAitorState.data=null;mapAitorState.nativeSource=null;$('mapLegend').style.display='flex';loadMapNativeLayer(false,false,targetTime);return}
   const reusable=mapAitorState.data&&mapAitorState.renderedModel===$('mapModel').value&&mapAitorState.data.bundle===mapRequestBundle(layer)&&Number(mapAitorState.data.grid?.rows||0)>=mapLayerDensity(layer)&&mapDataCoversViewport()&&mapHasLayerData();
-  if(reusable){mapAitorState.renderedLayer=layer;mapAitorState.lastError=null;$('mapStatus').textContent='Malla compartida · cambio instantáneo de capa';renderMapGrid();return}
+  if(reusable){mapAitorState.renderedLayer=layer;mapAitorState.lastError=null;$('mapStatus').textContent=MAP_NOAA_RAIN_LAYERS.has(layer)?mapNoaaRainProgressText(mapAitorState.data):'Malla compartida · cambio instantáneo de capa';renderMapGrid();return}
   if(!mapAitorState.field||!mapAitorState.data){clearMapLayers();mapAitorState.data=null;updateMapLabels()}queueMapLoad(false,650,false,targetTime);
 }
 function setMapModel(model){
   const select=$('mapModel');
   if(!select||![...select.options].some(option=>option.value===model))return;
+  clearMapNoaaRainPagination();
   if(mapLayerForcesGfs(mapAitorState.layer))model='gfs';
+  if(mapLayerForcesEcmwf(mapAitorState.layer))model='ecmwf';
   if(MAP_AROME_ONLY_LAYERS.has(mapAitorState.layer))model='arome';
   const center=mapAitorState.map?.getCenter?.();
   if(model==='arome'&&center&&!mapAromeCoversCoordinates(center.lat,center.lng)){$('mapStatus').textContent='AROME HD es regional y no llega a esta zona · usa GFS, ECMWF o ICON mundial';$('mapInfo').innerHTML='<strong>Fuera del dominio AROME HD</strong>Esta zona se consulta con GFS, ECMWF o ICON. AROME se mantiene únicamente dentro de 37,5–55,4° N y 12° O–16° E.';syncMapSelection(mapAitorState.layer,mapAitorState.model);return}
@@ -4013,7 +4155,7 @@ function mapStep(delta,fromPlayback=false){
     mapAitorState.timeIndex=Math.max(0,Math.min(frames.length-1,mapAitorState.timeIndex+delta));renderRainViewerFrame();return;
   }
   if(mapUsesNativeTiles()){
-    const times=mapAitorState.nativeSource?.timeline||[];if(!times.length)return;clearMapViewportTimer();clearMapNativeWarmRequests();clearInterval(mapAitorState.playTimer);clearTimeout(mapAitorState.playTimer);mapAitorState.playTimer=null;const origin=mapAitorState.nativeDesiredTimeIndex??mapAitorState.timeIndex,target=Math.max(0,Math.min(times.length-1,origin+delta));if(mapAitorState.nativePendingField){mapAitorState.nativeRequestId+=1;clearMapNativePending()}clearTimeout(mapAitorState.nativeRefineTimer);mapAitorState.nativeRefineTimer=null;mapAitorState.nativePrefetchDirection=fromPlayback?1:delta<0?-1:1;mapAitorState.nativeDesiredTimeIndex=target;mapAitorState.nativeDragging=false;$('mapTimeRange').value=target;previewMapNativeTime(target);if(mapNativeMovieReady()){queueMapNativeMovieFrame(target);return}prefetchMapNativePreviewWindow(target,mapAitorState.nativePrefetchDirection);queueMapNativeLiveFrame(0);return;
+    const times=mapAitorState.nativeSource?.timeline||[];if(!times.length)return;clearMapViewportTimer();clearInterval(mapAitorState.playTimer);clearTimeout(mapAitorState.playTimer);mapAitorState.playTimer=null;const origin=mapAitorState.nativeDesiredTimeIndex??mapAitorState.timeIndex,target=Math.max(0,Math.min(times.length-1,origin+delta));if(mapAitorState.nativePendingField){mapAitorState.nativeRequestId+=1;clearMapNativePending()}clearTimeout(mapAitorState.nativeRefineTimer);mapAitorState.nativeRefineTimer=null;mapAitorState.nativePrefetchDirection=fromPlayback?1:delta<0?-1:1;mapAitorState.nativeDesiredTimeIndex=target;mapAitorState.nativeDragging=false;pauseMapNativePrefetchTimers(mapNativeFrameKey(target));$('mapTimeRange').value=target;previewMapNativeTime(target);queueMapNativeLiveFrame(0);return;
   }
   const times=mapAitorState.data?.times||[];if(!times.length||MAP_FIXED_OBSERVATION_LAYERS.has(mapAitorState.layer))return;
   mapAitorState.timeIndex=Math.max(0,Math.min(times.length-1,mapAitorState.timeIndex+delta));$('mapTimeRange').value=mapAitorState.timeIndex;
@@ -4191,7 +4333,10 @@ function initMapAitor(){
   // Fondo profesional claro. El relieve se añade en una capa independiente;
   // así lluvia, nubes y reflectividad nunca quedan sobre un mapa negro.
   const topographic=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:cartoAttribution});
-  const standard=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'});
+  // El fondo limpio usa cartografía sin rótulos y una única capa de
+  // etiquetas por encima del campo meteorológico. Antes se combinaban los
+  // nombres de OSM con los de CARTO y el mapa parecía duplicado y recargado.
+  const standard=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:cartoAttribution});
   const dark=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:cartoAttribution});
   map.createPane('mapWeatherRadar');map.getPane('mapWeatherRadar').style.zIndex='420';map.getPane('mapWeatherRadar').style.pointerEvents='none';
   map.createPane('mapRelief');map.getPane('mapRelief').style.zIndex='380';map.getPane('mapRelief').style.pointerEvents='none';
@@ -4218,7 +4363,7 @@ function initMapAitor(){
   $('mapTimeRange').addEventListener('input',event=>{
     if(MAP_FIXED_OBSERVATION_LAYERS.has(mapAitorState.layer))return;const index=Number(event.target.value)||0;
     if(mapAitorState.layer==='rainviewer'){mapAitorState.timeIndex=index;renderRainViewerFrame();return}
-    if(mapUsesNativeTiles()){clearMapViewportTimer();clearMapNativeWarmRequests();clearInterval(mapAitorState.playTimer);clearTimeout(mapAitorState.playTimer);mapAitorState.playTimer=null;clearTimeout(mapAitorState.nativeRefineTimer);mapAitorState.nativeRefineTimer=null;const origin=mapAitorState.nativeDesiredTimeIndex??mapAitorState.timeIndex;if(index!==origin)mapAitorState.nativePrefetchDirection=index<origin?-1:1;if(mapAitorState.nativePendingField){mapAitorState.nativeRequestId+=1;clearMapNativePending()}pauseMapNativePrefetchTimers();mapAitorState.nativeDragging=true;mapAitorState.nativeDesiredTimeIndex=index;previewMapNativeTime(index);if(mapNativeMovieReady()){mapAitorState.timeIndex=index;queueMapNativeMovieFrame(index);return}queueMapNativeLiveFrame(70);return}
+    if(mapUsesNativeTiles()){clearMapViewportTimer();clearInterval(mapAitorState.playTimer);clearTimeout(mapAitorState.playTimer);mapAitorState.playTimer=null;clearTimeout(mapAitorState.nativeRefineTimer);mapAitorState.nativeRefineTimer=null;const origin=mapAitorState.nativeDesiredTimeIndex??mapAitorState.timeIndex;if(index!==origin)mapAitorState.nativePrefetchDirection=index<origin?-1:1;if(mapAitorState.nativePendingField){mapAitorState.nativeRequestId+=1;clearMapNativePending()}mapAitorState.nativeDragging=true;mapAitorState.nativeDesiredTimeIndex=index;pauseMapNativePrefetchTimers(mapNativeFrameKey(index));previewMapNativeTime(index);queueMapNativeLiveFrame(70);return}
     mapAitorState.timeIndex=index;mapAitorState.gridTimelineDragging=true;clearTimeout(mapAitorState.gridRefineTimer);scheduleMapRender(true)
   });
   $('mapTimeRange').addEventListener('change',finishMapTimelineScrub);
@@ -4257,7 +4402,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.96',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.97',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
