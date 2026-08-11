@@ -1,3 +1,25 @@
+Meteo Aitor Bermeo v10.94 · cámaras de Bizkaia y España
+Fecha: 2026-08-11
+
+El apartado de cámaras amplía el acceso desde seis localidades de Bizkaia a
+dieciocho directorios y fuentes adicionales del resto de España. Bakio sigue
+siendo la señal directa integrada; Bermeo, Getxo, Sopela, Gorliz y Lekeitio
+se identifican por separado y conservan el enlace a su organismo original.
+Gorliz figura expresamente en mantenimiento y no se presenta como activa.
+
+Se incorporan las redes oficiales de Trafikoa, MeteoGalicia, MeteoCantabria,
+Puerto de Santander, Tráfico Navarra, DGT, Servei Català de Trànsit, Informo
+Madrid, Turisme Comunitat Valenciana, Sierra Nevada, Cabildo de Tenerife,
+municipios turísticos de Canarias, Turismo de Gran Canaria y AEMET Izaña.
+También se identifican sin llamarlos oficiales las redes y directorios
+externos de Asturias, Baleares, Playas de España y Skyline.
+
+La ampliación usa enlaces externos en vez de iniciar muchos vídeos a la vez:
+así no bloquea el móvil, no fuerza reproductores que impiden ser incrustados
+y mantiene clara la atribución de cada cámara. La caché sube a v10.94.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.93 · mapas oficiales, cursor fluido y cámaras
 Fecha: 2026-08-11
 
