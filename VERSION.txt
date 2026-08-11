@@ -1,3 +1,20 @@
+Meteo Aitor Bermeo v10.99 · hora exacta sin carrera de carga
+Fecha: 2026-08-11
+
+El arrastre conserva la vista rápida ligera, pero al soltar el cursor cancela
+la vista incompleta de la hora elegida antes de solicitar el fotograma nativo
+exacto. De este modo dos lectores del mismo archivo meteorológico ya no
+compiten ni pueden dejar la hora seleccionada esperando indefinidamente.
+
+Los botones y el teclado solicitan directamente la hora exacta. El reintento
+también vuelve a abrir ese fotograma completo, conservando siempre en pantalla
+el último mapa correcto. Probado con 30 movimientos seguidos en ECMWF: control
+en 0,1 ms, fotograma exacto en 1,6 s; en móvil, 1,4 s y sin desbordamiento.
+
+MUCAPE permanece intacto y el filtrado MUCIN de v10.98 no cambia.
+
+La caché de la aplicación sube a v10.99.
+
 Meteo Aitor Bermeo v10.98 · MUCIN limpio y deslizador nativo rápido
 Fecha: 2026-08-11
 

@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.98" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.99" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -2731,7 +2731,7 @@ function prefetchMapNativeFrame(index,delay=70){
     const specs=mapNativeFrameSpecs(source,layerName,entry),derivedDewpoint=specs.some(spec=>spec.derived),base=mapNativeOmFile(source,entry),visibleCount=Math.max(1,specs.filter(spec=>!spec.support).length),tiles=specs.map(spec=>{const url=mapNativeTileUrl(spec.base||base,spec),targetOpacity=spec.support?.001:Math.max(.12,Math.min(1,mapFieldOpacity()*spec.factor)),tile=mapNativeAdapter(spec.kind).createTileLayer(url,{pane:'mapWeatherRadar',opacity:0,tileSize:256,maxZoom:12,maxNativeZoom:12,keepBuffer:0,updateWhenIdle:false,className:'mapNativeWeatherTile mapNativeWeatherTile-'+layerName+' mapNativeWeatherTileKind-'+spec.kind+(spec.support?' mapNativeWeatherSupport':'')+' mapNativeWeatherPrefetch mapNativeWeatherFrame-'+index,attribution:'Datos meteorológicos © Open‑Meteo'});tile.options.nativeOpacityFactor=spec.factor;tile.options.nativeTargetOpacity=targetOpacity;tile.options.nativeFrameVisible=false;tile.options.nativeSourceUrl=url;tile.options.nativeVariable=spec.variable;tile.options.nativeKind=spec.kind;tile.options.nativeSupport=!!spec.support;tile.options.nativeDerivedDewpoint=!!spec.derived;tile.options.nativeDewpointSupport=!!spec.dewpointSupport;return tile}),field=L.layerGroup(tiles),cached=mapNativeRememberFrame(key,index,field,false);let ready=0;
     const markReady=()=>{if(mapAitorState.nativeFrameCache.get(key)!==cached)return;clearTimeout(cached.watchdog);cached.watchdog=null;cached.ready=true;cached.touched=Date.now();if(mapNativeDesiredIndex()===index)activateMapNativeCachedFrame(cached);else if(mapAitorState.nativeDesiredTimeIndex!==null&&mapNativeDesiredIndex()!==mapAitorState.timeIndex&&!mapAitorState.nativeDragging)queueMapNativeLiveFrame(0)};
     const failDerived=()=>{if(mapAitorState.nativeFrameCache.get(key)!==cached)return;mapNativeRemoveFrameEntry(key,cached);if(mapNativeDesiredIndex()===index&&mapAitorState.playing)scheduleMapNativePlayback()};
-    if(derivedDewpoint)mapNativePrepareDerivedDewpoint(tiles,markReady,failDerived);else tiles.forEach(tile=>tile.once('load',()=>{if(tile.options.nativeSupport)return;ready+=1;if(ready>=visibleCount)markReady()}));field.addTo(map);cached.watchdog=setTimeout(()=>{if(mapAitorState.nativeFrameCache.get(key)!==cached||cached.ready)return;mapNativeRemoveFrameEntry(key,cached);if(mapNativeDesiredIndex()!==index||mapAitorState.nativeDesiredTimeIndex===null)return;if(mapAitorState.nativeRetryKey!==key){mapAitorState.nativeRetryKey=key;mapAitorState.nativeRetryCount=0}if(mapAitorState.nativeRetryCount<2){mapAitorState.nativeRetryCount+=1;$('mapStatus').textContent='Se conserva el último fotograma correcto · reintentando la hora exacta '+mapAitorState.nativeRetryCount+'/2';queueMapNativeLiveFrame(450)}else{mapAitorState.lastError=new Error('El fotograma nativo exacto no terminó de cargar.');$('mapLayerBadge').classList.add('mapLoadError');$('mapStatus').textContent='Se conserva el último fotograma correcto · pulsa Actualizar mapa para reintentar'}},15000);mapNativeTrimFrameCache(mapNativeDesiredIndex());
+    if(derivedDewpoint)mapNativePrepareDerivedDewpoint(tiles,markReady,failDerived);else tiles.forEach(tile=>tile.once('load',()=>{if(tile.options.nativeSupport)return;ready+=1;if(ready>=visibleCount)markReady()}));field.addTo(map);cached.watchdog=setTimeout(()=>{if(mapAitorState.nativeFrameCache.get(key)!==cached||cached.ready)return;mapNativeRemoveFrameEntry(key,cached);if(mapNativeDesiredIndex()!==index||mapAitorState.nativeDesiredTimeIndex===null)return;if(mapAitorState.nativeRetryKey!==key){mapAitorState.nativeRetryKey=key;mapAitorState.nativeRetryCount=0}if(mapAitorState.nativeRetryCount<2){mapAitorState.nativeRetryCount+=1;$('mapStatus').textContent='Se conserva el último fotograma correcto · reintentando la hora exacta '+mapAitorState.nativeRetryCount+'/2';prefetchMapNativeFrame(index,450);scheduleMapNativeRefine(index,570)}else{mapAitorState.lastError=new Error('El fotograma nativo exacto no terminó de cargar.');$('mapLayerBadge').classList.add('mapLoadError');$('mapStatus').textContent='Se conserva el último fotograma correcto · pulsa Actualizar mapa para reintentar'}},15000);mapNativeTrimFrameCache(mapNativeDesiredIndex());
   },Math.max(0,delay));mapAitorState.nativePrefetchTimers.set(key,timer);return null
 }
 function prefetchMapNativeWindow(center=mapAitorState.timeIndex,direction=1){
@@ -2775,8 +2775,8 @@ function scheduleMapNativeRefine(index=mapAitorState.timeIndex,delay=520){
     // Una carga incompleta de otra hora no bloquea el refinado solicitado.
     // Si es la propia hora y lleva demasiado tiempo sin terminar, se descarta
     // para permitir un intento limpio en lugar de esperar indefinidamente.
-    if(ready&&!ready.ready){if(Date.now()-ready.touched<12000){scheduleMapNativeRefine(index,360);return}mapNativeRemoveFrameEntry(key,ready)}
-    prefetchMapNativeFrame(index,0);$('mapStatus').textContent='Vista inmediata activa · afinando '+mapAitorState.nativeSource.label+'…';scheduleMapNativeRefine(index,12500)
+    if(ready&&!ready.ready){if(Date.now()-ready.touched<16500){scheduleMapNativeRefine(index,360);return}mapNativeRemoveFrameEntry(key,ready)}
+    prefetchMapNativeFrame(index,0);$('mapStatus').textContent='Vista inmediata activa · afinando '+mapAitorState.nativeSource.label+'…';scheduleMapNativeRefine(index,480)
   },Math.max(0,delay))
 }
 function queueMapNativeLiveFrame(delay=90){
@@ -2792,6 +2792,12 @@ function queueMapNativeLiveFrame(delay=90){
   const desired=mapNativeDesiredIndex(),cached=mapAitorState.nativeFrameCache.get(mapNativeFrameKey(desired));if(cached?.ready){activateMapNativeCachedFrame(cached);return}
   const quick=mapAitorState.nativePreviewCache.get(mapNativePreviewKey(desired));if(quick?.ready){activateMapNativePreview(quick);if(mapAitorState.playing)scheduleMapNativePlayback();else if(!mapAitorState.nativeDragging)scheduleMapNativeRefine(desired);return}
   if(desired===mapAitorState.timeIndex&&!mapAitorState.nativePreviewField){if(!mapAitorState.nativeDragging)mapAitorState.nativeDesiredTimeIndex=null;if(mapAitorState.playing)scheduleMapNativePlayback();return}
+  // Un salto discreto (botones o teclado) no compite con una tesela ligera.
+  // Se conserva el último mapa y se solicita directamente el fotograma exacto.
+  // Las vistas rápidas quedan reservadas al arrastre continuo y a la película.
+  if(!mapAitorState.nativeDragging&&!mapAitorState.playing){
+    clearMapNativePreviewCache(Boolean(mapAitorState.nativePreviewField));prefetchMapNativeFrame(desired,90);scheduleMapNativeRefine(desired,180);$('mapStatus').textContent='Cargando hora exacta · '+$('mapTimelineLabel').textContent;return
+  }
   // Seguimiento controlado: como máximo se inicia una hora cada ~45 ms y el
   // callback toma la última posición solicitada. Así el mapa avanza mientras
   // se arrastra sin lanzar una descompresión nueva por cada píxel del cursor.
@@ -4299,12 +4305,14 @@ function finishMapTimelineScrub(){
     const target=mapNativeDesiredIndex();clearTimeout(mapAitorState.nativeFrameTimer);mapAitorState.nativeFrameTimer=null;
     if(mapAitorState.nativeMovieField){clearTimeout(mapAitorState.nativeMovieThrottleTimer);mapAitorState.nativeMovieThrottleTimer=null;if(mapAitorState.nativeMovieRenderFrame)cancelAnimationFrame(mapAitorState.nativeMovieRenderFrame);mapAitorState.nativeMovieRenderFrame=null;mapAitorState.nativeMovieRenderIndex=null;if(mapAitorState.nativeMovieField._mapNativeFrameIndex!==target)renderMapNativeMovie(target);mapAitorState.nativeDragging=false;mapAitorState.timeIndex=target;mapAitorState.nativeDesiredTimeIndex=target;const range=$('mapTimeRange');if(range)range.value=target;scheduleMapNativeRefine(target,160);finalizeMapNativeTimelineUi();return}
     mapAitorState.nativeDragging=false;
-    // Al soltar el cursor el fotograma exacto tiene prioridad y empieza ya,
-    // aunque una vista ligera haya quedado en el worker. Así un preview lento
-    // nunca puede bloquear la hora elegida ni encadenar reintentos de 12 s.
-    prefetchMapNativeFrame(target,0);
+    // La vista rápida solo acompaña al arrastre. Al soltar, se cancela cualquier
+    // preview incompleto de la hora elegida antes de abrir el archivo exacto:
+    // ambos usan el mismo .om y hacerlos competir podía abortar las dos cargas.
+    const targetKey=mapNativeFrameKey(target),quick=mapAitorState.nativePreviewCache.get(mapNativePreviewKey(target));pauseMapNativePrefetchTimers(targetKey);
+    if(quick?.ready)activateMapNativePreview(quick);else clearMapNativePreviewCache(Boolean(mapAitorState.nativePreviewField));
+    prefetchMapNativeFrame(target,quick?.ready?0:100);scheduleMapNativeRefine(target,quick?.ready?120:220);
     if(!mapAitorState.nativePreviewField&&mapAitorState.nativeField?._mapNativeFrameIndex===target){mapAitorState.nativeDesiredTimeIndex=null;finalizeMapNativeTimelineUi();prefetchMapNativeWindow(target,mapAitorState.nativePrefetchDirection);if(mapAitorState.playing)scheduleMapNativePlayback();return}
-    queueMapNativeLiveFrame(0);return
+    $('mapStatus').textContent=(quick?.ready?'Vista inmediata real · afinando ':'Se conserva la última imagen correcta · cargando hora exacta · ')+$('mapTimelineLabel').textContent;return
   }
   if(!mapAitorState.gridTimelineDragging)return;mapAitorState.gridTimelineDragging=false;scheduleMapRender(false)
 }
@@ -4410,7 +4418,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.98',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.99',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
