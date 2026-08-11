@@ -25,9 +25,6 @@
       "maxDuration": 30
     },
     "api/aemet-radar.js": {
-      "maxDuration": 20
-    },
-    "api/euskalmet-map.js": {
       "maxDuration": 30
     },
     "api/map-arome-15m.js": {
@@ -41,6 +38,10 @@
     }
   },
   "rewrites": [
+    {
+      "source": "/api/euskalmet-map",
+      "destination": "/api/aemet-radar?route=euskalmet"
+    },
     {
       "source": "/api/map-rain3h",
       "destination": "/api/map-mu?route=rain3h"

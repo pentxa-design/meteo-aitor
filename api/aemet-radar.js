@@ -1,5 +1,6 @@
 const BASE_URL = 'https://opendata.aemet.es/opendata';
 const PUBLIC_RADAR_URL = 'https://www.aemet.es/es/api-eltiempo/radar';
+const euskalmetMapHandler = require('../lib/euskalmet-map');
 
 async function gateway(path, apiKey) {
   const response = await fetch(`${BASE_URL}/api${path}`, {
@@ -36,6 +37,7 @@ async function publicRadar() {
 }
 
 module.exports = async function handler(req, res) {
+  if (String(req.query?.route || '').trim().toLowerCase() === 'euskalmet') return euskalmetMapHandler(req, res);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
   if (req.method !== 'GET') {
