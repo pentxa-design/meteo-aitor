@@ -1,3 +1,24 @@
+Meteo Aitor Bermeo v10.98 · MUCIN limpio y deslizador nativo rápido
+Fecha: 2026-08-11
+
+MUCAPE permanece intacto. MUCIN conserva los valores y el signo negativo de
+NOAA GFS, pero su superficie ya no forma un rectángulo oscuro sobre el mundo.
+El color exige pares MUCIN/MUCAPE del mismo nodo y hora, enlaza su cobertura con
+un borde continuo y destaca la inhibición débil, cercana a cero. Los valores
+muy negativos se atenúan visualmente sin modificar cifras ni consulta puntual.
+
+El deslizador elimina definitivamente la antigua película de puntos que creaba
+manchones provisionales. Al mover la hora muestra primero una tesela nativa
+ligera de la misma variable, modelo y hora; después la sustituye por el campo
+exacto de 256 px. Las capas compuestas, incluida nubosidad con lluvia, solo se
+activan cuando han terminado todos sus componentes. En la prueba de escritorio
+con 30 movimientos seguidos, el evento tuvo p95 de 0,1 ms y la hora exacta
+quedó visible en 1,9 s, sin errores JavaScript.
+
+La caché de la aplicación sube a v10.98.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.97 · mapas precisos, lluvia a siete días y Mediterráneo
 Fecha: 2026-08-11
 
