@@ -25,7 +25,8 @@
       "maxDuration": 30
     },
     "api/aemet-radar.js": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "regions": ["cdg1"]
     },
     "api/map-arome-15m.js": {
       "maxDuration": 30
