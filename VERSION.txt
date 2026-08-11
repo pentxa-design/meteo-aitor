@@ -1,3 +1,28 @@
+Meteo Aitor Bermeo v10.95 · cámaras visibles dentro de la app
+Fecha: 2026-08-11
+
+El apartado de cámaras estrena un visor único dentro de Meteo Aitor: al pulsar
+una tarjeta se cambia inmediatamente la imagen o el reproductor sin abandonar
+la aplicación. Bakio conserva su emisión MJPEG continua y Sopela carga el
+reproductor municipal. Getxo muestra la imagen pública de Ereaga en 1280×720
+y la app la consulta cada dos minutos; el vídeo continuo no se fuerza porque su
+operador restringe expresamente la inserción a los dominios municipales.
+
+En España quedan integradas veintiuna cámaras seleccionables más la red
+dinámica de MeteoGalicia. Incluyen cuatro vistas oficiales de Santander, tres
+directos de Asturias, tres cámaras municipales de Madrid, tres webs en directo
+de Baleares, una cámara del Cabildo de Tenerife y siete imágenes de AEMET
+Izaña. La red de la Xunta se consulta mediante el servidor de la app, valida
+sus direcciones y muestra el número real disponible en cada momento.
+
+Las páginas de Baleares aparecen dentro del visor y permiten aceptar sus
+cookies allí mismo. Para proveedores que impiden ser incrustados se conserva
+el botón al visor original, sin eludir bloqueos técnicos. La antigua tarjeta
+de Bermeo se elimina porque no existe una señal actual verificable. La caché
+de la aplicación sube a v10.95.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.94 · cámaras de Bizkaia y España
 Fecha: 2026-08-11
 

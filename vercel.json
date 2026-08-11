@@ -44,6 +44,10 @@
       "destination": "/api/aemet-radar?route=euskalmet"
     },
     {
+      "source": "/api/webcams",
+      "destination": "/api/aemet-radar?route=webcams"
+    },
+    {
       "source": "/api/map-rain3h",
       "destination": "/api/map-mu?route=rain3h"
     }
