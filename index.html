@@ -265,6 +265,8 @@
     @media(max-width:900px){.webcamGrid{grid-template-columns:1fr}.webcamFrame{min-height:240px}.webcamLinksSpain{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:760px){.webcamSection{padding:14px}.webcamHead{display:block}.webcamRefresh{width:100%;min-height:44px;margin-top:10px}.webcamFrame{min-height:220px}}
     @media(max-width:520px){.webcamLinks,.webcamLinksBizkaia,.webcamLinksSpain{grid-template-columns:1fr}.webcamFrame{min-height:190px}.webcamRegionSpain{padding:11px}.webcamRegionHead{align-items:flex-start;flex-direction:column}.webcamPicker{grid-template-columns:1fr}.webcamPicker label,.webcamPickerStatus{grid-column:auto}}
+    .webcamSelectorPanel{padding:17px;border-radius:19px;background:linear-gradient(145deg,rgba(11,55,89,.92),rgba(35,36,96,.92));border:1px solid rgba(135,229,244,.19)}.webcamMasterLabel{display:block;margin:15px 0 7px;color:#d9f8ff;font-size:11px;font-weight:900;letter-spacing:.04em;text-transform:uppercase}.webcamMasterSelect{width:100%;min-height:52px;padding:0 14px;border-radius:14px;border:1px solid rgba(93,231,255,.42);background:#0b2a4e;color:#fff;font-family:inherit;font-size:13px;font-weight:800;outline:none;cursor:pointer}.webcamMasterSelect:focus{border-color:#45e8ff;box-shadow:0 0 0 3px rgba(69,232,255,.17)}.webcamSelectorPanel .webcamPickerStatus{display:block;margin-top:8px}.webcamSelectorHint{margin-top:14px;padding:12px;border-radius:13px;background:rgba(34,221,190,.08);border:1px solid rgba(86,232,210,.15);color:#cceaf2;font-size:11px;line-height:1.45}.webcamSourceDetails,.webcamDirectoryDisclosure{border:1px solid rgba(135,229,244,.17);background:rgba(7,29,61,.48);border-radius:15px}.webcamSourceDetails{margin-top:13px}.webcamSourceDetails summary,.webcamDirectoryDisclosure summary{position:relative;cursor:pointer;list-style:none;color:#e9fbff;font-weight:850}.webcamSourceDetails summary::-webkit-details-marker,.webcamDirectoryDisclosure summary::-webkit-details-marker{display:none}.webcamSourceDetails summary{padding:12px 38px 12px 13px;font-size:11px}.webcamSourceDetails summary:after,.webcamDirectoryDisclosure summary:after{content:'+';position:absolute;right:13px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:rgba(84,224,255,.12);color:#93f2ff;font-size:17px}.webcamSourceDetails[open] summary:after,.webcamDirectoryDisclosure[open] summary:after{content:'−'}.webcamSourceDetails summary:focus-visible,.webcamDirectoryDisclosure summary:focus-visible{outline:2px solid #86efff;outline-offset:2px}.webcamCompactLinks{grid-template-columns:repeat(3,minmax(0,1fr));padding:0 10px 10px}.webcamCompactLinks .webcamLinkCard{padding:10px}.webcamCompactLinks .webcamLinkCard strong{font-size:12px}.webcamDirectoryDisclosure{margin-top:14px}.webcamDirectoryDisclosure>summary{display:flex;flex-direction:column;gap:3px;padding:14px 48px 14px 15px}.webcamDirectoryDisclosure>summary span{font-size:13px}.webcamDirectoryDisclosure>summary small{color:#a9d5e5;font-size:10px;font-weight:650}.webcamDisclosureBody{padding:0 13px 13px}.webcamDisclosureBody .webcamLinksSpain{margin-top:2px}
+    @media(max-width:520px){.webcamSelectorPanel{padding:13px}.webcamMasterSelect{min-height:50px;font-size:12px}.webcamCompactLinks{grid-template-columns:1fr}.webcamDirectoryDisclosure>summary{padding-left:12px}.webcamDisclosureBody{padding:0 9px 9px}}
 
     /* Mapa Aitor: visor propio de modelos, radar y evolución temporal */
     .mapAitor{margin-top:28px;padding:18px;border-radius:26px;background:linear-gradient(145deg,rgba(10,42,78,.98),rgba(31,24,85,.97));border:1px solid rgba(105,222,255,.30);box-shadow:0 22px 54px rgba(0,16,62,.42);overflow:hidden}
@@ -758,7 +760,7 @@
 
     <section id="webcams" class="webcamSection" aria-labelledby="webcamTitle">
       <div class="webcamHead">
-        <div><h2 id="webcamTitle">Cámaras web · Bizkaia y España</h2><div class="sectionSub">Pulsa una cámara y la imagen aparecerá aquí, sin salir de Meteo Aitor.</div></div>
+        <div><h2 id="webcamTitle">Cámaras web · Bizkaia y España</h2><div class="sectionSub">Elige una cámara en el desplegable y aparecerá aquí, sin salir de Meteo Aitor.</div></div>
         <button id="webcamRefresh" class="webcamRefresh" type="button">↻ Actualizar cámara</button>
       </div>
       <div class="webcamGrid">
@@ -770,93 +772,68 @@
           </div>
           <div class="webcamBody"><strong id="webcamViewerTitle">Bakio · playa · directo</strong><p id="webcamViewerDescription">Emisión pública enlazada desde la web municipal de Bakio. La imagen procede de la cámara.</p><div class="webcamActions"><a id="webcamViewerOriginal" class="webcamAction webcamActionPrimary" href="http://webcam.bakio.eus/viewer/live/es/live.html" target="_blank" rel="noopener">Abrir visor original</a><a id="webcamViewerSource" class="webcamAction" href="https://www.bakio.com/" target="_blank" rel="noopener">Fuente oficial</a></div></div>
         </article>
-        <section class="webcamRegion" aria-labelledby="webcamBizkaiaTitle">
-          <div class="webcamRegionHead"><h3 id="webcamBizkaiaTitle">Bizkaia</h3><span class="webcamRegionCount">3 visibles aquí</span></div>
-          <p class="webcamRegionSub">Bakio y Sopela ofrecen vídeo continuo. Getxo muestra la imagen pública de Ereaga y la app la consulta cada dos minutos.</p>
-          <div class="webcamLinks webcamLinksBizkaia" aria-label="Cámaras de Bizkaia">
-            <button class="webcamLinkCard isActive" type="button" data-webcam="bakio" aria-pressed="true"><span>Directo integrado</span><strong>Bakio · playa</strong><small>Pulsa para ver la emisión continua.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="getxo" aria-pressed="false"><span>Imagen actual · cada 2 min</span><strong>Getxo · Ereaga</strong><small>Vista pública 1280×720 consultada automáticamente.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="sopela" aria-pressed="false"><span>Directo integrado</span><strong>Sopela · olas</strong><small>Reproductor municipal visible dentro de la app.</small></button>
-            <a class="webcamLinkCard isMaintenance" href="https://www.visitgorliz.eus/webcam/" target="_blank" rel="noopener"><span>Mantenimiento oficial</span><strong>Gorliz · playa</strong><small>La fuente municipal comunica mantenimiento temporal.</small></a>
-            <a class="webcamLinkCard" href="https://lekeitio.org/es" target="_blank" rel="noopener"><span>Turismo municipal · web</span><strong>Lekeitio</strong><small>La señal externa publicada no responde de forma estable.</small></a>
-            <a class="webcamLinkCard" href="https://www.bizkaia.eus/es/kirolak/igeribideak" target="_blank" rel="noopener"><span>Diputación Foral</span><strong>Más playas de Bizkaia</strong><small>Directorio foral de Getxo, Gorliz, Lekeitio y Sopela.</small></a>
-          </div>
+        <section class="webcamRegion webcamSelectorPanel" aria-labelledby="webcamSelectorTitle">
+          <div class="webcamRegionHead"><h3 id="webcamSelectorTitle">Elige una cámara</h3><span id="webcamTotalCount" class="webcamRegionCount">24 + red Galicia</span></div>
+          <p class="webcamRegionSub">Abre el desplegable: al seleccionar una cámara aparecerá directamente en el visor.</p>
+          <label class="webcamMasterLabel" for="webcamAllSelect">Cámaras disponibles</label>
+          <select id="webcamAllSelect" class="webcamMasterSelect" aria-describedby="webcamSelectStatus">
+            <optgroup label="Bizkaia">
+              <option value="bakio" selected>Bakio · playa · directo</option>
+              <option value="getxo">Getxo · Ereaga · imagen actual</option>
+              <option value="sopela">Sopela · olas · directo</option>
+            </optgroup>
+            <optgroup label="Cantabria · Santander">
+              <option value="santander_mouro">Santander · Isla de Mouro</option>
+              <option value="santander_matalenas">Santander · Mataleñas</option>
+              <option value="santander_raos">Santander · Puerto de Raos</option>
+              <option value="santander_bahia">Santander · bahía</option>
+            </optgroup>
+            <optgroup label="Asturias">
+              <option value="asturias_vidosa">Vidosa · desfiladero de los Beyos</option>
+              <option value="asturias_gijon">Gijón · La Escalerona</option>
+              <option value="asturias_xago">Playa de Xagó</option>
+            </optgroup>
+            <optgroup id="webcamGaliciaGroup" label="Galicia · MeteoGalicia" disabled>
+              <option value="">Cargando cámaras oficiales…</option>
+            </optgroup>
+            <optgroup label="Madrid">
+              <option value="madrid_alcala_goya">Madrid · Alcalá con Goya</option>
+              <option value="madrid_alcala_sevilla">Madrid · Alcalá con Sevilla</option>
+              <option value="madrid_castellana_ortega">Madrid · Castellana con Ortega y Gasset</option>
+            </optgroup>
+            <optgroup label="Baleares · directo con cookies">
+              <option value="baleares_cala_bosch">Menorca · Cala en Bosch</option>
+              <option value="baleares_santa_eularia">Ibiza · Santa Eulària des Riu</option>
+              <option value="baleares_la_savina">Formentera · La Savina</option>
+            </optgroup>
+            <optgroup label="Tenerife · Cabildo">
+              <option value="tenerife_puerto_cruz">Tenerife · Puerto de la Cruz</option>
+            </optgroup>
+            <optgroup label="Canarias · AEMET Izaña">
+              <option value="izana_day">Izaña · cielo diurno</option>
+              <option value="izana_northwest">Izaña · noroeste</option>
+              <option value="izana_southeast">Izaña · sudeste</option>
+              <option value="izana_north">Izaña · norte</option>
+              <option value="izana_south">Izaña · sur</option>
+              <option value="izana_northeast">Izaña · nordeste</option>
+              <option value="izana_night">Izaña · cielo nocturno</option>
+            </optgroup>
+          </select>
+          <span id="webcamSelectStatus" class="webcamPickerStatus" aria-live="polite">Cargando la red oficial de Galicia…</span>
+          <div class="webcamSelectorHint"><strong>Bizkaia:</strong> Bakio y Sopela son vídeo continuo; Getxo es una imagen actual consultada cada dos minutos.</div>
+          <details class="webcamSourceDetails">
+            <summary>Otras fuentes de Bizkaia</summary>
+            <div class="webcamLinks webcamCompactLinks">
+              <a class="webcamLinkCard isMaintenance" href="https://www.visitgorliz.eus/webcam/" target="_blank" rel="noopener"><span>Mantenimiento oficial</span><strong>Gorliz · playa</strong></a>
+              <a class="webcamLinkCard" href="https://lekeitio.org/es" target="_blank" rel="noopener"><span>Web municipal</span><strong>Lekeitio</strong></a>
+              <a class="webcamLinkCard" href="https://www.bizkaia.eus/es/kirolak/igeribideak" target="_blank" rel="noopener"><span>Diputación Foral</span><strong>Más playas</strong></a>
+            </div>
+          </details>
         </section>
       </div>
-
-      <section class="webcamRegion webcamRegionSpain" aria-labelledby="webcamSpainTitle">
-        <div class="webcamRegionHead"><h3 id="webcamSpainTitle">Resto de España</h3><span id="webcamSpainCount" class="webcamRegionCount">21 cámaras + red Galicia</span></div>
-        <p class="webcamRegionSub">Las tarjetas con “Ver aquí” cambian el visor superior. Las páginas completas se conservan para aceptar sus cookies cuando el proveedor las exige.</p>
-
-        <div class="webcamArea">
-          <h4>Cantábrico · Autoridad Portuaria de Santander</h4>
-          <div class="webcamLinks webcamLinksSpain">
-            <button class="webcamLinkCard" type="button" data-webcam="santander_mouro"><span>Ver aquí · oficial</span><strong>Isla de Mouro</strong><small>Imagen actual de la bocana y mar abierto.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="santander_matalenas"><span>Ver aquí · oficial</span><strong>Mataleñas</strong><small>Vista costera de la Autoridad Portuaria.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="santander_raos"><span>Ver aquí · oficial</span><strong>Puerto de Raos</strong><small>Imagen actual del puente y la zona portuaria.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="santander_bahia"><span>Ver aquí · oficial</span><strong>Bahía de Santander</strong><small>Panorámica actual de la bahía.</small></button>
-          </div>
-        </div>
-
-        <div class="webcamArea">
-          <h4>Asturias · costa e interior</h4>
-          <div class="webcamLinks webcamLinksSpain">
-            <button class="webcamLinkCard" type="button" data-webcam="asturias_vidosa"><span>Ver directo aquí</span><strong>Vidosa · Los Beyos</strong><small>Cascada de Aguasaliu y desfiladero.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="asturias_gijon"><span>Ver directo aquí</span><strong>Gijón · La Escalerona</strong><small>Playa de San Lorenzo en directo.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="asturias_xago"><span>Ver directo aquí</span><strong>Playa de Xagó</strong><small>Panorámica en directo de la costa.</small></button>
-          </div>
-        </div>
-
-        <div class="webcamArea">
-          <h4>Galicia · red oficial de MeteoGalicia</h4>
-          <div class="webcamPicker">
-            <label for="webcamGaliciaSelect">Elige una cámara de Galicia</label>
-            <select id="webcamGaliciaSelect" disabled><option>Cargando cámaras oficiales…</option></select>
-            <button id="webcamGaliciaOpen" class="webcamAction webcamActionPrimary" type="button" disabled>Ver cámara</button>
-            <span id="webcamGaliciaStatus" class="webcamPickerStatus" aria-live="polite">Consultando la red de la Xunta…</span>
-          </div>
-        </div>
-
-        <div class="webcamArea">
-          <h4>Madrid · cámaras municipales</h4>
-          <div class="webcamLinks webcamLinksSpain">
-            <button class="webcamLinkCard" type="button" data-webcam="madrid_alcala_goya"><span>Ver aquí · oficial</span><strong>Alcalá · Goya</strong><small>Imagen actual del tráfico municipal.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="madrid_alcala_sevilla"><span>Ver aquí · oficial</span><strong>Alcalá · Sevilla</strong><small>Imagen actual del tráfico municipal.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="madrid_castellana_ortega"><span>Ver aquí · oficial</span><strong>Castellana · Ortega y Gasset</strong><small>Imagen actual del tráfico municipal.</small></button>
-          </div>
-        </div>
-
-        <div class="webcamArea">
-          <h4>Baleares · cámaras en directo</h4>
-          <div class="webcamLinks webcamLinksSpain">
-            <button class="webcamLinkCard" type="button" data-webcam="baleares_cala_bosch"><span>Web en directo · cookies</span><strong>Menorca · Cala en Bosch</strong><small>Reproductor visible aquí; acepta cookies si aparece el aviso.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="baleares_santa_eularia"><span>Web en directo · cookies</span><strong>Ibiza · Santa Eulària</strong><small>Reproductor visible aquí; acepta cookies si aparece el aviso.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="baleares_la_savina"><span>Web en directo · cookies</span><strong>Formentera · La Savina</strong><small>Reproductor visible aquí; acepta cookies si aparece el aviso.</small></button>
-          </div>
-        </div>
-
-        <div class="webcamArea">
-          <h4>Tenerife · Cabildo</h4>
-          <div class="webcamLinks webcamLinksSpain">
-            <button class="webcamLinkCard" type="button" data-webcam="tenerife_puerto_cruz"><span>Ver aquí · oficial</span><strong>Puerto de la Cruz</strong><small>Imagen del Centro de Información de Carreteras.</small></button>
-          </div>
-        </div>
-
-        <div class="webcamArea">
-          <h4>Canarias · Observatorio de Izaña (AEMET)</h4>
-          <div class="webcamLinks webcamLinksSpain">
-            <button class="webcamLinkCard" type="button" data-webcam="izana_day"><span>Ver aquí · AEMET</span><strong>Izaña · cielo diurno</strong><small>Cámara hemisférica del observatorio.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="izana_northwest"><span>Ver aquí · AEMET</span><strong>Izaña · noroeste</strong><small>Vista actual desde la alta montaña.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="izana_southeast"><span>Ver aquí · AEMET</span><strong>Izaña · sudeste</strong><small>Vista hacia el valle de Güímar.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="izana_north"><span>Ver aquí · AEMET</span><strong>Izaña · norte</strong><small>Panorámica hacia Anaga.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="izana_south"><span>Ver aquí · AEMET</span><strong>Izaña · sur</strong><small>Vista meridional del observatorio.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="izana_northeast"><span>Ver aquí · AEMET</span><strong>Izaña · nordeste</strong><small>Imagen actual hacia el nordeste.</small></button>
-            <button class="webcamLinkCard" type="button" data-webcam="izana_night"><span>Ver aquí · AEMET</span><strong>Izaña · cielo nocturno</strong><small>Cámara hemisférica nocturna.</small></button>
-          </div>
-        </div>
-
-        <div class="webcamArea">
-          <h4>Más cámaras y páginas originales</h4>
+      <details class="webcamDirectoryDisclosure">
+        <summary><span>Más páginas y directorios de cámaras</span><small>Se mantienen cerrados para no alargar la página.</small></summary>
+        <div class="webcamDisclosureBody">
           <div class="webcamLinks webcamLinksSpain">
             <a class="webcamLinkCard" href="https://apps.trafikoa.euskadi.eus/wps/portal/trafico/camarasTrafico" target="_blank" rel="noopener"><span>Gobierno Vasco · oficial</span><strong>Tráfico Euskadi</strong><small>Cámaras viarias con imagen actualizada por Trafikoa.</small></a>
             <a class="webcamLinkCard" href="https://www.meteogalicia.gal/web/observacion/camaras?request_locale=es" target="_blank" rel="noopener"><span>Xunta · oficial</span><strong>MeteoGalicia · mapa</strong><small>Mapa y datos originales de la red que alimenta el selector.</small></a>
@@ -878,8 +855,8 @@
             <a class="webcamLinkCard" href="https://www.skylinewebcams.com/es/webcam/espana.html" target="_blank" rel="noopener"><span>Red externa</span><strong>Skyline · España</strong><small>Playas, ciudades, puertos y plazas.</small></a>
           </div>
         </div>
-      </section>
-      <div class="webcamNote">Las imágenes directas se cargan únicamente al elegirlas. Si una página exige cookies, puedes aceptarlas en su web original. No se fuerzan ni se eluden los bloqueos de inserción de cada operador.</div>
+      </details>
+      <div class="webcamNote">Las cámaras se cargan únicamente al elegirlas. Si aparece un aviso de cookies, puedes aceptarlo en el propio visor o en la web original. No se fuerzan ni se eluden los bloqueos de inserción de cada operador.</div>
     </section>
 
   </section>
@@ -935,6 +912,7 @@ function updateWebcamDetails(source){
   const description=$('webcamViewerDescription');if(description)description.textContent=source.description;
   const original=$('webcamViewerOriginal');if(original)original.href=source.originalUrl||source.sourceUrl;
   const sourceLink=$('webcamViewerSource');if(sourceLink){sourceLink.href=source.sourceUrl||source.originalUrl;sourceLink.textContent=source.sourceLabel||'Fuente oficial'}
+  const selector=$('webcamAllSelect');if(selector&&[...selector.options].some(option=>option.value===source.key))selector.value=source.key;
   document.querySelectorAll('[data-webcam]').forEach(button=>{const active=button.dataset.webcam===source.key;button.classList.toggle('isActive',active);button.setAttribute('aria-pressed',String(active))});
 }
 function renderActiveWebcam(announce=true){
@@ -960,23 +938,22 @@ function selectWebcam(source,{scroll=true}={}){
 }
 document.querySelectorAll('[data-webcam]').forEach(button=>{if(!button.hasAttribute('aria-pressed'))button.setAttribute('aria-pressed','false');button.addEventListener('click',()=>selectWebcam(WEBCAM_SOURCES[button.dataset.webcam]))});
 if($('webcamRefresh'))$('webcamRefresh').addEventListener('click',()=>renderActiveWebcam());
+if($('webcamAllSelect'))$('webcamAllSelect').addEventListener('change',event=>selectWebcam(WEBCAM_SOURCES[event.target.value]||galiciaWebcams.get(event.target.value)));
 async function loadGaliciaWebcams(){
-  const select=$('webcamGaliciaSelect');const open=$('webcamGaliciaOpen');const status=$('webcamGaliciaStatus');if(!select||!open||!status)return;
+  const group=$('webcamGaliciaGroup');const status=$('webcamSelectStatus');if(!group||!status)return;
   try{
     const response=await fetch('/api/webcams',{headers:{Accept:'application/json'},cache:'no-store'});const payload=await response.json().catch(()=>null);
     if(!response.ok||!payload?.ok||!Array.isArray(payload.cameras))throw new Error(payload?.error||'No se pudo cargar la red.');
-    galiciaWebcams.clear();select.replaceChildren();
+    galiciaWebcams.clear();group.replaceChildren();
     payload.cameras.forEach((camera,index)=>{
       const key=`galicia_${camera.id}_${index}`;const place=[camera.town,camera.province].filter(Boolean).join(' · ');
       const source={key,mode:'snapshot',url:camera.imageUrl,refreshMs:60000,title:`Galicia · ${camera.name}`,description:`Imagen oficial de MeteoGalicia${place?' · '+place:''}.`,alt:`Cámara de ${camera.name}`,status:'Imagen MeteoGalicia actualizada',originalUrl:'https://www.meteogalicia.gal/web/observacion/camaras?request_locale=es',sourceUrl:'https://www.meteogalicia.gal/web/observacion/camaras?request_locale=es'};
-      galiciaWebcams.set(key,source);const option=document.createElement('option');option.value=key;option.textContent=place?`${camera.name} — ${place}`:camera.name;select.appendChild(option);
+      galiciaWebcams.set(key,source);const option=document.createElement('option');option.value=key;option.textContent=place?`${camera.name} — ${place}`:camera.name;group.appendChild(option);
     });
-    select.disabled=false;open.disabled=false;status.textContent=`${galiciaWebcams.size} cámaras oficiales disponibles`;
-    const count=$('webcamSpainCount');if(count)count.textContent=`${21+galiciaWebcams.size} vistas aquí`;
-  }catch(error){select.replaceChildren(new Option('Red temporalmente no disponible',''));status.textContent=error?.message||'No se pudo cargar MeteoGalicia.';status.style.color='#ffbdc8'}
+    group.disabled=false;status.textContent=`${galiciaWebcams.size} cámaras oficiales de Galicia añadidas al desplegable`;
+    const count=$('webcamTotalCount');if(count)count.textContent=`${Object.keys(WEBCAM_SOURCES).length+galiciaWebcams.size} cámaras`;
+  }catch(error){group.replaceChildren(new Option('Red de Galicia temporalmente no disponible',''));group.disabled=true;status.textContent=error?.message||'No se pudo cargar MeteoGalicia.';status.style.color='#ffbdc8'}
 }
-if($('webcamGaliciaOpen'))$('webcamGaliciaOpen').addEventListener('click',()=>selectWebcam(galiciaWebcams.get($('webcamGaliciaSelect')?.value)));
-if($('webcamGaliciaSelect'))$('webcamGaliciaSelect').addEventListener('change',()=>selectWebcam(galiciaWebcams.get($('webcamGaliciaSelect')?.value)));
 if($('webcamViewerImage')){
   const viewerImage=$('webcamViewerImage');
   if(viewerImage.complete&&viewerImage.naturalWidth>0)setWebcamState('Directo conectado','live');
@@ -4280,7 +4257,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.95',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.96',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
