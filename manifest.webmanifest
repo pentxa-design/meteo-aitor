@@ -2,7 +2,7 @@
   "name": "Meteo Aitor Bermeo",
   "short_name": "Meteo Aitor",
   "description": "Tiempo de Bermeo con Open-Meteo ECMWF, mareas, avisos oficiales, radar y mapas profesionales.",
-  "start_url": "./index.html?v=10.106",
+  "start_url": "./index.html?v=10.107",
   "scope": "./",
   "display": "standalone",
   "background_color": "#071521",

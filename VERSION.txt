@@ -1,3 +1,17 @@
+Meteo Aitor Bermeo v10.107 · relieve forzado y actualización inmediata
+Fecha: 2026-08-12
+
+Nubosidad ya no puede permanecer con "Mapa limpio": al seleccionarla, incluso
+desde una sesión anterior, se aplica siempre Relieve topográfico. Tierra,
+costas, fronteras y países quedan visibles bajo las nubes.
+
+Cuando se activa una nueva versión de la app instalada, sus ventanas abiertas
+se recargan una sola vez. Así Android, iPhone y escritorio dejan de conservar
+el JavaScript de la versión anterior después de una publicación.
+
+Datos, modelos, cursor de 24 horas y demás capas sin cambios. La caché sube a
+v10.107.
+
 Meteo Aitor Bermeo v10.106 · relieve visible en Nubosidad
 Fecha: 2026-08-12
 
