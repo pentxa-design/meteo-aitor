@@ -1,3 +1,15 @@
+Meteo Aitor Bermeo v10.101 · nubosidad azul según referencia
+Fecha: 2026-08-12
+
+La capa Nubosidad adopta el acabado de la imagen de referencia aportada por
+Aitor: mar azul vivo, cartografía azul limpia y nubes blancas o grises con
+bordes suaves y núcleos oscuros. Las zonas despejadas dejan visible el azul del
+mapa; la cobertura real del modelo forma la masa nubosa y la precipitación de
+la misma hora refuerza únicamente sus núcleos cargados.
+
+No cambian los datos ECMWF, GFS, ICON o AROME, el cursor horario ni las demás
+capas. La caché de la aplicación sube a v10.101.
+
 Meteo Aitor Bermeo v10.100 · nubes legibles, cursor ágil y lluvia mundial
 Fecha: 2026-08-11
 
