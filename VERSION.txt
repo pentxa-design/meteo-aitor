@@ -1,3 +1,13 @@
+Meteo Aitor Bermeo v10.103 · base azul continua en Nubosidad
+Fecha: 2026-08-12
+
+La base de Nubosidad usa ahora una luminosidad cartográfica sobre azul: mar y
+territorio conservan el mismo tono azul de la referencia, con carreteras,
+costas y relieve legibles. Las nubes permanecen en blanco y gris por encima,
+con núcleos oscuros, sin convertir las zonas despejadas en fondo blanco.
+
+Datos y demás capas sin cambios. La caché sube a v10.103.
+
 Meteo Aitor Bermeo v10.102 · azul reforzado según referencia
 Fecha: 2026-08-12
 
