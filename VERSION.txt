@@ -1,3 +1,14 @@
+Meteo Aitor Bermeo v10.104 · azul visible bajo la nubosidad
+Fecha: 2026-08-12
+
+La cartografía clara se integra de forma semitransparente sobre una base azul
+continua. Así el mar y el territorio mantienen el azul visible de la imagen de
+referencia, mientras las costas, carreteras y nombres siguen legibles. Las
+nubes blancas, grises y sus núcleos oscuros quedan por encima sin borrar el
+fondo en las zonas despejadas.
+
+Datos y demás capas sin cambios. La caché sube a v10.104.
+
 Meteo Aitor Bermeo v10.103 · base azul continua en Nubosidad
 Fecha: 2026-08-12
 
