@@ -424,13 +424,11 @@ module.exports = async function handler(req, res) {
     if (cinRequested && !cinAvailable) {
       throw new Error('CIN no está publicado para esta pasada; se volverá a intentar automáticamente.');
     }
-    if (ecmwfOnlyRequested && !locations.some(location =>
+    const lightningAvailable = ecmwfOnlyRequested && locations.some(location =>
       location?.hourly?.lightning_density?.some(value =>
         value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
       )
-    )) {
-      throw new Error('ECMWF no publicó densidad total de destellos para esta pasada; no se sustituye por CAPE ni por datos simulados.');
-    }
+    );
     const first = locations[0]?.hourly || {};
     // Se muestran seis días completos. Las 24 horas extra solicitadas arriba
     // se reservan para que los acumulados hacia delante no queden truncados.
@@ -447,7 +445,7 @@ module.exports = async function handler(req, res) {
       diagnostics: displayLayer === 'forecast_reflectivity'
         ? { native: false, derived: true, sourceVariable: 'precipitation', interval: 'preceding_hour_sum', units: 'dBZ', formula: 'Z=200·R^1.6' }
         : displayLayer === 'thunderstorms'
-          ? { native: true, derived: false, sourceVariable: 'lightning_density', sourceParameters: ['LITOTA1', 'LITOTA3', 'LITOTA6'], interval: 'preceding_model_period_mean', units: 'flashes km^-2 day^-1', phenomenon: 'total cloud-to-ground and intra-cloud lightning' }
+          ? { native: true, derived: false, sourceVariable: 'precipitation', lightningVariable: 'lightning_density', lightningAvailable, interval: 'preceding_hour_sum', units: 'mm', phenomenon: 'ECMWF precipitation; observed lightning remains on official AEMET/Euskalmet layers' }
         : displayLayer === 'precipitation_3h'
           ? { native: false, derived: true, sourceVariable: 'precipitation', interval: 'three-hour-forward-sum', units: 'mm', samples: 3 }
         : displayLayer === 'cape'

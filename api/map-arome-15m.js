@@ -146,7 +146,14 @@ module.exports = async function handler(req, res) {
   try {
     const locations = await requestGrid(requestPoints);
     const first = locations[0]?.minutely_15 || {};
-    const times = Array.isArray(first.time) ? first.time.slice(0, FORECAST_STEPS) : [];
+    const rawTimes = Array.isArray(first.time) ? first.time.slice(0, FORECAST_STEPS) : [];
+    let lastUsable = -1;
+    locations.forEach(location => {
+      (location?.minutely_15?.precipitation || []).slice(0, rawTimes.length).forEach((value, index) => {
+        if (value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))) lastUsable = Math.max(lastUsable, index);
+      });
+    });
+    const times = rawTimes.slice(0, lastUsable + 1);
     if (!times.length || locations.length !== requestPoints.length) throw new Error('AROME no devolvió una línea temporal de 15 minutos utilizable.');
     const gridLocations = locations.slice(0, mapGrid.points.length);
     const exactLocation = hasFocus ? locations[mapGrid.points.length] : null;

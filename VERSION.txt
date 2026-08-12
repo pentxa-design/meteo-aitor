@@ -1,3 +1,25 @@
+Meteo Aitor Bermeo v10.109 · visor reparado y respuesta inmediata
+Fecha: 2026-08-12
+
+Mapa limpio utiliza una sola cartografía: desaparece la segunda capa de relieve
+que formaba el halo gris azulado en toda la costa. Mar, tierra y límites quedan
+limpios y visibles bajo Nubosidad, Temperatura, Rocío, Humedad y T850. Estas
+capas limitan su opacidad efectiva y refuerzan saturación y contraste sin
+cambiar ningún valor meteorológico.
+
+El cursor horario muestra una tesela ligera real de la misma hora durante el
+movimiento y la mantiene mientras se afina la imagen exacta; ya no deja el mapa
+parado varios segundos al soltar. MUCIN deja de exigir CAPE simultáneo y vuelve
+a colorear su propio campo negativo NOAA, con una paleta más legible.
+
+Lluvia y truenos ya no queda bloqueada cuando ECMWF entrega lightning_density
+vacío: presenta su lluvia real, indica si la densidad de rayos no está publicada
+y conserva Rayos AEMET/Euskalmet como observación oficial, sin inventar rayos.
+AROME 15 min descarta la cola nula fuera de su horizonte real. La caché sube a
+v10.109.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.108 · mapa limpio estable y control fluido
 Fecha: 2026-08-12
 
