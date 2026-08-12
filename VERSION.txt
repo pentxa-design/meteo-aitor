@@ -1,3 +1,13 @@
+Meteo Aitor Bermeo v10.106 · relieve visible en Nubosidad
+Fecha: 2026-08-12
+
+Al abrir Nubosidad se activa el fondo de relieve topográfico. Tierra, costas,
+fronteras y países vuelven a distinguirse claramente sobre el mar azul, tanto
+en móvil como en escritorio. El usuario conserva los otros fondos en el mismo
+selector si desea cambiarlos manualmente.
+
+Nubes, datos, cursor y demás capas sin cambios. La caché sube a v10.106.
+
 Meteo Aitor Bermeo v10.105 · azul final según referencia
 Fecha: 2026-08-12
 

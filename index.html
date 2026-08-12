@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.105" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.106" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -4121,7 +4121,7 @@ function setMapLayer(layer){
   const targetTime=mapCurrentForecastTime();mapAitorState.nativeDesiredTimeIndex=null;mapAitorState.nativeDragging=false;mapAitorState.nativeFallbackNotice=null;clearTimeout(mapAitorState.gridRefineTimer);mapAitorState.gridRefineTimer=null;mapAitorState.gridTimelineDragging=false;
   if(mapAitorState.playing)stopMapPlayback();
   clearMapRetry();clearMapNativePending();clearMapNativePrefetch(false);clearMapNativePreview(false);clearMapNativeAnnotations();mapAitorState.retryAttempt=0;mapAitorState.nativeRequestId+=1;if(mapAitorState.requestController)mapAitorState.requestController.abort();
-  const selectedModel=mapLayerForcesGfs(layer)?'gfs':mapLayerForcesEcmwf(layer)?'ecmwf':MAP_AROME_ONLY_LAYERS.has(layer)?'arome':$('mapModel').value;syncMapSelection(layer,selectedModel);updateMapReliefStrength();
+  const selectedModel=mapLayerForcesGfs(layer)?'gfs':mapLayerForcesEcmwf(layer)?'ecmwf':MAP_AROME_ONLY_LAYERS.has(layer)?'arome':$('mapModel').value;syncMapSelection(layer,selectedModel);if(layer==='cloud')setMapBaseStyle('topographic');else updateMapReliefStrength();
   if($('mapOfficialEmbed')?.classList.contains('active'))setMapOfficialLayer(mapOfficialLayerFor(layer));
   if(MAP_OBSERVATION_LAYERS.has(layer))hideMapPickerMarker();
   if(layer==='reflectivity'){setMapRadar();return}
@@ -4448,7 +4448,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.105',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.106',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
