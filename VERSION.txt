@@ -1,3 +1,13 @@
+Meteo Aitor Bermeo v10.102 · azul reforzado según referencia
+Fecha: 2026-08-12
+
+La comprobación en producción de v10.101 mostró el mar demasiado claro. Esta
+revisión refuerza el azul de la cartografía en Nubosidad para acercarlo a la
+imagen de referencia, conservando las nubes blancas y grises, sus bordes suaves
+y los núcleos oscuros. Datos meteorológicos y demás capas sin cambios.
+
+La caché de la aplicación sube a v10.102.
+
 Meteo Aitor Bermeo v10.101 · nubosidad azul según referencia
 Fecha: 2026-08-12
 

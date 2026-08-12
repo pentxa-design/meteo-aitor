@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.101" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.102" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -305,7 +305,7 @@
     .mapViewport,.mapStage .mapViewport{height:clamp(700px,78vh,930px);min-height:700px;border:0;border-radius:0;background:#252b31;box-shadow:none}
     .mapAitor .leaflet-container{background:#252b31}.mapAitor .leaflet-control-zoom{margin-top:62px}.mapAitor .leaflet-control-zoom a{background:rgba(24,28,33,.88);border-color:rgba(255,255,255,.12);color:#fff}.mapAitor .leaflet-control-attribution{background:rgba(13,17,21,.70);color:#b9c1c8}.mapAitor .leaflet-control-attribution a{color:#b8eaff}.mapAitor .mapFieldOverlay{filter:saturate(1.16) contrast(1.10)}.mapAitor .leaflet-map-pane .leaflet-tile-pane{filter:saturate(.72) contrast(1.18) brightness(.92)}.mapAitor .mapBoundaryLabels{filter:contrast(1.65) saturate(.25);mix-blend-mode:multiply}.mapAitor .mapBoundaryLabelsDark{filter:contrast(1.72) brightness(1.14) saturate(.18);mix-blend-mode:normal}.mapAitor .mapReliefOverlay{filter:grayscale(1) contrast(1.95) brightness(.90);mix-blend-mode:soft-light}
     .mapAitor.mapDaylight.mapBaseTopographic .leaflet-container{background:#73bce3}.mapAitor.mapDaylight.mapBaseTopographic .leaflet-map-pane .leaflet-tile-pane{filter:saturate(1.08) contrast(1.12) brightness(1.01)}.mapAitor.mapDaylight.mapBaseTopographic .mapReliefOverlay{filter:saturate(1.32) contrast(1.16) brightness(1.02);mix-blend-mode:normal}.mapAitor.mapDaylight .mapFieldOverlay{filter:saturate(1.22) contrast(1.10) brightness(1.03)}
-    /* v10.101 · Nubosidad como la referencia visual: mar azul vivo y masas
+    /* v10.102 · Nubosidad como la referencia visual: mar azul vivo y masas
        blancas/grises con bordes suaves y núcleos oscuros. El ajuste queda
        limitado a esta capa; topográfico, oscuro y el resto de campos no cambian. */
     .mapAitor.mapBaseStandard .leaflet-container{background:#9edbf1}
@@ -313,7 +313,7 @@
     .mapAitor.mapBaseStandard .mapReliefOverlay{filter:grayscale(.28) saturate(.55) contrast(1.03) brightness(1.04);mix-blend-mode:soft-light;opacity:.16!important}
     .mapAitor.mapBaseStandard[data-map-layer="cloud"] .leaflet-container{background:#2f9ee8}
     .mapAitor.mapBaseStandard[data-map-layer="cloud"] .mapFieldOverlay{filter:grayscale(1) contrast(1.18) brightness(1.01) blur(.8px)}
-    .mapAitor.mapBaseStandard[data-map-layer="cloud"] .leaflet-map-pane .leaflet-tile-pane{filter:saturate(2.18) contrast(1.14) brightness(1.04) hue-rotate(-3deg)}
+    .mapAitor.mapBaseStandard[data-map-layer="cloud"] .leaflet-map-pane .leaflet-tile-pane{filter:grayscale(.18) sepia(.58) hue-rotate(164deg) saturate(2.75) contrast(1.14) brightness(.91)}
     .mapAitor.mapBaseStandard[data-map-layer="cloud"] .mapReliefOverlay{opacity:0!important}
     .mapPickerHint{position:absolute;z-index:710;top:54px;left:58px;display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:rgba(20,25,31,.80);border:1px solid rgba(255,255,255,.14);box-shadow:0 8px 24px rgba(0,0,0,.27);backdrop-filter:blur(14px);color:#f2f7fa;font-size:9px;font-weight:850;pointer-events:none;transition:opacity .2s ease,transform .2s ease}.mapPickerHint.isHidden{opacity:0;transform:translateY(-5px)}
     .mapPickerTarget{width:22px;height:22px;border:3px solid #fff;border-radius:50%;background:#f2a900;box-shadow:0 0 0 5px rgba(242,169,0,.25),0 5px 18px rgba(0,0,0,.42);cursor:grab}.mapPickerTarget::before,.mapPickerTarget::after{content:"";position:absolute;background:#fff;opacity:.92}.mapPickerTarget::before{width:2px;height:30px;left:10px;top:-7px}.mapPickerTarget::after{width:30px;height:2px;left:-7px;top:10px}.mapPickerTarget:active{cursor:grabbing}
@@ -4448,7 +4448,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.101',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.102',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
