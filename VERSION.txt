@@ -1,3 +1,12 @@
+Meteo Aitor Bermeo v10.105 · azul final según referencia
+Fecha: 2026-08-12
+
+Tras la comprobación visual en producción, el azul de mar y territorio gana
+profundidad para coincidir mejor con la imagen aportada. La cartografía sigue
+visible, y las nubes conservan halos claros, masas grises y núcleos oscuros.
+
+Datos y demás capas sin cambios. La caché sube a v10.105.
+
 Meteo Aitor Bermeo v10.104 · azul visible bajo la nubosidad
 Fecha: 2026-08-12
 
