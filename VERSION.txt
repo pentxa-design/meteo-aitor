@@ -1,3 +1,18 @@
+Meteo Aitor Bermeo v10.108 · mapa limpio estable y control fluido
+Fecha: 2026-08-12
+
+Mapa limpio vuelve a ser el fondo inicial y ya no se cambia automáticamente al
+abrir Nubosidad. El mar queda azul, la tierra clara y las etiquetas legibles;
+se elimina el relieve de esa capa para no crear manchas grises artificiales en
+la costa. Las nubes reales conservan su gradación blanca, gris y oscura.
+
+El cursor horario actualiza la hora mientras se mueve y carga una sola imagen
+exacta al soltarlo. También se evita repintar dos veces las anotaciones al
+mover el mapa. Se retira el botón superior Reintentar; los reintentos de datos
+siguen siendo automáticos en segundo plano.
+
+Datos, modelos y demás capas sin cambios. La caché sube a v10.108.
+
 Meteo Aitor Bermeo v10.107 · relieve forzado y actualización inmediata
 Fecha: 2026-08-12
 
