@@ -1,3 +1,21 @@
+Meteo Aitor Bermeo v10.110 · mapas profesionales y línea temporal fluida
+Fecha: 2026-08-13
+
+Las 23 capas existentes se conservan completas. Sus escalas pasan a una barra
+horizontal superior, con colores continuos, valores de menor a mayor y la
+cartografía siempre legible, siguiendo el acabado de los visores
+meteorológicos profesionales usados como referencia.
+
+Nubosidad deja el mar azul y abre la tierra para mostrar países, costas,
+fronteras y nombres. Las zonas despejadas quedan transparentes; las nubes
+progresan de blanco a gris y solo se oscurecen donde existe precipitación real.
+
+La línea de horas vuelve a activar una vista ligera del mismo modelo y hora
+mientras se mueve el cursor. Al soltar, el fotograma exacto la sustituye
+automáticamente, sin mantener el mapa congelado durante seis segundos.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.109 · visor reparado y respuesta inmediata
 Fecha: 2026-08-12
 

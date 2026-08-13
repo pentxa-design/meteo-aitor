@@ -1,5 +1,16 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
+VERSIÓN v10.110 · MAPAS PROFESIONALES Y CURSOR FLUIDO
+
+- Se conservan las 23 capas existentes y sus fuentes meteorológicas reales.
+- Todas las capas muestran una escala horizontal superior, paleta continua,
+  valores ordenados, fronteras y nombres legibles.
+- Nubosidad mantiene el mar azul y la tierra visible; cielo despejado
+  transparente, nubes blancas/grises y núcleos oscuros solo con precipitación.
+- La línea temporal muestra una vista rápida real al moverla y afina después
+  la hora exacta sin dejar el visor bloqueado seis segundos.
+- Caché PWA renovada a v10.110.
+
 VERSIÓN v10.38 · CAPAS CON VALORES Y DATOS DEL MAR
 
 - Viento y rachas recuperan valores, dirección, barbas y partículas sobre las teselas continuas.

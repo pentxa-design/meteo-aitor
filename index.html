@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.109" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.110" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -351,9 +351,15 @@
     .mapAitor.mapBaseTopographic[data-map-layer="cloud"] .mapReliefOverlay,.mapAitor.mapBaseTopographic[data-map-layer="precipitation"] .mapReliefOverlay,.mapAitor.mapBaseTopographic[data-map-layer="precipitation_15m"] .mapReliefOverlay,.mapAitor.mapBaseTopographic[data-map-layer="forecast_reflectivity"] .mapReliefOverlay{filter:saturate(1.32) contrast(1.18) brightness(1.00);mix-blend-mode:normal}
     .mapAitor.mapDaylight.mapBaseTopographic[data-map-layer="cloud"] .mapFieldOverlay{filter:saturate(.92) contrast(1.12) brightness(1.03)}
     .mapAitor.mapDaylight.mapBaseTopographic[data-map-layer="precipitation"] .mapFieldOverlay,.mapAitor.mapDaylight.mapBaseTopographic[data-map-layer="precipitation_15m"] .mapFieldOverlay,.mapAitor.mapDaylight.mapBaseTopographic[data-map-layer="forecast_reflectivity"] .mapFieldOverlay{filter:saturate(1.94) contrast(1.48) brightness(1.02)}
-    .mapAitor .mapNativeWeatherTile-cloud{filter:grayscale(1) contrast(1.16) brightness(1.03);mix-blend-mode:normal}
+    .mapAitor .mapNativeWeatherTile-cloud{filter:grayscale(1) contrast(1.10) brightness(1.12);mix-blend-mode:normal}
     .mapAitor .mapNativeWeatherTile{transition:opacity .12s linear}
     .mapAitor .mapNativeWeatherTileKind-cloud_rain{filter:grayscale(1) contrast(1.18) brightness(.80);mix-blend-mode:multiply}
+    /* v10.110 · costa limpia y cartografía siempre legible. La tesela base
+       dibuja el mar; ninguna capa meteorológica añade un velo azul costero. */
+    .mapAitor.mapBaseStandard .leaflet-container,.mapAitor.mapBaseTopographic .leaflet-container{background:#68b8e7}
+    .mapAitor.mapBaseStandard .leaflet-map-pane .leaflet-tile-pane,.mapAitor.mapBaseTopographic .leaflet-map-pane .leaflet-tile-pane{filter:saturate(1.08) contrast(1.10) brightness(1.02)}
+    .mapAitor.mapBaseStandard .mapReliefOverlay{opacity:0!important}
+    .mapAitor.mapBaseStandard[data-map-layer="cloud"] .leaflet-map-pane .leaflet-tile-pane,.mapAitor.mapBaseStandard[data-map-layer="precipitation"] .leaflet-map-pane .leaflet-tile-pane,.mapAitor.mapBaseStandard[data-map-layer="precipitation_15m"] .leaflet-map-pane .leaflet-tile-pane,.mapAitor.mapBaseStandard[data-map-layer="forecast_reflectivity"] .leaflet-map-pane .leaflet-tile-pane{filter:saturate(1.08) contrast(1.10) brightness(1.02)}
     .mapAitor .mapNativePreviewOverlay{transition:opacity .12s linear;image-rendering:auto}
     .mapAitor .mapNativeWeatherTile-precipitation{filter:saturate(1.20) contrast(1.14) brightness(.99)}
     .mapAitor .mapNativeWeatherTile-forecast_reflectivity{filter:saturate(1.21) contrast(1.14) brightness(1.01)}
@@ -425,16 +431,17 @@
     .mapOfficialToolbar strong{padding:0 8px;color:#fff;font-size:9px;white-space:nowrap}.mapOfficialLayer,.mapOfficialClose{min-height:31px;padding:0 10px;border:0;border-radius:999px;background:rgba(255,255,255,.10);color:#fff;font:850 9px/1 inherit;cursor:pointer;white-space:nowrap}.mapOfficialLayer:hover,.mapOfficialLayer.active{background:#f2a900;color:#151b20}.mapOfficialClose{width:31px;padding:0;background:#df5268;font-size:18px}.mapOfficialClose:hover{background:#ff6c82;color:#fff}
     @media(max-width:600px){.mapOfficialToolbar{left:8px;right:8px;transform:none;overflow-x:auto;justify-content:flex-start}.mapOfficialToolbar strong{display:none}.mapOfficialLayer,.mapOfficialClose{flex:0 0 auto}}
 
-    /* La leyenda de nubes es una clave mínima, no un panel que tape el mapa. */
-    .mapLegend.mapLegendCloud{align-items:center;gap:5px;width:auto;min-width:0;padding:5px 7px;border-radius:999px}
-    .mapLegend.mapLegendCloud .mapLegendBar{width:58px;height:9px;min-height:9px;border-radius:999px;box-shadow:none}
-    .mapLegend.mapLegendCloud .mapLegendScale{flex-direction:row;align-items:center;gap:4px;font-size:7px;line-height:1}
-    .mapLegend.mapLegendCloud .mapLegendScale span{display:grid;place-items:center;width:11px;height:11px;border-radius:50%;background:rgba(255,255,255,.10)}
-    @media(max-width:820px){.mapLegend.mapLegendCloud .mapLegendBar{width:46px;height:8px;min-height:8px}.mapLegend.mapLegendCloud .mapLegendScale{font-size:6px}}
-    /* En móvil la leyenda vertical tapaba una parte importante del mapa. La
-       información exacta sigue disponible al tocar un punto y en el texto de
-       la capa, por lo que se retira por completo en pantallas estrechas. */
-    @media(max-width:520px){.mapAitor .mapLegend{display:none!important}}
+    /* v10.110 · escala profesional horizontal, como en los visores de
+       producción. Queda pegada al borde superior y no tapa el campo. */
+    .mapLegend,.mapLegend.mapLegendCloud{box-sizing:border-box;top:0;left:58px;right:224px;bottom:auto;width:auto;min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:4px 7px 3px;border-radius:0 0 10px 10px;background:rgba(20,25,31,.84)}
+    .mapLegendBar,.mapLegend.mapLegendCloud .mapLegendBar{width:100%;height:10px;min-height:10px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.28)}
+    .mapLegendScale,.mapLegend.mapLegendCloud .mapLegendScale{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:4px;width:100%;color:#f5f8fa;font-size:7px;line-height:1;font-variant-numeric:tabular-nums}
+    .mapLegendScale span,.mapLegend.mapLegendCloud .mapLegendScale span{display:block;width:auto;height:auto;border-radius:0;background:transparent;white-space:nowrap;text-shadow:0 1px 2px #000}
+    .mapTopRibbon{top:34px}.mapLayerRail{top:34px}.mapPickerHint{top:78px}
+    @media(max-width:820px){.mapLegend,.mapLegend.mapLegendCloud{left:8px;right:8px;top:0;padding:3px 5px}.mapLegendBar,.mapLegend.mapLegendCloud .mapLegendBar{height:8px;min-height:8px}.mapLegendScale,.mapLegend.mapLegendCloud .mapLegendScale{font-size:6px}.mapLayerRail{top:50px}.mapTopRibbon{top:27px}.mapPickerHint{top:116px}}
+    /* La escala horizontal también permanece en móvil: ocupa una franja muy
+       fina y permite interpretar el color sin abrir ningún panel. */
+    @media(max-width:520px){.mapAitor .mapLegend{display:flex!important}.mapLegendScale,.mapLegend.mapLegendCloud .mapLegendScale{font-size:5px;gap:2px}.mapLegendScale span:nth-child(even){display:none}}
 
     /* Mareas oficiales Euskalmet · módulo fijo de Bermeo */
     .tidesPanel{position:relative;overflow:hidden;margin:0 0 16px;padding:14px 16px;border-radius:22px;background:linear-gradient(145deg,rgba(8,49,85,.98),rgba(22,35,91,.97));border:1px solid rgba(104,226,255,.34);box-shadow:0 16px 38px rgba(0,18,66,.30)}
@@ -2280,7 +2287,7 @@ setInterval(()=>{if(!document.hidden&&state.location&&isBermeoLocation(state.loc
    sus nodos reales sin inventar continuidad. Los valores auxiliares no
    sustituyen nunca el modelo seleccionado.
 --------------------------------------------------------------------------- */
-const mapAitorState={map:null,grid:null,labels:null,values:null,windArrows:null,isobars:null,field:null,nativeField:null,nativePendingField:null,nativePrefetchField:null,nativePrefetchTimer:null,nativePrefetchCleanupTimer:null,nativePrefetchKey:null,nativePrefetchReady:false,nativeFrameCache:new Map(),nativePrefetchTimers:new Map(),nativePrefetchGeneration:0,nativePrefetchDirection:1,nativeFrameTimer:null,nativeRefineTimer:null,nativeDesiredTimeIndex:null,nativeDragging:false,nativeCloudShadeTimer:null,nativePreviewField:null,nativePreviewTimer:null,nativePreviewCache:new Map(),nativePreviewTimers:new Map(),nativePreviewGeneration:0,nativeCacheIdentity:null,nativeCacheFrames:0,nativeCacheTrimTimer:null,nativeSource:null,nativeVectorSource:null,nativeWindSampleUrl:null,nativeGustSampleUrl:null,nativeWindSampleTimer:null,nativeWindSampleRequestId:0,nativeAdapters:new Map(),nativeMetaCache:new Map(),nativeWarmFiles:new Map(),nativeWarmUrls:new Set(),nativeWarmGeneration:0,nativeDerivedDewpointStates:new Map(),nativeRequestId:0,nativeRetryKey:null,nativeRetryCount:0,nativeRetryTimer:null,nativeAnnotationController:null,nativeAnnotationRequestId:0,nativeAnnotationTimer:null,nativeAnnotationKey:null,nativeMovieData:null,nativeMovieIdentity:null,nativeMovieField:null,nativeMovieController:null,nativeMovieRequestId:0,nativeMovieTimer:null,nativeMovieRenderFrame:null,nativeMovieRenderIndex:null,nativeMovieThrottleTimer:null,nativeMovieLastRenderAt:0,nativeMovieAnnotationsHidden:false,marker:null,pickerMarker:null,pickerLocation:null,data:null,layer:'precipitation',model:'ecmwf',renderedLayer:null,renderedModel:null,timeIndex:0,selectedForecastTime:null,playing:false,playTimer:null,playbackSpeed:1,lastPlaybackToggleAt:0,loading:false,requestController:null,requestId:0,rainPageController:null,rainPageRequestId:0,radarRequestId:0,radarTimer:null,euskalmetController:null,euskalmetLastGood:new Map(),renderFrame:null,gridRefineTimer:null,gridTimelineDragging:false,cache:new Map(),fieldCache:new Map(),lastGood:new Map(),lastError:null,windCanvas:null,windFrame:null,windFlowKey:null,windNeedsClear:false,particles:[],viewportTimer:null,selectionTimer:null,retryTimer:null,retryTick:null,retryRequest:null,retryAttempt:0,baseLayers:null,baseLabelLayers:null,baseReliefLayers:null,activeBaseLabel:null,activeBaseRelief:null,baseStyle:'standard',daylight:false,rainviewerLayer:null,rainviewerData:null,aemetRadarLayer:null,officialEmbedLayer:null,officialEmbedDismissed:false,location:{...BERMEO}};
+const mapAitorState={map:null,grid:null,labels:null,values:null,windArrows:null,isobars:null,field:null,nativeField:null,nativePendingField:null,nativePrefetchField:null,nativePrefetchTimer:null,nativePrefetchCleanupTimer:null,nativePrefetchKey:null,nativePrefetchReady:false,nativeFrameCache:new Map(),nativePrefetchTimers:new Map(),nativePrefetchGeneration:0,nativePrefetchDirection:1,nativeFrameTimer:null,nativeRefineTimer:null,nativeDesiredTimeIndex:null,nativeDragging:false,nativeCloudShadeTimer:null,nativePreviewField:null,nativePreviewTimer:null,nativePreviewCache:new Map(),nativePreviewTimers:new Map(),nativePreviewGeneration:0,nativeCacheIdentity:null,nativeCacheFrames:0,nativeCacheTrimTimer:null,nativeSource:null,nativeVectorSource:null,nativeWindSampleUrl:null,nativeGustSampleUrl:null,nativeWindSampleTimer:null,nativeWindSampleRequestId:0,nativeAdapters:new Map(),nativeMetaCache:new Map(),nativeWarmFiles:new Map(),nativeWarmUrls:new Set(),nativeWarmGeneration:0,nativeDerivedDewpointStates:new Map(),nativeRequestId:0,nativeRetryKey:null,nativeRetryCount:0,nativeRetryTimer:null,nativeAnnotationController:null,nativeAnnotationRequestId:0,nativeAnnotationTimer:null,nativeAnnotationKey:null,nativeMovieData:null,nativeMovieIdentity:null,nativeMovieField:null,nativeMovieController:null,nativeMovieRequestId:0,nativeMovieTimer:null,nativeMovieRenderFrame:null,nativeMovieRenderIndex:null,nativeMovieThrottleTimer:null,nativeMovieLastRenderAt:0,nativeMovieAnnotationsHidden:false,marker:null,pickerMarker:null,pickerLocation:null,data:null,layer:'precipitation',model:'ecmwf',renderedLayer:null,renderedModel:null,timeIndex:0,selectedForecastTime:null,playing:false,playTimer:null,playbackSpeed:1,lastPlaybackToggleAt:0,loading:false,requestController:null,requestId:0,rainPageController:null,rainPageRequestId:0,radarRequestId:0,radarTimer:null,euskalmetController:null,euskalmetLastGood:new Map(),renderFrame:null,gridRefineTimer:null,gridTimelineDragging:false,cache:new Map(),fieldCache:new Map(),lastGood:new Map(),lastError:null,windCanvas:null,windFrame:null,windFlowKey:null,windNeedsClear:false,particles:[],viewportTimer:null,selectionTimer:null,retryTimer:null,retryTick:null,retryRequest:null,retryAttempt:0,baseLayers:null,oceanLayer:null,baseLabelLayers:null,baseReliefLayers:null,activeBaseLabel:null,activeBaseRelief:null,baseStyle:'standard',daylight:false,rainviewerLayer:null,rainviewerData:null,aemetRadarLayer:null,officialEmbedLayer:null,officialEmbedDismissed:false,location:{...BERMEO}};
 const MAP_LAYERS={
   euskalmet_radar:{key:'observed_reflectivity',title:'Radar Kapildui · Euskalmet',unit:'dBZ',scale:[0,20,40,60],colors:['#8bd8ff','#4bd56e','#ffd63d','#e63a48'],legend:['0','20','40','60+'],detail:'Máxima reflectividad observada por el radar de Kapildui. Es un producto regional oficial de Euskalmet y se muestra completo, sin deformar.'},
   euskalmet_lightning:{key:'observed_lightning',title:'Rayos observados · Euskalmet',unit:'descargas',scale:[0,1],colors:['#1b2430','#ffe34b'],legend:['0','observadas'],detail:'Descargas observadas en el producto regional oficial de Euskalmet. La imagen se muestra completa, sin reinterpretar sus colores.'},
@@ -2487,14 +2494,14 @@ function mapNativeTimeline(metadata){
   const now=Date.now(),pastLimit=now-24*60*60*1000,futureLimit=now+6*24*60*60*1000;let first=valid.findIndex(item=>item.date.getTime()>=pastLimit);if(first<0)first=valid.length-1;const timeline=valid.slice(first).filter(item=>item.date.getTime()<=futureLimit);return timeline.length?timeline:valid.slice(first,first+1);
 }
 function mapNativeLayerSpecs(layer,model=mapAitorState.model){
-  if(layer==='cloud'&&model==='arome')return[{variable:'cloud_cover_low',factor:.86,kind:'cloud'},{variable:'precipitation',factor:.70,kind:'cloud_rain_arome'}];
-  if(layer==='cloud')return[{variable:'cloud_cover',factor:.86,kind:'cloud'},{variable:'precipitation',factor:.94,kind:'cloud_rain'}];
-  if(layer==='temperature')return[{variable:'temperature_2m',factor:.96,kind:'temperature'}];
-  if(layer==='dewpoint'&&model==='ecmwf')return[{variable:'dew_point_2m',factor:.82,kind:'dewpoint'}];
-  if(layer==='dewpoint')return[{variable:'relative_humidity_2m',factor:0,kind:'standard',support:true,dewpointSupport:true},{variable:'temperature_2m',factor:.82,kind:'dewpoint_derived',derived:true}];
-  if(layer==='t850')return[{variable:'temperature_850hPa',factor:.94,kind:'t850'}];
-  if(layer==='pressure')return[{variable:'pressure_msl',factor:.92,kind:'pressure'}];
-  const factor=layer==='cape'?.60:layer==='cin'?.55:1;
+  if(layer==='cloud'&&model==='arome')return[{variable:'cloud_cover_low',factor:.78,kind:'cloud'},{variable:'precipitation',factor:.80,kind:'cloud_rain_arome'}];
+  if(layer==='cloud')return[{variable:'cloud_cover',factor:.78,kind:'cloud'},{variable:'precipitation',factor:.82,kind:'cloud_rain'}];
+  if(layer==='temperature')return[{variable:'temperature_2m',factor:.58,kind:'temperature'}];
+  if(layer==='dewpoint'&&model==='ecmwf')return[{variable:'dew_point_2m',factor:.56,kind:'dewpoint'}];
+  if(layer==='dewpoint')return[{variable:'relative_humidity_2m',factor:0,kind:'standard',support:true,dewpointSupport:true},{variable:'temperature_2m',factor:.56,kind:'dewpoint_derived',derived:true}];
+  if(layer==='t850')return[{variable:'temperature_850hPa',factor:.60,kind:'t850'}];
+  if(layer==='pressure')return[{variable:'pressure_msl',factor:.76,kind:'pressure'}];
+  const factor=layer==='cape'?.72:layer==='cin'?.70:layer==='wind'?.72:1;
   return[{variable:MAP_NATIVE_VARIABLES[layer],factor,kind:layer==='precipitation'?'rain':layer==='forecast_reflectivity'?'reflectivity':layer==='cin'?'cin':layer==='wind'?'wind':'standard'}];
 }
 function mapNativeOmFile(source,entry){
@@ -2982,7 +2989,7 @@ async function loadMapNativeAnnotations(force=false){
 }
 function mapBlendRgb(a,b,ratio){const mix=Math.max(0,Math.min(1,ratio));return{r:Math.round(a.r+(b.r-a.r)*mix),g:Math.round(a.g+(b.g-a.g)*mix),b:Math.round(a.b+(b.b-a.b)*mix)}}
 function mapSmoothColor(config,value,palette=null){const v=mapNumber(value),scale=config.scale,colors=palette||config.colors.map(mapHexRgb);let index=0;while(index<scale.length-1&&v>scale[index+1])index+=1;if(index>=scale.length-1)return colors[colors.length-1];const low=scale[index],high=scale[index+1],ratio=Math.max(0,Math.min(1,(v-low)/Math.max(.0001,high-low))),a=colors[index],b=colors[index+1];return{r:Math.round(a.r+(b.r-a.r)*ratio),g:Math.round(a.g+(b.g-a.g)*ratio),b:Math.round(a.b+(b.b-a.b)*ratio)}}
-const MAP_CLOUD_TONES={high:{r:202,g:206,b:210},mid:{r:142,g:147,b:152},low:{r:82,g:87,b:92},storm:{r:27,g:30,b:34}};
+const MAP_CLOUD_TONES={high:{r:252,g:253,b:255},mid:{r:222,g:226,b:230},low:{r:166,g:172,b:179},storm:{r:43,g:47,b:52}};
 function mapCloudColor(total,low,mid,high,precipitation){
   const cover=Math.max(0,Math.min(100,mapNumber(total))),lowCloud=Math.max(0,Math.min(100,mapNumber(low))),midCloud=Math.max(0,Math.min(100,mapNumber(mid))),highCloud=Math.max(0,Math.min(100,mapNumber(high))),rain=Math.max(0,mapNumber(precipitation));
   const highTone=MAP_CLOUD_TONES.high,midTone=MAP_CLOUD_TONES.mid,lowTone=MAP_CLOUD_TONES.low,storm=MAP_CLOUD_TONES.storm;
@@ -2998,7 +3005,7 @@ function mapCloudColor(total,low,mid,high,precipitation){
   color=mapBlendRgb(color,dominantTone,mapSmoothstep(42,92,dominant)*.28);
   // En cobertura total, una masa densa debe leerse como nube gris compacta,
   // no como un velo blanco azulado. El nivel vertical sigue aportando textura.
-  const totalTone=mapBlendRgb({r:218,g:221,b:224},{r:45,g:49,b:53},mapSmoothstep(22,100,cover));color=mapBlendRgb(color,totalTone,.58);
+  const totalTone=mapBlendRgb({r:252,g:253,b:255},{r:184,g:189,b:195},mapSmoothstep(22,100,cover));color=mapBlendRgb(color,totalTone,.58);
   if(rain>.015){const rainStrength=mapSmoothstep(.015,1.25,rain),lowSupport=mapSmoothstep(25,80,lowCloud),stormWeight=(.34+.55*rainStrength)*(.85+.15*lowSupport);color=mapBlendRgb(color,storm,Math.min(.90,stormWeight))}
   return color;
 }
@@ -3016,15 +3023,27 @@ function mapCloudTexture(latitude,longitude,zoom=5){
 }
 let mapLandMaskData=null,mapLandMaskPromise=null;
 function loadMapLandMask(){
-  if(mapLandMaskData)return Promise.resolve(mapLandMaskData);
+  if(mapLandMaskData){refreshMapOceanOverlay();return Promise.resolve(mapLandMaskData)}
   if(mapLandMaskPromise)return mapLandMaskPromise;
   mapLandMaskPromise=fetch('assets/ne-110m-land.geojson',{cache:'force-cache'}).then(response=>{if(!response.ok)throw new Error('Máscara terrestre no disponible');return response.json()}).then(data=>{
     if(data?.type!=='FeatureCollection'||!Array.isArray(data.features))throw new Error('Máscara terrestre no válida');
-    mapLandMaskData=data;mapAitorState.fieldCache.clear();
+    mapLandMaskData=data;mapAitorState.fieldCache.clear();refreshMapOceanOverlay();
     if(MAP_MARINE_LAYERS.has(mapAitorState.layer)&&mapAitorState.data)scheduleMapRender();
     return data;
   }).catch(()=>null);
   return mapLandMaskPromise;
+}
+function mapLandOuterRings(data,longitudeShift=0){
+  const rings=[];data?.features?.forEach(feature=>{const geometry=feature?.geometry,polygons=geometry?.type==='Polygon'?[geometry.coordinates]:geometry?.type==='MultiPolygon'?geometry.coordinates:[];polygons.forEach(polygon=>{const outer=polygon?.[0];if(!Array.isArray(outer)||outer.length<3)return;rings.push(outer.map(coordinate=>[Number(coordinate[1]),Number(coordinate[0])+longitudeShift]))})});return rings;
+}
+function refreshMapOceanOverlay(){
+  const map=mapAitorState.map;if(!map||!window.L||!mapLandMaskData?.features?.length)return;
+  if(mapAitorState.oceanLayer){map.removeLayer(mapAitorState.oceanLayer);mapAitorState.oceanLayer=null}
+  // Un polígono oceánico opaco, recortado con Natural Earth, elimina el halo
+  // azul/gris que generaban las teselas alrededor de la costa. La tierra son
+  // huecos transparentes: conserva cartografía, fronteras y nombres reales.
+  const polygons=[-360,0,360].map(shift=>[[[-85,-180+shift],[-85,180+shift],[85,180+shift],[85,-180+shift],[-85,-180+shift]],...mapLandOuterRings(mapLandMaskData,shift)]);
+  mapAitorState.oceanLayer=L.polygon(polygons,{pane:'mapOcean',stroke:false,fill:true,fillColor:'#4ea9dc',fillOpacity:1,fillRule:'evenodd',interactive:false,smoothFactor:.2,className:'mapOceanOverlay'}).addTo(map);
 }
 function mapApplyLandMask(context,width,height,bounds,northY,southY,invert=false){
   if(!mapLandMaskData?.features?.length)return false;
@@ -3303,8 +3322,8 @@ function mapFieldOpacity(){
   // vivo, pero países, costas, carreteras y nombres permanecen legibles. Las
   // capas de fenómeno (lluvia, reflectividad y nubes) conservan más contraste
   // porque sus valores nulos ya son completamente transparentes.
-  const factor={temperature:.92,t850:.90,dewpoint:.86,humidity:.82,wind:.78,gust:.80,pressure:.80,cloud:.86,precipitation:.90,precipitation_15m:.92,forecast_reflectivity:.92,cape:.90,cin:.86,sea_temperature:.82,waves:.84}[mapAitorState.layer]??1;
-  const cap={temperature:.68,t850:.70,dewpoint:.64,humidity:.60,wind:.66,gust:.68,pressure:.66,cloud:.70,cape:.80,cin:.78,sea_temperature:.72,waves:.74}[mapAitorState.layer]??.96;
+  const factor={temperature:.78,t850:.78,dewpoint:.76,humidity:.82,wind:.78,gust:.80,pressure:.80,cloud:.86,precipitation:.90,precipitation_15m:.92,forecast_reflectivity:.92,cape:.90,cin:.86,sea_temperature:.82,waves:.84}[mapAitorState.layer]??1;
+  const cap={temperature:.56,t850:.60,dewpoint:.54,humidity:.60,wind:.66,gust:.68,pressure:.66,cloud:.70,cape:.80,cin:.78,sea_temperature:.72,waves:.74}[mapAitorState.layer]??.96;
   return Math.min(requested*factor,cap);
 }
 function mapRainViewerOpacity(){
@@ -3390,14 +3409,14 @@ function buildMapField(quick=false){
             // evitar manchones, pero ya no se borra por completo.
             alpha=Math.round(alpha*shape*(isolatedAccumulation?.42:1));
           }else if(config.key==='convective_inhibition'){
-            const support=mapSparseSupport(rowFloat,columnFloat,config.key,threshold);alpha=Math.round(alpha*Math.max(.34,support.fade));
+            const support=mapSparseSupport(rowFloat,columnFloat,config.key,threshold);alpha=Math.round(alpha*support.fade);
           }else{
             const support=mapSparseSupport(rowFloat,columnFloat,config.key,threshold);alpha=Math.round(alpha*support.fade);
           }
         }
         // Solo las respuestas excepcionalmente pequeñas quedan en modo de
         // muestras; las mallas normales conservan tanto campo como cifras.
-        if(exactAccumulation)alpha=0;
+        if(exactAccumulation)alpha=Math.round(alpha*.92);
         if(mapAitorState.layer==='precipitation'){
           const snowfall=mapInterpolatedValue(rowFloat,columnFloat,'snowfall');if(mapValidNumber(snowfall)&&snowfall>.02)color=mapBlendRgb(snowLight,snowDeep,Math.min(1,Math.sqrt(snowfall)/1.8));
         }
@@ -3489,16 +3508,16 @@ function mapLegendValues(config){
 }
 function renderMapConfiguredLegend(config){
   const minimum=config.scale[0],maximum=config.scale[config.scale.length-1],stops=config.colors.map((color,index)=>color+' '+(((config.scale[index]-minimum)/Math.max(.0001,maximum-minimum))*100).toFixed(1)+'%');
-  $('mapLegendBar').style.background='linear-gradient(to top,'+stops.join(',')+')';
+  $('mapLegendBar').style.background='linear-gradient(to right,'+stops.join(',')+')';
   if(mapAitorState.layer==='t850'){
-    $('mapLegendScale').innerHTML='<span>≥32 °C · rojo</span><span>24–30 °C · naranja</span><span>18–22 °C · amarillo</span><span>16 °C · neutro</span><span>12–14 °C · violeta/azul</span><span>0–10 °C · azul claro</span><span>≤−15 °C · azul/violeta</span>';
+    $('mapLegendScale').innerHTML='<span>≤−15 °C · violeta</span><span>0–10 °C · azul</span><span>12–14 °C · azul/violeta</span><span>16 °C · neutro</span><span>18–22 °C · amarillo</span><span>24–30 °C · naranja</span><span>≥32 °C · rojo</span>';
     return;
   }
-  $('mapLegendScale').innerHTML=mapLegendValues(config).reverse().map(value=>'<span>'+value+' '+config.unit+'</span>').join('');
+  $('mapLegendScale').innerHTML=mapLegendValues(config).map(value=>'<span>'+value+' '+config.unit+'</span>').join('');
 }
 function renderMapCloudLegend(){
   $('mapLegendBar').style.background='linear-gradient(to right,#45b9e5 0%,#dce0e2 22%,#b7bdc0 45%,#7b8388 66%,#3a4248 83%,#090f15 100%)';
-  $('mapLegendScale').innerHTML=mapAitorState.model==='arome'?'<span title="Cielo sin nube baja">○</span><span title="Nube baja suave">◔</span><span title="Nube baja densa">●</span><span title="Agua débil">◑</span><span title="Núcleo cargado">◆</span>':'<span title="Cielo despejado">○</span><span title="Nube suave">◔</span><span title="Nube media">●</span><span title="Agua débil">◑</span><span title="Núcleo cargado">◆</span>';
+  $('mapLegendScale').innerHTML=mapAitorState.model==='arome'?'<span title="Mar y cielo sin nube baja">Mar azul</span><span title="Nube baja suave">Nube suave</span><span title="Nube baja densa">Nube densa</span><span title="Núcleo con precipitación">Núcleo cargado</span>':'<span title="Mar azul y tierra visible">Despejado</span><span title="Nube suave">Nube suave</span><span title="Nube media">Nube media</span><span title="Núcleo con precipitación">Núcleo cargado</span>';
 }
 function updateMapLabels(){
   const data=mapAitorState.data,config=mapLayerConfig();
@@ -3510,8 +3529,8 @@ function updateMapLabels(){
     $('mapTimeBadge').textContent='Observación · RainViewer · '+(daylight?'☀ Día':'☾ Noche');
     $('mapTimelineLabel').textContent=mapEpochText(frame?.time);
     $('mapLegend').style.display='flex';
-    $('mapLegendBar').style.background='linear-gradient(to top,#928871 0%,#cec087 8%,#88ddee 18%,#00a3e0 28%,#0077aa 37%,#005588 45%,#ffee00 55%,#ffaa00 65%,#ff4400 75%,#c10000 84%,#ffaaff 92%,#ff77ff 100%)';
-    $('mapLegendScale').innerHTML='<span>60 dBZ</span><span>50</span><span>40</span><span>30</span><span>20</span><span>5</span>';
+    $('mapLegendBar').style.background='linear-gradient(to right,#928871 0%,#cec087 8%,#88ddee 18%,#00a3e0 28%,#0077aa 37%,#005588 45%,#ffee00 55%,#ffaa00 65%,#ff4400 75%,#c10000 84%,#ffaaff 92%,#ff77ff 100%)';
+    $('mapLegendScale').innerHTML='<span>5 dBZ</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60+</span>';
     return;
   }
   if(mapUsesNativeTiles()&&mapAitorState.nativeSource){
@@ -4062,7 +4081,7 @@ function mapCanonicalMuWindow(raw,zoom,center){
   // La vista ES (zoom 5) necesita la malla regional de 0,25° para contrastar
   // una célula concreta con el radar. Reservamos la panorámica reducida para
   // Mundo y Europa; Bermeo y España pasan a pasos horarios y detalle real.
-  if(zoom<5||rawWest<-180||rawEast>180)return world;
+  if(zoom<6||latitudeSpan>11.5||longitudeSpan>19.5||rawWest<-180||rawEast>180)return world;
   const longitude=((Number(center.lng)+540)%360)-180;
   if(Math.abs(longitude)>170)return world;
   const centerLat=Math.max(-74,Math.min(79,Math.round(Number(center.lat)/2)*2)),centerLon=Math.max(-169.75,Math.min(169.75,Math.round(longitude/2)*2));
@@ -4334,7 +4353,7 @@ function updateMapReliefStrength(){
   // y una capa dispersa deja ver el mapa intacto donde no hay fenomeno.
   if(reliefPane)reliefPane.style.zIndex='380';
   const topographicOpacity=radar ? .72 : (rain ? .78 : (cloud ? .72 : .82));
-  relief.setOpacity(base==='topographic' ? topographicOpacity : (base==='dark' ? .20 : .12));
+  relief.setOpacity(base==='topographic' ? topographicOpacity : (base==='dark' ? .20 : 0));
 }
 function scheduleMapGridRefine(delay=180){
   clearTimeout(mapAitorState.gridRefineTimer);mapAitorState.gridRefineTimer=null;
@@ -4357,7 +4376,7 @@ function finishMapTimelineScrub(){
     // La vista ligera real permanece visible mientras llega la tesela exacta.
     // Así el cursor responde al instante sin inventar ni interpolar valores.
     const targetKey=mapNativeFrameKey(target);pauseMapNativePrefetchTimers(targetKey);clearMapNativePreviewCache(Boolean(mapAitorState.nativePreviewField));
-    prefetchMapNativeFrame(target,0);scheduleMapNativeRefine(target,80);
+    prefetchMapNativeFrame(target,0);
     if(!mapAitorState.nativePreviewField&&mapAitorState.nativeField?._mapNativeFrameIndex===target){mapAitorState.nativeDesiredTimeIndex=null;finalizeMapNativeTimelineUi();prefetchMapNativeWindow(target,mapAitorState.nativePrefetchDirection);if(mapAitorState.playing)scheduleMapNativePlayback();return}
     $('mapStatus').textContent=(mapAitorState.nativePreviewField?'Vista inmediata real activa':'Se conserva la última imagen correcta')+' · cargando hora exacta · '+$('mapTimelineLabel').textContent;return
   }
@@ -4395,14 +4414,15 @@ function initMapAitor(){
   const cartoAttribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · © <a href="https://carto.com/attributions">CARTO</a>';
   // Fondo profesional claro. El relieve se añade en una capa independiente;
   // así lluvia, nubes y reflectividad nunca quedan sobre un mapa negro.
-  const topographic=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:cartoAttribution});
+  const topographic=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:cartoAttribution});
   // El fondo limpio usa cartografía sin rótulos y una única capa de
   // etiquetas por encima del campo meteorológico. Antes se combinaban los
   // nombres de OSM con los de CARTO y el mapa parecía duplicado y recargado.
-  const standardUrl='https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
+  const standardUrl='https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png';
   const standardCloudUrl=standardUrl;
   const standard=L.tileLayer(standardUrl,{subdomains:'abcd',maxZoom:20,attribution:cartoAttribution,mapStandardUrl:standardUrl,mapCloudUrl:standardCloudUrl});
   const dark=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:cartoAttribution});
+  map.createPane('mapOcean');map.getPane('mapOcean').style.zIndex='210';map.getPane('mapOcean').style.pointerEvents='none';
   map.createPane('mapWeatherRadar');map.getPane('mapWeatherRadar').style.zIndex='420';map.getPane('mapWeatherRadar').style.pointerEvents='none';
   map.createPane('mapRelief');map.getPane('mapRelief').style.zIndex='380';map.getPane('mapRelief').style.pointerEvents='none';
   map.createPane('mapLabels');map.getPane('mapLabels').style.zIndex='440';map.getPane('mapLabels').style.pointerEvents='none';
@@ -4467,7 +4487,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.109',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.110',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
