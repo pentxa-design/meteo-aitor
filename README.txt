@@ -1,6 +1,6 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
-VERSIÓN v10.118 · FONDOS AJUSTADOS AL PRODUCTO
+VERSIÓN v10.119 · NUBOSIDAD CON CARTOGRAFÍA VISIBLE
 
 - Android e iPhone abren el visor sobre la Península a resolución regional;
   Mac conserva el encuadre europeo.
@@ -22,7 +22,7 @@ VERSIÓN v10.118 · FONDOS AJUSTADOS AL PRODUCTO
 - En móvil se suavizan los nombres para que la cartografía no forme manchas.
 - La nube seca gana transparencia y la lluvia integrada conserva verde,
   amarillo, naranja y rojo sin ocultar costas ni fronteras.
-- Caché PWA renovada a v10.118.
+- Caché PWA renovada a v10.119.
 
 VERSIÓN v10.113 · CAPAS METEOROLÓGICAS CORREGIDAS
 

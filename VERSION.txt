@@ -1,4 +1,4 @@
-Meteo Aitor Bermeo v10.118 · fondos ajustados al producto
+Meteo Aitor Bermeo v10.119 · nubosidad con cartografía visible
 Fecha: 2026-08-13
 
 Las capas actuales se conservan y se añade Tormentas eléctricas ECMWF con el
