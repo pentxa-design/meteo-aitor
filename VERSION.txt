@@ -1,4 +1,4 @@
-Meteo Aitor Bermeo v10.113 · capas meteorológicas corregidas
+Meteo Aitor Bermeo v10.114 · mapas móviles legibles
 Fecha: 2026-08-13
 
 Las 23 capas actuales se conservan. Mapa limpio vuelve a ser el fondo inicial.
