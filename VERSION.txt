@@ -1,3 +1,18 @@
+Meteo Aitor Bermeo v10.111 · colores con relieve cartográfico
+Fecha: 2026-08-13
+
+Las 23 capas actuales se conservan. El relieve topográfico pasa a ser el fondo
+inicial, con una intensidad adaptada al tipo de mapa: tenue en nubosidad,
+precipitación y radar; más visible en temperatura, rocío, humedad, viento,
+presión, CAPE, CIN, temperatura marina y oleaje.
+
+Las fronteras, costas, nombres y cifras permanecen encima de la capa para que
+el color tenga profundidad sin ocultar el territorio. Nubosidad conserva mar
+azul y tierra visible, con gris progresivo y núcleos oscuros solo al coincidir
+con precipitación real del mismo modelo.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.110 · mapas profesionales y línea temporal fluida
 Fecha: 2026-08-13
 
@@ -13,8 +28,6 @@ progresan de blanco a gris y solo se oscurecen donde existe precipitación real.
 La línea de horas vuelve a activar una vista ligera del mismo modelo y hora
 mientras se mueve el cursor. Al soltar, el fotograma exacto la sustituye
 automáticamente, sin mantener el mapa congelado durante seis segundos.
-
-VERSIÓN ANTERIOR
 
 Meteo Aitor Bermeo v10.109 · visor reparado y respuesta inmediata
 Fecha: 2026-08-12

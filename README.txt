@@ -1,5 +1,15 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
+VERSIÓN v10.111 · COLORES CON RELIEVE CARTOGRÁFICO
+
+- Las 23 capas se conservan completas, sin sustituir datos ni fuentes.
+- El relieve topográfico pasa a ser el fondo inicial de los mapas y se adapta
+  a cada campo: suave en nubes y radar, más definido en campos continuos.
+- Fronteras, costas, nombres y valores permanecen sobre el color meteorológico.
+- Nubes mantiene el mar azul, la tierra visible y núcleos oscuros únicamente
+  donde el mismo modelo publica precipitación.
+- Caché PWA renovada a v10.111.
+
 VERSIÓN v10.110 · MAPAS PROFESIONALES Y CURSOR FLUIDO
 
 - Se conservan las 23 capas existentes y sus fuentes meteorológicas reales.

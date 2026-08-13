@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.110" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.111" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -371,6 +371,20 @@
     .mapAitor.mapBaseTopographic[data-map-layer="rainviewer"] .mapReliefOverlay,.mapAitor.mapBaseTopographic[data-map-layer="reflectivity"] .mapReliefOverlay{filter:saturate(1.34) contrast(1.20) brightness(1.00);mix-blend-mode:normal}
     .mapAitor .rainviewerTile{filter:saturate(1.18) contrast(1.10) brightness(1.01)}
     .mapRadarStage img{filter:contrast(1.22) saturate(1.48)}
+    /* v10.111 · acabado de atlas meteorológico. El relieve queda por debajo
+       del dato, con fuerza adaptada al tipo de campo, y los límites/nombres
+       conservan el último plano. El color describe el valor; el relieve no lo
+       altera y tampoco se elimina ninguna capa existente. */
+    .mapAitor.mapBaseTopographic .mapReliefOverlay{filter:saturate(1.08) contrast(1.24) brightness(1.01);mix-blend-mode:normal}
+    .mapAitor.mapBaseTopographic .mapBoundaryLabels{filter:grayscale(1) contrast(2.78) brightness(.50) drop-shadow(0 0 1px rgba(255,255,255,.96));mix-blend-mode:multiply;opacity:1!important}
+    .mapAitor.mapBaseTopographic[data-map-layer="cloud"] .mapReliefOverlay{filter:saturate(.82) contrast(1.16) brightness(1.06)}
+    .mapAitor.mapBaseTopographic[data-map-layer="cloud"] .mapNativeWeatherTile-cloud{filter:grayscale(1) contrast(1.18) brightness(1.09)}
+    .mapAitor.mapBaseTopographic[data-map-layer="cloud"] .mapNativeWeatherTileKind-cloud_rain,.mapAitor.mapBaseTopographic[data-map-layer="cloud"] .mapNativeWeatherTileKind-cloud_rain_arome{filter:grayscale(1) contrast(1.26) brightness(.80);mix-blend-mode:multiply}
+    .mapAitor.mapBaseTopographic[data-map-layer="temperature"] .mapNativeWeatherTile,.mapAitor.mapBaseTopographic[data-map-layer="t850"] .mapNativeWeatherTile{filter:saturate(1.72) contrast(1.22) brightness(1.02)}
+    .mapAitor.mapBaseTopographic[data-map-layer="dewpoint"] .mapNativeWeatherTile,.mapAitor.mapBaseTopographic[data-map-layer="humidity"] .mapNativeWeatherTile{filter:saturate(1.58) contrast(1.18) brightness(1.02)}
+    .mapAitor.mapBaseTopographic[data-map-layer="wind"] .mapNativeWeatherTile,.mapAitor.mapBaseTopographic[data-map-layer="gust"] .mapNativeWeatherTile,.mapAitor.mapBaseTopographic[data-map-layer="pressure"] .mapNativeWeatherTile{filter:saturate(1.46) contrast(1.17) brightness(1.01)}
+    .mapAitor.mapBaseTopographic[data-map-layer="cape"] .mapFieldOverlay,.mapAitor.mapBaseTopographic[data-map-layer="cin"] .mapFieldOverlay{filter:saturate(1.48) contrast(1.18) brightness(1.01)}
+    .mapAitor.mapBaseTopographic[data-map-layer="sea_temperature"] .mapFieldOverlay,.mapAitor.mapBaseTopographic[data-map-layer="waves"] .mapFieldOverlay{filter:saturate(1.46) contrast(1.16) brightness(1.02)}
     .mapTopRibbon{top:12px;left:58px;right:232px}.mapLayerBadge,.mapTimeBadge{border-radius:999px;background:rgba(20,25,31,.82);border-color:rgba(255,255,255,.14);box-shadow:0 8px 28px rgba(0,0,0,.32);font-size:11px}
     .mapQuickViews{position:absolute;z-index:710;left:11px;top:230px;display:grid;gap:6px}.mapQuickButton{width:38px;height:38px;padding:0;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(20,25,31,.84);color:#fff;font:850 14px/1 inherit;cursor:pointer;box-shadow:0 7px 20px rgba(0,0,0,.25);backdrop-filter:blur(12px)}.mapQuickButton:hover,.mapQuickButton.active{background:#1888df;border-color:#72d7ff}
     .mapLayerRail{position:absolute;z-index:720;top:10px;right:10px;bottom:142px;width:204px;padding:9px;border-radius:18px;background:rgba(24,27,31,.84);border:1px solid rgba(255,255,255,.14);box-shadow:0 16px 38px rgba(0,0,0,.35);backdrop-filter:blur(17px);overflow:auto;scrollbar-width:thin}
@@ -670,7 +684,7 @@
             <label class="mapToggle"><input id="mapValueLabels" type="checkbox" checked /> Valores</label>
             <label class="mapToggle"><input id="mapPressureLabels" type="checkbox" checked /> Isobaras reales</label>
             <label class="mapToggle"><input id="mapFollowPlace" type="checkbox" /> Seguir localidad</label>
-            <label class="mapToggle mapBaseControl">Fondo <select id="mapBase" aria-label="Fondo del mapa"><option value="topographic">Relieve topográfico</option><option value="dark">Oscuro profesional</option><option value="standard" selected>Mapa limpio</option></select></label>
+            <label class="mapToggle mapBaseControl">Fondo <select id="mapBase" aria-label="Fondo del mapa"><option value="topographic" selected>Relieve topográfico</option><option value="dark">Oscuro profesional</option><option value="standard">Mapa limpio</option></select></label>
             <label class="mapOpacity">Capa <input id="mapOpacity" type="range" min="30" max="98" value="88" step="1" aria-label="Intensidad de la capa meteorológica" /><output id="mapOpacityValue" for="mapOpacity">88%</output></label>
             <button id="mapWorld" class="mapFullscreen mapWorld" type="button">🌍 Mundo</button>
             <button id="mapOfficialOpen" class="mapFullscreen mapOfficialButton" type="button">◉ Windy</button>
@@ -3820,7 +3834,7 @@ const MAP_AEMET_IMAGE_BOUNDS=[[27.22,-16.08],[51.30,12.14]],MAP_AEMET_VIEW_BOUND
 function setMapRadar(){
   if(mapAitorState.requestController)mapAitorState.requestController.abort();
   clearTimeout(mapAitorState.radarTimer);const radarRequestId=++mapAitorState.radarRequestId;
-  clearMapNativeAnnotations();mapAitorState.loading=false;mapAitorState.lastError=null;mapAitorState.rainviewerData=null;clearMapLayers();stopMapWind();$('mapLegend').style.display='none';$('mapRadarStage').classList.remove('active');setMapBaseStyle('standard');
+  clearMapNativeAnnotations();mapAitorState.loading=false;mapAitorState.lastError=null;mapAitorState.rainviewerData=null;clearMapLayers();stopMapWind();$('mapLegend').style.display='none';$('mapRadarStage').classList.remove('active');setMapBaseStyle('topographic');
   const image=$('mapRadarImage'),candidates=['/api/aemet-radar?frame='+Math.floor(Date.now()/300000),...mapAemetDirectUrls()];image.alt='Reflectividad de radar observada por AEMET';image.style.visibility='hidden';
   if($('mapRadarProductTag'))$('mapRadarProductTag').textContent='Producto nacional fijo · AEMET';
   if($('mapRadarCaption'))$('mapRadarCaption').innerHTML='<strong>Radar AEMET · reflectividad observada</strong><br />Imagen nacional oficial más reciente. Para zoom y desplazamiento sobre el mapa usa “Radar mundial”.';
@@ -3838,7 +3852,7 @@ function setMapLightning(){
   if(mapAitorState.requestController)mapAitorState.requestController.abort();
   unsetMapRadar();clearMapNativeAnnotations();clearMapLayers();stopMapWind();mapAitorState.data=null;mapAitorState.rainviewerData=null;mapAitorState.loading=false;mapAitorState.lastError=null;
   const requestId=++mapAitorState.radarRequestId,image=$('mapRadarImage'),stage=$('mapRadarStage');
-  clearTimeout(mapAitorState.radarTimer);$('mapLegend').style.display='none';setMapBaseStyle('standard');stage.classList.add('active');image.alt='Mapa de rayos observados por AEMET';image.style.visibility='hidden';
+  clearTimeout(mapAitorState.radarTimer);$('mapLegend').style.display='none';setMapBaseStyle('topographic');stage.classList.add('active');image.alt='Mapa de rayos observados por AEMET';image.style.visibility='hidden';
   if($('mapRadarProductTag'))$('mapRadarProductTag').textContent='Último período estándar · AEMET OpenData';
   if($('mapRadarCaption'))$('mapRadarCaption').innerHTML='<strong>Rayos observados · AEMET</strong><br />Producto oficial más reciente, mostrado completo y sin deformar. Es observación de descargas, no una previsión.';
   $('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Cargando rayos observados AEMET…';$('mapTimeBadge').textContent='Observación oficial';$('mapTimelineLabel').textContent='Último período estándar';$('mapStatus').textContent='Consultando la red de rayos de AEMET OpenData…';
@@ -3857,7 +3871,7 @@ function setMapEuskalmet(product='radar'){
   if(mapAitorState.requestController)mapAitorState.requestController.abort();
   unsetMapRadar();clearMapNativeAnnotations();clearMapLayers();stopMapWind();mapAitorState.data=null;mapAitorState.rainviewerData=null;mapAitorState.loading=false;mapAitorState.lastError=null;
   const requestId=++mapAitorState.radarRequestId,image=$('mapRadarImage'),stage=$('mapRadarStage');
-  clearTimeout(mapAitorState.radarTimer);$('mapLegend').style.display='none';setMapBaseStyle('standard');stage.classList.add('active');image.alt=isLightning?'Rayos observados por Euskalmet':'Reflectividad observada por el radar de Kapildui de Euskalmet';image.style.visibility='hidden';
+  clearTimeout(mapAitorState.radarTimer);$('mapLegend').style.display='none';setMapBaseStyle('topographic');stage.classList.add('active');image.alt=isLightning?'Rayos observados por Euskalmet':'Reflectividad observada por el radar de Kapildui de Euskalmet';image.style.visibility='hidden';
   if($('mapRadarProductTag'))$('mapRadarProductTag').textContent=(isLightning?'Rayos':'Radar Kapildui')+' · Euskalmet';
   if($('mapRadarCaption'))$('mapRadarCaption').innerHTML='<strong>'+(isLightning?'Rayos observados':'Radar de Kapildui · máxima reflectividad')+' · Euskalmet</strong><br />Último fotograma oficial utilizable de las tres horas recientes, completo y sin deformar. <a href="https://www.euskalmet.euskadi.eus/observacion/radar-kapildui-precipitaciones/" target="_blank" rel="noopener">Abrir fuente oficial</a>.';
   $('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Cargando '+(isLightning?'rayos':'radar de Kapildui')+' Euskalmet…';$('mapTimeBadge').textContent='Observación oficial';$('mapTimelineLabel').textContent='Último fotograma disponible';$('mapStatus').textContent='Consultando los fotogramas públicos de Euskalmet…';
@@ -4326,8 +4340,8 @@ function queueMapViewportRefresh(){
 function setMapBaseStyle(style='standard'){
   const map=mapAitorState.map,layers=mapAitorState.baseLayers,labelLayers=mapAitorState.baseLabelLayers,reliefLayers=mapAitorState.baseReliefLayers;if(!map||!layers)return;
   // El fondo elegido nunca cambia al seleccionar una capa meteorológica.
-  // Mapa limpio es el valor inicial; topográfico y oscuro siguen disponibles
-  // únicamente como elecciones manuales del usuario durante la sesión.
+  // Relieve topográfico es el fondo inicial profesional. Mapa limpio y oscuro
+  // siguen disponibles como elecciones manuales durante la sesión.
   const requested=layers[style]?style:'standard',selected=requested;
   Object.values(layers).forEach(layer=>{if(map.hasLayer(layer))map.removeLayer(layer)});
   if(mapAitorState.activeBaseRelief&&map.hasLayer(mapAitorState.activeBaseRelief))map.removeLayer(mapAitorState.activeBaseRelief);
@@ -4352,7 +4366,10 @@ function updateMapReliefStrength(){
   // Asi una capa continua conserva el gradiente, pero no borra el territorio;
   // y una capa dispersa deja ver el mapa intacto donde no hay fenomeno.
   if(reliefPane)reliefPane.style.zIndex='380';
-  const topographicOpacity=radar ? .72 : (rain ? .78 : (cloud ? .72 : .82));
+  // El relieve acompaña a todas las capas: más suave bajo nubes y radar para
+  // no falsear ecos; más definido bajo campos continuos como temperatura,
+  // humedad, viento, presión, CAPE y CIN.
+  const topographicOpacity=radar ? .48 : (rain ? .56 : (cloud ? .44 : .62));
   relief.setOpacity(base==='topographic' ? topographicOpacity : (base==='dark' ? .20 : 0));
 }
 function scheduleMapGridRefine(delay=180){
@@ -4429,7 +4446,7 @@ function initMapAitor(){
   const relief=()=>L.tileLayer(reliefUrl,{subdomains:'abc',maxZoom:17,pane:'mapRelief',opacity:.28,className:'mapReliefOverlay',attribution:'Datos © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, <a href="https://viewfinderpanoramas.org/">SRTM</a> · estilo © <a href="https://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC‑BY‑SA</a>)'});
   const lightLabels=()=>L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,pane:'mapLabels',opacity:.96,className:'mapBoundaryLabels',attribution:cartoAttribution});
   const darkLabels=()=>L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,pane:'mapLabels',opacity:.96,className:'mapBoundaryLabelsDark',attribution:cartoAttribution});
-  mapAitorState.map=map;mapAitorState.baseLayers={topographic,dark,standard};mapAitorState.baseLabelLayers={topographic:lightLabels(),standard:lightLabels(),dark:darkLabels()};mapAitorState.baseReliefLayers={topographic:relief(),dark:relief(),standard:relief()};loadMapLandMask();syncMapSelection(mapAitorState.layer,mapAitorState.model);setMapBaseStyle('standard');updateMapLightTheme();mapAitorState.grid=L.layerGroup().addTo(map);mapAitorState.isobars=L.layerGroup().addTo(map);mapAitorState.labels=L.layerGroup().addTo(map);mapAitorState.values=L.layerGroup().addTo(map);mapAitorState.windArrows=L.layerGroup().addTo(map);
+  mapAitorState.map=map;mapAitorState.baseLayers={topographic,dark,standard};mapAitorState.baseLabelLayers={topographic:lightLabels(),standard:lightLabels(),dark:darkLabels()};mapAitorState.baseReliefLayers={topographic:relief(),dark:relief(),standard:relief()};loadMapLandMask();syncMapSelection(mapAitorState.layer,mapAitorState.model);setMapBaseStyle('topographic');updateMapLightTheme();mapAitorState.grid=L.layerGroup().addTo(map);mapAitorState.isobars=L.layerGroup().addTo(map);mapAitorState.labels=L.layerGroup().addTo(map);mapAitorState.values=L.layerGroup().addTo(map);mapAitorState.windArrows=L.layerGroup().addTo(map);
   const mapViewport=$('mapViewport');let mapControlsRestoreTimer=null;
   map.on('movestart zoomstart dragstart',()=>{clearTimeout(mapControlsRestoreTimer);mapViewport?.classList.add('isMapMoving')});
   map.on('moveend zoomend dragend',()=>{clearTimeout(mapControlsRestoreTimer);mapControlsRestoreTimer=setTimeout(()=>mapViewport?.classList.remove('isMapMoving'),140)});
@@ -4487,7 +4504,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.110',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.111',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
