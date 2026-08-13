@@ -1,17 +1,22 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
-VERSIÓN v10.115 · MAPAS MÓVILES LEGIBLES
+VERSIÓN v10.116 · FONDO PROFESIONAL SEGÚN LA CAPA
 
 - Android e iPhone abren el visor sobre la Península a resolución regional;
   Mac conserva el encuadre europeo.
-- Tierra, mar, costas y nombres permanecen visibles bajo la precipitación.
+- El fondo se adapta automáticamente al producto: gris neutro en lluvia y
+  tormentas, gris profundo en acumulados, tierra cálida en nubosidad y campo
+  meteorológico completo en temperatura.
+- Tierra, mar, costas y nombres permanecen visibles bajo el campo meteorológico.
 - Las trazas inferiores a 0,10 mm/h son transparentes y no lavan el mapa.
 - Una muestra aislada de una malla abierta no se convierte en una mancha falsa.
 - Reflectividad usa una base clara limpia, con tierra y costas distinguibles
   incluso cuando no hay ecos.
 - Las cifras de lluvia se ocultan en panorámica móvil para no tapar el campo.
-- Mapa limpio continúa siendo el fondo inicial y se conservan las 23 capas.
-- Caché PWA renovada a v10.115.
+- Se incorpora Tormentas eléctricas ECMWF con densidad real de rayos; si el
+  proveedor no publica el campo, no se inventan descargas.
+- Mapa limpio continúa siendo el fondo inicial y se conservan todas las capas.
+- Caché PWA renovada a v10.116.
 
 VERSIÓN v10.113 · CAPAS METEOROLÓGICAS CORREGIDAS
 

@@ -13,7 +13,7 @@ const MODELS = {
 const GFS_ONLY_LAYERS = new Set();
 // Open-Meteo publica lightning_density únicamente para ECMWF IFS. Esta capa
 // queda ligada al modelo que origina el dato: no se sustituye por best_match.
-const ECMWF_ONLY_LAYERS = new Set(['thunderstorms']);
+const ECMWF_ONLY_LAYERS = new Set(['thunderstorms', 'electric_storms']);
 const AROME_LAYERS = new Set(['precipitation', 'forecast_reflectivity', 'cloud', 'temperature', 'humidity', 'wind', 'gust', 'cape']);
 
 function modelForLayer(requested, layer) {
@@ -444,8 +444,8 @@ module.exports = async function handler(req, res) {
       model: { requested: effectiveRequested, label: marineRequested ? model.label : sourceModel === 'best_match' ? 'Modelo automático · respaldo' : model.label, sourceModel, cinAvailable, fallback: !marineRequested && sourceModel === 'best_match', provider: marineRequested ? 'Open-Meteo Marine' : 'Open-Meteo', resolution: marineRequested ? 'Mejor modelo marino disponible' : effectiveRequested === 'arome' ? 'AROME France HD 0.01° · 1,5 km' : effectiveRequested === 'gfs' ? 'GFS seamless' : effectiveRequested === 'icon' ? 'ICON seamless' : displayLayer === 't850' ? 'ECMWF IFS 0.25°' : 'ECMWF IFS HRES' },
       diagnostics: displayLayer === 'forecast_reflectivity'
         ? { native: false, derived: true, sourceVariable: 'precipitation', interval: 'preceding_hour_sum', units: 'dBZ', formula: 'Z=200·R^1.6' }
-        : displayLayer === 'thunderstorms'
-          ? { native: true, derived: false, sourceVariable: 'precipitation', lightningVariable: 'lightning_density', lightningAvailable, interval: 'preceding_hour_sum', units: 'mm', phenomenon: 'ECMWF precipitation; observed lightning remains on official AEMET/Euskalmet layers' }
+        : (displayLayer === 'thunderstorms' || displayLayer === 'electric_storms')
+          ? { native: true, derived: false, sourceVariable: displayLayer === 'electric_storms' ? 'lightning_density' : 'precipitation', lightningVariable: 'lightning_density', lightningAvailable, interval: 'preceding_hour_sum', units: displayLayer === 'electric_storms' ? 'l/km²' : 'mm', phenomenon: displayLayer === 'electric_storms' ? 'ECMWF lightning density; no lightning is synthesized when the field is unavailable' : 'ECMWF precipitation with lightning density; observed lightning remains on official AEMET/Euskalmet layers' }
         : displayLayer === 'precipitation_3h'
           ? { native: false, derived: true, sourceVariable: 'precipitation', interval: 'three-hour-forward-sum', units: 'mm', samples: 3 }
         : displayLayer === 'cape'
@@ -480,7 +480,7 @@ module.exports = async function handler(req, res) {
     const dailyLimited = isDailyLimitError(error);
     // Si la instancia conserva una malla anterior, es preferible mostrarla
     // identificada como caché antes que dejar el visor completamente vacío.
-    const detailSensitive = ['precipitation', 'thunderstorms', 'precipitation_3h', 'precipitation_6h', 'precipitation_12h', 'precipitation_24h', 'rain', 'showers', 'snowfall', 'precipitation_probability', 'forecast_reflectivity', 'cloud'].includes(displayLayer);
+    const detailSensitive = ['precipitation', 'thunderstorms', 'electric_storms', 'precipitation_3h', 'precipitation_6h', 'precipitation_12h', 'precipitation_24h', 'rain', 'showers', 'snowfall', 'precipitation_probability', 'forecast_reflectivity', 'cloud'].includes(displayLayer);
     const nearby = cached || closestStalePayload(effectiveRequested, layer, displayLayer, { south, north, west, east }, detailSensitive ? Math.max(18, Math.floor(density * 0.8)) : 0);
     const canUseStale = nearby?.payload && Date.now() - nearby.savedAt < MAX_STALE_AGE;
     if (canUseStale) {

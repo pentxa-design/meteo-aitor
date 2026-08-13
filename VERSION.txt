@@ -1,25 +1,19 @@
-Meteo Aitor Bermeo v10.115 · lluvia continental limpia
+Meteo Aitor Bermeo v10.116 · fondos profesionales por capa
 Fecha: 2026-08-13
 
-Las 23 capas actuales se conservan. Mapa limpio vuelve a ser el fondo inicial.
-En capas de lluvia azul el fondo marítimo se vuelve neutro para separar la
-cartografía del dato meteorológico. Se elimina la máscara oceánica simplificada
-que recortaba falsamente el norte de Galicia.
+Las capas actuales se conservan y se añade Tormentas eléctricas ECMWF con el
+campo real lightning_density. Si ese campo no está disponible, el mapa lo
+indica y no inventa descargas. Mapa limpio sigue siendo el fondo inicial.
 
-Lluvia 3 h y acumulada muestran cantidades pequeñas como superficie; Lluvia y
-truenos rechaza las mallas de respaldo demasiado dispersas. La reflectividad
-reutiliza la caché de precipitación. Presión convierte Pa a hPa antes de pintar
-valores e isobaras. Temperatura y T850 ganan color vivo según sus leyendas.
-Nubosidad seca queda blanca y solo se vuelve gris u oscura donde hay agua.
-MUCIN amplía su escala a -3000 J/kg, usa marrón/rojo/naranja y limita el
-relleno a los nodos donde la pareja NOAA publica MUCAPE convectivo. El contorno
-se interpola de forma continua para no mostrar celdas rectangulares. Las cifras
-y el signo negativo no cambian. MUCAPE permanece intacto.
+Cada familia cambia su fondo automáticamente. Lluvia, lluvia y truenos,
+reflectividad y tormentas usan gris neutro y colores vivos. Los acumulados usan
+gris más profundo para separar azul, verde, amarillo y rojo. Nubosidad usa una
+tierra cálida visible, nube seca blanca/gris y lluvia verde que pasa a amarillo,
+naranja y rojo. Temperatura mantiene su campo completo y saturado.
 
-La superficie se adapta automáticamente a cada producto: mapa limpio por
-defecto, fondo oscuro para reflectividad pronosticada, mar neutro cuando la
-precipitación débil es azul y mar azul limpio para acumulados verdes. Las nubes
-cruzan la costa con transición continua y suave.
+En Android, iPhone y Mac se conservan costas, fronteras, relieve y nombres. Se
+eliminan la tinta residual de llovizna, la interpolación de muestras aisladas y
+el recorte falso del norte de Galicia.
 
 VERSIÓN ANTERIOR
 
