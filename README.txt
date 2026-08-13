@@ -1,5 +1,20 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
+VERSIÓN v10.112 · CAPAS METEOROLÓGICAS CORREGIDAS
+
+- Se conservan las 23 capas y MUCAPE queda intacta.
+- Mapa limpio es el fondo inicial; lluvia azul usa cartografía marítima neutra.
+- La superficie se adapta sola por capa: reflectividad prevista usa base carbón
+  y acumulados verdes conservan el mar azul limpio.
+- Se elimina el recorte costero falso del norte de Galicia.
+- Lluvia 3 h, acumulada, tormentas, reflectividad y presión quedan corregidas.
+- Reflectividad usa verde, amarillo y naranja, con rojo/magenta únicamente en
+  pequeños núcleos cuya intensidad real estimada alcanza esos dBZ.
+- Nube seca blanca; nube con precipitación gris u oscura y transición costera suave.
+- Temperatura y T850 usan colores vivos; MUCIN amplía su escala hasta −3000.
+- Precipitación y reflectividad reutilizan la misma descarga y caché horaria.
+- Caché PWA renovada a v10.112.
+
 VERSIÓN v10.111 · COLORES CON RELIEVE CARTOGRÁFICO
 
 - Las 23 capas se conservan completas, sin sustituir datos ni fuentes.

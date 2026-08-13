@@ -18,7 +18,7 @@ const AROME_LAYERS = new Set(['precipitation', 'forecast_reflectivity', 'cloud',
 
 function modelForLayer(requested, layer) {
   if (ECMWF_ONLY_LAYERS.has(layer)) {
-    return { label: 'ECMWF IFS HRES · densidad total de destellos · 9 km', candidates: ['ecmwf_ifs'] };
+    return { label: 'ECMWF IFS HRES · precipitación horaria + densidad de destellos · 9 km', candidates: ['ecmwf_ifs'] };
   }
   if (GFS_ONLY_LAYERS.has(layer)) {
     return { label: layer === 'cin' ? 'NOAA GFS · CIN' : 'NOAA GFS Seamless', candidates: ['ncep_gfs_seamless'] };

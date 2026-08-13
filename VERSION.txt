@@ -1,15 +1,22 @@
-Meteo Aitor Bermeo v10.111 · colores con relieve cartográfico
+Meteo Aitor Bermeo v10.112 · capas meteorológicas corregidas
 Fecha: 2026-08-13
 
-Las 23 capas actuales se conservan. El relieve topográfico pasa a ser el fondo
-inicial, con una intensidad adaptada al tipo de mapa: tenue en nubosidad,
-precipitación y radar; más visible en temperatura, rocío, humedad, viento,
-presión, CAPE, CIN, temperatura marina y oleaje.
+Las 23 capas actuales se conservan. Mapa limpio vuelve a ser el fondo inicial.
+En capas de lluvia azul el fondo marítimo se vuelve neutro para separar la
+cartografía del dato meteorológico. Se elimina la máscara oceánica simplificada
+que recortaba falsamente el norte de Galicia.
 
-Las fronteras, costas, nombres y cifras permanecen encima de la capa para que
-el color tenga profundidad sin ocultar el territorio. Nubosidad conserva mar
-azul y tierra visible, con gris progresivo y núcleos oscuros solo al coincidir
-con precipitación real del mismo modelo.
+Lluvia 3 h y acumulada muestran cantidades pequeñas como superficie; Lluvia y
+truenos rechaza las mallas de respaldo demasiado dispersas. La reflectividad
+reutiliza la caché de precipitación. Presión convierte Pa a hPa antes de pintar
+valores e isobaras. Temperatura y T850 ganan color vivo según sus leyendas.
+Nubosidad seca queda blanca y solo se vuelve gris u oscura donde hay agua.
+MUCIN amplía su escala a -3000 J/kg; MUCAPE no cambia.
+
+La superficie se adapta automáticamente a cada producto: mapa limpio por
+defecto, fondo oscuro para reflectividad pronosticada, mar neutro cuando la
+precipitación débil es azul y mar azul limpio para acumulados verdes. Las nubes
+cruzan la costa con transición continua y suave.
 
 VERSIÓN ANTERIOR
 
