@@ -1,4 +1,4 @@
-Meteo Aitor Bermeo v10.119 · nubosidad con cartografía visible
+Meteo Aitor Bermeo v10.120 · mapa limpio fijo y precipitación nítida
 Fecha: 2026-08-13
 
 Las capas actuales se conservan y se añade Tormentas eléctricas ECMWF con el
@@ -6,11 +6,14 @@ campo real lightning_density. Si ese campo no está disponible, el mapa lo
 indica como campo no publicado, no inicia reintentos engañosos y no inventa
 descargas. Mapa limpio sigue siendo el fondo inicial.
 
-Cada familia cambia su fondo automáticamente. Lluvia, lluvia y truenos,
-reflectividad y tormentas usan gris neutro y colores vivos. Los acumulados usan
-gris más profundo para separar azul, verde, amarillo y rojo. Nubosidad usa una
-tierra cálida visible, nube seca blanca/gris y lluvia verde que pasa a amarillo,
-naranja y rojo. Temperatura mantiene su campo completo y saturado.
+Mapa limpio permanece fijo al cambiar hora, modelo o variable. La tierra, el
+mar, las costas y las fronteras conservan la misma cartografía; únicamente el
+campo meteorológico superpuesto cambia de color. La precipitación mantiene su
+paleta verde, amarilla, naranja y roja con transparencia total fuera de la señal.
+
+Nubosidad queda separada de reflectividad y muestra solo blancos y grises. La
+temperatura usa una saturación contenida y mantiene fronteras, relieve y nombres
+legibles por encima del campo, siguiendo la referencia visual de AguaceroWX.
 
 En Android, iPhone y Mac se conservan costas, fronteras, relieve y nombres. Se
 eliminan la tinta residual de llovizna, la interpolación de muestras aisladas y

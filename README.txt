@@ -1,12 +1,11 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
-VERSIÓN v10.119 · NUBOSIDAD CON CARTOGRAFÍA VISIBLE
+VERSIÓN v10.120 · MAPA LIMPIO FIJO Y PRECIPITACIÓN NÍTIDA
 
 - Android e iPhone abren el visor sobre la Península a resolución regional;
   Mac conserva el encuadre europeo.
-- El fondo se adapta automáticamente al producto: gris neutro en lluvia y
-  tormentas, gris profundo en acumulados, tierra cálida en nubosidad y campo
-  meteorológico completo en temperatura.
+- Mapa limpio es el único fondo y permanece fijo al cambiar hora, modelo o
+  variable; la tierra, el mar, las costas y las fronteras no cambian de color.
 - Tierra, mar, costas y nombres permanecen visibles bajo el campo meteorológico.
 - Las trazas inferiores a 0,10 mm/h son transparentes y no lavan el mapa.
 - Una muestra aislada de una malla abierta no se convierte en una mancha falsa.
@@ -16,13 +15,13 @@ VERSIÓN v10.119 · NUBOSIDAD CON CARTOGRAFÍA VISIBLE
 - Se incorpora Tormentas eléctricas ECMWF con densidad real de rayos; si el
   proveedor no publica el campo, se indica claramente, no se reintenta como si
   fuera un fallo de red y no se inventan descargas.
-- Mapa limpio continúa siendo el fondo inicial y se conservan todas las capas.
-- Lluvia y tormentas usan una base gris neutra; acumulados, una base gris
-  profunda; nubosidad, tierra ocre; temperatura conserva su campo vivo.
+- Mapa limpio es el único fondo y se conservan todas las capas.
+- Lluvia, acumulados, nubosidad y temperatura comparten la misma cartografía;
+  solo cambia el campo meteorológico superpuesto.
 - En móvil se suavizan los nombres para que la cartografía no forme manchas.
-- La nube seca gana transparencia y la lluvia integrada conserva verde,
-  amarillo, naranja y rojo sin ocultar costas ni fronteras.
-- Caché PWA renovada a v10.119.
+- Nubosidad usa únicamente blanco y gris, sin lluvia ni reflectividad mezcladas.
+- Temperatura reduce la saturación y mantiene fronteras y nombres por encima.
+- Caché PWA renovada a v10.120.
 
 VERSIÓN v10.113 · CAPAS METEOROLÓGICAS CORREGIDAS
 
