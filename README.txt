@@ -12,7 +12,8 @@ VERSIÓN v10.113 · CAPAS METEOROLÓGICAS CORREGIDAS
   pequeños núcleos cuya intensidad real estimada alcanza esos dBZ.
 - Nube seca blanca; nube con precipitación gris u oscura y transición costera suave.
 - Temperatura y T850 usan colores vivos; MUCIN conserva el dato NOAA, usa
-  marrón/rojo/naranja y solo colorea la parcela con MUCAPE convectivo.
+  marrón/rojo/naranja y solo colorea la parcela con MUCAPE convectivo mediante
+  un contorno interpolado y suave, sin celdas rectangulares.
 - Precipitación y reflectividad reutilizan la misma descarga y caché horaria.
 - Caché PWA renovada a v10.113.
 

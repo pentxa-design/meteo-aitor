@@ -12,7 +12,8 @@ reutiliza la caché de precipitación. Presión convierte Pa a hPa antes de pint
 valores e isobaras. Temperatura y T850 ganan color vivo según sus leyendas.
 Nubosidad seca queda blanca y solo se vuelve gris u oscura donde hay agua.
 MUCIN amplía su escala a -3000 J/kg, usa marrón/rojo/naranja y limita el
-relleno a los nodos donde la pareja NOAA publica MUCAPE convectivo. Las cifras
+relleno a los nodos donde la pareja NOAA publica MUCAPE convectivo. El contorno
+se interpola de forma continua para no mostrar celdas rectangulares. Las cifras
 y el signo negativo no cambian. MUCAPE permanece intacto.
 
 La superficie se adapta automáticamente a cada producto: mapa limpio por

@@ -3228,20 +3228,13 @@ function mapSparseSupport(rowFloat,columnFloat,key,threshold){
   return{hasData:true,fade:Math.max(0,Math.min(1,radial*coverageFade)),nearestValue};
 }
 function mapCinConvectiveSupport(rowFloat,columnFloat,capeThreshold=100){
-  // La máscara de la superficie CIN se construye con pares del mismo nodo
-  // NOAA y hora. La cobertura bilineal enlaza nodos respaldados y desvanece
-  // los bordes: no dibuja círculos, cuadrados ni una cuadrícula de muestras.
-  const cinSamples=mapGridSamples(rowFloat,columnFloat,'convective_inhibition'),capeSamples=mapGridSamples(rowFloat,columnFloat,'cape');let validWeight=0,supportWeight=0,strengthWeight=0,supportedCorners=0;
-  for(let index=0;index<cinSamples.length;index+=1){
-    const cin=cinSamples[index]?.[0],weight=cinSamples[index]?.[1],cape=capeSamples[index]?.[0];
-    if(weight<=0||!mapValidNumber(cin)||!mapValidNumber(cape))continue;
-    validWeight+=weight;
-    if(Number(cin)>=-.5||Number(cape)<=capeThreshold)continue;
-    supportWeight+=weight;strengthWeight+=weight*(.12+.88*mapSmoothstep(capeThreshold,700,Number(cape)));supportedCorners+=1;
-  }
-  if(validWeight<.74||supportedCorners===0||supportWeight<=0)return{hasData:false,fade:0};
-  const global=Number(mapAitorState.data?.bounds?.east)-Number(mapAitorState.data?.bounds?.west)>=350,coverage=supportWeight/validWeight,strength=strengthWeight/supportWeight,shape=mapSmoothstep(global?.05:.035,global?.70:.58,coverage);
-  return{hasData:true,fade:Math.max(0,Math.min(1,shape*strength))};
+  // CAPE y CIN se interpolan desde los mismos cuatro nodos NOAA y la misma
+  // hora. El umbral se desvanece de forma continua: desaparecen los bloques
+  // de la panorámica de 1° sin modificar el MUCIN que determina el color.
+  const cin=mapInterpolatedValue(rowFloat,columnFloat,'convective_inhibition'),cape=mapInterpolatedValue(rowFloat,columnFloat,'cape');
+  if(!mapValidNumber(cin)||!mapValidNumber(cape)||Number(cin)>=-.5||Number(cape)<=capeThreshold)return{hasData:false,fade:0};
+  const global=Number(mapAitorState.data?.bounds?.east)-Number(mapAitorState.data?.bounds?.west)>=350,upper=global?700:500,fade=mapSmoothstep(capeThreshold,upper,Number(cape));
+  return{hasData:true,fade:Math.max(0,Math.min(1,fade))};
 }
 function mapValueAtCoordinates(latitude,longitude,key){
   const data=mapAitorState.data,bounds=data?.bounds;if(!data||!bounds)return null;
