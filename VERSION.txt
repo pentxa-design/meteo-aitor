@@ -1,4 +1,4 @@
-Meteo Aitor Bermeo v10.112 · capas meteorológicas corregidas
+Meteo Aitor Bermeo v10.113 · capas meteorológicas corregidas
 Fecha: 2026-08-13
 
 Las 23 capas actuales se conservan. Mapa limpio vuelve a ser el fondo inicial.
@@ -11,7 +11,9 @@ truenos rechaza las mallas de respaldo demasiado dispersas. La reflectividad
 reutiliza la caché de precipitación. Presión convierte Pa a hPa antes de pintar
 valores e isobaras. Temperatura y T850 ganan color vivo según sus leyendas.
 Nubosidad seca queda blanca y solo se vuelve gris u oscura donde hay agua.
-MUCIN amplía su escala a -3000 J/kg; MUCAPE no cambia.
+MUCIN amplía su escala a -3000 J/kg, usa marrón/rojo/naranja y limita el
+relleno a los nodos donde la pareja NOAA publica MUCAPE convectivo. Las cifras
+y el signo negativo no cambian. MUCAPE permanece intacto.
 
 La superficie se adapta automáticamente a cada producto: mapa limpio por
 defecto, fondo oscuro para reflectividad pronosticada, mar neutro cuando la

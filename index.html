@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.112" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.113" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -385,7 +385,7 @@
     .mapAitor.mapBaseTopographic[data-map-layer="wind"] .mapNativeWeatherTile,.mapAitor.mapBaseTopographic[data-map-layer="gust"] .mapNativeWeatherTile,.mapAitor.mapBaseTopographic[data-map-layer="pressure"] .mapNativeWeatherTile{filter:saturate(1.46) contrast(1.17) brightness(1.01)}
     .mapAitor.mapBaseTopographic[data-map-layer="cape"] .mapFieldOverlay,.mapAitor.mapBaseTopographic[data-map-layer="cin"] .mapFieldOverlay{filter:saturate(1.48) contrast(1.18) brightness(1.01)}
     .mapAitor.mapBaseTopographic[data-map-layer="sea_temperature"] .mapFieldOverlay,.mapAitor.mapBaseTopographic[data-map-layer="waves"] .mapFieldOverlay{filter:saturate(1.46) contrast(1.16) brightness(1.02)}
-    /* v10.112 · Mapa limpio inicial, fondo neutro bajo precipitación azul y
+    /* v10.113 · Mapa limpio inicial, fondo neutro bajo precipitación azul y
        paletas de campo vivas. Solo se filtran las teselas cartográficas; el
        dato meteorológico conserva su color y queda claramente por encima. */
     .mapAitor.mapBaseStandard[data-map-layer="precipitation"] .leaflet-map-pane>.leaflet-tile-pane,
@@ -2375,7 +2375,7 @@ const MAP_LAYERS={
   pressure:{key:'pressure_msl',title:'Presión a nivel del mar',unit:'hPa',scale:[960,970,980,990,1000,1010,1020,1030,1040,1050],colors:['#143854','#155b73','#197b89','#3f9ca2','#83b9b2','#c7d0c5','#d2c49f','#bc9569','#9c6647','#6f4033'],legend:['960','970','980','990','1000','1010','1020','1030','1040','1050+'],detail:'Presión reducida al nivel del mar con isobaras reales cada 4 hPa. Las bajas presiones aparecen en azul y turquesa, la presión media en gris beige y las altas en ocre y marrón; los hPa no se modifican.'},
   t850:{key:'temperature_850hPa',title:'Temperatura a 850 hPa',unit:'°C',scale:[-50,-35,-25,-14,-8,-4,0,4,8,14,18,22,26,32,40,50],colors:['#3a073f','#71106f','#6d2a91','#4f3ca6','#315cb6','#1d7bc7','#20a5d1','#28c9c2','#31d783','#55dd43','#b9e72c','#f5e62b','#ffac21','#ff5d20','#c51b48','#74204f'],legend:['−50','−35','−25','−14','−8','−4','0','4','8','14','18','22','26','32','40','50+'],detail:'Temperatura real prevista a unos 1.500 m: violeta y azul para aire frío, cian y verde al templarse, amarillo alrededor de 18–22 °C, naranja y rojo en masas muy cálidas. La paleta es continua y no altera ningún valor.'},
   cape:{key:'cape',title:'MUCAPE · más inestable',unit:'J/kg',scale:[100,250,500,750,1000,1500,2000,3000,4000,5000,6000],colors:['#49364f','#274d6c','#08788d','#009c98','#29b879','#78c94f','#d0d62d','#ffb520','#f2692f','#b93058','#5b1b62'],legend:['100','250','500','750','1000','1500','2000','3000','4000','5000','6000+'],detail:'MUCAPE oficial de NOAA GFS para la parcela más inestable de la capa 255–0 mb: fuente mundial de 1° en una panorámica reducida y detalle regional real de 0,25° al acercar. El símbolo ≈ solo identifica una cifra aproximada de la panorámica mundial; al acercar desaparece y se muestra el nodo NOAA de 0,25°. Menos de 100 J/kg queda transparente; cuanto mayor es el valor, más energía potencial tiene la convección si logra iniciarse. CAPE no confirma un tornado por sí solo: hay que contrastarlo con radar, viento, cizalladura y avisos oficiales.'},
-  cin:{key:'convective_inhibition',title:'MUCIN · inhibición más inestable',unit:'J/kg',scale:[-3000,-2000,-1500,-1200,-1000,-750,-500,-300,-200,-100,-50,-20,-5,0],colors:['#170b2f','#261241','#3b1d54','#52275f','#6a2d61','#81345f','#983b5b','#b14653','#c75a49','#dc7041','#e68a43','#efa752','#f5c971','#f8f3df'],legend:['−3000','−2000','−1500','−1200','−1000','−750','−500','−300','−200','−100','−50','−20','−5','0'],detail:'MUCIN oficial de NOAA GFS para la parcela más inestable de 255–0 mb. El signo − pertenece al dato real. La escala amplía el rango hasta −3000 J/kg para que valores muy inhibidos no queden todos saturados en el mismo violeta; las cifras conservan el valor original.'},
+  cin:{key:'convective_inhibition',title:'MUCIN · inhibición más inestable',unit:'J/kg',scale:[-3000,-2000,-1500,-1200,-1000,-750,-500,-300,-200,-100,-50,-20,-5,0],colors:['#171316','#292023','#3c2a2c','#513234','#683838','#804039','#9a4637','#b94c32','#d2552c','#e76b30','#f0823e','#f4a35d','#f7d2a7','#fffaf0'],legend:['−3000','−2000','−1500','−1200','−1000','−750','−500','−300','−200','−100','−50','−20','−5','0'],detail:'MUCIN oficial de NOAA GFS para la parcela más inestable de 255–0 mb. El signo − y las cifras son el dato real. El color marrón, rojo y naranja se limita a la misma parcela cuando NOAA publica MUCAPE convectivo, evitando cubrir el mapa completo en ambientes estables.'},
   sea_temperature:{key:'sea_surface_temperature',title:'Temperatura superficial del mar',unit:'°C',scale:[-2,0,5,10,14,17,20,23,26,29,32,35],colors:['#35156e','#2939a5','#176bd2','#159fcf','#20c5b7','#70d37d','#d7df48','#ffe03d','#ffad32','#f26e2c','#ce3428','#721b36'],legend:['-2','0','5','10','14','17','20','23','26','29','32','35+'],detail:'Temperatura de la superficie del agua prevista por Open‑Meteo Marine. La capa se recorta al mar y no colorea la tierra.'},
   waves:{key:'wave_height',title:'Altura de las olas',unit:'m',scale:[0,.25,.5,.75,1,1.5,2,3,4,6,8,12],colors:['#284675','#2c78a9','#24a8c1','#25cdc5','#64d495','#b7dc5c','#e7da49','#f4b141','#ed7c3c','#dd4f4f','#a93969','#622a72'],legend:['0','0,25','0,5','0,75','1','1,5','2','3','4','6','8','12+'],detail:'Altura significativa de las olas prevista por Open‑Meteo Marine. Al pulsar un punto también se indica la dirección y el período cuando están publicados.'}
 };
@@ -3435,7 +3435,10 @@ function buildMapField(quick=false){
             // evitar manchones, pero ya no se borra por completo.
             alpha=Math.round(alpha*shape*(isolatedAccumulation?.82:1));
           }else if(config.key==='convective_inhibition'){
-            const support=mapSparseSupport(rowFloat,columnFloat,config.key,threshold);alpha=Math.round(alpha*support.fade);
+            // MUCIN solo colorea la parcela cuando la pareja oficial del mismo
+            // nodo y hora publica MUCAPE convectivo. El valor MUCIN no cambia:
+            // esta máscara evita convertir todo el mundo estable en un bloque.
+            const support=mapCinConvectiveSupport(rowFloat,columnFloat);alpha=Math.round(alpha*support.fade);
           }else{
             const support=mapSparseSupport(rowFloat,columnFloat,config.key,threshold);alpha=Math.round(alpha*support.fade);
           }
@@ -4521,7 +4524,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.112',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.113',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });

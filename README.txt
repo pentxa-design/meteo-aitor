@@ -1,6 +1,6 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
-VERSIÓN v10.112 · CAPAS METEOROLÓGICAS CORREGIDAS
+VERSIÓN v10.113 · CAPAS METEOROLÓGICAS CORREGIDAS
 
 - Se conservan las 23 capas y MUCAPE queda intacta.
 - Mapa limpio es el fondo inicial; lluvia azul usa cartografía marítima neutra.
@@ -11,9 +11,10 @@ VERSIÓN v10.112 · CAPAS METEOROLÓGICAS CORREGIDAS
 - Reflectividad usa verde, amarillo y naranja, con rojo/magenta únicamente en
   pequeños núcleos cuya intensidad real estimada alcanza esos dBZ.
 - Nube seca blanca; nube con precipitación gris u oscura y transición costera suave.
-- Temperatura y T850 usan colores vivos; MUCIN amplía su escala hasta −3000.
+- Temperatura y T850 usan colores vivos; MUCIN conserva el dato NOAA, usa
+  marrón/rojo/naranja y solo colorea la parcela con MUCAPE convectivo.
 - Precipitación y reflectividad reutilizan la misma descarga y caché horaria.
-- Caché PWA renovada a v10.112.
+- Caché PWA renovada a v10.113.
 
 VERSIÓN v10.111 · COLORES CON RELIEVE CARTOGRÁFICO
 
