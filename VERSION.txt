@@ -1,23 +1,23 @@
-Meteo Aitor Bermeo v10.120 · mapa limpio fijo y precipitación nítida
+Meteo Aitor Bermeo v10.121 · capas meteorológicas profesionales
 Fecha: 2026-08-13
 
-Las capas actuales se conservan y se añade Tormentas eléctricas ECMWF con el
-campo real lightning_density. Si ese campo no está disponible, el mapa lo
-indica como campo no publicado, no inicia reintentos engañosos y no inventa
-descargas. Mapa limpio sigue siendo el fondo inicial.
+Las capas actuales se conservan. Lluvia y truenos usa precipitación nativa
+ECMWF y solo añade rayos si el campo lightning_density está publicado. La capa
+Tormentas eléctricas pasa a Potencial tormentoso CAPE, dato real de ECMWF que
+no se presenta como observación de rayos.
 
 Mapa limpio permanece fijo al cambiar hora, modelo o variable. La tierra, el
 mar, las costas y las fronteras conservan la misma cartografía; únicamente el
 campo meteorológico superpuesto cambia de color. La precipitación mantiene su
 paleta verde, amarilla, naranja y roja con transparencia total fuera de la señal.
 
-Nubosidad queda separada de reflectividad y muestra solo blancos y grises. La
-temperatura usa una saturación contenida y mantiene fronteras, relieve y nombres
-legibles por encima del campo, siguiendo la referencia visual de AguaceroWX.
+Nubosidad muestra masas blancas y grises definidas y oscurece en gris donde el
+mismo modelo publica lluvia. Temperatura, T850, MUCAPE y MUCIN ganan contraste;
+la temperatura del mar pasa a tesela espacial ECMWF de 9 km sin bloques.
 
-En Android, iPhone y Mac se conservan costas, fronteras, relieve y nombres. Se
-eliminan la tinta residual de llovizna, la interpolación de muestras aisladas y
-el recorte falso del norte de Galicia.
+Lluvia 3 h y acumulación dejan de extender cada nodo en un halo borroso. Radar
+Euskalmet busca hasta doce horas el último fotograma oficial útil cuando las
+ranuras recientes contienen la lámina oficial vacía y lo marca como anterior.
 
 VERSIÓN ANTERIOR
 
