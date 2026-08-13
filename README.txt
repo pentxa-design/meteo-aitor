@@ -1,6 +1,6 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
-VERSIÓN v10.117 · FONDO PROFESIONAL SEGÚN LA CAPA
+VERSIÓN v10.118 · FONDOS AJUSTADOS AL PRODUCTO
 
 - Android e iPhone abren el visor sobre la Península a resolución regional;
   Mac conserva el encuadre europeo.
@@ -17,7 +17,12 @@ VERSIÓN v10.117 · FONDO PROFESIONAL SEGÚN LA CAPA
   proveedor no publica el campo, se indica claramente, no se reintenta como si
   fuera un fallo de red y no se inventan descargas.
 - Mapa limpio continúa siendo el fondo inicial y se conservan todas las capas.
-- Caché PWA renovada a v10.117.
+- Lluvia y tormentas usan una base gris neutra; acumulados, una base gris
+  profunda; nubosidad, tierra ocre; temperatura conserva su campo vivo.
+- En móvil se suavizan los nombres para que la cartografía no forme manchas.
+- La nube seca gana transparencia y la lluvia integrada conserva verde,
+  amarillo, naranja y rojo sin ocultar costas ni fronteras.
+- Caché PWA renovada a v10.118.
 
 VERSIÓN v10.113 · CAPAS METEOROLÓGICAS CORREGIDAS
 
