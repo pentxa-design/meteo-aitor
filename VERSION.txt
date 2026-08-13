@@ -1,9 +1,10 @@
-Meteo Aitor Bermeo v10.116 · fondos profesionales por capa
+Meteo Aitor Bermeo v10.117 · fondos profesionales por capa
 Fecha: 2026-08-13
 
 Las capas actuales se conservan y se añade Tormentas eléctricas ECMWF con el
 campo real lightning_density. Si ese campo no está disponible, el mapa lo
-indica y no inventa descargas. Mapa limpio sigue siendo el fondo inicial.
+indica como campo no publicado, no inicia reintentos engañosos y no inventa
+descargas. Mapa limpio sigue siendo el fondo inicial.
 
 Cada familia cambia su fondo automáticamente. Lluvia, lluvia y truenos,
 reflectividad y tormentas usan gris neutro y colores vivos. Los acumulados usan

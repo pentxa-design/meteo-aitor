@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.116" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.117" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -4183,7 +4183,7 @@ async function loadMapForecast(fit=false,force=false,targetTime=mapCurrentForeca
     if(!cached){mapAitorState.cache.set(cacheKey,sourceResponse);while(mapAitorState.cache.size>6)mapAitorState.cache.delete(mapAitorState.cache.keys().next().value)}
     const response={...sourceResponse,model:{...(sourceResponse.model||{})}};
     if(MAP_NOAA_RAIN_LAYERS.has(requestedLayer)&&response.pagination)response.pagination={...response.pagination,loadedIntervals:Number(response.pagination.loadedIntervals)||response.times?.length||0,loadedThroughPage:Number.isInteger(Number(response.pagination.loadedThroughPage))?Number(response.pagination.loadedThroughPage):Number(response.pagination.page)||0,loadedThroughHour:Number(response.pagination.loadedThroughHour)||Number(response.pagination.pageEndHour)||24};
-    const responseTimeIndex=Math.min(targetTime?mapNearestTimeIndex(response.times,targetTime):mapNearestIndex(response.times),Math.max(0,response.times.length-1));if(!mapResponseHasLayerData(response,requestedLayer,responseTimeIndex)){const unavailable=new Error('El modelo no publicó esta capa en su última pasada.');unavailable.retryAfter=120;throw unavailable}
+    const responseTimeIndex=Math.min(targetTime?mapNearestTimeIndex(response.times,targetTime):mapNearestIndex(response.times),Math.max(0,response.times.length-1));if(!mapResponseHasLayerData(response,requestedLayer,responseTimeIndex)){const fieldNotPublished=requestedLayer==='electric_storms'&&sourceResponse?.diagnostics?.lightningAvailable===false,unavailable=new Error(fieldNotPublished?'ECMWF no ha publicado el campo de densidad de rayos en esta pasada.':'El modelo no publicó esta capa en su última pasada.');unavailable.fieldNotPublished=fieldNotPublished;unavailable.retryAfter=120;throw unavailable}
     response.viewZoom=zoom;
     // Estas tres capas son exclusivamente GFS. La identidad visible no puede
     // quedar heredada de una respuesta anterior o de una caché multimodelo.
@@ -4196,6 +4196,10 @@ async function loadMapForecast(fit=false,force=false,targetTime=mapCurrentForeca
     if(fit&&response?.focus)map.panTo([response.focus.latitude,response.focus.longitude],{animate:true});
   }catch(error){
     if(requestId!==mapAitorState.requestId||error?.name==='AbortError'&&controller.signal.reason!=='timeout')return;
+    if(error?.fieldNotPublished&&requestedLayer==='electric_storms'){
+      clearMapRetry();clearMapLayers();mapAitorState.data=null;mapAitorState.field=null;mapAitorState.renderedLayer=null;mapAitorState.renderedModel=null;mapAitorState.lastError=null;mapAitorState.retryAttempt=0;syncMapSelection(requestedLayer,requestedModel);
+      $('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Tormentas eléctricas · campo no publicado';$('mapTimeBadge').textContent='ECMWF · sin densidad de rayos';$('mapStatus').dataset.transport='field-unavailable';$('mapStatus').textContent='ECMWF no ha publicado densidad de rayos en esta pasada · sin datos inventados';$('mapInfo').innerHTML='<strong>Tormentas eléctricas · campo no publicado</strong>ECMWF no ha publicado densidad de rayos en esta pasada. No se dibujan tormentas eléctricas ni se inventan datos. Para observación reciente, usa Rayos AEMET o Rayos Euskalmet.';renderMapLocation();renderMapPicker();return;
+    }
     // Lluvia 3 h nunca se sustituye por otra capa ni por otro modelo. Si el
     // proveedor está limitado, se conserva la última malla 3 h válida y se
     // reintenta con su identidad original claramente visible.
@@ -4557,7 +4561,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.116',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.117',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });

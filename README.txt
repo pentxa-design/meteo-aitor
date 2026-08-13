@@ -1,6 +1,6 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
-VERSIÓN v10.116 · FONDO PROFESIONAL SEGÚN LA CAPA
+VERSIÓN v10.117 · FONDO PROFESIONAL SEGÚN LA CAPA
 
 - Android e iPhone abren el visor sobre la Península a resolución regional;
   Mac conserva el encuadre europeo.
@@ -14,9 +14,10 @@ VERSIÓN v10.116 · FONDO PROFESIONAL SEGÚN LA CAPA
   incluso cuando no hay ecos.
 - Las cifras de lluvia se ocultan en panorámica móvil para no tapar el campo.
 - Se incorpora Tormentas eléctricas ECMWF con densidad real de rayos; si el
-  proveedor no publica el campo, no se inventan descargas.
+  proveedor no publica el campo, se indica claramente, no se reintenta como si
+  fuera un fallo de red y no se inventan descargas.
 - Mapa limpio continúa siendo el fondo inicial y se conservan todas las capas.
-- Caché PWA renovada a v10.116.
+- Caché PWA renovada a v10.117.
 
 VERSIÓN v10.113 · CAPAS METEOROLÓGICAS CORREGIDAS
 
