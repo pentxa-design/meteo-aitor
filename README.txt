@@ -1,6 +1,6 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
-VERSIÓN v10.114 · MAPAS MÓVILES LEGIBLES
+VERSIÓN v10.115 · MAPAS MÓVILES LEGIBLES
 
 - Android e iPhone abren el visor sobre la Península a resolución regional;
   Mac conserva el encuadre europeo.
@@ -11,7 +11,7 @@ VERSIÓN v10.114 · MAPAS MÓVILES LEGIBLES
   incluso cuando no hay ecos.
 - Las cifras de lluvia se ocultan en panorámica móvil para no tapar el campo.
 - Mapa limpio continúa siendo el fondo inicial y se conservan las 23 capas.
-- Caché PWA renovada a v10.114.
+- Caché PWA renovada a v10.115.
 
 VERSIÓN v10.113 · CAPAS METEOROLÓGICAS CORREGIDAS
 

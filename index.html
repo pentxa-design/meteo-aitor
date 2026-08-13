@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.114" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.115" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -2510,11 +2510,12 @@ function mapNativeAdapter(kind='standard'){
     // marcado porque queda integrado en la propia masa nubosa.
     settings.colorScales.precipitation={type:'breakpoint',unit:'mm',breakpoints:[0,.02,.08,.2,.5,1,2,4,8,15,25],colors:[[0,0,0,0],[154,160,166,.10],[132,139,145,.18],[110,117,124,.30],[88,95,102,.44],[68,75,82,.58],[50,57,64,.70],[36,43,50,.79],[26,32,39,.86],[18,24,31,.91],[10,16,23,.95]]};
   }else if(kind==='rain'){
-    // Las trazas numéricas inferiores a 0,02 mm/h no se pintan. Antes esa
-    // humedad residual coloreaba de cian casi todo el planeta y borraba la
-    // costa en móvil aunque no hubiera precipitación interpretable.
-    settings.colorScales.precipitation={type:'breakpoint',unit:'mm',breakpoints:[0,.1,.2,.4,1,2,4,8,15,25,50],colors:[[0,0,0,0],[66,197,238,.34],[23,190,113,.54],[15,177,79,.66],[73,201,50,.76],[167,217,48,.83],[248,220,53,.89],[255,168,38,.94],[255,105,32,.97],[237,52,36,.99],[194,20,34,1]]};
-    settings.postReadCallback=(_reader,data)=>{if(data?.values)data.values=data.values.map(value=>{const rain=Math.max(0,Number(value)||0);return rain<.1?0:rain})};
+    // En la vista continental se oculta la llovizna inferior a 0,20 mm/h:
+    // esa fibra residual cubría océanos enteros y lavaba la cartografía. Al
+    // acercarse se conserva el detalle desde 0,10 mm/h. El primer nivel útil
+    // entra ya en verde vivo, como en los visores meteorológicos de referencia.
+    settings.colorScales.precipitation={type:'breakpoint',unit:'mm',breakpoints:[0,.1,.2,.4,1,2,4,8,15,25,50],colors:[[0,0,0,0],[56,198,236,.30],[18,190,103,.66],[8,166,62,.76],[79,201,37,.84],[176,218,34,.89],[250,219,39,.94],[255,160,23,.97],[255,88,25,.99],[231,35,33,1],[179,13,30,1]]};
+    settings.postReadCallback=(_reader,data)=>{if(data?.values){const cutoff=(mapAitorState.map?.getZoom()||5)<=4?.2:.1;data.values=data.values.map(value=>{const rain=Math.max(0,Number(value)||0);return rain<cutoff?0:rain})}};
   }else if(kind==='wind'){
     const config=MAP_LAYERS.wind;
     settings.colorScales.wind={type:'breakpoint',unit:'km/h',breakpoints:config.scale.map(value=>value/3.6),colors:config.colors.map((color,index)=>mapNativeRgba(color,index===0?.10:Math.min(.96,.44+index*.065)))};
@@ -4528,7 +4529,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.114',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.115',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
