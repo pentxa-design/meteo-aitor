@@ -1,5 +1,23 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
+VERSIÓN v10.121 · CAPAS METEOROLÓGICAS PROFESIONALES
+
+- Nubes blancas/grises definidas, con lluvia del mismo modelo en gris oscuro.
+- Temperatura y T850 opacas, con escalas térmicas de mayor contraste.
+- Lluvia y truenos usa precipitación nativa ECMWF y no inventa descargas.
+- Potencial tormentoso muestra CAPE ECMWF en vez de una densidad de rayos que
+  el proveedor no publica actualmente.
+- Lluvia 3 h y acumulación respetan las celdas NOAA sin halos grandes.
+- MUCAPE y MUCIN dejan de difuminar la malla mundial reducida.
+- Temperatura del mar usa tesela espacial ECMWF de 9 km y respeta la costa.
+- Radar Euskalmet conserva el último fotograma oficial útil, identificado como
+  anterior cuando las ranuras recientes están vacías.
+- El cursor horario responde inmediatamente y solo carga la última hora al
+  soltar; no abre ni decodifica todas las horas intermedias del arrastre.
+- Caché PWA renovada a v10.121.
+
+VERSIÓN ANTERIOR
+
 VERSIÓN v10.120 · MAPA LIMPIO FIJO Y PRECIPITACIÓN NÍTIDA
 
 - Android e iPhone abren el visor sobre la Península a resolución regional;
