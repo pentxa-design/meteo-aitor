@@ -8,8 +8,10 @@ const FETCH_TIMEOUT = 10000;
 const FETCH_CONCURRENCY = 6;
 const CACHE_TTL = 15 * 60 * 1000;
 const MAX_STALE_AGE = 2 * 60 * 60 * 1000;
-const MAX_LATITUDE_SPAN = 12;
-const MAX_LONGITUDE_SPAN = 20;
+const DETAIL_LATITUDE_SPAN = 12;
+const DETAIL_LONGITUDE_SPAN = 20;
+const WIDE_LATITUDE_SPAN = 30;
+const WIDE_LONGITUDE_SPAN = 70;
 const WORLD_BOUNDS = Object.freeze({ south: -80, north: 85, west: -180, east: 180 });
 const RESPONSE_CACHE = globalThis.__METEO_AITOR_MU_CACHE__ ||
   (globalThis.__METEO_AITOR_MU_CACHE__ = new Map());
@@ -48,21 +50,32 @@ function candidateRuns(now = Date.now()) {
 function gridResolution(bounds) {
   const latitudeSpan = bounds.north - bounds.south;
   const longitudeSpan = bounds.east - bounds.west;
-  return latitudeSpan > MAX_LATITUDE_SPAN || longitudeSpan > MAX_LONGITUDE_SPAN
-    ? { code: '1p00', degrees: 1, stepHours: 3 }
-    : { code: '0p25', degrees: 0.25, stepHours: 1 };
+  if (latitudeSpan > WIDE_LATITUDE_SPAN || longitudeSpan > WIDE_LONGITUDE_SPAN) {
+    return { code: '1p00', degrees: 1, displayDegrees: 2, stepHours: 3, scope: 'world' };
+  }
+  if (latitudeSpan > DETAIL_LATITUDE_SPAN || longitudeSpan > DETAIL_LONGITUDE_SPAN) {
+    // NOAA sigue siendo 0,25°. Para la panorámica europea se conservan uno de
+    // cada dos nodos oficiales (0,5°) en vez de ampliar una fuente mundial de
+    // 1°. Así desaparecen los bloques enormes sin inventar valores intermedios.
+    return { code: '0p25', degrees: 0.25, displayDegrees: 0.5, stepHours: 1, scope: 'wide' };
+  }
+  return { code: '0p25', degrees: 0.25, displayDegrees: 0.25, stepHours: 1, scope: 'detail' };
 }
 
-function canonicalRegionalBounds(center) {
-  // Ventana estable de 12° × 20°. El centro cambia solo cada 2°, por lo que
+function canonicalRegionalBounds(center, resolution) {
+  const latitudeSpan = resolution.scope === 'wide' ? WIDE_LATITUDE_SPAN : DETAIL_LATITUDE_SPAN;
+  const longitudeSpan = resolution.scope === 'wide' ? WIDE_LONGITUDE_SPAN : DETAIL_LONGITUDE_SPAN;
+  // Ventana estable. El centro cambia solo cada 2°, por lo que
   // un paneo pequeño reutiliza la misma caché y no repite 25 descargas NOAA.
-  const latitude = Math.max(-74, Math.min(79, Math.round(center.latitude / 2) * 2));
-  const longitude = Math.max(-169.75, Math.min(169.75, Math.round(center.longitude / 2) * 2));
+  const latitudeRadius = latitudeSpan / 2;
+  const longitudeRadius = longitudeSpan / 2;
+  const latitude = Math.max(-80 + latitudeRadius, Math.min(85 - latitudeRadius, Math.round(center.latitude / 2) * 2));
+  const longitude = Math.max(-179.75 + longitudeRadius, Math.min(179.75 - longitudeRadius, Math.round(center.longitude / 2) * 2));
   return {
-    south: latitude - MAX_LATITUDE_SPAN / 2,
-    north: latitude + MAX_LATITUDE_SPAN / 2,
-    west: longitude - MAX_LONGITUDE_SPAN / 2,
-    east: longitude + MAX_LONGITUDE_SPAN / 2
+    south: latitude - latitudeRadius,
+    north: latitude + latitudeRadius,
+    west: longitude - longitudeRadius,
+    east: longitude + longitudeRadius
   };
 }
 
@@ -82,15 +95,15 @@ function grid(bounds, minimumRows, resolution) {
   // hasta casi un grado de distancia y podía alterar mucho CAPE/CIN cerca de
   // sus bordes. El límite mantiene acotado el tamaño de la respuesta cuando
   // el usuario abre una vista continental.
-  const nativeSteps = 1 / resolution.degrees;
+  const nativeSteps = 1 / (resolution.displayDegrees || resolution.degrees);
   // En la panorámica mundial se conservan celdas visuales de ~2°. El límite
   // anterior (48 × 96) llegaba a casi 4°: una tormenta de Castellón podía
   // quedar absorbida por una celda enorme aun usando la fuente GFS de 1°.
   // Esta densidad coincide con la usada por Lluvia 3 h y sigue siendo apta
   // para la película mundial de CAPE/CIN.
-  const rowLimit = resolution.degrees >= 1 ? 84 : 49;
+  const rowLimit = resolution.scope === 'world' ? 84 : resolution.scope === 'wide' ? 61 : 49;
   const rows = Math.max(minimumRows, Math.min(rowLimit, Math.round((bounds.north - bounds.south) * nativeSteps) + 1));
-  const columnLimit = resolution.degrees >= 1 ? 181 : 81;
+  const columnLimit = resolution.scope === 'world' ? 181 : resolution.scope === 'wide' ? 141 : 81;
   const columns = Math.max(8, Math.min(columnLimit, Math.round((bounds.east - bounds.west) * nativeSteps) + 1));
   const points = [];
   for (let row = 0; row < rows; row += 1) {
@@ -320,12 +333,12 @@ module.exports = async function handler(req, res) {
   const resolution = gridResolution(requestedBounds);
   const bounds = resolution.degrees >= 1
     ? { ...WORLD_BOUNDS }
-    : canonicalRegionalBounds(viewportCenter);
+    : canonicalRegionalBounds(viewportCenter, resolution);
   const noaaBounds = alignedBounds(bounds, resolution);
   const density = clamp(req.query?.density, 6, 18, 18);
   const outputGrid = grid(bounds, density, resolution);
   const cacheKey = [
-    resolution.code,
+    resolution.code, resolution.scope,
     density,
     bounds.south.toFixed(2), bounds.north.toFixed(2),
     bounds.west.toFixed(2), bounds.east.toFixed(2)
@@ -356,9 +369,11 @@ module.exports = async function handler(req, res) {
       displayLayer: String(req.query?.displayLayer || 'cape'),
       model: {
         requested: 'gfs',
-        label: resolution.degrees >= 1
+        label: resolution.scope === 'world'
           ? 'NOAA GFS · fuente 1° · vista mundial reducida · MUCAPE/MUCIN'
-          : 'NOAA GFS 0,25° · MUCAPE/MUCIN',
+          : resolution.scope === 'wide'
+            ? 'NOAA GFS 0,25° · superficie europea 0,5° · MUCAPE/MUCIN'
+            : 'NOAA GFS 0,25° · MUCAPE/MUCIN',
         sourceModel: `ncep_gfs_${resolution.code}_nomads`,
         run: run.iso,
         parcelLayer: '255–0 mb sobre el suelo',
@@ -367,7 +382,7 @@ module.exports = async function handler(req, res) {
           (bounds.north - bounds.south) / Math.max(1, outputGrid.rows - 1),
           (bounds.east - bounds.west) / Math.max(1, outputGrid.columns - 1)
         ),
-        overview: resolution.degrees >= 1,
+        overview: resolution.scope === 'world',
         timeStepHours: resolution.stepHours,
         fallback: false,
         cinAvailable: true
