@@ -1,12 +1,18 @@
 const OPEN_METEO = 'https://api.open-meteo.com/v1/forecast';
-const MODEL = 'meteofrance_arome_france_hd';
+// AROME France HD horario acepta `minutely_15`, pero fuera de la ventana
+// nativa esos cuartos de hora pueden proceder de interpolacion temporal. Esta
+// capa promete lluvia AROME de 15 minutos, por lo que usa exclusivamente la
+// salida HD 15-min publicada por Meteo-France.
+const MODEL = 'meteofrance_arome_france_hd_15min';
 const DOMAIN = { south: 37.5, north: 55.4, west: -12, east: 16 };
-const FORECAST_STEPS = 48 * 4;
-const POINTS_PER_REQUEST = 65;
+// La salida AROME HD 15-min ofrece ahora un horizonte disponible de 6 horas. No se
+// alarga a 48 h repitiendo o interpolando el modelo horario.
+const FORECAST_STEPS = 6 * 4;
+const POINTS_PER_REQUEST = 80;
 const BATCH_CONCURRENCY = 3;
 const FETCH_TIMEOUT = 18000;
 const CACHE_TTL = 10 * 60 * 1000;
-const MAX_STALE_AGE = 4 * 60 * 60 * 1000;
+const MAX_STALE_AGE = 90 * 60 * 1000;
 const RESPONSE_CACHE = globalThis.__METEO_AITOR_AROME_15M_CACHE__ ||
   (globalThis.__METEO_AITOR_AROME_15M_CACHE__ = new Map());
 
@@ -93,11 +99,11 @@ async function requestGrid(points) {
   return responses.flat();
 }
 
-function compactPoint(result, fallbackPoint) {
+function compactPoint(result, fallbackPoint, firstIndex = 0, endIndex) {
   return {
     latitude: Number(result?.latitude ?? fallbackPoint.latitude),
     longitude: Number(result?.longitude ?? fallbackPoint.longitude),
-    hourly: { precipitation_15m: result?.minutely_15?.precipitation || [] }
+    hourly: { precipitation_15m: (result?.minutely_15?.precipitation || []).slice(firstIndex, endIndex) }
   };
 }
 
@@ -147,13 +153,17 @@ module.exports = async function handler(req, res) {
     const locations = await requestGrid(requestPoints);
     const first = locations[0]?.minutely_15 || {};
     const rawTimes = Array.isArray(first.time) ? first.time.slice(0, FORECAST_STEPS) : [];
+    let firstUsable = Infinity;
     let lastUsable = -1;
     locations.forEach(location => {
       (location?.minutely_15?.precipitation || []).slice(0, rawTimes.length).forEach((value, index) => {
-        if (value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))) lastUsable = Math.max(lastUsable, index);
+        if (value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))) {
+          firstUsable = Math.min(firstUsable, index);
+          lastUsable = Math.max(lastUsable, index);
+        }
       });
     });
-    const times = rawTimes.slice(0, lastUsable + 1);
+    const times = Number.isFinite(firstUsable) ? rawTimes.slice(firstUsable, lastUsable + 1) : [];
     if (!times.length || locations.length !== requestPoints.length) throw new Error('AROME no devolvió una línea temporal de 15 minutos utilizable.');
     const gridLocations = locations.slice(0, mapGrid.points.length);
     const exactLocation = hasFocus ? locations[mapGrid.points.length] : null;
@@ -165,12 +175,12 @@ module.exports = async function handler(req, res) {
       displayLayer: 'precipitation_15m',
       model: {
         requested: 'arome',
-        label: 'Météo‑France AROME HD · 1,5 km · lluvia 15 min',
+        label: 'Météo‑France AROME HD 15min · 1,5 km · horizonte disponible 6 h',
         sourceModel: MODEL,
         provider: 'Open‑Meteo / Météo‑France',
-        resolution: 'AROME France HD 0,01° · 1,5 km'
+        resolution: 'AROME France HD 15min 0,01° · fuente 1,5 km · visualización muestreada'
       },
-      diagnostics: { native: true, derived: false, sourceVariable: 'precipitation', interval: 'preceding_15_minutes_sum', units: 'mm' },
+      diagnostics: { native: true, derived: false, sourceVariable: 'precipitation', interval: 'preceding_15_minutes_sum', units: 'mm', forecastLengthHours: 6 },
       domain: DOMAIN,
       bounds: { south, north, west, east },
       focus,
@@ -181,8 +191,8 @@ module.exports = async function handler(req, res) {
         stepLongitude: (east - west) / (mapGrid.columns - 1)
       },
       times,
-      points: gridLocations.map((item, index) => compactPoint(item, mapGrid.points[index])),
-      focusPoint: exactLocation ? compactPoint(exactLocation, focus) : null
+      points: gridLocations.map((item, index) => compactPoint(item, mapGrid.points[index], firstUsable, lastUsable + 1)),
+      focusPoint: exactLocation ? compactPoint(exactLocation, focus, firstUsable, lastUsable + 1) : null
     };
     RESPONSE_CACHE.set(cacheKey, { savedAt: Date.now(), payload });
     if (RESPONSE_CACHE.size > 18) RESPONSE_CACHE.delete(RESPONSE_CACHE.keys().next().value);
@@ -200,7 +210,7 @@ module.exports = async function handler(req, res) {
     if (rateLimited) res.setHeader('Retry-After', '60');
     return res.status(rateLimited ? 429 : 502).json({
       ok: false,
-      source: 'Météo‑France AROME HD mediante Open‑Meteo',
+      source: 'Météo‑France AROME HD 15min mediante Open‑Meteo',
       retryAfter: 60,
       error: error?.name === 'AbortError' ? 'AROME tardó demasiado en responder.' : (error?.message || 'No se pudo cargar la lluvia AROME de 15 minutos.')
     });

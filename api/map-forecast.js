@@ -11,23 +11,34 @@ const MODELS = {
 // actuales publican reflectividad derivada y CAPE en los tres modelos; CIN se
 // dibuja mediante la malla horaria cuando el dominio espacial no lo ofrece.
 const GFS_ONLY_LAYERS = new Set();
-// Open-Meteo publica lightning_density únicamente para ECMWF IFS. Esta capa
-// queda ligada al modelo que origina el dato: no se sustituye por best_match.
+// Lluvia convectiva y CAPE quedan ligados a ECMWF IFS. La densidad de rayos
+// se trata como un campo opcional: si llega completa a null no se inventa.
 const ECMWF_ONLY_LAYERS = new Set(['thunderstorms', 'electric_storms']);
 const AROME_LAYERS = new Set(['precipitation', 'forecast_reflectivity', 'cloud', 'temperature', 'humidity', 'wind', 'gust', 'cape']);
 
 function modelForLayer(requested, layer) {
+  // La temperatura a 850 hPa no se mezcla con el selector general. Open‑Meteo
+  // la publica para ECMWF IFS 0,25° y esta ruta es una malla de puntos de ese
+  // campo: si falla, se informa del fallo en lugar de cambiar a GFS/best_match.
+  if (layer === 't850') {
+    return {
+      label: 'ECMWF IFS 0,25° · temperatura a 850 hPa · respaldo oficial muestreado',
+      candidates: ['ecmwf_ifs025'],
+      sourceResolutionDegrees: 0.25
+    };
+  }
   if (ECMWF_ONLY_LAYERS.has(layer)) {
-    return { label: 'ECMWF IFS HRES · precipitación horaria + densidad de destellos · 9 km', candidates: ['ecmwf_ifs'] };
+    return {
+      label: layer === 'electric_storms'
+        ? 'ECMWF IFS HRES · CAPE · potencial tormentoso · 9 km'
+        : 'ECMWF IFS HRES · precipitación + CAPE · 9 km',
+      candidates: ['ecmwf_ifs']
+    };
   }
   if (GFS_ONLY_LAYERS.has(layer)) {
     return { label: layer === 'cin' ? 'NOAA GFS · CIN' : 'NOAA GFS Seamless', candidates: ['ncep_gfs_seamless'] };
   }
-  const model = MODELS[requested] || MODELS.ecmwf;
-  if (requested === 'ecmwf' && layer === 't850') {
-    return { label: 'ECMWF IFS · 25 km · nivel 850 hPa', candidates: ['ecmwf_ifs025', 'best_match'] };
-  }
-  return model;
+  return MODELS[requested] || MODELS.ecmwf;
 }
 
 // El visor llega hasta la misma hora del sexto día (145 marcas horarias). Se añaden 24 horas de
@@ -76,11 +87,11 @@ const LAYER_FIELDS = {
   windbundle: ['wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m'],
   precipitation: ['precipitation', 'precipitation_probability', 'rain', 'showers', 'snowfall', 'pressure_msl'],
   precipitation_accumulation: ['precipitation'],
-  cloud: ['cloud_cover', 'cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high', 'precipitation', 'pressure_msl'],
+  cloud: ['cloud_cover', 'precipitation'],
   pressure: ['pressure_msl'],
   t850: ['temperature_850hPa'],
   convection: ['cape', 'convective_inhibition'],
-  thunderstorms: ['lightning_density', 'precipitation'],
+  thunderstorms: ['precipitation', 'cape', 'lightning_density'],
   marine: ['wave_height', 'wave_direction', 'wave_period', 'sea_surface_temperature']
 };
 
@@ -339,6 +350,7 @@ function closestStalePayload(requested, layer, displayLayer, bounds, minimumRows
       entry.payload.bundle !== layer ||
       entry.payload.displayLayer !== displayLayer ||
       entry.payload.model?.requested !== requested ||
+      (displayLayer === 't850' && entry.payload.model?.sourceModel !== 'ecmwf_ifs025') ||
       Number(entry.payload.grid?.rows || 0) < minimumRows
     ) continue;
     const score = boundsOverlapScore(bounds, entry.payload.bounds);
@@ -376,7 +388,8 @@ module.exports = async function handler(req, res) {
   const layer = String(req.query?.layer || 'thermo').toLowerCase();
   const displayLayer = String(req.query?.displayLayer || layer).toLowerCase();
   const ecmwfOnlyRequested = ECMWF_ONLY_LAYERS.has(displayLayer);
-  if (requested === 'arome' && !ecmwfOnlyRequested && !AROME_LAYERS.has(displayLayer)) {
+  const t850Requested = displayLayer === 't850';
+  if (requested === 'arome' && !ecmwfOnlyRequested && !t850Requested && !AROME_LAYERS.has(displayLayer)) {
     return res.status(422).json({ ok: false, error: 'AROME HD no publica esta capa en la salida utilizada; no se sustituye por otro modelo.' });
   }
   const cinRequested = displayLayer === 'cin';
@@ -384,7 +397,7 @@ module.exports = async function handler(req, res) {
   // específicas de ECMWF/ICON pueden devolver la serie completa a null. CIN
   // se sirve por tanto con GFS y se identifica expresamente en la respuesta.
   const marineRequested = displayLayer === 'sea_temperature' || displayLayer === 'waves';
-  const effectiveRequested = marineRequested ? 'marine' : ecmwfOnlyRequested ? 'ecmwf' : GFS_ONLY_LAYERS.has(displayLayer) ? 'gfs' : requested;
+  const effectiveRequested = marineRequested ? 'marine' : (ecmwfOnlyRequested || t850Requested) ? 'ecmwf' : GFS_ONLY_LAYERS.has(displayLayer) ? 'gfs' : requested;
   const model = marineRequested ? { label: 'Open‑Meteo Marine', candidates: ['best_match'] } : modelForLayer(effectiveRequested, displayLayer);
   const focusLatitude = clamp(req.query?.focusLat, -80, 85, 43.4201);
   const focusLongitude = clamp(req.query?.focusLon, -180, 180, -2.7224);
@@ -396,7 +409,8 @@ module.exports = async function handler(req, res) {
     focusPoint.latitude.toFixed(2), focusPoint.longitude.toFixed(2)
   ].join('|');
   const cached = RESPONSE_CACHE.get(cacheKey);
-  if (cached && Date.now() - cached.savedAt < CACHE_TTL) {
+  const cachedModelIsValid = !t850Requested || cached?.payload?.model?.sourceModel === 'ecmwf_ifs025';
+  if (cached && cachedModelIsValid && Date.now() - cached.savedAt < CACHE_TTL) {
     res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=21600');
     res.setHeader('X-Map-Cache', 'HIT');
     return res.status(200).json(cached.payload);
@@ -411,6 +425,9 @@ module.exports = async function handler(req, res) {
     const requestedFields = fieldsForLayer(layer, effectiveRequested, displayLayer);
     forecast = marineRequested ? await requestMarine(requestPoints, requestedFields) : await requestForecast(requestPoints, model, requestedFields);
     let { result: locations, sourceModel } = forecast;
+    if (t850Requested && sourceModel !== 'ecmwf_ifs025') {
+      throw new Error('La temperatura a 850 hPa solo admite ECMWF IFS 0,25°; no se sustituye por otro modelo.');
+    }
     if (cinRequested && cinAvailable) {
       cinAvailable = locations.some(location =>
         location?.hourly?.convective_inhibition?.some(value =>
@@ -438,16 +455,50 @@ module.exports = async function handler(req, res) {
     }
     const gridLocations = locations.slice(0, mapGrid.points.length);
     const exactLocation = locations[mapGrid.points.length];
+    const stepLatitude = (north - south) / (mapGrid.rows - 1);
+    const stepLongitude = (east - west) / (mapGrid.columns - 1);
+    // Aunque el cliente pida puntos más juntos, la fuente no gana detalle por
+    // debajo de su malla nominal de 0,25°. Se publica el paso efectivo para no
+    // presentar la superficie interpolada como una tesela nativa de 25 km.
+    const displayResolutionDegrees = t850Requested
+      ? Math.max(model.sourceResolutionDegrees, Math.abs(stepLatitude), Math.abs(stepLongitude))
+      : null;
+    const displayResolutionLabel = displayResolutionDegrees === null
+      ? null
+      : `${displayResolutionDegrees.toFixed(displayResolutionDegrees < 0.1 ? 3 : 2).replace('.', ',')}°`;
     const payload = {
       ok: true,
       generatedAt: new Date().toISOString(),
-      model: { requested: effectiveRequested, label: marineRequested ? model.label : sourceModel === 'best_match' ? 'Modelo automático · respaldo' : model.label, sourceModel, cinAvailable, fallback: !marineRequested && sourceModel === 'best_match', provider: marineRequested ? 'Open-Meteo Marine' : 'Open-Meteo', resolution: marineRequested ? 'Mejor modelo marino disponible' : effectiveRequested === 'arome' ? 'AROME France HD 0.01° · 1,5 km' : effectiveRequested === 'gfs' ? 'GFS seamless' : effectiveRequested === 'icon' ? 'ICON seamless' : displayLayer === 't850' ? 'ECMWF IFS 0.25°' : 'ECMWF IFS HRES' },
+      model: {
+        requested: effectiveRequested,
+        label: marineRequested ? model.label : sourceModel === 'best_match' ? 'Modelo automático · respaldo' : model.label,
+        sourceModel,
+        cinAvailable,
+        fallback: !marineRequested && sourceModel === 'best_match',
+        sampledFallback: t850Requested,
+        provider: marineRequested ? 'Open-Meteo Marine' : t850Requested ? 'Open‑Meteo / ECMWF' : 'Open-Meteo',
+        resolution: marineRequested
+          ? 'Mejor modelo marino disponible'
+          : t850Requested
+            ? `Fuente ECMWF IFS 0,25° · visualización muestreada ${displayResolutionLabel}`
+            : effectiveRequested === 'arome'
+              ? 'AROME France HD 0.01° · 1,5 km'
+              : effectiveRequested === 'gfs'
+                ? 'GFS seamless'
+                : effectiveRequested === 'icon'
+                  ? 'ICON seamless'
+                  : 'ECMWF IFS HRES',
+        sourceResolutionDegrees: t850Requested ? model.sourceResolutionDegrees : undefined,
+        displayResolutionDegrees
+      },
       diagnostics: displayLayer === 'forecast_reflectivity'
         ? { native: false, derived: true, sourceVariable: 'precipitation', interval: 'preceding_hour_sum', units: 'dBZ', formula: 'Z=200·R^1.6' }
         : (displayLayer === 'thunderstorms' || displayLayer === 'electric_storms')
-          ? { native: true, derived: false, sourceVariable: displayLayer === 'electric_storms' ? 'lightning_density' : 'precipitation', lightningVariable: 'lightning_density', lightningAvailable, interval: 'preceding_hour_sum', units: displayLayer === 'electric_storms' ? 'l/km²' : 'mm', phenomenon: displayLayer === 'electric_storms' ? 'ECMWF lightning density; no lightning is synthesized when the field is unavailable' : 'ECMWF precipitation with lightning density; observed lightning remains on official AEMET/Euskalmet layers' }
+          ? { native: true, derived: false, sourceVariable: displayLayer === 'electric_storms' ? 'cape' : 'precipitation', supportVariable: 'cape', lightningVariable: 'lightning_density', lightningAvailable, interval: displayLayer === 'electric_storms' ? 'instantaneous' : 'preceding_hour_sum', units: displayLayer === 'electric_storms' ? 'J/kg' : 'mm', phenomenon: displayLayer === 'electric_storms' ? 'ECMWF CAPE; convective potential, not observed lightning' : 'ECMWF precipitation plus CAPE; lightning density is optional and observed lightning remains on official AEMET/Euskalmet layers' }
         : displayLayer === 'precipitation_3h'
           ? { native: false, derived: true, sourceVariable: 'precipitation', interval: 'three-hour-forward-sum', units: 'mm', samples: 3 }
+        : displayLayer === 't850'
+          ? { native: false, derived: false, sampled: true, sourceVariable: 'temperature_850hPa', sourceModel: 'ecmwf_ifs025', sourceResolutionDegrees: model.sourceResolutionDegrees, displayResolutionDegrees, units: '°C', interpolation: 'solo visual; los valores de origen no se alteran' }
         : displayLayer === 'cape'
           ? { native: true, derived: false, sourceVariable: 'cape', parcelType: 'not-specified-by-provider', units: 'J/kg' }
         : displayLayer === 'cin'
@@ -460,8 +511,8 @@ module.exports = async function handler(req, res) {
       grid: {
         rows: mapGrid.rows,
         columns: mapGrid.columns,
-        stepLatitude: (north - south) / (mapGrid.rows - 1),
-        stepLongitude: (east - west) / (mapGrid.columns - 1)
+        stepLatitude,
+        stepLongitude
       },
       times,
       points: gridLocations.map((item, index) => compactPoint(item, mapGrid.points[index])),
@@ -481,7 +532,7 @@ module.exports = async function handler(req, res) {
     // Si la instancia conserva una malla anterior, es preferible mostrarla
     // identificada como caché antes que dejar el visor completamente vacío.
     const detailSensitive = ['precipitation', 'thunderstorms', 'electric_storms', 'precipitation_3h', 'precipitation_6h', 'precipitation_12h', 'precipitation_24h', 'rain', 'showers', 'snowfall', 'precipitation_probability', 'forecast_reflectivity', 'cloud'].includes(displayLayer);
-    const nearby = cached || closestStalePayload(effectiveRequested, layer, displayLayer, { south, north, west, east }, detailSensitive ? Math.max(18, Math.floor(density * 0.8)) : 0);
+    const nearby = (cachedModelIsValid ? cached : null) || closestStalePayload(effectiveRequested, layer, displayLayer, { south, north, west, east }, detailSensitive ? Math.max(18, Math.floor(density * 0.8)) : 0);
     const canUseStale = nearby?.payload && Date.now() - nearby.savedAt < MAX_STALE_AGE;
     if (canUseStale) {
       res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=21600');

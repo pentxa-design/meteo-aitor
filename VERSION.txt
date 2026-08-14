@@ -1,5 +1,5 @@
-Meteo Aitor Bermeo v10.121 · capas meteorológicas profesionales
-Fecha: 2026-08-13
+Meteo Aitor Bermeo v10.122 · capas meteorológicas profesionales
+Fecha: 2026-08-14
 
 Las capas actuales se conservan. Lluvia y truenos usa precipitación nativa
 ECMWF y solo añade rayos si el campo lightning_density está publicado. La capa
@@ -12,10 +12,14 @@ campo meteorológico superpuesto cambia de color. La precipitación mantiene su
 paleta verde, amarilla, naranja y roja con transparencia total fuera de la señal.
 
 Nubosidad muestra masas blancas y grises definidas y oscurece en gris donde el
-mismo modelo publica lluvia. Temperatura, T850, MUCAPE y MUCIN ganan contraste;
-la temperatura del mar pasa a tesela espacial ECMWF de 9 km sin bloques.
+mismo modelo publica lluvia. Temperatura a 2 m usa ECMWF HRES de 9 km; T850
+queda exclusivamente en ECMWF IFS 0,25°. MUCAPE y MUCIN usan NOAA 0,25° en
+vista regional. La temperatura del mar usa la tesela Météo-France SST 0,08°
+(~8 km) y las olas la malla ECMWF WAM 0,25°, ambas con tierra transparente.
 
-Lluvia 3 h y acumulación dejan de extender cada nodo en un halo borroso. Radar
+Lluvia 3 h y acumulación NOAA conservan la misma pasada y dejan de extender
+cada nodo en una celda o halo borroso. AROME conserva cuartos reales de 15 min
+y el cursor difiere la carga pesada hasta soltar. Radar
 Euskalmet busca hasta doce horas el último fotograma oficial útil cuando las
 ranuras recientes contienen la lámina oficial vacía y lo marca como anterior.
 
