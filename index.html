@@ -1136,6 +1136,7 @@ const WEATHER_NUMERIC_FRESH_MAX_AGE=15*60*1000;
 let euskalmetBackendReady=false;
 let lastEuskalmetError='';
 let euskalmetSeaTemperature=null;
+let openMeteoSeaTemperature=null;
 let aemetBackendReady=false;
 let lastAemetError='';
 const ALIASES={
@@ -1326,7 +1327,7 @@ function renderBermeoTides(data){
   const officialSeaTemperature=finiteWeatherNumber(data.seaTemperature);
   if(officialSeaTemperature!==null){
     euskalmetSeaTemperature=officialSeaTemperature;
-    $('seaTemperature').textContent=marineValue(officialSeaTemperature,'°C',0);$('seaTemperatureMeta').textContent='Euskalmet · dato oficial';
+    renderSeaTemperatureMetric();
     if(mapAitorState?.layer==='sea_temperature'){updateMapInfo();renderMapPicker()}
   }
 
@@ -1377,6 +1378,16 @@ function marineValue(value,unit,digits=1){
 function marineDirection(value){
   const number=finiteWeatherNumber(value);return number===null?'dirección —':'de '+windDirection(number).split(' · ')[0];
 }
+function renderSeaTemperatureMetric(){
+  const model=finiteWeatherNumber(openMeteoSeaTemperature),official=finiteWeatherNumber(euskalmetSeaTemperature);
+  if(model!==null){
+    $('seaTemperature').textContent=marineValue(model,'°C');
+    $('seaTemperatureMeta').textContent=official===null?'Open‑Meteo Marine · modelo':`Open‑Meteo Marine · modelo · Euskalmet puntual ${marineValue(official,'°C',0)}`;
+    return;
+  }
+  $('seaTemperature').textContent=official===null?'—':marineValue(official,'°C',0);
+  $('seaTemperatureMeta').textContent=official===null?'modelo marino no disponible':'Euskalmet · dato puntual publicado';
+}
 function renderBermeoMarine(data){
   const current=data?.current||{},box=$('marineNow');if(!box)return;
   box.classList.remove('loading','error');
@@ -1385,15 +1396,14 @@ function renderBermeoMarine(data){
   $('swellHeight').textContent=marineValue(current.swell_wave_height,'m');
   $('swellMeta').textContent=marineDirection(current.swell_wave_direction)+' · '+marineValue(current.swell_wave_period,'s');
   $('wavePeriod').textContent=marineValue(current.wave_period,'s');
-  const officialSeaTemperature=finiteWeatherNumber(euskalmetSeaTemperature);
-  $('seaTemperature').textContent=officialSeaTemperature===null?marineValue(current.sea_surface_temperature,'°C'):marineValue(officialSeaTemperature,'°C',0);
-  $('seaTemperatureMeta').textContent=officialSeaTemperature===null?'Open‑Meteo Marine · modelo':'Euskalmet · dato oficial';
-  box.title=(data.stale?'Último parte marino guardado':'Parte marino actualizado')+' · oleaje Open‑Meteo Marine'+(officialSeaTemperature===null?'':' · temperatura del agua Euskalmet');
+  openMeteoSeaTemperature=finiteWeatherNumber(current.sea_surface_temperature);
+  renderSeaTemperatureMetric();
+  box.title=(data.stale?'Último parte marino guardado':'Parte marino actualizado')+' · oleaje y temperatura modelada Open‑Meteo Marine'+(finiteWeatherNumber(euskalmetSeaTemperature)===null?'':' · temperatura puntual Euskalmet separada');
 }
 function renderMarineError(){
   const box=$('marineNow');if(!box)return;box.classList.remove('loading');box.classList.add('error');box.title='El oleaje se actualizará automáticamente';
   ['waveHeight','swellHeight','wavePeriod'].forEach(id=>$(id).textContent='—');
-  const officialSeaTemperature=finiteWeatherNumber(euskalmetSeaTemperature);$('seaTemperature').textContent=officialSeaTemperature===null?'—':marineValue(officialSeaTemperature,'°C',0);$('seaTemperatureMeta').textContent=officialSeaTemperature===null?'reintentando':'Euskalmet · dato oficial';
+  openMeteoSeaTemperature=null;renderSeaTemperatureMetric();
   $('waveMeta').textContent='reintentando';$('swellMeta').textContent='reintentando';
 }
 async function loadBermeoMarine(){
@@ -1569,37 +1579,34 @@ function legacyWeatherFromEuskalmet(payload){
 function weatherFromEuskalmet(payload){
   const daily=(payload?.daily||[]).filter(day=>day?.date&&(day.description||finiteWeatherNumber(day.tempMin)!==null||finiteWeatherNumber(day.tempMax)!==null||finiteWeatherNumber(day.temperature)!==null));
   const periods=(payload?.hourly||[]).filter(period=>period?.time&&period?.endTime).sort((a,b)=>String(a.time).localeCompare(String(b.time)));
-  const report=payload?.report||{},now=localCurrentTime('Europe/Madrid');
+  const now=localCurrentTime('Europe/Madrid');
   const active=periods.find(period=>String(period.time)<=now&&String(period.endTime)>now)||periods.find(period=>String(period.time)>=now)||{};
-  // La descripción diaria no se presenta como observación "actual". Si Euskalmet
-  // no publica una observación o una franja vigente, los campos actuales quedan —.
-  const description=report.description||active.description||'';
-  const time=report.time||active.time||now,hour=Number(String(time).slice(11,13));
-  const reportDirection=finiteWeatherNumber(report.windDirection)??directionDegrees(report.windDirectionCardinal||'');
+  // El respaldo de portada usa exclusivamente una franja de previsión. El
+  // endpoint /reports de Euskalmet no se mezcla con el "current" de Open-Meteo:
+  // sin una franja alineada, el valor queda sin publicar.
+  const description=active.description||'';
+  const time=active.time||now;
   const officialLabel=payload.stale?'Euskalmet · guardado':(payload.fallbackIssue?'Euskalmet · parte anterior':'Euskalmet');
-  const reportPrecipitation=officialPrecipMm(report.precipitation,report.precipitationUnit);
   const activePrecipitation=officialPrecipMm(active.precipitation,active.precipitationUnit);
   return {
     timezone:'Europe/Madrid',
     current:{
       time,
-      temperature_2m:finiteWeatherNumber(report.temperature)??finiteWeatherNumber(active.temperature),
-      relative_humidity_2m:finiteWeatherNumber(report.humidity),
+      temperature_2m:finiteWeatherNumber(active.temperature),
+      relative_humidity_2m:null,
       dew_point_2m:null,
       apparent_temperature:null,
-      is_day:hour>=7&&hour<21?1:0,
-      precipitation:reportPrecipitation??activePrecipitation,
-      rain:reportPrecipitation??activePrecipitation,
+      is_day:active.time?officialPeriodIsDay(active):null,
+      precipitation:activePrecipitation,
+      rain:activePrecipitation,
       weather_code:description?codeFromOfficialText(description):null,
       cloud_cover:null,
       pressure_msl:null,
-      wind_speed_10m:officialWindKmh(report.windSpeed,report.windSpeedUnit)??officialWindKmh(active.windSpeed,active.windSpeedUnit),
-      wind_direction_10m:reportDirection??finiteWeatherNumber(active.windDirection)??directionDegrees(active.windDirectionCardinal||''),
+      wind_speed_10m:officialWindKmh(active.windSpeed,active.windSpeedUnit),
+      wind_direction_10m:finiteWeatherNumber(active.windDirection)??directionDegrees(active.windDirectionCardinal||''),
       wind_gusts_10m:null,
       _official_description:description,
-      _official_precipitation_period:report.precipitationPeriod??null,
-      _official_precipitation_period_unit:report.precipitationPeriodUnit||'',
-      _source:officialLabel
+      _source:officialLabel+' · respaldo de previsión'
     },
     hourly:{
       time:periods.map(period=>period.time),
@@ -1635,15 +1642,16 @@ function weatherFromEuskalmet(payload){
     },
     _euskalmet:payload,
     _officialOnly:true,
-    _dataPolicy:'euskalmet-only'
+    _dataPolicy:'official-forecast-backup',
+    _backupSource:'Euskalmet'
   };
 }
 function weatherFromAemet(payload,loc={}){
   const daily=(payload?.daily||[]).filter(day=>day?.date),hourly=(payload?.hourly||[]).filter(hour=>hour?.time);
   const timezone=timezoneForLocation(loc),nowHour=localCurrentTime(timezone).slice(0,13)+':00';
   const current=hourly.find(hour=>String(hour.time)>=nowHour)||[...hourly].reverse().find(hour=>String(hour.time)<nowHour)||{};
-  const description=current.description||daily[0]?.description||'',time=current.time||localCurrentTime(timezone);
-  return {timezone,current:{time,temperature_2m:finiteWeatherNumber(current.temperature),relative_humidity_2m:finiteWeatherNumber(current.humidity),dew_point_2m:null,apparent_temperature:null,is_day:Number(time.slice(11,13))>=7&&Number(time.slice(11,13))<21?1:0,precipitation:finiteWeatherNumber(current.precipitation),rain:finiteWeatherNumber(current.precipitation),weather_code:codeFromOfficialText(description),cloud_cover:null,pressure_msl:null,wind_speed_10m:finiteWeatherNumber(current.windSpeed),wind_direction_10m:directionDegrees(current.windDirection),wind_gusts_10m:finiteWeatherNumber(current.windGust),_official_description:description,_source:'AEMET'},hourly:{time:hourly.map(hour=>hour.time),temperature_2m:hourly.map(hour=>finiteWeatherNumber(hour.temperature)),relative_humidity_2m:hourly.map(hour=>finiteWeatherNumber(hour.humidity)),dew_point_2m:hourly.map(()=>null),weather_code:hourly.map(hour=>codeFromOfficialText(hour.description||'')),precipitation_probability:hourly.map(hour=>finiteWeatherNumber(hour.precipitationProbability)),precipitation:hourly.map(hour=>finiteWeatherNumber(hour.precipitation)),wind_speed_10m:hourly.map(hour=>finiteWeatherNumber(hour.windSpeed)),wind_direction_10m:hourly.map(hour=>directionDegrees(hour.windDirection)),wind_gusts_10m:hourly.map(hour=>finiteWeatherNumber(hour.windGust)),is_day:hourly.map(hour=>{const h=Number(String(hour.time).slice(11,13));return h>=7&&h<21?1:0}),official_source:hourly.map(()=>'AEMET')},daily:{time:daily.map(day=>day.date),weather_code:daily.map(day=>codeFromOfficialText(day.description||'')),temperature_2m_max:daily.map(day=>finiteWeatherNumber(day.tempMax)),temperature_2m_min:daily.map(day=>finiteWeatherNumber(day.tempMin)),precipitation_probability_max:daily.map(day=>finiteWeatherNumber(day.precipitationProbability)),precipitation_sum:daily.map(()=>null),wind_gusts_10m_max:daily.map(day=>finiteWeatherNumber(day.windGust)),sunrise:daily.map(()=>null),sunset:daily.map(()=>null),official_text:daily.map(day=>day.description||''),official_source:daily.map(()=>'AEMET')},_aemet:payload,_officialOnly:true};
+  const description=current.description||'',time=current.time||localCurrentTime(timezone),officialLabel=payload.stale?'AEMET · guardado':'AEMET';
+  return {timezone,current:{time,temperature_2m:finiteWeatherNumber(current.temperature),relative_humidity_2m:finiteWeatherNumber(current.humidity),dew_point_2m:null,apparent_temperature:null,is_day:Number(time.slice(11,13))>=7&&Number(time.slice(11,13))<21?1:0,precipitation:finiteWeatherNumber(current.precipitation),rain:finiteWeatherNumber(current.precipitation),weather_code:description?codeFromOfficialText(description):null,cloud_cover:null,pressure_msl:null,wind_speed_10m:finiteWeatherNumber(current.windSpeed),wind_direction_10m:directionDegrees(current.windDirection),wind_gusts_10m:finiteWeatherNumber(current.windGust),_official_description:description,_source:officialLabel+' · respaldo de previsión'},hourly:{time:hourly.map(hour=>hour.time),temperature_2m:hourly.map(hour=>finiteWeatherNumber(hour.temperature)),relative_humidity_2m:hourly.map(hour=>finiteWeatherNumber(hour.humidity)),dew_point_2m:hourly.map(()=>null),weather_code:hourly.map(hour=>codeFromOfficialText(hour.description||'')),precipitation_probability:hourly.map(hour=>finiteWeatherNumber(hour.precipitationProbability)),precipitation:hourly.map(hour=>finiteWeatherNumber(hour.precipitation)),wind_speed_10m:hourly.map(hour=>finiteWeatherNumber(hour.windSpeed)),wind_direction_10m:hourly.map(hour=>directionDegrees(hour.windDirection)),wind_gusts_10m:hourly.map(hour=>finiteWeatherNumber(hour.windGust)),is_day:hourly.map(hour=>{const h=Number(String(hour.time).slice(11,13));return h>=7&&h<21?1:0}),official_source:hourly.map(()=>officialLabel)},daily:{time:daily.map(day=>day.date),weather_code:daily.map(day=>codeFromOfficialText(day.description||'')),temperature_2m_max:daily.map(day=>finiteWeatherNumber(day.tempMax)),temperature_2m_min:daily.map(day=>finiteWeatherNumber(day.tempMin)),precipitation_probability_max:daily.map(day=>finiteWeatherNumber(day.precipitationProbability)),precipitation_sum:daily.map(()=>null),wind_gusts_10m_max:daily.map(day=>finiteWeatherNumber(day.windGust)),sunrise:daily.map(()=>null),sunset:daily.map(()=>null),official_text:daily.map(day=>day.description||''),official_source:daily.map(()=>officialLabel)},_aemet:payload,_officialOnly:true,_dataPolicy:'official-forecast-backup',_backupSource:'AEMET'};
 }
 function showWeatherShell(loc,message=isBermeoLocation(loc)?'Consultando Open‑Meteo · ECMWF IFS…':'Consultando las fuentes meteorológicas…'){
   state.location=loc;state.weatherHasData=false;$('main').style.display='block';$('main').classList.add('weatherUnavailable');
@@ -1684,6 +1692,13 @@ function tagBermeoOpenMeteo(data){
   normalized._gfsSkyCorrections=0;
   normalized._gfsSkyCurrent=false;
   normalized.current._source='Open‑Meteo · ECMWF IFS';
+  return normalized;
+}
+function tagOpenMeteoBase(data){
+  const normalized=normalizeOpenForecast(data);
+  normalized._dataPolicy='open-meteo-base';
+  normalized._backupSource='';
+  normalized.current._source='Open‑Meteo · fuente base';
   return normalized;
 }
 function bermeoUseGfsSky(ecmwf={},gfs={}){
@@ -1789,76 +1804,65 @@ async function loadBermeoOfficialWeather(loc,options={}){
   scheduleWeatherRetry(loc);return Boolean(snapshot);
 }
 async function loadWeatherCore(loc,options={}){
-  if(isBermeoLocation(loc))return loadBermeoEcmwfWeather(loc,options);
+  const bermeo=isBermeoLocation(loc),euskadi=isEuskadiLocation(loc),spain=isSpainLocation(loc),basePolicy=bermeo?'open-meteo-ecmwf':'open-meteo-base';
   const locationKey=weatherLocationKey(loc);if(state.weatherRetryLocationKey!==locationKey){state.weatherRetryLocationKey=locationKey;state.weatherRetryAttempt=0}
   const requestId=++state.weatherRequestId;clearWeatherRetry();state.location=loc;$('search').value=[loc.name,loc.country].filter(Boolean).join(', ');$('results').style.display='none';
-  const storedSnapshot=readWeatherSnapshot(loc),snapshot=storedSnapshot?{...storedSnapshot,data:normalizeOpenForecast(storedSnapshot.data)}:null;
-  const snapshotAge=snapshot?Date.now()-Number(snapshot.savedAt):Infinity;let displayed=false;
+  const storedSnapshot=readWeatherSnapshot(loc,WEATHER_CACHE_MAX_AGE,basePolicy),tagBase=data=>bermeo?tagBermeoOpenMeteo(data):tagOpenMeteoBase(data);
+  const snapshotData=storedSnapshot?tagBase(storedSnapshot.data):null,snapshot=storedSnapshot&&usableOpenForecast(snapshotData)?{...storedSnapshot,data:snapshotData}:null;
+  const snapshotAge=snapshot?Date.now()-Number(snapshot.savedAt):Infinity;
+  const setBaseState=(cached,savedAt=null)=>Object.assign(loc,{_euskalmetActive:false,_euskalmetCurrent:false,_aemetActive:false,_officialStale:false,_fallbackIssue:false,_openMeteoActive:true,_weatherAvailable:true,_cacheOnly:cached,_numericStale:cached,_cacheSavedAt:cached?savedAt:null,_snapshotOld:Boolean(cached&&savedAt&&Date.now()-savedAt>WEATHER_CACHE_OLD_LABEL),_hourlyStale:cached,_dailyStale:cached,_officialOnly:false,_dataPolicy:basePolicy,_forecastMode:cached?'base-cache':'base-live',_forecastBackupSource:''});
   if(snapshot){
-    Object.assign(loc,{_euskalmetActive:Boolean(snapshot.location?._euskalmetActive),_euskalmetCurrent:Boolean(snapshot.location?._euskalmetCurrent),_aemetActive:Boolean(snapshot.location?._aemetActive),_officialStale:Boolean(snapshot.location?._officialStale),_openMeteoActive:Boolean(snapshot.location?._openMeteoActive),_weatherAvailable:true,_cacheOnly:true,_numericStale:true,_cacheSavedAt:Number(snapshot.savedAt),_snapshotOld:snapshotAge>WEATHER_CACHE_OLD_LABEL,_hourlyStale:true,_dailyStale:true});
-    render(loc,snapshot.data);setHeroPhoto(loc,snapshot.data.current||{});startLocalClock(snapshot.data.timezone);displayed=true;
-    const ageMinutes=Math.max(1,Math.round(snapshotAge/60000));status('Mostrando la última previsión guardada de '+loc.name+' · hace '+ageMinutes+' min. Actualizando…');$('status').className='status cached';
-  }else{Object.assign(loc,{_euskalmetActive:false,_euskalmetCurrent:false,_aemetActive:false,_officialStale:false,_openMeteoActive:false,_weatherAvailable:false,_cacheOnly:false,_numericStale:false,_cacheSavedAt:null,_snapshotOld:false,_hourlyStale:false,_dailyStale:false,_officialOnly:false});showWeatherShell(loc);if(!options.quiet)status('Cargando el tiempo de '+loc.name+'…')}
-  const p=new URLSearchParams({latitude:loc.latitude,longitude:loc.longitude,timezone:'auto',forecast_days:'7',wind_speed_unit:'kmh',temperature_unit:'celsius',precipitation_unit:'mm',current:'temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,is_day,precipitation,rain,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m',hourly:'temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,weather_code,precipitation_probability,precipitation,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m,is_day',daily:'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_gusts_10m_max,sunrise,sunset'});
-  const euskadi=isEuskadiLocation(loc),spain=isSpainLocation(loc),aemetParams=new URLSearchParams({name:loc.name||'',admin1:loc.admin1||'',lat:loc.latitude,lon:loc.longitude});
-  let openReady=false;
-  const openTask=settledWeather(getOpenMeteoForecast(p)).then(result=>{
-    if(result.ok&&usableOpenForecast(result.value)){openReady=true;if(requestId===state.weatherRequestId&&!snapshot){
-      const info=forecastCacheInfo(result.value),stale=info.state==='stale';Object.assign(loc,{_euskalmetActive:false,_euskalmetCurrent:false,_aemetActive:false,_officialStale:false,_openMeteoActive:true,_weatherAvailable:true,_cacheOnly:stale,_numericStale:stale,_cacheSavedAt:stale?info.savedAt:null,_snapshotOld:stale&&Date.now()-info.savedAt>WEATHER_CACHE_OLD_LABEL,_hourlyStale:stale,_dailyStale:stale,_officialOnly:false});
-      render(loc,result.value);setHeroPhoto(loc,result.value.current||{});startLocalClock(result.value.timezone);displayed=true;
-      status(stale?'Mostrando la previsión numérica guardada · comprobando las fuentes…':'Previsión numérica actualizada · comprobando la fuente oficial…');if(stale)$('status').className='status cached';
-    }}return result;
-  });
-  const officialTask=euskadi?settledWeather(getJSON('/api/euskalmet?name='+encodeURIComponent(loc.name)+'&days=7',27000)):spain?settledWeather(getJSON('/api/aemet?'+aemetParams.toString(),18000)):Promise.resolve({ok:true,value:null});
-  const officialProgress=officialTask.then(result=>{
-    if(requestId!==state.weatherRequestId||openReady||snapshot||!result.ok)return result;
-    const valid=euskadi?usableEuskalmetForecast(result.value):(spain?usableAemetForecast(result.value):false);
-    if(valid){const partial=euskadi?weatherFromEuskalmet(result.value):weatherFromAemet(result.value,loc),officialStored=Boolean(result.value?.stale),storedAt=Date.parse(result.value?.staleSavedAt||result.value?.generatedAt||'');Object.assign(loc,{_euskalmetActive:euskadi,_euskalmetCurrent:Boolean(euskadi&&finiteWeatherNumber(result.value?.report?.temperature)!==null),_aemetActive:spain&&!euskadi,_officialStale:officialStored,_openMeteoActive:false,_weatherAvailable:true,_cacheOnly:officialStored,_numericStale:false,_cacheSavedAt:officialStored&&Number.isFinite(storedAt)?storedAt:null,_snapshotOld:officialStored&&Number.isFinite(storedAt)&&Date.now()-storedAt>WEATHER_CACHE_OLD_LABEL,_hourlyStale:officialStored,_dailyStale:officialStored,_officialOnly:true});render(loc,partial);setHeroPhoto(loc,partial.current||{});startLocalClock(partial.timezone);displayed=true;status(officialStored?'Mostrando la última previsión oficial guardada · completando campos numéricos…':'Previsión oficial '+(euskadi?'Euskalmet':'AEMET')+' disponible · completando campos numéricos…');if(officialStored)$('status').className='status cached'}
-    return result;
-  });
-  const [openResult,officialResult]=await Promise.all([openTask,officialProgress]);
+    setBaseState(true,Number(snapshot.savedAt));render(loc,snapshot.data);setHeroPhoto(loc,snapshot.data.current||{});startLocalClock(snapshot.data.timezone);
+    const ageMinutes=Math.max(1,Math.round(snapshotAge/60000));status('BASE GUARDADA · Open‑Meteo · hace '+ageMinutes+' min · actualizando…');$('status').className='status cached';
+  }else{
+    Object.assign(loc,{_euskalmetActive:false,_euskalmetCurrent:false,_aemetActive:false,_officialStale:false,_fallbackIssue:false,_openMeteoActive:false,_weatherAvailable:false,_cacheOnly:false,_numericStale:false,_cacheSavedAt:null,_snapshotOld:false,_hourlyStale:false,_dailyStale:false,_officialOnly:false,_dataPolicy:basePolicy,_forecastMode:'connecting',_forecastBackupSource:''});
+    showWeatherShell(loc,bermeo?'Consultando BASE Open‑Meteo · ECMWF IFS…':'Consultando BASE Open‑Meteo…');if(!options.quiet)status('Consultando la fuente base Open‑Meteo para '+loc.name+'…');
+  }
+  const params=bermeo?bermeoEcmwfParams(loc):new URLSearchParams({latitude:loc.latitude,longitude:loc.longitude,timezone:'auto',forecast_days:'7',wind_speed_unit:'kmh',temperature_unit:'celsius',precipitation_unit:'mm',current:'temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,is_day,precipitation,rain,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m',hourly:'temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,weather_code,precipitation_probability,precipitation,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m,is_day',daily:'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_gusts_10m_max,sunrise,sunset'});
+  const openResult=await settledWeather(getOpenMeteoForecast(params));
   if(requestId!==state.weatherRequestId)return false;
-  const openData=openResult.ok&&usableOpenForecast(openResult.value)?normalizeOpenForecast(openResult.value):null,officialData=officialResult.ok?officialResult.value:null;
-  const officialStored=Boolean(officialData?.stale),officialStoredParsed=Date.parse(officialData?.staleSavedAt||officialData?.generatedAt||''),officialStoredAt=Number.isFinite(officialStoredParsed)?officialStoredParsed:Date.now();
-  const eusAvailable=euskadi&&usableEuskalmetForecast(officialData),aemetAvailable=spain&&!euskadi&&usableAemetForecast(officialData),eusOfficial=eusAvailable&&!officialStored,aemetOfficial=aemetAvailable&&!officialStored,officialReady=eusOfficial||aemetOfficial;
-  const openInfo=openData?forecastCacheInfo(openData):{state:'missing',savedAt:0},numericStale=Boolean(openData&&openInfo.state==='stale');
-  const snapshotNumeric=Boolean(snapshot&&snapshot.location?._openMeteoActive),numericBaseline=openData||(snapshotNumeric?snapshot.data:null);
-  loc._euskalmetActive=eusAvailable;loc._euskalmetCurrent=Boolean(eusAvailable&&finiteWeatherNumber(officialData?.report?.temperature)!==null);loc._aemetActive=aemetAvailable;loc._officialStale=officialStored;loc._openMeteoActive=Boolean(numericBaseline);loc._numericStale=Boolean(numericStale||(!openData&&numericBaseline));loc._cacheSavedAt=loc._numericStale?(openData?openInfo.savedAt:Number(snapshot?.savedAt)):(officialStored?officialStoredAt:null);loc._snapshotOld=Boolean(loc._cacheSavedAt&&Date.now()-loc._cacheSavedAt>WEATHER_CACHE_OLD_LABEL);loc._hourlyStale=numericBaseline?loc._numericStale:officialStored;loc._dailyStale=(eusAvailable||aemetAvailable)?officialStored:loc._numericStale;loc._cacheOnly=Boolean(officialStored&&!numericBaseline);
-  if(!eusOfficial&&euskadi)lastEuskalmetError=officialResult.error?.message||officialData?.error||'Euskalmet no disponible';if(!aemetOfficial&&spain&&!euskadi)lastAemetError=officialResult.error?.message||officialData?.error||'AEMET no disponible';
-  let data=null;
-  if(numericBaseline)data=eusAvailable?mergeEuskalmet(numericBaseline,officialData):(aemetAvailable?mergeAemet(numericBaseline,officialData):numericBaseline);
-  else if(eusAvailable)data=weatherFromEuskalmet(officialData);else if(aemetAvailable)data=weatherFromAemet(officialData,loc);
-  if(data){
-    loc._weatherAvailable=true;loc._officialOnly=Boolean(data._officialOnly&&!numericBaseline);render(loc,data);setHeroPhoto(loc,data.current||{});startLocalClock(data.timezone);state.weatherHasData=true;
-    const dataSavedAt=openData?openInfo.savedAt:(numericBaseline&&snapshot?Number(snapshot.savedAt):(officialStored?officialStoredAt:Date.now()));if(!snapshot||dataSavedAt>=Number(snapshot.savedAt))saveWeatherSnapshot(loc,data,dataSavedAt);
-    const expectedOfficial=euskadi||spain,officialComplete=!expectedOfficial||officialReady,numericComplete=Boolean(openData&&!numericStale),needsRetry=!officialComplete||!numericComplete;
-    const source=eusOfficial?'Euskalmet':(aemetOfficial?'AEMET':'');
-    if(source&&numericComplete)status('Actualizado para '+loc.name+' · previsión oficial '+source+' y campos numéricos de respaldo.');
-    else if(source&&loc._numericStale){status('Previsión oficial '+source+' actualizada · campos numéricos guardados del '+weatherSavedTimeLabel(loc._cacheSavedAt,data.timezone)+'.');$('status').className='status cached'}
-    else if(source)status('Actualizado para '+loc.name+' · previsión oficial '+source+'; los campos no publicados aparecen como —.');
-    else if(numericComplete)status('Actualizado para '+loc.name+(spain?' · respaldo numérico activo; la fuente oficial no está disponible para esta consulta.':'.'));
-    else{status('Mostrando la última previsión numérica guardada del '+weatherSavedTimeLabel(loc._cacheSavedAt,data.timezone)+' · se actualizará automáticamente.');$('status').className='status cached'}
-    if(needsRetry)scheduleWeatherRetry(loc,180000);else{state.weatherRetryAttempt=0;clearWeatherRetry()}
+  if(openResult.ok&&usableOpenForecast(openResult.value)){
+    const data=tagBase(openResult.value),info=forecastCacheInfo(data),cached=info.state==='stale';setBaseState(cached,info.savedAt);
+    render(loc,data);setHeroPhoto(loc,data.current||{});startLocalClock(data.timezone);state.weatherHasData=true;saveWeatherSnapshot(loc,data,info.savedAt);
+    if(cached){status('BASE GUARDADA · Open‑Meteo · '+weatherSavedTimeLabel(info.savedAt,data.timezone)+' · reintentando actualización.');$('status').className='status cached';scheduleWeatherRetry(loc,180000)}
+    else{status('BASE · Open‑Meteo actualizada para '+loc.name+(bermeo?' · ECMWF IFS.':'.'));state.weatherRetryAttempt=0;clearWeatherRetry()}
     return true;
   }
-  loc._weatherAvailable=Boolean(snapshot);loc._officialOnly=false;loc._cacheOnly=Boolean(snapshot);loc._numericStale=Boolean(snapshot);loc._cacheSavedAt=snapshot?Number(snapshot.savedAt):null;loc._snapshotOld=Boolean(snapshot&&snapshotAge>WEATHER_CACHE_OLD_LABEL);loc._hourlyStale=Boolean(snapshot);loc._dailyStale=Boolean(snapshot);
-  if(!displayed)showWeatherShell(loc,navigator.onLine?'Las fuentes meteorológicas están temporalmente ocupadas. La aplicación seguirá reintentando.':'Sin conexión. El radar, los mapas guardados y la navegación siguen disponibles.');updateSourcePolicy(loc);
-  if(snapshot){status('No se pudo renovar ahora. Se conserva la previsión guardada del '+weatherSavedTimeLabel(snapshot.savedAt,snapshot.data.timezone)+' y se reintentará automáticamente.');$('status').className='status cached'}else if(!navigator.onLine)status('Sin conexión a Internet. La portada permanece disponible y se actualizará al recuperarla.',true);else status('Fuentes meteorológicas temporalmente ocupadas. La portada, las mareas y los mapas permanecen disponibles.',true);
-  scheduleWeatherRetry(loc);return Boolean(snapshot);
+  if(snapshot){
+    setBaseState(true,Number(snapshot.savedAt));updateSourcePolicy(loc);status('BASE GUARDADA · Open‑Meteo no respondió · se conserva '+weatherSavedTimeLabel(snapshot.savedAt,snapshot.data.timezone)+' y se reintentará automáticamente.');$('status').className='status cached';scheduleWeatherRetry(loc,180000);return true;
+  }
+  if(!spain){
+    Object.assign(loc,{_forecastMode:'error',_weatherAvailable:false,_openMeteoActive:false,_forecastBackupSource:''});showWeatherShell(loc,navigator.onLine?'Open‑Meteo está temporalmente ocupado. La aplicación seguirá reintentando.':'Sin conexión. La previsión volverá cuando se recupere Internet.');updateSourcePolicy(loc);status('Open‑Meteo no respondió y no existe una base guardada utilizable.',true);scheduleWeatherRetry(loc);return false;
+  }
+  const backupSource=euskadi?'Euskalmet':'AEMET',aemetParams=new URLSearchParams({name:loc.name||'',admin1:loc.admin1||'',lat:loc.latitude,lon:loc.longitude});
+  status('Open‑Meteo no respondió · consultando RESPALDO DE PREVISIÓN '+backupSource+'…');
+  const officialResult=euskadi?await settledWeather(getJSON('/api/euskalmet?name='+encodeURIComponent(loc.name)+'&days=7',27000)):await settledWeather(getJSON('/api/aemet?'+aemetParams.toString(),18000));
+  if(requestId!==state.weatherRequestId)return false;
+  const payload=officialResult.ok?officialResult.value:null,valid=euskadi?usableEuskalmetForecast(payload):usableAemetForecast(payload);
+  if(valid){
+    const data=euskadi?weatherFromEuskalmet(payload):weatherFromAemet(payload,loc),stored=Boolean(payload?.stale),partial=Boolean(payload?.fallbackIssue),parsedSavedAt=Date.parse(payload?.staleSavedAt||payload?.generatedAt||''),savedAt=Number.isFinite(parsedSavedAt)?parsedSavedAt:Date.now();
+    Object.assign(loc,{_euskalmetActive:euskadi,_euskalmetCurrent:false,_aemetActive:!euskadi,_officialStale:stored,_fallbackIssue:partial,_openMeteoActive:false,_weatherAvailable:true,_cacheOnly:stored,_numericStale:false,_cacheSavedAt:stored?savedAt:null,_snapshotOld:Boolean(stored&&Date.now()-savedAt>WEATHER_CACHE_OLD_LABEL),_hourlyStale:stored,_dailyStale:stored,_officialOnly:true,_dataPolicy:'official-forecast-backup',_forecastMode:'official-backup',_forecastBackupSource:backupSource});
+    render(loc,data);setHeroPhoto(loc,data.current||{});startLocalClock(data.timezone);state.weatherHasData=true;
+    status((stored?'RESPALDO DE PREVISIÓN GUARDADO':partial?'RESPALDO PARCIAL DE PREVISIÓN':'RESPALDO DE PREVISIÓN')+' · '+backupSource+' · Open‑Meteo no respondió; los campos no publicados quedan como —.');if(stored||partial)$('status').className='status cached';
+    scheduleWeatherRetry(loc,60000);return true;
+  }
+  if(euskadi)lastEuskalmetError=officialResult.error?.message||payload?.error||'Euskalmet no disponible';else lastAemetError=officialResult.error?.message||payload?.error||'AEMET no disponible';
+  Object.assign(loc,{_euskalmetActive:false,_euskalmetCurrent:false,_aemetActive:false,_officialStale:false,_fallbackIssue:false,_openMeteoActive:false,_weatherAvailable:false,_cacheOnly:false,_numericStale:false,_cacheSavedAt:null,_snapshotOld:false,_hourlyStale:false,_dailyStale:false,_officialOnly:false,_dataPolicy:basePolicy,_forecastMode:'error',_forecastBackupSource:''});
+  showWeatherShell(loc,navigator.onLine?'Open‑Meteo y el respaldo de previsión están temporalmente ocupados.':'Sin conexión. La aplicación seguirá reintentando.');updateSourcePolicy(loc);status('Sin previsión utilizable: Open‑Meteo y '+backupSource+' no respondieron. No se sustituyen con radar ni observaciones.',true);scheduleWeatherRetry(loc);return false;
 }
 async function loadWeather(loc,options={}){
   try{return await loadWeatherCore(loc,options)}catch(_){
     if(!state.location||weatherLocationKey(state.location)!==weatherLocationKey(loc))return false;
-    const bermeoEcmwf=isBermeoLocation(loc),snapshot=readWeatherSnapshot(loc,WEATHER_CACHE_MAX_AGE,bermeoEcmwf?'open-meteo-ecmwf':'');
+    const bermeoEcmwf=isBermeoLocation(loc),basePolicy=bermeoEcmwf?'open-meteo-ecmwf':'open-meteo-base',snapshot=readWeatherSnapshot(loc,WEATHER_CACHE_MAX_AGE,basePolicy);
     if(snapshot&&!state.weatherHasData){
-      const data=bermeoEcmwf?tagBermeoOpenMeteo(snapshot.data):normalizeOpenForecast(snapshot.data);
+      const data=bermeoEcmwf?tagBermeoOpenMeteo(snapshot.data):tagOpenMeteoBase(snapshot.data);
       Object.assign(loc,{
-        _euskalmetActive:bermeoEcmwf?false:Boolean(snapshot.location?._euskalmetActive),
-        _euskalmetCurrent:bermeoEcmwf?false:Boolean(snapshot.location?._euskalmetCurrent),
-        _aemetActive:bermeoEcmwf?false:Boolean(snapshot.location?._aemetActive),
-        _officialStale:bermeoEcmwf?false:Boolean(snapshot.location?._officialStale),
-        _fallbackIssue:bermeoEcmwf?false:Boolean(snapshot.location?._fallbackIssue),
-        _openMeteoActive:bermeoEcmwf||Boolean(snapshot.location?._openMeteoActive),
+        _euskalmetActive:false,
+        _euskalmetCurrent:false,
+        _aemetActive:false,
+        _officialStale:false,
+        _fallbackIssue:false,
+        _openMeteoActive:true,
         _gfsSkyActive:false,
         _weatherAvailable:true,
         _cacheOnly:true,
@@ -1868,12 +1872,14 @@ async function loadWeather(loc,options={}){
         _hourlyStale:true,
         _dailyStale:true,
         _officialOnly:false,
-        _dataPolicy:bermeoEcmwf?'open-meteo-ecmwf':''
+        _dataPolicy:basePolicy,
+        _forecastMode:'base-cache',
+        _forecastBackupSource:''
       });
       render(loc,data);setHeroPhoto(loc,data.current||{});startLocalClock(data.timezone);
     }
     else if(!state.weatherHasData)showWeatherShell(loc,bermeoEcmwf?'Open‑Meteo está temporalmente ocupado. La aplicación seguirá reintentando.':'La previsión está temporalmente ocupada. La aplicación seguirá reintentando.');
-    updateSourcePolicy(loc);status(snapshot?(bermeoEcmwf?'Se conserva la última previsión ECMWF guardada y se reintentará automáticamente.':'Se conserva la última previsión guardada y se reintentará automáticamente.'):(bermeoEcmwf?'Open‑Meteo no ha respondido todavía. Mareas, avisos y mapas siguen disponibles.':'La previsión no ha respondido todavía. La portada, las mareas y los mapas siguen disponibles.'),!snapshot);if(snapshot)$('status').className='status cached';scheduleWeatherRetry(loc);return Boolean(snapshot);
+    updateSourcePolicy(loc);status(snapshot?'BASE GUARDADA · Open‑Meteo · se conserva la última previsión y se reintentará automáticamente.':'Open‑Meteo no ha respondido todavía. La aplicación seguirá reintentando.',!snapshot);if(snapshot)$('status').className='status cached';scheduleWeatherRetry(loc);return Boolean(snapshot);
   }
 }
 function iconHTML(symbols,big=false){
@@ -2057,7 +2063,7 @@ function renderHeroPhases(d,loc={}){
 function renderDayParts(d,loc={}){
   const grid=$('dayPartsGrid'),source=$('dayPartsSource');if(!grid||!source)return;
   const timezone=d.timezone||timezoneForLocation(loc),today=localCurrentTime(timezone).slice(0,10);
-  source.textContent=d._dataPolicy==='euskalmet-only'?'Euskalmet · horas publicadas sin interpolar':isBermeoLocation(loc)?'ECMWF IFS · Open‑Meteo · horas sin interpolar':'Open‑Meteo · horas sin interpolar';
+  source.textContent=d._dataPolicy==='official-forecast-backup'?`${d._backupSource||'Fuente oficial'} · RESPALDO DE PREVISIÓN · franjas publicadas`:isBermeoLocation(loc)?'BASE Open‑Meteo · ECMWF IFS · horas sin interpolar':'BASE Open‑Meteo · horas sin interpolar';
   grid.innerHTML=WEATHER_DAY_PARTS.map(period=>{
     const entries=weatherDayPartEntries(d,today,period);
     if(!entries.length)return `<div class="dayPartCard dayPartEmpty"><div class="dayPartName">${period.name}</div><div class="dayPartWindow">${period.window}</div><div class="dayPartState">Sin franja publicada</div></div>`;
@@ -2114,8 +2120,8 @@ function windLevel(gust){
 function renderHourly(d,loc={}){
   const box=$('hourly');if(!box)return;box.innerHTML='';
   const h=d.hourly||{},times=h.time||[];
-  const officialOnly=d?._dataPolicy==='euskalmet-only';
-  const emptyMessage=officialOnly?'Euskalmet no ha publicado ahora franjas futuras para Bermeo. No se sustituirán con otra fuente; la previsión diaria, el radar y los mapas continúan disponibles.':'La fuente meteorológica no ha publicado ahora un avance horario utilizable.';
+  const officialOnly=['euskalmet-only','official-forecast-backup'].includes(d?._dataPolicy);
+  const emptyMessage=officialOnly?`${d?._backupSource||'La fuente oficial'} no ha publicado ahora franjas de previsión equivalentes. Los campos ausentes quedan como —; no se usan radar ni observaciones.`:'Open‑Meteo no ha publicado ahora un avance horario utilizable.';
   if(!times.length){box.innerHTML=`<div class="weatherEmpty">${emptyMessage}</div>`;return}
   const now=localCurrentTime(d.timezone||timezoneForLocation(loc)),nowHour=now.slice(0,13);
   const start=times.findIndex((time,index)=>String(h.end_time?.[index]||time)>now);
@@ -2217,25 +2223,12 @@ function shortOfficialText(text='',limit=115){const clean=String(text).replace(/
 
 function sourcePolicyFor(loc={}){
   const savedLabel=loc._cacheSavedAt?weatherSavedTimeLabel(loc._cacheSavedAt,state.timezone||timezoneForLocation(loc)):'';
-  if(isBermeoLocation(loc)){
-    if(loc._cacheOnly||loc._numericStale)return {title:'Última previsión ECMWF guardada',text:'Se conserva el último cálculo del modelo europeo'+(savedLabel?' del '+savedLabel:'')+' mientras se solicita una actualización. AEMET continúa como referencia principal de avisos.',badge:'ECMWF · guardado'};
-    if(loc._openMeteoActive)return {title:'Bermeo · modelo europeo ECMWF',text:'Toda la portada y el avance de los próximos cuatro días proceden de ECMWF IFS. AEMET es la referencia principal de avisos y Euskalmet el contraste autonómico.',badge:'ECMWF · actualizado'};
-    return {title:'Conectando con el modelo europeo ECMWF',text:'La portada está solicitando ECMWF IFS. Mareas, avisos AEMET, radar y mapas permanecen accesibles.',badge:'ECMWF · conectando'};
-  }
-  if(loc._cacheOnly)return {title:'Última previsión guardada disponible',text:'La aplicación muestra el último parte válido'+(savedLabel?' del '+savedLabel:'')+' mientras consulta de nuevo las fuentes. Los datos guardados no se presentan como una actualización nueva.',badge:'Datos guardados'};
-  if(isEuskadiLocation(loc)){
-    if(loc._officialStale)return {title:loc._openMeteoActive&&!loc._numericStale?'Respaldo numérico actualizado':'Última previsión oficial guardada',text:'La última previsión de Euskalmet disponible está identificada como guardada. La aplicación sigue consultando una publicación oficial nueva.',badge:'Euskalmet · guardado'};
-    if(loc._euskalmetActive)return {title:'Previsión oficial conectada: Euskalmet',text:loc._numericStale?'Euskalmet aporta la previsión oficial disponible. Los campos numéricos proceden del último respaldo guardado'+(savedLabel?' del '+savedLabel:'')+' y se siguen actualizando.':loc._openMeteoActive?(loc._euskalmetCurrent?'Euskalmet aporta su informe disponible y la previsión oficial. Los campos que no publica se completan con el respaldo numérico.':'Euskalmet aporta la previsión oficial diaria. El tiempo actual y los campos que no publica se completan con el respaldo numérico.'):'Euskalmet está sosteniendo la previsión oficial. Los campos que no publica aparecen como — hasta que vuelva el respaldo numérico.',badge:loc._numericStale?'Euskalmet · parcial':(loc._openMeteoActive?'Euskalmet · conectado':'Euskalmet · modo oficial')};
-    if(loc._openMeteoActive)return loc._numericStale?{title:'Previsión numérica guardada',text:'Euskalmet no está disponible para esta consulta. Se conserva el último respaldo numérico'+(savedLabel?' del '+savedLabel:'')+' y se reintenta en segundo plano.',badge:'Datos guardados'}:{title:'Respaldo meteorológico activo',text:'Euskalmet no está disponible para esta consulta. Se muestran datos numéricos de Open‑Meteo identificados como respaldo.',badge:'Respaldo activo'};
-    return {title:'Fuentes temporalmente sin datos',text:'La portada permanece operativa y volverá a consultar Euskalmet y el respaldo numérico automáticamente. Mareas, radar y mapas siguen accesibles.',badge:'Reintentando'};
-  }
-  if(isSpainLocation(loc)){
-    if(loc._officialStale)return {title:loc._openMeteoActive&&!loc._numericStale?'Respaldo numérico actualizado':'Última previsión oficial guardada',text:'La última previsión de AEMET disponible está identificada como guardada. La aplicación sigue consultando una publicación oficial nueva.',badge:'AEMET · guardado'};
-    if(loc._aemetActive)return {title:'Previsión oficial conectada: AEMET',text:loc._numericStale?'AEMET aporta la previsión oficial disponible. Los campos numéricos proceden del último respaldo guardado'+(savedLabel?' del '+savedLabel:'')+'.':loc._openMeteoActive?'AEMET aporta la previsión oficial disponible y el respaldo numérico completa los campos no publicados.':'AEMET sostiene la previsión oficial; los campos no publicados aparecen como — hasta que vuelva el respaldo.',badge:loc._numericStale?'AEMET · parcial':(loc._openMeteoActive?'AEMET · conectado':'AEMET · modo oficial')};
-    if(loc._openMeteoActive)return loc._numericStale?{title:'Previsión numérica guardada',text:'AEMET no está disponible para esta consulta. Se conserva el último respaldo numérico'+(savedLabel?' del '+savedLabel:'')+'.',badge:'Datos guardados'}:{title:'Respaldo meteorológico activo',text:'AEMET no está disponible para esta consulta. Se muestran datos numéricos de Open‑Meteo como respaldo.',badge:'Respaldo activo'};
-    return {title:'Fuentes temporalmente sin datos',text:'La portada permanece operativa y volverá a consultar AEMET y el respaldo numérico automáticamente.',badge:'Reintentando'};
-  }
-  return loc._openMeteoActive?(loc._numericStale?{title:'Previsión mundial guardada',text:'Se conserva la última previsión numérica'+(savedLabel?' del '+savedLabel:'')+' mientras se actualiza.',badge:'Datos guardados'}:{title:'Fuente mundial: Open‑Meteo',text:'Fuera de España se utiliza Open‑Meteo para la previsión general, con Meteored como visor profesional de contraste.',badge:'Cobertura mundial'}):{title:'Fuente mundial temporalmente ocupada',text:'La interfaz y los mapas permanecen disponibles mientras se reintenta la previsión numérica.',badge:'Reintentando'};
+  const bermeo=isBermeoLocation(loc),backup=loc._forecastBackupSource||(isEuskadiLocation(loc)?'Euskalmet':'AEMET');
+  if(loc._forecastMode==='official-backup')return {title:(loc._officialStale?'Respaldo de previsión guardado · ':'Respaldo de previsión · ')+backup,text:'Open‑Meteo no respondió y no existe una base guardada utilizable. Se muestran únicamente campos equivalentes de previsión '+backup+'; lo no publicado queda como —. Open‑Meteo se reintenta para restaurar la fuente base.',badge:(loc._officialStale?'RESPALDO GUARDADO · ':'RESPALDO · ')+backup};
+  if(loc._openMeteoActive&&loc._numericStale)return {title:'Base guardada · Open‑Meteo',text:'Se conserva la última previsión base'+(savedLabel?' del '+savedLabel:'')+' mientras se solicita una actualización. No se mezcla con AEMET ni Euskalmet.',badge:'BASE GUARDADA'};
+  if(loc._openMeteoActive)return {title:'Fuente base · Open‑Meteo'+(bermeo?' · ECMWF IFS':''),text:'La previsión visible procede únicamente de Open‑Meteo. AEMET y Euskalmet solo se consultan como respaldo de previsión equivalente si fallan la fuente base y su caché.',badge:'BASE · Open‑Meteo'};
+  if(loc._forecastMode==='error')return {title:'Previsión temporalmente sin datos',text:'Open‑Meteo y el respaldo equivalente no respondieron. No se sustituyen por radar, rayos ni observaciones.',badge:'REINTENTANDO'};
+  return {title:'Conectando con la fuente base',text:'Consultando Open‑Meteo. El respaldo oficial solo se solicitará si también falta una base guardada utilizable.',badge:'BASE · conectando'};
 }
 function updateSourcePolicy(loc){
   const p=sourcePolicyFor(loc);
@@ -2394,7 +2387,7 @@ setInterval(()=>{if(!document.hidden&&state.location&&isBermeoLocation(state.loc
    sus nodos reales sin inventar continuidad. Los valores auxiliares no
    sustituyen nunca el modelo seleccionado.
 --------------------------------------------------------------------------- */
-const mapAitorState={map:null,grid:null,labels:null,values:null,windArrows:null,isobars:null,contours:null,field:null,nativeField:null,nativePendingField:null,nativePrefetchField:null,nativePrefetchTimer:null,nativePrefetchCleanupTimer:null,nativePrefetchKey:null,nativePrefetchReady:false,nativeFrameCache:new Map(),nativePrefetchTimers:new Map(),nativePrefetchGeneration:0,nativePrefetchDirection:1,nativeFrameTimer:null,nativeRefineTimer:null,nativeDesiredTimeIndex:null,nativeDragging:false,nativeCloudShadeTimer:null,nativePreviewField:null,nativePreviewTimer:null,nativePreviewCache:new Map(),nativePreviewTimers:new Map(),nativePreviewGeneration:0,nativeCacheIdentity:null,nativeCacheFrames:0,nativeCacheTrimTimer:null,nativeSource:null,nativeVectorSource:null,nativeGridFallbackLayer:null,nativeGridFallbackModel:null,nativeRaceController:null,nativeRaceRequestId:0,nativeRaceSource:null,nativeRaceTime:null,nativeRaceGridVisible:false,nativeRaceCleanupTimer:null,nativeWindSampleUrl:null,nativeGustSampleUrl:null,nativeWindSampleTimer:null,nativeWindSampleRequestId:0,nativeAdapters:new Map(),nativeMetaCache:new Map(),nativeWarmFiles:new Map(),nativeWarmUrls:new Set(),nativeWarmGeneration:0,nativeDerivedDewpointStates:new Map(),nativeRequestId:0,nativeRetryKey:null,nativeRetryCount:0,nativeRetryTimer:null,nativeAnnotationController:null,nativeAnnotationRequestId:0,nativeAnnotationTimer:null,nativeAnnotationKey:null,nativeMovieData:null,nativeMovieIdentity:null,nativeMovieField:null,nativeMovieController:null,nativeMovieRequestId:0,nativeMovieTimer:null,nativeMovieRenderFrame:null,nativeMovieRenderIndex:null,nativeMovieThrottleTimer:null,nativeMovieLastRenderAt:0,nativeMovieAnnotationsHidden:false,marker:null,pickerMarker:null,pickerLocation:null,data:null,layer:'precipitation',model:'ecmwf',preferredModel:'ecmwf',renderedLayer:null,renderedModel:null,timeIndex:0,selectedForecastTime:null,playing:false,playTimer:null,playbackSpeed:1,lastPlaybackToggleAt:0,loading:false,requestController:null,requestId:0,rainPageController:null,rainPageRequestId:0,radarRequestId:0,radarTimer:null,euskalmetController:null,euskalmetLastGood:new Map(),renderFrame:null,gridRefineTimer:null,gridTimelineDragging:false,cache:new Map(),fieldCache:new Map(),lastGood:new Map(),lastError:null,windCanvas:null,windFrame:null,windFlowKey:null,windNeedsClear:false,particles:[],viewportTimer:null,selectionTimer:null,retryTimer:null,retryTick:null,retryRequest:null,retryAttempt:0,baseLayers:null,oceanLayer:null,baseLabelLayers:null,baseReliefLayers:null,activeBaseLabel:null,activeBaseRelief:null,baseStyle:'standard',daylight:false,rainviewerLayer:null,rainviewerData:null,aemetRadarLayer:null,officialEmbedLayer:null,officialEmbedDismissed:false,location:{...BERMEO}};
+const mapAitorState={map:null,grid:null,labels:null,values:null,windArrows:null,isobars:null,contours:null,field:null,nativeField:null,nativePendingField:null,nativePrefetchField:null,nativePrefetchTimer:null,nativePrefetchCleanupTimer:null,nativePrefetchKey:null,nativePrefetchReady:false,nativeFrameCache:new Map(),nativePrefetchTimers:new Map(),nativePrefetchGeneration:0,nativePrefetchDirection:1,nativeFrameTimer:null,nativeRefineTimer:null,nativeDesiredTimeIndex:null,nativeDragging:false,nativeCloudShadeTimer:null,nativePreviewField:null,nativePreviewTimer:null,nativePreviewCache:new Map(),nativePreviewTimers:new Map(),nativePreviewGeneration:0,nativeCacheIdentity:null,nativeCacheFrames:0,nativeCacheTrimTimer:null,nativeSource:null,nativeVectorSource:null,nativeGridFallbackLayer:null,nativeGridFallbackModel:null,nativeRaceController:null,nativeRaceRequestId:0,nativeRaceSource:null,nativeRaceTime:null,nativeRaceGridVisible:false,nativeRaceCleanupTimer:null,nativeWindSampleUrl:null,nativeGustSampleUrl:null,nativeWindSampleTimer:null,nativeWindSampleRequestId:0,nativeAdapters:new Map(),nativeMetaCache:new Map(),nativeWarmFiles:new Map(),nativeWarmUrls:new Set(),nativeWarmGeneration:0,nativeDerivedDewpointStates:new Map(),nativeRequestId:0,nativeRetryKey:null,nativeRetryCount:0,nativeRetryTimer:null,nativeAnnotationController:null,nativeAnnotationRequestId:0,nativeAnnotationTimer:null,nativeAnnotationKey:null,nativeMovieData:null,nativeMovieIdentity:null,nativeMovieField:null,nativeMovieController:null,nativeMovieRequestId:0,nativeMovieTimer:null,nativeMovieRenderFrame:null,nativeMovieRenderIndex:null,nativeMovieThrottleTimer:null,nativeMovieLastRenderAt:0,nativeMovieAnnotationsHidden:false,marker:null,pickerMarker:null,pickerLocation:null,data:null,layer:'precipitation',model:'ecmwf',preferredModel:'ecmwf',renderedLayer:null,renderedModel:null,timeIndex:0,selectedForecastTime:null,playing:false,playTimer:null,playbackSpeed:1,lastPlaybackToggleAt:0,loading:false,requestController:null,requestId:0,rainPageController:null,rainPageRequestId:0,radarRequestId:0,radarTimer:null,euskalmetController:null,euskalmetLastGood:new Map(),observationFallback:null,renderFrame:null,gridRefineTimer:null,gridTimelineDragging:false,cache:new Map(),fieldCache:new Map(),lastGood:new Map(),lastError:null,windCanvas:null,windFrame:null,windFlowKey:null,windNeedsClear:false,particles:[],viewportTimer:null,selectionTimer:null,retryTimer:null,retryTick:null,retryRequest:null,retryAttempt:0,baseLayers:null,oceanLayer:null,baseLabelLayers:null,baseReliefLayers:null,activeBaseLabel:null,activeBaseRelief:null,baseStyle:'standard',daylight:false,rainviewerLayer:null,rainviewerData:null,aemetRadarLayer:null,officialEmbedLayer:null,officialEmbedDismissed:false,location:{...BERMEO}};
 const MAP_LAYERS={
   euskalmet_radar:{key:'observed_reflectivity',title:'Radar Kapildui · Euskalmet',unit:'dBZ',scale:[0,20,40,60],colors:['#8bd8ff','#4bd56e','#ffd63d','#e63a48'],legend:['0','20','40','60+'],detail:'Máxima reflectividad observada por el radar de Kapildui. Es un producto regional oficial de Euskalmet y se muestra completo, sin deformar.'},
   euskalmet_lightning:{key:'observed_lightning',title:'Rayos observados · Euskalmet',unit:'descargas',scale:[0,1],colors:['#1b2430','#ffe34b'],legend:['0','observadas'],detail:'Descargas observadas en el producto regional oficial de Euskalmet. La imagen se muestra completa, sin reinterpretar sus colores.'},
@@ -2442,6 +2435,8 @@ const MAP_OBSERVATION_LAYERS=new Set(['reflectivity','rainviewer','lightning','e
 const MAP_NATIVE_TILE_LAYERS=new Set(['precipitation','precipitation_15m','thunderstorms','electric_storms','forecast_reflectivity','cloud','temperature','dewpoint','humidity','wind','gust','pressure','t850','sea_temperature','waves']);
 const MAP_NATIVE_GRID_FALLBACK_LAYERS=new Set(['precipitation','thunderstorms','forecast_reflectivity','cloud','temperature','dewpoint','humidity','wind','gust','pressure','t850']);
 const MAP_NATIVE_FAST_GRID_LAYERS=new Set(['precipitation','thunderstorms','forecast_reflectivity']);
+const MAP_FORECAST_OBSERVATION_MISMATCH_LAYERS=new Set(['precipitation','precipitation_15m','thunderstorms','forecast_reflectivity']);
+function mapObservationSeparationNote(layer=mapAitorState.layer){return MAP_FORECAST_OBSERVATION_MISMATCH_LAYERS.has(layer)?' AEMET y Euskalmet publican radar o rayos observados, no esta hora de pronóstico; por eso esas observaciones permanecen en sus capas propias y no se colocan como sustitución.':''}
 const MAP_AROME_LAYERS=new Set(['reflectivity','rainviewer','lightning','euskalmet_radar','euskalmet_lightning','precipitation','precipitation_15m','forecast_reflectivity','cloud','temperature','dewpoint','humidity','wind','gust']);
 const MAP_NATIVE_VARIABLES={precipitation:'precipitation',precipitation_15m:'precipitation',thunderstorms:'precipitation',electric_storms:'cape',forecast_reflectivity:'precipitation',cloud:'cloud_cover',temperature:'temperature_2m',dewpoint:'dew_point_2m',humidity:'relative_humidity_2m',wind:'wind_u_component_10m',gust:'wind_gusts_10m',pressure:'pressure_msl',t850:'temperature_850hPa',cape:'cape',cin:'convective_inhibition',sea_temperature:'sea_surface_temperature',waves:'wave_height'};
 const MAP_NATIVE_SOURCES={
@@ -3117,7 +3112,7 @@ async function loadMapNativeLayer(force=false,preserveTime=false,targetTime=null
       // expresamente como respaldo; nunca se cambia a GFS ni a best_match.
       mapAitorState.nativeGridFallbackLayer=layer;mapAitorState.nativeGridFallbackModel=model;setMapBusy(false,'Tesela ECMWF no disponible · cargando respaldo oficial muestreado…');queueMapLoad(false,0,false,requestedTime);return
     }
-    $('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+mapLayerConfig().title+' · sin conexión';$('mapTimeBadge').textContent='Aitor Meteo Maps · reintentar';$('mapTimelineLabel').textContent='Sin datos nuevos';$('mapStatus').textContent='La fuente espacial no respondió. Windy no se abre: queda solo como opción secundaria manual.';$('mapInfo').innerHTML='<strong>'+mapLayerConfig().title+' temporalmente sin datos</strong>El mapa base permanece disponible. Pulsa Actualizar mapa para reintentar.';renderMapLocation();setMapBusy(false);
+    $('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+mapLayerConfig().title+' · sin conexión';$('mapTimeBadge').textContent='Aitor Meteo Maps · reintentar';$('mapTimelineLabel').textContent='Sin datos nuevos';$('mapStatus').textContent='La fuente espacial no respondió. Windy no se abre: queda solo como opción secundaria manual.';$('mapInfo').innerHTML='<strong>'+mapLayerConfig().title+' temporalmente sin datos</strong>El mapa base permanece disponible. Pulsa Actualizar mapa para reintentar.'+mapObservationSeparationNote(layer);renderMapLocation();setMapBusy(false);
   }
 }
 function clearMapNativeAnnotations(dropData=true){
@@ -3803,7 +3798,7 @@ function updateMapLabels(){
 function updateMapInfo(){
   const data=mapAitorState.data,config=mapLayerConfig();
   if(mapAitorState.layer==='reflectivity'){
-    $('mapInfo').innerHTML='<strong>Reflectividad de radar observada</strong>El radar muestra ecos detectados ahora; no es una previsión ni un acumulado de lluvia.';
+    const fallback=mapAitorState.observationFallback;$('mapInfo').innerHTML=fallback?.product==='radar'?'<strong>OBSERVACIÓN · respaldo oficial Euskalmet</strong>AEMET no publicó ahora una imagen utilizable. Se muestra únicamente la máxima reflectividad observada por el radar regional de Kapildui; no es previsión y no conserva la hora del deslizador de pronóstico.':'<strong>Reflectividad de radar observada · AEMET</strong>El radar muestra ecos detectados ahora; no es una previsión ni un acumulado de lluvia. Open‑Meteo no publica este producto observado.';
     return;
   }
   if(mapAitorState.layer==='rainviewer'){
@@ -3811,7 +3806,7 @@ function updateMapInfo(){
     return;
   }
   if(mapAitorState.layer==='lightning'){
-    $('mapInfo').innerHTML='<strong>Rayos observados por AEMET</strong>Mapa oficial del último período estándar disponible. Es observación, no previsión de tormentas.';
+    const fallback=mapAitorState.observationFallback;$('mapInfo').innerHTML=fallback?.product==='lightning'?'<strong>OBSERVACIÓN · respaldo oficial Euskalmet</strong>AEMET no publicó ahora su mapa de rayos. Se muestra únicamente el producto regional equivalente de descargas observadas de Euskalmet; no es previsión y no conserva una hora de pronóstico.':'<strong>Rayos observados por AEMET</strong>Mapa oficial del último período estándar disponible. Es observación, no previsión de tormentas. Open‑Meteo no publica este producto observado.';
     return;
   }
   if(mapAitorState.layer==='euskalmet_radar'){
@@ -4096,58 +4091,59 @@ function mapAemetDirectUrls(count=12){
   return urls;
 }
 const MAP_AEMET_IMAGE_BOUNDS=[[27.22,-16.08],[51.30,12.14]],MAP_AEMET_VIEW_BOUNDS=[[33.22,-11.08],[46.30,7.14]];
+function resetMapFixedObservationTimeline(){const range=$('mapTimeRange');if(range){range.min='0';range.max='0';range.value='0'}}
 function setMapRadar(){
   if(mapAitorState.requestController)mapAitorState.requestController.abort();
   clearTimeout(mapAitorState.radarTimer);const radarRequestId=++mapAitorState.radarRequestId;
-  clearMapNativeAnnotations();mapAitorState.loading=false;mapAitorState.lastError=null;mapAitorState.rainviewerData=null;clearMapLayers();stopMapWind();$('mapLegend').style.display='none';$('mapRadarStage').classList.remove('active');setMapBaseStyle('standard');
+  clearMapNativeAnnotations();mapAitorState.loading=false;mapAitorState.lastError=null;mapAitorState.rainviewerData=null;mapAitorState.observationFallback=null;resetMapFixedObservationTimeline();clearMapLayers();stopMapWind();$('mapLegend').style.display='none';$('mapRadarStage').classList.remove('active');setMapBaseStyle('standard');
   const image=$('mapRadarImage'),candidates=['/api/aemet-radar?frame='+Math.floor(Date.now()/300000),...mapAemetDirectUrls()];image.alt='Reflectividad de radar observada por AEMET';image.style.visibility='hidden';
   if($('mapRadarProductTag'))$('mapRadarProductTag').textContent='Producto nacional fijo · AEMET';
   if($('mapRadarCaption'))$('mapRadarCaption').innerHTML='<strong>Radar AEMET · reflectividad observada</strong><br />Imagen nacional oficial más reciente. Para zoom y desplazamiento sobre el mapa usa “Radar mundial”.';
-  $('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Radar AEMET · imagen nacional fija';$('mapTimeBadge').textContent='Observación actual';$('mapTimelineLabel').textContent='Producto nacional';$('mapStatus').textContent='Actualizando radar AEMET…';
+  $('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>OBSERVACIÓN · Radar AEMET';$('mapTimeBadge').textContent='Observación actual';$('mapTimelineLabel').textContent='Producto nacional';$('mapStatus').textContent='Actualizando radar observado AEMET…';
   let candidateIndex=0,resolved=false,candidateTimer=null;
   const validRequest=()=>radarRequestId===mapAitorState.radarRequestId&&mapAitorState.layer==='reflectivity';
-  const radarError=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(candidateTimer);clearTimeout(mapAitorState.radarTimer);image.style.visibility='hidden';mapAitorState.lastError=new Error('AEMET no publicó una imagen nacional utilizable.');$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Radar AEMET · sin imagen reciente';$('mapTimeBadge').textContent='AEMET temporalmente no disponible';$('mapTimelineLabel').textContent='Pulsa para reintentar';$('mapStatus').textContent='AEMET no respondió tras probar su API y su visor oficial. Radar mundial sigue disponible en su botón.';updateMapInfo()};
+  const radarError=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(candidateTimer);clearTimeout(mapAitorState.radarTimer);image.style.visibility='hidden';setMapEuskalmet('radar',{fallbackLayer:'reflectivity',fallbackFrom:'AEMET'})};
   const loadNext=()=>{if(resolved||!validRequest())return;clearTimeout(candidateTimer);if(candidateIndex>=candidates.length){radarError();return}const source=candidates[candidateIndex++];image.dataset.radarSource=source.startsWith('/api/')?'api':'visor';image.src=source;candidateTimer=setTimeout(loadNext,4500)};
   mapAitorState.radarTimer=setTimeout(radarError,32000);
-  image.onload=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(candidateTimer);clearTimeout(mapAitorState.radarTimer);image.style.visibility='hidden';if(mapAitorState.aemetRadarLayer)mapAitorState.aemetRadarLayer.remove();mapAitorState.aemetRadarLayer=L.imageOverlay(image.currentSrc||image.src,MAP_AEMET_IMAGE_BOUNDS,{pane:'mapWeatherRadar',opacity:Math.max(.58,mapFieldOpacity()),interactive:false,className:'aemetRadarOverlay',attribution:'Radar © AEMET'}).addTo(mapAitorState.map);mapAitorState.map.fitBounds(MAP_AEMET_VIEW_BOUNDS,{animate:false,padding:[18,18]});mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapTimelineLabel').textContent='Último producto nacional';$('mapStatus').textContent='Radar AEMET actualizado · '+(image.dataset.radarSource==='api'?'API oficial':'visor oficial de respaldo')+' · georreferenciado sobre el mapa';renderMapLocation();};
+  image.onload=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(candidateTimer);clearTimeout(mapAitorState.radarTimer);image.style.visibility='hidden';if(mapAitorState.aemetRadarLayer)mapAitorState.aemetRadarLayer.remove();mapAitorState.aemetRadarLayer=L.imageOverlay(image.currentSrc||image.src,MAP_AEMET_IMAGE_BOUNDS,{pane:'mapWeatherRadar',opacity:Math.max(.58,mapFieldOpacity()),interactive:false,className:'aemetRadarOverlay',attribution:'Radar © AEMET'}).addTo(mapAitorState.map);mapAitorState.map.fitBounds(MAP_AEMET_VIEW_BOUNDS,{animate:false,padding:[18,18]});mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapTimelineLabel').textContent='Último producto nacional';$('mapStatus').textContent='OBSERVACIÓN · Radar AEMET actualizado · '+(image.dataset.radarSource==='api'?'API oficial':'visor oficial de respaldo')+' · georreferenciado sobre el mapa';renderMapLocation();};
   image.onerror=loadNext;loadNext();updateMapInfo();
 }
-function unsetMapRadar(){clearTimeout(mapAitorState.radarTimer);mapAitorState.radarRequestId+=1;if(mapAitorState.euskalmetController){mapAitorState.euskalmetController.abort();mapAitorState.euskalmetController=null}const image=$('mapRadarImage');if(image){image.onload=null;image.onerror=null;image.style.visibility='hidden'}if(mapAitorState.aemetRadarLayer){mapAitorState.aemetRadarLayer.remove();mapAitorState.aemetRadarLayer=null}$('mapRadarStage').classList.remove('active');$('mapLegend').style.display='flex'}
+function unsetMapRadar(){clearTimeout(mapAitorState.radarTimer);mapAitorState.radarRequestId+=1;mapAitorState.observationFallback=null;if(mapAitorState.euskalmetController){mapAitorState.euskalmetController.abort();mapAitorState.euskalmetController=null}const image=$('mapRadarImage');if(image){image.onload=null;image.onerror=null;image.style.visibility='hidden'}if(mapAitorState.aemetRadarLayer){mapAitorState.aemetRadarLayer.remove();mapAitorState.aemetRadarLayer=null}$('mapRadarStage').classList.remove('active');$('mapLegend').style.display='flex'}
 function setMapLightning(){
   if(mapAitorState.requestController)mapAitorState.requestController.abort();
-  unsetMapRadar();clearMapNativeAnnotations();clearMapLayers();stopMapWind();mapAitorState.data=null;mapAitorState.rainviewerData=null;mapAitorState.loading=false;mapAitorState.lastError=null;
+  unsetMapRadar();clearMapNativeAnnotations();clearMapLayers();stopMapWind();mapAitorState.data=null;mapAitorState.rainviewerData=null;mapAitorState.loading=false;mapAitorState.lastError=null;resetMapFixedObservationTimeline();
   const requestId=++mapAitorState.radarRequestId,image=$('mapRadarImage'),stage=$('mapRadarStage');
   clearTimeout(mapAitorState.radarTimer);$('mapLegend').style.display='none';setMapBaseStyle('standard');stage.classList.add('active');image.alt='Mapa de rayos observados por AEMET';image.style.visibility='hidden';
   if($('mapRadarProductTag'))$('mapRadarProductTag').textContent='Último período estándar · AEMET OpenData';
   if($('mapRadarCaption'))$('mapRadarCaption').innerHTML='<strong>Rayos observados · AEMET</strong><br />Producto oficial más reciente, mostrado completo y sin deformar. Es observación de descargas, no una previsión.';
-  $('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Cargando rayos observados AEMET…';$('mapTimeBadge').textContent='Observación oficial';$('mapTimelineLabel').textContent='Último período estándar';$('mapStatus').textContent='Consultando la red de rayos de AEMET OpenData…';
+  $('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>OBSERVACIÓN · cargando rayos AEMET…';$('mapTimeBadge').textContent='Observación oficial';$('mapTimelineLabel').textContent='Último período estándar';$('mapStatus').textContent='Consultando la red de rayos de AEMET OpenData…';
   let resolved=false;const validRequest=()=>requestId===mapAitorState.radarRequestId&&mapAitorState.layer==='lightning';
-  const lightningError=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(mapAitorState.radarTimer);image.style.visibility='hidden';mapAitorState.lastError=new Error('AEMET no publicó ahora un mapa de rayos utilizable.');$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Rayos AEMET · sin imagen reciente';$('mapTimeBadge').textContent='AEMET temporalmente no disponible';$('mapTimelineLabel').textContent='Pulsa para reintentar';$('mapStatus').textContent='La API oficial de rayos de AEMET no respondió. No se muestra una capa distinta como sustitución.';updateMapInfo()};
-  image.onload=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(mapAitorState.radarTimer);image.style.visibility='visible';mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Rayos observados · AEMET';$('mapTimeBadge').textContent='Observación oficial · último período';$('mapTimelineLabel').textContent='AEMET OpenData';$('mapStatus').textContent='Mapa de rayos AEMET actualizado · producto oficial sin deformar';updateMapInfo()};
+  const lightningError=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(mapAitorState.radarTimer);image.style.visibility='hidden';setMapEuskalmet('lightning',{fallbackLayer:'lightning',fallbackFrom:'AEMET'})};
+  image.onload=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(mapAitorState.radarTimer);image.style.visibility='visible';mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>OBSERVACIÓN · Rayos AEMET';$('mapTimeBadge').textContent='Observación oficial · último período';$('mapTimelineLabel').textContent='AEMET OpenData';$('mapStatus').textContent='OBSERVACIÓN · Mapa de rayos AEMET actualizado · producto oficial sin deformar';updateMapInfo()};
   image.onerror=lightningError;mapAitorState.radarTimer=setTimeout(lightningError,18000);image.src='/api/aemet-radar?product=lightning&frame='+Math.floor(Date.now()/300000);
 }
 function mapEuskalmetFrameLabel(source=''){
   const match=String(source).match(/webmet00-(\d{2})(\d{2})\.png/i);if(match)return match[1]+':'+match[2]+' UTC';
   const date=new Date(source);return Number.isNaN(date.getTime())?'Último fotograma oficial útil':String(date.getUTCHours()).padStart(2,'0')+':'+String(date.getUTCMinutes()).padStart(2,'0')+' UTC';
 }
-function setMapEuskalmet(product='radar'){
-  const layer=product==='lightning'?'euskalmet_lightning':'euskalmet_radar',isLightning=product==='lightning';
+function setMapEuskalmet(product='radar',options={}){
+  const isLightning=product==='lightning',directLayer=isLightning?'euskalmet_lightning':'euskalmet_radar',equivalentLayer=isLightning?'lightning':'reflectivity',fallback=options?.fallbackFrom==='AEMET'&&options?.fallbackLayer===equivalentLayer,layer=fallback?equivalentLayer:directLayer;
   const retained=mapAitorState.euskalmetLastGood.get(product)||null;
   if(mapAitorState.requestController)mapAitorState.requestController.abort();
-  unsetMapRadar();clearMapNativeAnnotations();clearMapLayers();stopMapWind();mapAitorState.data=null;mapAitorState.rainviewerData=null;mapAitorState.loading=false;mapAitorState.lastError=null;
-  const requestId=++mapAitorState.radarRequestId,image=$('mapRadarImage'),stage=$('mapRadarStage');
+  unsetMapRadar();clearMapNativeAnnotations();clearMapLayers();stopMapWind();mapAitorState.data=null;mapAitorState.rainviewerData=null;mapAitorState.loading=false;mapAitorState.lastError=null;mapAitorState.observationFallback=fallback?{source:'Euskalmet',from:'AEMET',product}:null;resetMapFixedObservationTimeline();
+  const requestId=++mapAitorState.radarRequestId,image=$('mapRadarImage'),stage=$('mapRadarStage'),productName=isLightning?'Rayos observados':'Radar Kapildui · máxima reflectividad',sourceLink=isLightning?'https://www.euskalmet.euskadi.eus':'https://www.euskalmet.euskadi.eus/observacion/radar-kapildui-precipitaciones/';
   clearTimeout(mapAitorState.radarTimer);$('mapLegend').style.display='none';setMapBaseStyle('standard');stage.classList.add('active');image.alt=isLightning?'Rayos observados por Euskalmet':'Reflectividad observada por el radar de Kapildui de Euskalmet';image.style.visibility='hidden';
-  if($('mapRadarProductTag'))$('mapRadarProductTag').textContent=(isLightning?'Rayos':'Radar Kapildui')+' · Euskalmet';
-  if($('mapRadarCaption'))$('mapRadarCaption').innerHTML='<strong>'+(isLightning?'Rayos observados':'Radar de Kapildui · máxima reflectividad')+' · Euskalmet</strong><br />Último fotograma oficial utilizable de las doce horas recientes, completo y sin deformar. <a href="https://www.euskalmet.euskadi.eus/observacion/radar-kapildui-precipitaciones/" target="_blank" rel="noopener">Abrir fuente oficial</a>.';
-  $('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Cargando '+(isLightning?'rayos':'radar de Kapildui')+' Euskalmet…';$('mapTimeBadge').textContent='Observación oficial';$('mapTimelineLabel').textContent='Último fotograma disponible';$('mapStatus').textContent='Consultando los fotogramas públicos de Euskalmet…';
+  if($('mapRadarProductTag'))$('mapRadarProductTag').textContent=(fallback?'OBSERVACIÓN · respaldo oficial · ':'')+(isLightning?'Rayos':'Radar Kapildui')+' · Euskalmet';
+  if($('mapRadarCaption'))$('mapRadarCaption').innerHTML='<strong>'+(fallback?'OBSERVACIÓN · respaldo oficial · ':'')+productName+' · Euskalmet</strong><br />'+(fallback?'AEMET no publicó ahora el producto nacional utilizable. ':'')+'Último fotograma oficial utilizable de las doce horas recientes, completo y sin deformar. Es observación, no previsión. <a href="'+sourceLink+'" target="_blank" rel="noopener">Abrir fuente oficial</a>.';
+  $('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · buscando respaldo Euskalmet…':'Cargando '+(isLightning?'rayos':'radar de Kapildui')+' Euskalmet…');$('mapTimeBadge').textContent=fallback?'OBSERVACIÓN · respaldo oficial':'Observación oficial';$('mapTimelineLabel').textContent='Último fotograma disponible';$('mapStatus').textContent=fallback?'AEMET sin producto utilizable · consultando el producto observado equivalente de Euskalmet…':'Consultando los fotogramas públicos de Euskalmet…';updateMapInfo();
   let resolved=false;const validRequest=()=>requestId===mapAitorState.radarRequestId&&mapAitorState.layer===layer;
-  const showRetained=()=>{if(!retained||Date.now()-retained.savedAt>12*60*60*1000)return false;image.src=retained.url;image.style.visibility='visible';mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(isLightning?'Rayos observados':'Radar Kapildui')+' · último útil';$('mapTimeBadge').textContent='Euskalmet · sin fotograma nuevo';$('mapTimelineLabel').textContent=mapEuskalmetFrameLabel(retained.observedAt);$('mapStatus').textContent='Sin fotograma oficial nuevo utilizable · se mantiene el último correcto';updateMapInfo();return true};
-  const imageError=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(mapAitorState.radarTimer);if(mapAitorState.euskalmetController){mapAitorState.euskalmetController.abort();mapAitorState.euskalmetController=null}if(showRetained())return;image.style.visibility='hidden';mapAitorState.lastError=new Error('Euskalmet no publicó un fotograma utilizable durante las doce últimas horas.');$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>Euskalmet · sin fotograma reciente';$('mapTimeBadge').textContent='Fuente temporalmente sin datos';$('mapTimelineLabel').textContent='Pulsa para reintentar';$('mapStatus').textContent='Euskalmet no tiene ahora un fotograma reciente utilizable. No se muestra una lámina vacía ni otra capa como sustitución.';updateMapInfo()};
+  const showRetained=()=>{if(!retained||Date.now()-retained.savedAt>12*60*60*1000)return false;image.src=retained.url;image.style.visibility='visible';mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · respaldo Euskalmet · ':'')+(isLightning?'Rayos observados':'Radar Kapildui')+' · último útil';$('mapTimeBadge').textContent='Euskalmet · sin fotograma nuevo';$('mapTimelineLabel').textContent=mapEuskalmetFrameLabel(retained.observedAt);$('mapStatus').textContent=(fallback?'OBSERVACIÓN · respaldo oficial · ':'')+'sin fotograma nuevo utilizable · se mantiene el último correcto';updateMapInfo();return true};
+  const imageError=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(mapAitorState.radarTimer);if(mapAitorState.euskalmetController){mapAitorState.euskalmetController.abort();mapAitorState.euskalmetController=null}if(showRetained())return;image.style.visibility='hidden';mapAitorState.lastError=new Error('Euskalmet no publicó un fotograma utilizable durante las doce últimas horas.');$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · AEMET y Euskalmet sin producto':'Euskalmet · sin fotograma reciente');$('mapTimeBadge').textContent='Fuente temporalmente sin datos';$('mapTimelineLabel').textContent='Pulsa para reintentar';$('mapStatus').textContent=fallback?'AEMET y Euskalmet no publicaron ahora un producto observado equivalente utilizable. No se sustituye por lluvia prevista ni por otra variable.':'Euskalmet no tiene ahora un fotograma reciente utilizable. No se muestra una lámina vacía ni otra capa como sustitución.';$('mapInfo').innerHTML=fallback?'<strong>OBSERVACIÓN temporalmente sin datos</strong>No hay ahora radar/rayos oficiales equivalentes utilizables de AEMET ni Euskalmet. No se mezcla ninguna previsión ni se conserva una hora del modelo.':'';if(!fallback)updateMapInfo()};
   const controller=new AbortController();mapAitorState.euskalmetController=controller;mapAitorState.radarTimer=setTimeout(imageError,18000);
   fetch('/api/euskalmet-map?product='+encodeURIComponent(product)+'&frame='+Math.floor(Date.now()/300000),{signal:controller.signal,cache:'no-store',headers:{Accept:'image/png'}}).then(async response=>{
     if(!response.ok||!String(response.headers.get('content-type')||'').toLowerCase().includes('image'))throw new Error('Fotograma no utilizable');
     const blob=await response.blob(),url=URL.createObjectURL(blob),observedAt=response.headers.get('x-meteo-aitor-time')||'',stale=response.headers.get('x-meteo-aitor-stale')==='1',probe=new Image();
-    probe.onload=()=>{if(!validRequest()){URL.revokeObjectURL(url);return}resolved=true;clearTimeout(mapAitorState.radarTimer);mapAitorState.euskalmetController=null;const previous=mapAitorState.euskalmetLastGood.get(product);mapAitorState.euskalmetLastGood.set(product,{url,observedAt,savedAt:Date.now()});image.src=url;image.style.visibility='visible';if(previous?.url&&previous.url!==url)setTimeout(()=>URL.revokeObjectURL(previous.url),1000);mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(isLightning?'Rayos observados':'Radar Kapildui')+' · Euskalmet';$('mapTimeBadge').textContent='Observación oficial · Euskalmet';$('mapTimelineLabel').textContent=mapEuskalmetFrameLabel(observedAt);$('mapStatus').textContent=(isLightning?'Rayos Euskalmet':'Radar de Kapildui')+(stale?' · se mantiene el último fotograma útil':' · último fotograma oficial útil');updateMapInfo()};
+    probe.onload=()=>{if(!validRequest()){URL.revokeObjectURL(url);return}resolved=true;clearTimeout(mapAitorState.radarTimer);mapAitorState.euskalmetController=null;const previous=mapAitorState.euskalmetLastGood.get(product);mapAitorState.euskalmetLastGood.set(product,{url,observedAt,savedAt:Date.now()});image.src=url;image.style.visibility='visible';if(previous?.url&&previous.url!==url)setTimeout(()=>URL.revokeObjectURL(previous.url),1000);mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · respaldo Euskalmet · ':'')+(isLightning?'Rayos observados':'Radar Kapildui');$('mapTimeBadge').textContent=fallback?'OBSERVACIÓN · respaldo oficial Euskalmet':'Observación oficial · Euskalmet';$('mapTimelineLabel').textContent=mapEuskalmetFrameLabel(observedAt);$('mapStatus').textContent=(fallback?'OBSERVACIÓN · respaldo oficial Euskalmet · ':'')+(isLightning?'rayos observados':'radar de Kapildui')+(stale?' · se mantiene el último fotograma útil':' · último fotograma oficial útil')+' · sin cronología de pronóstico';updateMapInfo()};
     probe.onerror=()=>{URL.revokeObjectURL(url);imageError()};probe.src=url;
   }).catch(error=>{if(error?.name!=='AbortError'||validRequest())imageError()});
 }
@@ -4424,8 +4420,8 @@ async function loadMapForecast(fit=false,force=false,targetTime=mapCurrentForeca
     if(!preserved){restored=restoreMapLastGood(requestedLayer,requestedModel);preserved=restored&&mapAitorState.renderedLayer===requestedLayer&&mapAitorState.renderedModel===requestedModel}
     const reason=mapFriendlyError(error,controller.signal.reason==='timeout');
     syncMapSelection(requestedLayer,requestedModel);
-    if(preserved){updateMapLabels();$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+requestedTitle+' · última malla de esta capa';$('mapInfo').innerHTML='<strong>'+requestedTitle+' temporalmente sin datos nuevos</strong>'+reason+' Se conserva únicamente la última malla válida de esta misma capa; nunca se etiqueta como '+requestedTitle+' una capa distinta.';}
-    else{clearMapLayers();mapAitorState.data=null;mapAitorState.field=null;mapAitorState.renderedLayer=null;mapAitorState.renderedModel=null;$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+requestedTitle+' sin datos';$('mapTimeBadge').textContent='Mapa Aitor · reintentando';$('mapInfo').innerHTML='<strong>'+requestedTitle+' temporalmente sin datos</strong>'+reason+' No se muestra una capa distinta y Windy no se abre automáticamente: permanece solo en su botón secundario.';}
+    if(preserved){updateMapLabels();$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+requestedTitle+' · última malla de esta capa';$('mapInfo').innerHTML='<strong>'+requestedTitle+' temporalmente sin datos nuevos</strong>'+reason+' Se conserva únicamente la última malla válida de esta misma capa; nunca se etiqueta como '+requestedTitle+' una capa distinta.'+mapObservationSeparationNote(requestedLayer);}
+    else{clearMapLayers();mapAitorState.data=null;mapAitorState.field=null;mapAitorState.renderedLayer=null;mapAitorState.renderedModel=null;$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+requestedTitle+' sin datos';$('mapTimeBadge').textContent='Mapa Aitor · reintentando';$('mapInfo').innerHTML='<strong>'+requestedTitle+' temporalmente sin datos</strong>'+reason+' No se muestra una capa distinta y Windy no se abre automáticamente: permanece solo en su botón secundario.'+mapObservationSeparationNote(requestedLayer);}
     scheduleMapRetry(error?.retryAfter||60,{layer:requestedLayer,model:requestedModel,fit,preserved,targetTime});
     renderMapLocation();renderMapPicker();
   }finally{
