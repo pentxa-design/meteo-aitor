@@ -22,7 +22,7 @@ function modelForLayer(requested, layer) {
   // campo: si falla, se informa del fallo en lugar de cambiar a GFS/best_match.
   if (layer === 't850') {
     return {
-      label: 'ECMWF IFS 0,25° · temperatura a 850 hPa · respaldo oficial muestreado',
+      label: 'ECMWF IFS 0,25° · temperatura a 850 hPa · malla oficial muestreada',
       candidates: ['ecmwf_ifs025'],
       sourceResolutionDegrees: 0.25
     };
@@ -475,7 +475,8 @@ module.exports = async function handler(req, res) {
         sourceModel,
         cinAvailable,
         fallback: !marineRequested && sourceModel === 'best_match',
-        sampledFallback: t850Requested,
+        sampled: t850Requested,
+        sampledFallback: false,
         provider: marineRequested ? 'Open-Meteo Marine' : t850Requested ? 'Open‑Meteo / ECMWF' : 'Open-Meteo',
         resolution: marineRequested
           ? 'Mejor modelo marino disponible'
