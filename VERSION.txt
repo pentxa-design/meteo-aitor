@@ -1,3 +1,23 @@
+Meteo Aitor Bermeo v10.126 · slider horario más rápido
+Fecha: 2026-08-15
+
+El mapa responde durante el movimiento del slider con una vista ligera del
+mismo modelo, pasada y hora. No se interpolan horas ni se sustituye la fuente.
+La tesela nativa exacta comienza cuando el cursor se estabiliza para evitar que
+la decodificación pesada bloquee el siguiente movimiento.
+
+T850 usa como avance la malla oficial muestreada ECMWF IFS 0,25°. MUCAPE y
+MUCIN sustituyen solo el raster mientras se arrastra y recuperan cifras y
+contornos al soltar. Nubosidad mantiene la tesela espacial real: carga primero
+su salida reducida y después la exacta, sin convertir una malla escasa en una
+superficie inventada. Dos ficheros posteriores se preparan únicamente en la
+caché HTTP, sin decodificarlos por adelantado.
+
+La caché PWA se renueva a v10.126 para impedir que móviles y escritorio
+reutilicen el comportamiento anterior del slider.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.125 · cartografía visible y nubosidad corregida
 Fecha: 2026-08-15
 

@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.125" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.126" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -468,7 +468,7 @@
     .mapAitor.mapBaseStandard[data-map-layer="cin"] .mapNativeWeatherTileKind-cin{filter:saturate(1.52) contrast(1.25) brightness(.99)}
     .mapAitor.mapBaseStandard[data-map-layer="sea_temperature"] .mapNativeWeatherTileKind-sea_temperature{filter:saturate(1.34) contrast(1.13) brightness(1.00)}
     .mapAitor.mapBaseStandard[data-map-layer="waves"] .mapNativeWeatherTileKind-waves{filter:saturate(1.28) contrast(1.11) brightness(1.00)}
-    /* v10.125 · fondo limpio y fijo. El relieve no cambia con la variable ni
+    /* v10.126 · fondo limpio y fijo. El relieve no cambia con la variable ni
        con la hora: solo mantiene legibles tierra y costa bajo el dato. */
     .mapAitor.mapBaseStandard .mapReliefOverlay{display:block!important;opacity:.14!important;filter:grayscale(1) contrast(1.55) brightness(.96);mix-blend-mode:multiply}
     .mapAitor.mapBaseStandard[data-map-surface="instant-precipitation"] .mapReliefOverlay,
@@ -2412,7 +2412,7 @@ setInterval(()=>{if(!document.hidden&&state.location&&isBermeoLocation(state.loc
    sus nodos reales sin inventar continuidad. Los valores auxiliares no
    sustituyen nunca el modelo seleccionado.
 --------------------------------------------------------------------------- */
-const mapAitorState={map:null,grid:null,labels:null,values:null,windArrows:null,isobars:null,contours:null,field:null,nativeField:null,nativePendingField:null,nativePrefetchField:null,nativePrefetchTimer:null,nativePrefetchCleanupTimer:null,nativePrefetchKey:null,nativePrefetchReady:false,nativeFrameCache:new Map(),nativePrefetchTimers:new Map(),nativePrefetchGeneration:0,nativePrefetchDirection:1,nativeFrameTimer:null,nativeRefineTimer:null,nativeDesiredTimeIndex:null,nativeDragging:false,nativeCloudShadeTimer:null,nativePreviewField:null,nativePreviewTimer:null,nativePreviewCache:new Map(),nativePreviewTimers:new Map(),nativePreviewGeneration:0,nativeCacheIdentity:null,nativeCacheFrames:0,nativeCacheTrimTimer:null,nativeSource:null,nativeVectorSource:null,nativeGridFallbackLayer:null,nativeGridFallbackModel:null,nativeRaceController:null,nativeRaceRequestId:0,nativeRaceSource:null,nativeRaceTime:null,nativeRaceGridVisible:false,nativeRaceCleanupTimer:null,nativeWindSampleUrl:null,nativeGustSampleUrl:null,nativeWindSampleTimer:null,nativeWindSampleRequestId:0,nativeAdapters:new Map(),nativeMetaCache:new Map(),nativeWarmFiles:new Map(),nativeWarmUrls:new Set(),nativeWarmGeneration:0,nativeDerivedDewpointStates:new Map(),nativeRequestId:0,nativeRetryKey:null,nativeRetryCount:0,nativeRetryTimer:null,nativeAnnotationController:null,nativeAnnotationRequestId:0,nativeAnnotationTimer:null,nativeAnnotationKey:null,nativeMovieData:null,nativeMovieIdentity:null,nativeMovieField:null,nativeMovieController:null,nativeMovieRequestId:0,nativeMovieTimer:null,nativeMovieRenderFrame:null,nativeMovieRenderIndex:null,nativeMovieThrottleTimer:null,nativeMovieLastRenderAt:0,nativeMovieAnnotationsHidden:false,marker:null,pickerMarker:null,pickerLocation:null,data:null,layer:'precipitation',model:'ecmwf',preferredModel:'ecmwf',renderedLayer:null,renderedModel:null,timeIndex:0,selectedForecastTime:null,playing:false,playTimer:null,playbackSpeed:1,lastPlaybackToggleAt:0,loading:false,requestController:null,requestId:0,rainPageController:null,rainPageRequestId:0,radarRequestId:0,radarTimer:null,euskalmetController:null,euskalmetLastGood:new Map(),observationFallback:null,renderFrame:null,gridRefineTimer:null,gridTimelineDragging:false,cache:new Map(),fieldCache:new Map(),lastGood:new Map(),lastError:null,windCanvas:null,windFrame:null,windFlowKey:null,windNeedsClear:false,particles:[],viewportTimer:null,selectionTimer:null,retryTimer:null,retryTick:null,retryRequest:null,retryAttempt:0,baseLayers:null,oceanLayer:null,baseLabelLayers:null,baseReliefLayers:null,mapAdministrativeLayer:null,activeBaseLabel:null,activeBaseRelief:null,baseStyle:'standard',daylight:false,rainviewerLayer:null,rainviewerData:null,aemetRadarLayer:null,officialEmbedLayer:null,officialEmbedDismissed:false,location:{...BERMEO}};
+const mapAitorState={map:null,grid:null,labels:null,values:null,windArrows:null,isobars:null,contours:null,field:null,nativeField:null,nativePendingField:null,nativePrefetchField:null,nativePrefetchTimer:null,nativePrefetchCleanupTimer:null,nativePrefetchKey:null,nativePrefetchReady:false,nativeFrameCache:new Map(),nativePrefetchTimers:new Map(),nativePrefetchGeneration:0,nativePrefetchDirection:1,nativeFrameTimer:null,nativeRefineTimer:null,nativeDesiredTimeIndex:null,nativeDragging:false,nativeCloudShadeTimer:null,nativePreviewField:null,nativePreviewTimer:null,nativePreviewCache:new Map(),nativePreviewTimers:new Map(),nativePreviewGeneration:0,nativeCacheIdentity:null,nativeCacheFrames:0,nativeCacheTrimTimer:null,nativeSource:null,nativeVectorSource:null,nativeGridFallbackLayer:null,nativeGridFallbackModel:null,nativeRaceController:null,nativeRaceRequestId:0,nativeRaceSource:null,nativeRaceTime:null,nativeRaceGridVisible:false,nativeRaceCleanupTimer:null,nativeWindSampleUrl:null,nativeGustSampleUrl:null,nativeWindSampleTimer:null,nativeWindSampleRequestId:0,nativeAdapters:new Map(),nativeMetaCache:new Map(),nativeWarmFiles:new Map(),nativeWarmUrls:new Set(),nativeWarmGeneration:0,nativeDerivedDewpointStates:new Map(),nativeRequestId:0,nativeRetryKey:null,nativeRetryCount:0,nativeRetryTimer:null,nativeAnnotationController:null,nativeAnnotationRequestId:0,nativeAnnotationTimer:null,nativeAnnotationKey:null,nativeMovieData:null,nativeMovieIdentity:null,nativeMovieField:null,nativeMovieController:null,nativeMovieRequestId:0,nativeMovieTimer:null,nativeMovieRenderFrame:null,nativeMovieRenderIndex:null,nativeMovieThrottleTimer:null,nativeMovieLastRenderAt:0,nativeMovieAnnotationsHidden:false,marker:null,pickerMarker:null,pickerLocation:null,data:null,layer:'precipitation',model:'ecmwf',preferredModel:'ecmwf',renderedLayer:null,renderedModel:null,timeIndex:0,selectedForecastTime:null,playing:false,playTimer:null,playbackSpeed:1,lastPlaybackToggleAt:0,loading:false,requestController:null,requestId:0,rainPageController:null,rainPageRequestId:0,radarRequestId:0,radarTimer:null,euskalmetController:null,euskalmetLastGood:new Map(),observationFallback:null,renderFrame:null,gridRefineTimer:null,gridTimelinePreviewTimer:null,gridTimelineDragging:false,cache:new Map(),fieldCache:new Map(),lastGood:new Map(),lastError:null,windCanvas:null,windFrame:null,windFlowKey:null,windNeedsClear:false,particles:[],viewportTimer:null,selectionTimer:null,retryTimer:null,retryTick:null,retryRequest:null,retryAttempt:0,baseLayers:null,oceanLayer:null,baseLabelLayers:null,baseReliefLayers:null,mapAdministrativeLayer:null,activeBaseLabel:null,activeBaseRelief:null,baseStyle:'standard',daylight:false,rainviewerLayer:null,rainviewerData:null,aemetRadarLayer:null,officialEmbedLayer:null,officialEmbedDismissed:false,location:{...BERMEO}};
 const MAP_LAYERS={
   euskalmet_radar:{key:'observed_reflectivity',title:'Radar Kapildui · Euskalmet',unit:'dBZ',scale:[0,20,40,60],colors:['#8bd8ff','#4bd56e','#ffd63d','#e63a48'],legend:['0','20','40','60+'],detail:'Máxima reflectividad observada por el radar de Kapildui. Es un producto regional oficial de Euskalmet y se muestra completo, sin deformar.'},
   euskalmet_lightning:{key:'observed_lightning',title:'Rayos observados · Euskalmet',unit:'descargas',scale:[0,1],colors:['#1b2430','#ffe34b'],legend:['0','observadas'],detail:'Descargas observadas en el producto regional oficial de Euskalmet. La imagen se muestra completa, sin reinterpretar sus colores.'},
@@ -2467,7 +2467,9 @@ const MAP_NATIVE_FAST_GRID_LAYERS=new Set(['precipitation','thunderstorms','fore
 // cargando en segundo plano y la sustituye al quedar completa.
 // La nubosidad no usa la película de malla reducida: con pocos puntos, una
 // superficie continua fabrica rombos grises que pueden confundirse con nubes.
-const MAP_NATIVE_TIMELINE_MOVIE_LAYERS=new Set(['precipitation','thunderstorms','forecast_reflectivity','temperature','dewpoint','humidity']);
+// T850 sí dispone de una malla ECMWF IFS 0,25° validada para cada hora; sirve
+// como vista inmediata real hasta que termina su tesela nativa exacta.
+const MAP_NATIVE_TIMELINE_MOVIE_LAYERS=new Set(['precipitation','thunderstorms','forecast_reflectivity','temperature','dewpoint','humidity','t850']);
 const MAP_FORECAST_OBSERVATION_MISMATCH_LAYERS=new Set(['precipitation','precipitation_15m','thunderstorms','forecast_reflectivity']);
 function mapObservationSeparationNote(layer=mapAitorState.layer){return MAP_FORECAST_OBSERVATION_MISMATCH_LAYERS.has(layer)?' AEMET y Euskalmet publican radar o rayos observados, no esta hora de pronóstico; por eso esas observaciones permanecen en sus capas propias y no se colocan como sustitución.':''}
 const MAP_AROME_LAYERS=new Set(['reflectivity','rainviewer','lightning','euskalmet_radar','euskalmet_lightning','precipitation','precipitation_15m','forecast_reflectivity','cloud','temperature','dewpoint','humidity','wind','gust']);
@@ -2734,9 +2736,9 @@ function warmMapNativeFile(index,delay=0){
     }catch(error){if(error?.name!=='AbortError'&&mapAitorState.nativeWarmFiles.get(url)===record)mapAitorState.nativeWarmUrls.delete(url)}finally{clearTimeout(record.timeout);record.timeout=null;if(mapAitorState.nativeWarmFiles.get(url)===record)mapAitorState.nativeWarmFiles.delete(url);record.resolve(warmed)}
   },Math.max(0,delay));return record.promise
 }
-function warmMapNativeCdn(center=mapAitorState.timeIndex,count=2,direction=1){
+function warmMapNativeCdn(center=mapAitorState.timeIndex,count=2,direction=1,startStep=1,delay=0){
   const source=mapAitorState.nativeSource,timeline=source?.timeline||[],connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;if(!timeline.length||!mapUsesNativeTiles()||document.hidden||connection?.saveData||/2g/.test(String(connection?.effectiveType||'')))return;const maximum=timeline.length-1,forward=direction<0?-1:1,generation=mapAitorState.nativeWarmGeneration;
-  void(async()=>{for(let step=1;step<=count;step+=1){const currentConnection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;if(generation!==mapAitorState.nativeWarmGeneration||source!==mapAitorState.nativeSource||document.hidden||currentConnection?.saveData||/2g/.test(String(currentConnection?.effectiveType||'')))return;let index=center+forward*step;if(mapAitorState.playing)index=((index%(maximum+1))+(maximum+1))%(maximum+1);else if(index<0||index>maximum)continue;const warmed=await warmMapNativeFile(index);if(!warmed)return}})().catch(()=>{})
+  void(async()=>{for(let offset=0;offset<count;offset+=1){const step=startStep+offset,currentConnection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;if(generation!==mapAitorState.nativeWarmGeneration||source!==mapAitorState.nativeSource||document.hidden||currentConnection?.saveData||/2g/.test(String(currentConnection?.effectiveType||'')))return;let index=center+forward*step;if(mapAitorState.playing)index=((index%(maximum+1))+(maximum+1))%(maximum+1);else if(index<0||index>maximum)continue;const warmed=await warmMapNativeFile(index,offset===0?delay:0);if(!warmed)return}})().catch(()=>{})
 }
 function mapNativeTileUrl(base,spec,quick=false){
   const smoothKinds=['cloud','cloud_rain_gray','rain','rain_15m','wind','temperature','dewpoint','dewpoint_derived','pressure','t850','cape','cin','sea_temperature','waves'],smooth=smoothKinds.includes(spec.kind),crispKinds=['temperature','t850','cloud','cape','cin'],crisp=crispKinds.includes(spec.kind),strictBreakpoints=spec.kind==='rain'||spec.kind==='rain_15m'||spec.kind==='reflectivity'||spec.kind==='cloud_rain_gray',parameters=new URLSearchParams({variable:spec.variable,interpolation:quick||crisp?'linear':smooth?'monotone':'linear',tile_size:quick?'64':'256'});if(smooth&&!quick&&!strictBreakpoints&&!crisp)parameters.set('color_blend','true');return'om://'+base+'?'+parameters.toString();
@@ -2991,6 +2993,11 @@ function prefetchMapNativeFrame(index,delay=70){
 function prefetchMapNativeWindow(center=mapAitorState.timeIndex,direction=1){
   const source=mapAitorState.nativeSource,timeline=source?.timeline||[],connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;if(!timeline.length||!mapUsesNativeTiles()||document.hidden||mapAitorState.nativeDragging||connection?.saveData||/2g/.test(String(connection?.effectiveType||'')))return;
   const maximum=timeline.length-1,forward=direction<0?-1:1,wrap=index=>mapAitorState.playing?((index%(maximum+1))+(maximum+1))%(maximum+1):index,primary=wrap(center+forward),targets=[];
+  // El fotograma adyacente se decodifica completo. Dos horas posteriores
+  // calientan solo el índice final del fichero en la caché HTTP, después de
+  // una pausa, para que un salto del slider no empiece desde cero ni compita
+  // con la hora visible.
+  warmMapNativeCdn(center,2,forward,2,850);
   // Una única hora adyacente basta. Preparar también el lado opuesto y lanzar
   // un Range manual al CDN hacía competir tres lecturas con la hora elegida.
   if(primary>=0&&primary<=maximum&&primary!==center)targets.push(primary);if(!targets.length)return;
@@ -3065,14 +3072,14 @@ function queueMapNativeLiveFrame(delay=90){
   // AROME 15 min dispone de la malla directa de la misma hora antes de que
   // termine el archivo .om. Botones y reproducción pueden mostrarla sin
   // esperar; la tesela exacta sigue solicitándose mediante el refinado.
-  if(!mapAitorState.nativeDragging&&mapNativeMovieReady(desired)&&renderMapNativeMovie(desired)){mapAitorState.nativeDesiredTimeIndex=desired;if(!mapAitorState.playing)scheduleMapNativeRefine(desired,160);else scheduleMapNativePlayback();return}
+  if(!mapAitorState.nativeDragging&&mapNativeMovieReady(desired)&&renderMapNativeMovie(desired)){mapAitorState.nativeDesiredTimeIndex=desired;if(!mapAitorState.playing)scheduleMapNativeRefine(desired,520);else scheduleMapNativePlayback();return}
   const quick=mapAitorState.nativePreviewCache.get(mapNativePreviewKey(desired));if(quick?.ready){activateMapNativePreview(quick);if(mapAitorState.playing)scheduleMapNativePlayback();else if(!mapAitorState.nativeDragging)scheduleMapNativeRefine(desired);return}
   if(desired===mapAitorState.timeIndex&&!mapAitorState.nativePreviewField){if(!mapAitorState.nativeDragging)mapAitorState.nativeDesiredTimeIndex=null;if(mapAitorState.playing)scheduleMapNativePlayback();return}
-  // Un salto discreto (botones o teclado) no compite con una tesela ligera.
-  // Se conserva el último mapa y se solicita directamente el fotograma exacto.
-  // Las vistas rápidas quedan reservadas al arrastre continuo y a la película.
+  // Un salto discreto no debe iniciar de inmediato el lienzo pesado. Primero
+  // muestra una tesela ligera de la misma fuente y hora; el fotograma nativo
+  // exacto se solicita cuando el usuario lleva un instante sin volver a mover.
   if(!mapAitorState.nativeDragging&&!mapAitorState.playing){
-    clearMapNativePreviewCache(Boolean(mapAitorState.nativePreviewField));if(mapAitorState.layer==='thunderstorms')queueMapNativeMovie(false,0);prefetchMapNativeFrame(desired,90);scheduleMapNativeRefine(desired,180);$('mapStatus').textContent=(mapAitorState.layer==='thunderstorms'?'Cargando puente oficial de la misma hora y refinando tesela exacta · ':'Cargando hora exacta · ')+$('mapTimelineLabel').textContent;return
+    clearMapNativePreviewCache(Boolean(mapAitorState.nativePreviewField));if(mapAitorState.layer==='thunderstorms')queueMapNativeMovie(false,0);prefetchMapNativePreview(desired,0,true);scheduleMapNativeRefine(desired,850);$('mapStatus').textContent=(mapAitorState.layer==='thunderstorms'?'Preparando puente oficial de la misma hora · ':'Preparando vista inmediata real · ')+$('mapTimelineLabel').textContent;return
   }
   // Seguimiento controlado: como máximo se inicia una hora cada ~45 ms y el
   // callback toma la última posición solicitada. Así el mapa avanza mientras
@@ -4136,6 +4143,14 @@ function renderMapGrid(quick=false){
   const data=mapAitorState.data,map=mapAitorState.map;if(!data||!map||mapAitorState.layer==='reflectivity')return;
   const config=mapLayerConfig(),field=buildMapField(quick);
   if(!field){updateMapLabels();$('mapInfo').innerHTML='<strong>'+config.title+' no disponible</strong>El modelo seleccionado no ha publicado este campo para esta hora.';renderMapLocation();renderMapPicker();return}
+  if(quick&&mapAitorState.gridTimelineDragging){
+    // Durante el arrastre se sustituye solo el raster. Contornos, cifras,
+    // símbolos y partículas se reconstruyen una vez al soltar; volver a crear
+    // cientos de capas Leaflet por cada evento input era la pausa visible.
+    if(mapAitorState.field)mapAitorState.field.remove();
+    const previewOverlays=[],previewSouth=field.bounds[0][0],previewWest=field.bounds[0][1],previewNorth=field.bounds[1][0],previewEast=field.bounds[1][1],previewShifts=field.isGlobal?[-360,0,360]:[0];previewShifts.forEach(shift=>previewOverlays.push(L.imageOverlay(field.url,[[previewSouth,previewWest+shift],[previewNorth,previewEast+shift]],{opacity:mapFieldOpacity(),interactive:false,className:'mapFieldOverlay mapTimelinePreviewOverlay'})));mapAitorState.field=L.layerGroup(previewOverlays).addTo(map);
+    if(mapAitorState.values)mapAitorState.values.clearLayers();if(mapAitorState.windArrows)mapAitorState.windArrows.clearLayers();if(mapAitorState.isobars)mapAitorState.isobars.clearLayers();if(mapAitorState.contours)mapAitorState.contours.clearLayers();if(mapAitorState.labels)mapAitorState.labels.clearLayers();stopMapWind();updateMapLabels();updateMapInfo();return
+  }
   clearMapLayers();
   const overlays=[],south=field.bounds[0][0],west=field.bounds[0][1],north=field.bounds[1][0],east=field.bounds[1][1],shifts=field.isGlobal?[-360,0,360]:[0];shifts.forEach(shift=>overlays.push(L.imageOverlay(field.url,[[south,west+shift],[north,east+shift]],{opacity:mapFieldOpacity(),interactive:false,className:'mapFieldOverlay'})));mapAitorState.field=L.layerGroup(overlays).addTo(map);
   renderMapIsobars();renderMapConvectionContours();renderMapWeatherSymbols();renderMapValueLabels();renderMapWindArrows();
@@ -4802,6 +4817,13 @@ function scheduleMapGridRefine(delay=180){
   if(mapUsesNativeTiles()||MAP_OBSERVATION_LAYERS.has(mapAitorState.layer)||mapAitorState.playing||mapAitorState.gridTimelineDragging)return;
   mapAitorState.gridRefineTimer=setTimeout(()=>{mapAitorState.gridRefineTimer=null;if(!mapUsesNativeTiles()&&!MAP_OBSERVATION_LAYERS.has(mapAitorState.layer)&&!mapAitorState.playing&&!mapAitorState.gridTimelineDragging)scheduleMapRender(false)},Math.max(0,delay));
 }
+function queueMapGridTimelinePreview(delay=90){
+  if(mapUsesNativeTiles()||MAP_OBSERVATION_LAYERS.has(mapAitorState.layer)||!mapAitorState.gridTimelineDragging||mapAitorState.gridTimelinePreviewTimer)return;
+  // Como máximo se dibuja una vista reducida cada 90 ms y siempre de la
+  // última hora solicitada. Mantiene el pulgar fluido aunque lleguen muchos
+  // eventos input seguidos.
+  mapAitorState.gridTimelinePreviewTimer=setTimeout(()=>{mapAitorState.gridTimelinePreviewTimer=null;if(!mapUsesNativeTiles()&&!MAP_OBSERVATION_LAYERS.has(mapAitorState.layer)&&mapAitorState.gridTimelineDragging)scheduleMapRender(true)},Math.max(0,delay))
+}
 function scheduleMapRender(quick=false){
   if(mapAitorState.renderFrame)cancelAnimationFrame(mapAitorState.renderFrame);
   mapAitorState.renderFrame=requestAnimationFrame(()=>{mapAitorState.renderFrame=null;renderMapGrid(quick)});
@@ -4812,7 +4834,7 @@ function finishMapTimelineScrub(){
     if(!mapAitorState.nativeDragging&&mapAitorState.nativeDesiredTimeIndex===null){if(mapAitorState.playing)scheduleMapNativePlayback();return}
     const target=mapNativeDesiredIndex();clearTimeout(mapAitorState.nativeFrameTimer);mapAitorState.nativeFrameTimer=null;
     const directPreviewReady=mapNativeMovieReady(target);if(mapAitorState.nativeMovieField&&!directPreviewReady)clearMapNativeMovie(false,true);
-    if(directPreviewReady){clearTimeout(mapAitorState.nativeMovieThrottleTimer);mapAitorState.nativeMovieThrottleTimer=null;if(mapAitorState.nativeMovieRenderFrame)cancelAnimationFrame(mapAitorState.nativeMovieRenderFrame);mapAitorState.nativeMovieRenderFrame=null;mapAitorState.nativeMovieRenderIndex=null;mapAitorState.nativeDragging=false;mapAitorState.timeIndex=target;mapAitorState.nativeDesiredTimeIndex=target;const range=$('mapTimeRange');if(range)range.value=target;if(renderMapNativeMovie(target)){scheduleMapNativeRefine(target,160);return}}
+    if(directPreviewReady){clearTimeout(mapAitorState.nativeMovieThrottleTimer);mapAitorState.nativeMovieThrottleTimer=null;if(mapAitorState.nativeMovieRenderFrame)cancelAnimationFrame(mapAitorState.nativeMovieRenderFrame);mapAitorState.nativeMovieRenderFrame=null;mapAitorState.nativeMovieRenderIndex=null;mapAitorState.nativeDragging=false;mapAitorState.timeIndex=target;mapAitorState.nativeDesiredTimeIndex=target;const range=$('mapTimeRange');if(range)range.value=target;if(renderMapNativeMovie(target)){scheduleMapNativeRefine(target,520);return}}
     const quick=mapAitorState.nativePreviewCache.get(mapNativePreviewKey(target));
     if(quick?.ready)activateMapNativePreview(quick);else activateMapNativeNearestPreview(target);
     mapAitorState.nativeDragging=false;
@@ -4820,11 +4842,12 @@ function finishMapTimelineScrub(){
     // Así el cursor responde al instante sin inventar ni interpolar valores.
     const targetKey=mapNativeFrameKey(target);pauseMapNativePrefetchTimers(targetKey);clearMapNativePreviewCache(Boolean(mapAitorState.nativePreviewField));
     if(mapAitorState.layer==='thunderstorms')queueMapNativeMovie(false,0);
-    prefetchMapNativeFrame(target,0);
+    if(!quick?.ready)prefetchMapNativePreview(target,0,true);
+    scheduleMapNativeRefine(target,quick?.ready?520:900);
     if(!mapAitorState.nativePreviewField&&mapAitorState.nativeField?._mapNativeFrameIndex===target){mapAitorState.nativeDesiredTimeIndex=null;finalizeMapNativeTimelineUi();prefetchMapNativeWindow(target,mapAitorState.nativePrefetchDirection);if(mapAitorState.playing)scheduleMapNativePlayback();return}
     $('mapStatus').textContent=(mapAitorState.nativePreviewField?'Vista inmediata real activa':mapAitorState.layer==='thunderstorms'?'Cargando puente oficial exacto o última malla de esta misma capa':'Se conserva la última imagen correcta')+' · cargando hora exacta · '+$('mapTimelineLabel').textContent;return
   }
-  if(!mapAitorState.gridTimelineDragging)return;mapAitorState.gridTimelineDragging=false;$('mapStatus').textContent='Dibujando la hora exacta seleccionada…';scheduleMapRender(false)
+  if(!mapAitorState.gridTimelineDragging)return;mapAitorState.gridTimelineDragging=false;clearTimeout(mapAitorState.gridTimelinePreviewTimer);mapAitorState.gridTimelinePreviewTimer=null;$('mapStatus').textContent='Dibujando la hora exacta seleccionada…';scheduleMapRender(false)
 }
 function setMapFullscreen(active){
   const studio=$('mapAitorStudio');if(!studio)return;
@@ -4902,10 +4925,14 @@ function initMapAitor(){
       // exclusivamente la última hora elegida. Incluso una capa cacheada se
       // activa al soltar: cambiar grupos Leaflet dentro de input todavía podía
       // bloquear el movimiento físico del cursor.
-      if(starting){pauseMapNativePrefetchTimers();clearMapNativePreviewCache(Boolean(mapAitorState.nativePreviewField))}
-      previewMapNativeTime(index);return
+      if(starting){clearMapNativeWarmRequests();pauseMapNativePrefetchTimers();clearMapNativePreviewCache(Boolean(mapAitorState.nativePreviewField))}
+      previewMapNativeTime(index);
+      // Si la malla horaria oficial ya está en memoria, el mapa acompaña al
+      // slider mediante un único overlay ligero. La tesela nativa exacta se
+      // deja para el reposo del cursor y no bloquea el siguiente movimiento.
+      if(mapNativeMovieReady(index))queueMapNativeMovieFrame(index);return
     }
-    if(!mapAitorState.gridTimelineDragging)$('mapStatus').dataset.timelineReadyStatus=$('mapStatus').textContent;mapAitorState.timeIndex=index;mapAitorState.gridTimelineDragging=true;clearTimeout(mapAitorState.gridRefineTimer);previewMapGridTime(index)
+    if(!mapAitorState.gridTimelineDragging)$('mapStatus').dataset.timelineReadyStatus=$('mapStatus').textContent;mapAitorState.timeIndex=index;mapAitorState.gridTimelineDragging=true;clearTimeout(mapAitorState.gridRefineTimer);previewMapGridTime(index);queueMapGridTimelinePreview(90)
   });
   $('mapTimeRange').addEventListener('change',finishMapTimelineScrub);
   $('mapTimeRange').addEventListener('pointerup',finishMapTimelineScrub,{passive:true});
@@ -4943,7 +4970,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.125',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.126',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });

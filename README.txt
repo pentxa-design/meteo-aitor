@@ -1,5 +1,22 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
+VERSIÓN v10.126 · SLIDER HORARIO MÁS RÁPIDO
+
+- El mapa acompaña al slider con una vista ligera construida únicamente con
+  valores reales de la misma fuente, pasada y hora seleccionada.
+- La tesela nativa pesada espera a que el cursor se estabilice; así no bloquea
+  el siguiente movimiento ni descarga todas las horas intermedias.
+- T850 utiliza una malla temporal ECMWF IFS 0,25° validada mientras termina la
+  tesela exacta. MUCAPE y MUCIN actualizan solo el raster durante el arrastre y
+  reconstruyen cifras y contornos una vez al soltar.
+- Nubosidad conserva su tesela real: primero solicita una versión de 64 píxeles
+  y después la sustituye por la exacta, sin fabricar una superficie reducida.
+- Se precalientan en caché HTTP dos ficheros horarios posteriores sin iniciar
+  su decodificación y respetando conexiones con ahorro de datos.
+- Caché PWA renovada a v10.126.
+
+VERSIÓN ANTERIOR
+
 VERSIÓN v10.125 · CARTOGRAFÍA VISIBLE Y NUBOSIDAD CORREGIDA
 
 - Temperatura a 2 m, T850, Punto de rocío, Humedad, MUCAPE y MUCIN vuelven a
