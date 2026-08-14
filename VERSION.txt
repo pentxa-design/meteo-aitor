@@ -1,4 +1,4 @@
-Meteo Aitor Bermeo v10.123 · capas meteorológicas profesionales
+Meteo Aitor Bermeo v10.124 · capas meteorológicas profesionales
 Fecha: 2026-08-14
 
 Las capas actuales se conservan. Lluvia y truenos usa precipitación nativa

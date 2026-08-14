@@ -1,6 +1,6 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
-VERSIÓN v10.123 · CAPAS METEOROLÓGICAS PROFESIONALES
+VERSIÓN v10.124 · CAPAS METEOROLÓGICAS PROFESIONALES
 
 - Nubosidad total oficial definida de blanco a gris carbón; la precipitación
   del mismo modelo solo añade un refuerzo gris independiente.
@@ -20,7 +20,7 @@ VERSIÓN v10.123 · CAPAS METEOROLÓGICAS PROFESIONALES
   anterior cuando las ranuras recientes están vacías.
 - El cursor horario responde inmediatamente y solo carga la última hora al
   soltar; no abre ni decodifica todas las horas intermedias del arrastre.
-- Caché PWA renovada a v10.123.
+- Caché PWA renovada a v10.124.
 
 VERSIÓN ANTERIOR
 

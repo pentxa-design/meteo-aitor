@@ -533,7 +533,12 @@ module.exports = async function handler(req, res) {
     // Si la instancia conserva una malla anterior, es preferible mostrarla
     // identificada como caché antes que dejar el visor completamente vacío.
     const detailSensitive = ['precipitation', 'thunderstorms', 'electric_storms', 'precipitation_3h', 'precipitation_6h', 'precipitation_12h', 'precipitation_24h', 'rain', 'showers', 'snowfall', 'precipitation_probability', 'forecast_reflectivity', 'cloud'].includes(displayLayer);
-    const nearby = (cachedModelIsValid ? cached : null) || closestStalePayload(effectiveRequested, layer, displayLayer, { south, north, west, east }, detailSensitive ? Math.max(18, Math.floor(density * 0.8)) : 0);
+    // El puente temporal de tormentas pide como maximo 14 filas. Exigir 18
+    // impedia recuperar su propia ultima malla valida durante un limite temporal.
+    const minimumStaleRows = displayLayer === 'thunderstorms'
+      ? Math.max(12, Math.floor(density * 0.8))
+      : detailSensitive ? Math.max(18, Math.floor(density * 0.8)) : 0;
+    const nearby = (cachedModelIsValid ? cached : null) || closestStalePayload(effectiveRequested, layer, displayLayer, { south, north, west, east }, minimumStaleRows);
     const canUseStale = nearby?.payload && Date.now() - nearby.savedAt < MAX_STALE_AGE;
     if (canUseStale) {
       res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=21600');
