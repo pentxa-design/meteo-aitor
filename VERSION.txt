@@ -1,4 +1,4 @@
-Meteo Aitor Bermeo v10.122 · capas meteorológicas profesionales
+Meteo Aitor Bermeo v10.123 · capas meteorológicas profesionales
 Fecha: 2026-08-14
 
 Las capas actuales se conservan. Lluvia y truenos usa precipitación nativa
@@ -19,7 +19,8 @@ vista regional. La temperatura del mar usa la tesela Météo-France SST 0,08°
 
 Lluvia 3 h y acumulación NOAA conservan la misma pasada y dejan de extender
 cada nodo en una celda o halo borroso. AROME conserva cuartos reales de 15 min
-y el cursor difiere la carga pesada hasta soltar. Radar
+durante las 6 h publicadas y continúa con AROME HD horario hasta 24 h. El
+cursor difiere la carga pesada hasta soltar. Radar
 Euskalmet busca hasta doce horas el último fotograma oficial útil cuando las
 ranuras recientes contienen la lámina oficial vacía y lo marca como anterior.
 

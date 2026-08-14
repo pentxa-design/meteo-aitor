@@ -1,6 +1,6 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
-VERSIÓN v10.122 · CAPAS METEOROLÓGICAS PROFESIONALES
+VERSIÓN v10.123 · CAPAS METEOROLÓGICAS PROFESIONALES
 
 - Nubosidad total oficial definida de blanco a gris carbón; la precipitación
   del mismo modelo solo añade un refuerzo gris independiente.
@@ -12,14 +12,15 @@ VERSIÓN v10.122 · CAPAS METEOROLÓGICAS PROFESIONALES
 - Lluvia 3 h y acumulación usan NOAA NOMADS 0,25°, conservan la misma pasada
   y se interpolan sin celdas cuadradas ni halos artificiales.
 - MUCAPE y MUCIN usan NOAA 0,25° en vista regional, con contornos reales.
-- AROME usa intervalos reales de 15 minutos y horizonte disponible de 6 h.
+- AROME usa intervalos reales de 15 minutos durante las 6 h publicadas y
+  continúa con el mismo AROME HD horario hasta completar 24 h.
 - Temperatura del mar usa Météo-France SST 0,08° (~8 km); las olas usan ECMWF
   WAM 0,25°. Ambas respetan la máscara terrestre.
 - Radar Euskalmet conserva el último fotograma oficial útil, identificado como
   anterior cuando las ranuras recientes están vacías.
 - El cursor horario responde inmediatamente y solo carga la última hora al
   soltar; no abre ni decodifica todas las horas intermedias del arrastre.
-- Caché PWA renovada a v10.122.
+- Caché PWA renovada a v10.123.
 
 VERSIÓN ANTERIOR
 
