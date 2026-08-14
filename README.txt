@@ -1,5 +1,19 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
+VERSIÓN v10.125 · CARTOGRAFÍA VISIBLE Y NUBOSIDAD CORREGIDA
+
+- Temperatura a 2 m, T850, Punto de rocío, Humedad, MUCAPE y MUCIN vuelven a
+  dejar visibles el relieve, fronteras, carreteras y nombres del mapa base.
+- Los valores, fuentes, escalas y paletas meteorológicas no cambian; solo se
+  corrige la composición visual y la opacidad efectiva de esos campos.
+- Toda nube seca se representa en blanco o gris claro, también con cobertura
+  densa. La precipitación positiva de Open-Meteo añade gris automáticamente y
+  el tono se oscurece al aumentar los milímetros del mismo modelo y hora.
+- La leyenda distingue nube seca, lluvia débil, moderada e intensa.
+- Caché PWA renovada a v10.125.
+
+VERSIÓN ANTERIOR
+
 VERSIÓN v10.124 · CAPAS METEOROLÓGICAS PROFESIONALES
 
 - Nubosidad total oficial definida de blanco a gris carbón; la precipitación

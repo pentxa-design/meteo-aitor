@@ -1,3 +1,21 @@
+Meteo Aitor Bermeo v10.125 · cartografía visible y nubosidad corregida
+Fecha: 2026-08-15
+
+La cartografía base recupera relieve, fronteras, carreteras y nombres legibles
+bajo Temperatura a 2 m, T850, Punto de rocío, Humedad, MUCAPE y MUCIN. Los
+campos meteorológicos conservan exactamente sus fuentes, valores, escalas y
+paletas; solo cambia la composición visual y su opacidad efectiva.
+
+Nubosidad mantiene toda nube seca en blanco o gris claro, incluso con cobertura
+densa. Cualquier precipitación positiva publicada por Open-Meteo para el mismo
+modelo, pasada y hora añade gris automáticamente; cuanto mayor es la cantidad
+real en milímetros, más oscuro resulta. La leyenda muestra esta relación.
+
+La caché PWA se renueva a v10.125 para impedir que móviles y escritorio
+reutilicen la presentación de la v10.124.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.124 · capas meteorológicas profesionales
 Fecha: 2026-08-14
 
