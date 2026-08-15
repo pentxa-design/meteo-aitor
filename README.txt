@@ -1,5 +1,20 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
+VERSIÓN v10.129 · MUCIN Y NUBES CON LLUVIA VISIBLES
+
+- MUCIN mantiene todos los valores NOAA GFS y refuerza únicamente su paleta:
+  azul/púrpura para inhibición fuerte, granate/rojo para la intermedia y
+  naranja claro cerca de cero.
+- Nubosidad conserva la nube seca blanca. Solo la precipitación cuantitativa
+  del mismo archivo, modelo, pasada y hora añade gris verdoso/verde desde
+  0,02 mm, cian al aumentar y azul en los valores más intensos.
+- Una tesela parcial de lluvia ya no oculta las partes válidas del encuadre;
+  la cobertura nubosa principal continúa exigiéndose completa.
+- No se inventa probabilidad ni reflectividad y no se mezcla ninguna fuente.
+- Caché PWA renovada a v10.129.
+
+VERSIÓN ANTERIOR
+
 VERSIÓN v10.128 · COBERTURA MUCAPE/MUCIN COMPLETA
 
 - MUCAPE y MUCIN usan a zoom 6 la ventana europea NOAA GFS 0,25° reducida a

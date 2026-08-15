@@ -1,3 +1,23 @@
+Meteo Aitor Bermeo v10.129 · MUCIN y nubes con lluvia visibles
+Fecha: 2026-08-15
+
+MUCIN conserva los J/kg y el signo publicados por NOAA GFS, pero sustituye los
+grises casi invisibles por una escala azul, púrpura, granate, roja y naranja.
+Los valores habituales de inhibición fuerte e intermedia quedan legibles sin
+cambiar la malla, la hora ni los umbrales del producto 255–0 mb.
+
+Nubosidad usa la cobertura y la precipitación cuantitativa que ECMWF, ICON,
+GFS o AROME publican juntas en el mismo archivo, pasada y hora. La nube seca
+permanece blanca; desde 0,02 mm la lluvia real aparece gris verdosa/verde y
+pasa a cian o azul al aumentar. El cero continúa transparente y no se calcula
+probabilidad ni reflectividad de radar.
+
+Una tesela de precipitación parcial ya no oculta todas las teselas válidas del
+encuadre. La nubosidad principal sigue exigiendo cobertura completa para no
+rellenar huecos. La caché PWA se renueva a v10.129.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.128 · cobertura MUCAPE/MUCIN completa
 Fecha: 2026-08-15
 
