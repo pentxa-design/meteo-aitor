@@ -1,3 +1,15 @@
+VERSIÓN v10.133 · MUCIN OPERATIVO SIN SATURACIÓN
+
+- La escala de MUCIN pasa a tonos profesionales azul grisáceo, malva, granate
+  apagado y naranja suave: desaparece el efecto rosa neón.
+- Se mantienen exactamente los valores NOAA GFS en J/kg, sus umbrales, puntos
+  y contornos; solo cambia la representación visual.
+- Nubosidad deja de mezclar la cartografía con un fondo cian: el mar queda azul,
+  la tierra natural y las nubes solo blancas/grises; la lluvia sigue en puntos.
+- Caché PWA renovada a v10.133.
+
+VERSIÓN ANTERIOR
+
 VERSIÓN v10.132 · NUBES Y MUCIN LEGIBLES
 
 - El mar recupera su fondo azul y la nubosidad queda exclusivamente en blanco
