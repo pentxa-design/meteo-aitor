@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.127" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.128" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -4547,7 +4547,12 @@ function mapCanonicalMuWindow(raw,zoom,center){
   // al acercar se conserva cada nodo de 0,25°. Solo Mundo recurre a GFS 1°.
   if(zoom<5||rawWest<-180||rawEast>180)return world;
   const longitude=((Number(center.lng)+540)%360)-180;
-  const wide=zoom<6||latitudeSpan>20||longitudeSpan>35,latitudeRadius=wide?15:6,longitudeRadius=wide?35:10,latitudeLimitSouth=-80+latitudeRadius,latitudeLimitNorth=85-latitudeRadius,longitudeLimit=179.75-longitudeRadius;
+  // A zoom 6 el lienzo de escritorio puede abarcar más de 12 × 20 grados.
+  // La ventana regional de detalle no cubriría sus esquinas y la validación
+  // la rechazaría para no rellenar huecos. En ese zoom se usa la ventana
+  // europea NOAA 0,25° reducida a nodos oficiales de 0,5°; a zoom 7 o mayor
+  // vuelve el detalle de cada nodo 0,25°.
+  const wide=zoom<7||latitudeSpan>20||longitudeSpan>35,latitudeRadius=wide?15:6,longitudeRadius=wide?35:10,latitudeLimitSouth=-80+latitudeRadius,latitudeLimitNorth=85-latitudeRadius,longitudeLimit=179.75-longitudeRadius;
   if(Math.abs(longitude)>longitudeLimit)return world;
   const centerLat=Math.max(latitudeLimitSouth,Math.min(latitudeLimitNorth,Math.round(Number(center.lat)/2)*2)),centerLon=Math.max(-longitudeLimit,Math.min(longitudeLimit,Math.round(longitude/2)*2));
   return{south:centerLat-latitudeRadius,north:centerLat+latitudeRadius,west:centerLon-longitudeRadius,east:centerLon+longitudeRadius,centerLat,centerLon};
@@ -5002,7 +5007,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.127',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.128',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });

@@ -1,5 +1,16 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
+VERSIÓN v10.128 · COBERTURA MUCAPE/MUCIN COMPLETA
+
+- MUCAPE y MUCIN usan a zoom 6 la ventana europea NOAA GFS 0,25° reducida a
+  nodos oficiales de 0,5°. Así el campo cubre todo el lienzo de escritorio y
+  la aplicación ya no lo rechaza por dejar esquinas fuera de la malla.
+- A zoom 7 o superior se recupera el detalle de cada nodo NOAA GFS 0,25°.
+- No se interpola una hora, no se cambia de modelo y no se rellena ningún hueco.
+- Caché PWA renovada a v10.128.
+
+VERSIÓN ANTERIOR
+
 VERSIÓN v10.127 · CARTOGRAFÍA Y CONVECCIÓN LEGIBLES
 
 - Temperatura a 2 m y T850 mantienen el color continuo del modelo, pero el

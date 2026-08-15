@@ -1,3 +1,18 @@
+Meteo Aitor Bermeo v10.128 · cobertura MUCAPE/MUCIN completa
+Fecha: 2026-08-15
+
+La vista ES y otras vistas de escritorio a zoom 6 solicitan ahora la ventana
+europea NOAA GFS 0,25° reducida a nodos oficiales de 0,5°. La anterior ventana
+de detalle 12 × 20° podía ser menor que el lienzo visible y la validación la
+rechazaba correctamente para no rellenar zonas sin malla.
+
+A zoom 7 o superior vuelve el detalle de cada nodo NOAA GFS 0,25°. No se
+interpolan horas, no se cambia de modelo y no se generan valores nuevos.
+
+La caché PWA se renueva a v10.128.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.127 · cartografía y convección legibles
 Fecha: 2026-08-15
 
