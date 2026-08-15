@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.129" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.130" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -2435,6 +2435,7 @@ setInterval(()=>{if(!document.hidden&&state.location&&isBermeoLocation(state.loc
    sustituyen nunca el modelo seleccionado.
 --------------------------------------------------------------------------- */
 const mapAitorState={map:null,grid:null,labels:null,values:null,windArrows:null,isobars:null,contours:null,field:null,nativeField:null,nativePendingField:null,nativePrefetchField:null,nativePrefetchTimer:null,nativePrefetchCleanupTimer:null,nativePrefetchKey:null,nativePrefetchReady:false,nativeFrameCache:new Map(),nativePrefetchTimers:new Map(),nativePrefetchGeneration:0,nativePrefetchDirection:1,nativeFrameTimer:null,nativeRefineTimer:null,nativeDesiredTimeIndex:null,nativeDragging:false,nativeCloudShadeTimer:null,nativePreviewField:null,nativePreviewTimer:null,nativePreviewCache:new Map(),nativePreviewTimers:new Map(),nativePreviewGeneration:0,nativeCacheIdentity:null,nativeCacheFrames:0,nativeCacheTrimTimer:null,nativeSource:null,nativeVectorSource:null,nativeGridFallbackLayer:null,nativeGridFallbackModel:null,nativeRaceController:null,nativeRaceRequestId:0,nativeRaceSource:null,nativeRaceTime:null,nativeRaceGridVisible:false,nativeRaceCleanupTimer:null,nativeWindSampleUrl:null,nativeGustSampleUrl:null,nativeWindSampleTimer:null,nativeWindSampleRequestId:0,nativeAdapters:new Map(),nativeMetaCache:new Map(),nativeWarmFiles:new Map(),nativeWarmUrls:new Set(),nativeWarmGeneration:0,nativeDerivedDewpointStates:new Map(),nativeRequestId:0,nativeRetryKey:null,nativeRetryCount:0,nativeRetryTimer:null,nativeAnnotationController:null,nativeAnnotationRequestId:0,nativeAnnotationTimer:null,nativeAnnotationKey:null,nativeMovieData:null,nativeMovieIdentity:null,nativeMovieField:null,nativeMovieController:null,nativeMovieRequestId:0,nativeMovieTimer:null,nativeMovieRenderFrame:null,nativeMovieRenderIndex:null,nativeMovieThrottleTimer:null,nativeMovieLastRenderAt:0,nativeMovieAnnotationsHidden:false,marker:null,pickerMarker:null,pickerLocation:null,data:null,layer:'precipitation',model:'ecmwf',preferredModel:'ecmwf',renderedLayer:null,renderedModel:null,timeIndex:0,selectedForecastTime:null,playing:false,playTimer:null,playbackSpeed:1,lastPlaybackToggleAt:0,loading:false,requestController:null,requestId:0,rainPageController:null,rainPageRequestId:0,radarRequestId:0,radarTimer:null,euskalmetController:null,euskalmetLastGood:new Map(),observationFallback:null,renderFrame:null,gridRefineTimer:null,gridTimelinePreviewTimer:null,gridTimelineDragging:false,cache:new Map(),fieldCache:new Map(),lastGood:new Map(),lastError:null,windCanvas:null,windFrame:null,windFlowKey:null,windNeedsClear:false,particles:[],viewportTimer:null,selectionTimer:null,retryTimer:null,retryTick:null,retryRequest:null,retryAttempt:0,baseLayers:null,oceanLayer:null,baseLabelLayers:null,baseReliefLayers:null,mapAdministrativeLayer:null,mapAdministrativeSpainLayer:null,activeBaseLabel:null,activeBaseRelief:null,baseStyle:'standard',daylight:false,rainviewerLayer:null,rainviewerData:null,aemetRadarLayer:null,officialEmbedLayer:null,officialEmbedDismissed:false,location:{...BERMEO}};
+const MAP_FORECAST_CACHE_MAX_AGE=15*60*1000,MAP_FORECAST_LAST_GOOD_MAX_AGE=2*60*60*1000,MAP_OBSERVATION_MAX_AGE=60*60*1000,MAP_NATIVE_METADATA_TTL=15*60*1000,MAP_NATIVE_METADATA_MAX_STALE=60*60*1000;
 const MAP_LAYERS={
   euskalmet_radar:{key:'observed_reflectivity',title:'Radar Kapildui · Euskalmet',unit:'dBZ',scale:[0,20,40,60],colors:['#8bd8ff','#4bd56e','#ffd63d','#e63a48'],legend:['0','20','40','60+'],detail:'Máxima reflectividad observada por el radar de Kapildui. Es un producto regional oficial de Euskalmet y se muestra completo, sin deformar.'},
   euskalmet_lightning:{key:'observed_lightning',title:'Rayos observados · Euskalmet',unit:'descargas',scale:[0,1],colors:['#1b2430','#ffe34b'],legend:['0','observadas'],detail:'Descargas observadas en el producto regional oficial de Euskalmet. La imagen se muestra completa, sin reinterpretar sus colores.'},
@@ -2456,8 +2457,8 @@ const MAP_LAYERS={
   temperature:{key:'temperature_2m',title:'Temperatura a 2 m',unit:'°C',scale:[-40,-30,-20,-10,0,5,10,15,20,25,30,35,40,45],colors:['#54216f','#53429a','#3d65ad','#2d8aba','#34b0bd','#58c49f','#87cf72','#c4d657','#ffe22b','#ff8a21','#ef3b24','#c8172c','#8f1632','#3c102b'],legend:['−40','−30','−20','−10','0','5','10','15','20','25','30','35','40','45+'],detail:'Temperatura real del modelo, representada con una gradación continua: violeta y azul para frío, verde en valores templados, amarillo alrededor de 20 °C, naranja desde 25 °C y rojo para el calor fuerte. La paleta cambia el aspecto, nunca los grados.'},
   dewpoint:{key:'dew_point_2m',title:'Punto de rocío a 2 m',unit:'°C',scale:[-15,-5,0,6,12,17,23],colors:['#4530a4','#236fe8','#16bde7','#24d39c','#a9e63f','#f6b83c','#e95b3d'],legend:['-15','-5','0','6','12','17','23+'],detail:'Cuanto más se acerca a la temperatura, mayor sensación de bochorno.'},
   humidity:{key:'relative_humidity_2m',title:'Humedad relativa a 2 m',unit:'%',scale:[0,15,30,45,60,75,88,100],colors:['#a63d2f','#b75e50','#6e6875','#aeb7bf','#d9ef69','#5ed466','#00b89b','#138be7'],legend:['0','15','30','45','60','75','88','100'],detail:'Humedad relativa real prevista por el modelo a dos metros, sin ajustes artificiales. La ubicación marcada utiliza el punto exacto y la mejor resolución disponible.'},
-  wind:{key:'wind_speed_10m',title:'Viento a 10 m',unit:'km/h',scale:[0,5,10,20,30,40,55,70,90,120],colors:['#354a78','#3379ac','#2ca8c5','#38cfc9','#65d49c','#b8db58','#f0d348','#f29a3d','#df5262','#8a2d75'],legend:['0','5','10','20','30','40','55','70','90','120+'],detail:'Viento medio previsto. El flujo animado muestra el desplazamiento y las barbas meteorológicas indican dirección y fuerza.'},
-  gust:{key:'wind_gusts_10m',title:'Rachas a 10 m',unit:'km/h',scale:[0,10,20,35,50,65,80,100,125,150],colors:['#354a78','#3379ac','#2ca8c5','#38cfc9','#65d49c','#d1d94c','#f0b53e','#ec6b45','#d43f68','#762b78'],legend:['0','10','20','35','50','65','80','100','125','150+'],detail:'Racha máxima prevista en el intervalo, con color de intensidad y barbas de viento normalizadas.'},
+  wind:{key:'wind_speed_10m',title:'Viento a 10 m',unit:'km/h',scale:[0,5,10,20,30,40,55,70,90,120],colors:['#354a78','#3379ac','#2ca8c5','#38cfc9','#65d49c','#b8db58','#f0d348','#f29a3d','#df5262','#8a2d75'],legend:['0','5','10','20','30','40','55','70','90','120+'],detail:'Viento medio instantáneo previsto a 10 m. El flujo animado muestra el desplazamiento y las barbas indican dirección y fuerza. No representa el viento a 80 m ni autoriza por sí solo una subida a torre.'},
+  gust:{key:'wind_gusts_10m',title:'Rachas a 10 m',unit:'km/h',scale:[0,10,20,35,50,65,80,100,125,150],colors:['#354a78','#3379ac','#2ca8c5','#38cfc9','#65d49c','#d1d94c','#f0b53e','#ec6b45','#d43f68','#762b78'],legend:['0','10','20','35','50','65','80','100','125','150+'],detail:'Racha máxima prevista a 10 m durante la hora precedente, con color de intensidad y barbas normalizadas. No representa la racha a 80 m ni autoriza por sí sola una subida a torre.'},
   pressure:{key:'pressure_msl',title:'Presión a nivel del mar',unit:'hPa',scale:[960,970,980,990,1000,1010,1020,1030,1040,1050],colors:['#143854','#155b73','#197b89','#3f9ca2','#83b9b2','#c7d0c5','#d2c49f','#bc9569','#9c6647','#6f4033'],legend:['960','970','980','990','1000','1010','1020','1030','1040','1050+'],detail:'Presión reducida al nivel del mar con isobaras reales cada 4 hPa. Las bajas presiones aparecen en azul y turquesa, la presión media en gris beige y las altas en ocre y marrón; los hPa no se modifican.'},
   t850:{key:'temperature_850hPa',title:'Temperatura a 850 hPa',unit:'°C',scale:[-30,-20,-15,-10,-5,0,5,10,12,14,16,18,20,22,24,28,32],colors:['#3d0757','#612087','#563cab','#335fc0','#1e82d0','#20a9d4','#26c8bd','#35d68b','#53dc5c','#88df3d','#c8e533','#ffd22b','#ff9f24','#f56a20','#dd3c22','#a91f2e','#641a34'],legend:['−30','−20','−15','−10','−5','0','5','10','12','14','16','18','20','22','24','28','32+'],detail:'Temperatura real prevista a unos 1.500 m. La escala reforzada separa con claridad los grados habituales en Europa: azul y cian para aire frío, verde en valores suaves, amarillo desde 18 °C, naranja alrededor de 20–22 °C y rojo oscuro en las masas más cálidas.'},
   cape:{key:'cape',title:'MUCAPE · más inestable',unit:'J/kg',scale:[100,250,500,750,1000,1500,2000,3000,4000,5000,6000,7000],colors:['#55495c','#465666','#2f6f78','#16878f','#179a91','#59ae72','#c6c148','#f2aa2b','#ef6e34','#b8424f','#713458','#3b213f'],legend:['100','250','500','750','1000','1500','2000','3000','4000','5000','6000','7000+'],detail:'MUCAPE oficial NOAA GFS de la parcela más inestable 255–0 mb. La panorámica mundial conserva la malla oficial reducida y el detalle regional usa 0,25°. Menos de 100 J/kg queda transparente; los tonos gris y púrpura muestran valores bajos, el turquesa los medios y amarillo/naranja los altos. CAPE no confirma por sí solo tormenta, rayo o tornado.'},
@@ -2567,7 +2568,7 @@ function mapNativeEntryLabel(source=mapAitorState.nativeSource,entry=mapNativeEn
 function mapLayerConfig(index=mapAitorState.timeIndex){
   const config=MAP_LAYERS[mapAitorState.layer]||MAP_LAYERS.precipitation;
   if(mapAitorState.layer==='precipitation_15m'&&mapNativeEntryInterval(mapNativeEntry(index))===60){const hourly=MAP_LAYERS.precipitation;return{...config,title:'Lluvia AROME HD · 1 h',unit:'mm / 1 h',scale:hourly.scale,colors:hourly.colors,legend:hourly.legend,detail:'Precipitación oficial acumulada durante la hora anterior por Météo‑France AROME France HD. Es la continuación horaria de la misma malla 0,01° después de terminar los cuartos nativos; no son cuartos interpolados ni repetidos.'}}
-  if(mapAitorState.model==='arome'&&mapAitorState.layer==='cloud')return{...config,key:'cloud_cover_low',title:'Nubosidad baja',detail:'Nubosidad baja publicada directamente por AROME HD, representada en blanco cuando está seca. La precipitación cuantitativa publicada por la misma pasada y hora la tiñe de gris verdoso y verde; pasa a cian o azul al aumentar los milímetros.'};
+  if(mapAitorState.model==='arome'&&mapAitorState.layer==='cloud')return{...config,key:'cloud_cover_low',title:'Nubes AROME · baja/media/alta',detail:'Composición visual de las tres coberturas oficiales que AROME HD publica por separado: baja, media y alta. AROME no entregó cobertura total en la pasada comprobada, por eso no se calcula ni se etiqueta un porcentaje total. La lluvia de la misma pasada y hora se añade en verde, cian o azul según los milímetros reales.'};
   return config
 }
 function mapNumber(value,fallback=0){if(value===null||value===undefined||value==='')return fallback;const number=Number(value);return Number.isFinite(number)?number:fallback}
@@ -2686,7 +2687,7 @@ function mapNativeAdapter(kind='standard'){
   const adapter=library.addLeafletProtocolSupport(L);adapter.addProtocol('om',library.omProtocol,settings);mapAitorState.nativeAdapters.set(kind,adapter);return adapter;
 }
 async function mapNativeMetadata(source,force=false){
-  const url='https://map-tiles.open-meteo.com/data_spatial/'+source.domain+'/latest.json',cached=mapAitorState.nativeMetaCache.get(url);if(!force&&cached)return cached;
+  const url='https://map-tiles.open-meteo.com/data_spatial/'+source.domain+'/latest.json',cached=mapAitorState.nativeMetaCache.get(url),cacheAge=cached?Date.now()-Number(cached.savedAt):Infinity;if(!force&&cached?.metadata&&cacheAge<MAP_NATIVE_METADATA_TTL)return cached.metadata;
   let lastError=null;const fastFallback=source.layer==='t850',attempts=fastFallback?1:3;
   for(let attempt=0;attempt<attempts;attempt+=1){
     if(attempt)await new Promise(resolve=>setTimeout(resolve,attempt===1?650:1400));
@@ -2694,10 +2695,10 @@ async function mapNativeMetadata(source,force=false){
       const controller=new AbortController(),timeout=setTimeout(()=>controller.abort('metadata-timeout'),fastFallback?1800:4500);let response;
       try{response=await fetch(url,{cache:force?'no-store':'default',headers:{Accept:'application/json'},signal:controller.signal})}finally{clearTimeout(timeout)}
       const metadata=await response.json().catch(()=>null);if(!response.ok||!metadata?.valid_times?.length)throw new Error('Respuesta espacial incompleta.');
-      mapAitorState.nativeMetaCache.set(url,metadata);return metadata;
+      mapAitorState.nativeMetaCache.set(url,{metadata,savedAt:Date.now()});return metadata;
     }catch(error){lastError=error}
   }
-  if(cached)return cached;
+  if(cached?.metadata&&cacheAge<MAP_NATIVE_METADATA_MAX_STALE)return cached.metadata;
   throw new Error('Open‑Meteo Spatial no respondió para '+source.label+'. '+(lastError?.message||''));
 }
 function mapNativeTimeline(metadata){
@@ -2719,7 +2720,7 @@ function mapNativeLayerSpecs(layer,model=mapAitorState.model){
   if(layer==='precipitation_15m')return[{variable:'precipitation',factor:.82,kind:'rain_15m'}];
   // cloud_cover y precipitation comparten siempre el mismo fichero OM base:
   // misma fuente oficial, pasada y hora válida; no se cruzan proveedores.
-  if(layer==='cloud'&&model==='arome')return[{variable:'cloud_cover_low',factor:.82,kind:'cloud'},{variable:'precipitation',factor:.88,kind:'cloud_rain_green',optional:true}];
+  if(layer==='cloud'&&model==='arome')return[{variable:'cloud_cover_low',factor:.52,kind:'cloud'},{variable:'cloud_cover_mid',factor:.58,kind:'cloud'},{variable:'cloud_cover_high',factor:.64,kind:'cloud'},{variable:'precipitation',factor:.88,kind:'cloud_rain_green',optional:true}];
   if(layer==='cloud')return[{variable:'cloud_cover',factor:model==='ecmwf'?.78:.82,kind:'cloud'},{variable:'precipitation',factor:.88,kind:'cloud_rain_green',optional:true}];
   if(layer==='temperature')return[{variable:'temperature_2m',factor:.98,kind:'temperature'}];
   if(layer==='thunderstorms')return[{variable:'precipitation',factor:.82,kind:'rain'},{variable:'cape',factor:.24,kind:'cape',optional:true}];
@@ -3287,7 +3288,7 @@ function mapNativeMovieEligible(layer=mapAitorState.layer,model=mapAitorState.mo
   return !!entry&&(layer==='precipitation_15m'&&model==='arome'&&mapNativeEntryInterval(entry)===15||MAP_NATIVE_TIMELINE_MOVIE_LAYERS.has(layer))
 }
 function mapNativeMovieDataMatches(data,index=mapNativeDesiredIndex(),requireValues=true){
-  const source=mapAitorState.nativeSource,layer=mapAitorState.layer,model=mapAitorState.model,target=Number(index),entry=source?.timeline?.[target];if(!data||!source||!entry||!mapNativeMovieEligible(layer,model,source,target)||data?.displayLayer!==layer||data?.model?.fallback||!mapDataCoversViewport(data))return false;
+  const source=mapAitorState.nativeSource,layer=mapAitorState.layer,model=mapAitorState.model,target=Number(index),entry=source?.timeline?.[target];if(!data||!source||!entry||!mapResponseIsFresh(data,MAP_FORECAST_LAST_GOOD_MAX_AGE)||!mapNativeMovieEligible(layer,model,source,target)||data?.displayLayer!==layer||data?.model?.fallback||!mapDataCoversViewport(data))return false;
   const previewTime=mapTimeMilliseconds(data?.times?.[target]),sourceTime=mapTimeMilliseconds(data?.nativeSourceTimes?.[target]),nativeTime=mapTimeMilliseconds(entry.time),sourceDomain=entry.domain||source.domain;
   if(mapAitorState.nativeMovieIdentity!==mapAitorState.nativeCacheIdentity||data?.model?.sourceModel!==sourceDomain||!Number.isFinite(previewTime)||previewTime!==nativeTime||!Number.isFinite(sourceTime)||sourceTime!==nativeTime)return false;
   if(layer==='precipitation_15m'&&(data?.diagnostics?.interval!=='preceding_15_minutes_sum'||data?.model?.sourceModel!=='meteofrance_arome_france_hd_15min'))return false;
@@ -3358,7 +3359,7 @@ async function loadMapNativeMovie(force=false){
   if(mapAitorState.layer!=='precipitation_15m'&&mapAitorState.nativeAnnotationController){queueMapNativeMovie(force,220);return}
   if(mapAitorState.nativeMovieController)mapAitorState.nativeMovieController.abort();
   const requestId=++mapAitorState.nativeMovieRequestId,controller=new AbortController();mapAitorState.nativeMovieController=controller;const layer=mapAitorState.layer,model=mapAitorState.model,identity=mapAitorState.nativeCacheIdentity,zoom=map.getZoom(),padding=zoom>=7?.10:zoom>=5?.16:.20,raw=map.getBounds().pad(padding),snap=zoom<=2?2:zoom<=3?.75:zoom<=5?.25:zoom>=8?.05:.10,south=Math.max(-80,Math.floor(raw.getSouth()/snap)*snap),north=Math.min(85,Math.ceil(raw.getNorth()/snap)*snap),west=Math.max(-180,Math.floor(raw.getWest()/snap)*snap),east=Math.min(180,Math.ceil(raw.getEast()/snap)*snap),density=Math.max(10,Math.min(14,mapLayerDensity(layer,zoom))),focus=mapAitorState.location||BERMEO;
-  const query=new URLSearchParams({south:south.toFixed(2),north:north.toFixed(2),west:west.toFixed(2),east:east.toFixed(2),model,layer:mapRequestBundle(layer),displayLayer:layer,density:String(density),cin:layer==='cin'?'1':'0',focusLat:Number(focus.latitude).toFixed(3),focusLon:Number(focus.longitude).toFixed(3)}),cacheKey='native-movie|'+query.toString(),cached=!force?mapAitorState.cache.get(cacheKey):null,timeout=setTimeout(()=>controller.abort('timeout'),26000);
+  const query=new URLSearchParams({south:south.toFixed(2),north:north.toFixed(2),west:west.toFixed(2),east:east.toFixed(2),model,layer:mapRequestBundle(layer),displayLayer:layer,density:String(density),cin:layer==='cin'?'1':'0',focusLat:Number(focus.latitude).toFixed(3),focusLon:Number(focus.longitude).toFixed(3)}),cacheKey='native-movie|'+query.toString(),cached=!force?mapCachedForecastResponse(cacheKey):null,timeout=setTimeout(()=>controller.abort('timeout'),26000);
   try{
     const response=cached||await mapFetchForecast(query,controller.signal);if(requestId!==mapAitorState.nativeMovieRequestId||identity!==mapAitorState.nativeCacheIdentity||layer!==mapAitorState.layer||model!==mapAitorState.model)return;if(response?.model?.fallback)throw new Error('La película rápida no sustituye el modelo seleccionado.');const aligned=mapNativeAlignedData(response,source.timeline),currentTarget=mapNativeDesiredIndex(),currentEntry=source.timeline?.[currentTarget],sourceDomain=currentEntry?.domain||source.domain;if(aligned?.displayLayer!==layer||aligned?.model?.sourceModel!==sourceDomain)throw new Error('La malla temporal no coincide con la fuente nativa seleccionada.');
     if(!cached){mapAitorState.cache.set(cacheKey,aligned);while(mapAitorState.cache.size>10)mapAitorState.cache.delete(mapAitorState.cache.keys().next().value)}mapAitorState.nativeMovieData=aligned;mapAitorState.nativeMovieIdentity=identity;
@@ -3395,7 +3396,7 @@ async function loadMapNativeAnnotations(force=false){
   if(mapAitorState.nativeAnnotationController)mapAitorState.nativeAnnotationController.abort();
   const requestId=++mapAitorState.nativeAnnotationRequestId,controller=new AbortController();mapAitorState.nativeAnnotationController=controller;
   const layer=mapAitorState.layer,model=mapAitorState.model,config=mapLayerConfig(),zoom=map.getZoom(),padding=zoom>=7?.10:zoom>=5?.16:.20,raw=map.getBounds().pad(padding),snap=zoom<=2?2:zoom<=3?.75:zoom<=5?.25:zoom>=8?.05:.10,south=Math.max(-80,Math.floor(raw.getSouth()/snap)*snap),north=Math.min(85,Math.ceil(raw.getNorth()/snap)*snap),west=Math.max(-180,Math.floor(raw.getWest()/snap)*snap),east=Math.min(180,Math.ceil(raw.getEast()/snap)*snap),density=Math.max(6,Math.min(12,mapLayerDensity(layer,zoom))),focus=mapAitorState.location||BERMEO;
-  const query=new URLSearchParams({south:south.toFixed(2),north:north.toFixed(2),west:west.toFixed(2),east:east.toFixed(2),model,layer:mapRequestBundle(layer),displayLayer:layer,density:String(density),cin:layer==='cin'?'1':'0',focusLat:Number(focus.latitude).toFixed(3),focusLon:Number(focus.longitude).toFixed(3)}),cacheKey='native-annotations|'+query.toString(),movieCached=!force&&mapNativeMovieDataMatches(mapAitorState.nativeMovieData,mapAitorState.timeIndex,true)?mapAitorState.nativeMovieData:null,cached=movieCached||(!force?mapAitorState.cache.get(cacheKey):null);mapAitorState.nativeAnnotationKey=cacheKey;
+  const query=new URLSearchParams({south:south.toFixed(2),north:north.toFixed(2),west:west.toFixed(2),east:east.toFixed(2),model,layer:mapRequestBundle(layer),displayLayer:layer,density:String(density),cin:layer==='cin'?'1':'0',focusLat:Number(focus.latitude).toFixed(3),focusLon:Number(focus.longitude).toFixed(3)}),cacheKey='native-annotations|'+query.toString(),movieCached=!force&&mapNativeMovieDataMatches(mapAitorState.nativeMovieData,mapAitorState.timeIndex,true)?mapAitorState.nativeMovieData:null,cached=movieCached||(!force?mapCachedForecastResponse(cacheKey):null);mapAitorState.nativeAnnotationKey=cacheKey;
   const timeout=setTimeout(()=>controller.abort('timeout'),26000);
   try{
     const response=cached||await mapFetchForecast(query,controller.signal);if(requestId!==mapAitorState.nativeAnnotationRequestId||layer!==mapAitorState.layer||model!==mapAitorState.model)return;
@@ -3698,7 +3699,7 @@ function renderMapPicker(){
   }
   if(mapAitorState.layer==='sea_temperature'&&Math.abs(latitude-BERMEO.latitude)<.08&&Math.abs(longitude-BERMEO.longitude)<.12&&finiteWeatherNumber(euskalmetSeaTemperature)!==null)extra.push('Euskalmet oficial en Bermeo: '+marineValue(euskalmetSeaTemperature,'°C',0));
   const muLayer=MAP_GFS_ONLY_LAYERS.has(mapAitorState.layer),muOverview=muLayer&&(data?.model?.overview||Number(data?.model?.resolutionDegrees||.25)>.25),visualStep=Number(data?.model?.displayResolutionDegrees),exactAccumulation=mapAccumulationUsesExactSamples(config),sampleNote=!available?'':muOverview?'lectura panorámica aproximada'+(Number.isFinite(visualStep)?' · paso visual ~'+visualStep.toFixed(1).replace('.',',')+'°':''):muLayer?'nodo NOAA más próximo · 0,25°':exactAccumulation?'nodo de malla más próximo':'valor interpolado';
-  const coordinates=Math.abs(latitude).toFixed(3)+'° '+(latitude>=0?'N':'S')+' · '+Math.abs(longitude).toFixed(3)+'° '+(longitude>=0?'E':'O'),content='<div class="mapPickerCard'+(available?'':' isUnavailable')+'"><button type="button" class="mapPickerClose" aria-label="Cerrar punto del modelo" title="Cerrar">×</button><span class="mapPickerKicker">Punto del modelo</span><strong class="mapPickerValue">'+(available?esc(mapFormatValue(config,value)):'Sin dato en esta malla')+'</strong><span class="mapPickerLayer">'+esc(config.title)+'</span>'+(extra.length?'<span class="mapPickerExtra">'+esc(extra.join(' · '))+'</span>':'')+'<span class="mapPickerMeta">'+esc(model)+' · '+esc(mapTimeText(time))+'<br>'+esc(coordinates)+(sampleNote?' · '+esc(sampleNote):'')+'</span></div>';
+  const coordinates=Math.abs(latitude).toFixed(3)+'° '+(latitude>=0?'N':'S')+' · '+Math.abs(longitude).toFixed(3)+'° '+(longitude>=0?'E':'O'),primaryValue=available?(mapAitorState.layer==='cloud'&&mapAitorState.model==='arome'?'Bajas '+Math.round(value)+'%':mapFormatValue(config,value)):'Sin dato en esta malla',content='<div class="mapPickerCard'+(available?'':' isUnavailable')+'"><button type="button" class="mapPickerClose" aria-label="Cerrar punto del modelo" title="Cerrar">×</button><span class="mapPickerKicker">Punto del modelo</span><strong class="mapPickerValue">'+esc(primaryValue)+'</strong><span class="mapPickerLayer">'+esc(config.title)+'</span>'+(extra.length?'<span class="mapPickerExtra">'+esc(extra.join(' · '))+'</span>':'')+'<span class="mapPickerMeta">'+esc(model)+' · '+esc(mapTimeText(time))+'<br>'+esc(coordinates)+(sampleNote?' · '+esc(sampleNote):'')+'</span></div>';
   if(!mapAitorState.pickerMarker){
     const icon=L.divIcon({className:'',html:'<div class="mapPickerTarget" aria-hidden="true"></div>',iconSize:[28,28],iconAnchor:[14,14]});
     mapAitorState.pickerMarker=L.marker([latitude,longitude],{icon,draggable:true,keyboard:true,title:'Punto meteorológico seleccionado',zIndexOffset:1600}).addTo(map);
@@ -3999,7 +4000,7 @@ function updateMapInfo(){
   if(mapAitorState.layer==='electric_storms'){$('mapInfo').innerHTML='<strong>Potencial tormentoso · ECMWF CAPE</strong>'+config.detail+' No es densidad de rayos ni observación.';return}
   if(mapUsesNativeTiles()&&mapAitorState.nativeSource&&!mapAitorState.nativeRaceGridVisible){
     const source=mapAitorState.nativeSource,entry=mapNativeEntry(),loc=mapAitorState.location,value=loc&&mapAitorState.data?mapValueAtCoordinates(loc.latitude,loc.longitude,config.key):null,method=mapAitorState.layer==='forecast_reflectivity'?'La reflectividad se estima a partir de la precipitación horaria mediante la relación Z–R. ':mapAitorState.layer==='cloud'?'La nube seca se muestra en blanco y la precipitación cuantitativa del mismo modelo, pasada y hora colorea solo la masa correspondiente: gris verdoso/verde en lluvia débil, cian o azul al aumentar; no es reflectividad de radar. ':MAP_MARINE_LAYERS.has(mapAitorState.layer)?'La tesela nativa conserva la malla marina y deja la tierra transparente. ':'',transition=mapAitorState.layer==='precipitation_15m'?' El visor usa cuartos nativos durante las 6 h publicadas y después cambia, sin interpolar, a acumulados horarios AROME HD hasta al menos +24 h. ':'';
-    $('mapInfo').innerHTML='<strong>'+config.title+(value!==null?' · '+mapFormatValue(config,value):'')+' · '+mapNativeEntryLabel(source,entry)+'</strong>'+method+config.detail+transition+' Teselas espaciales de Open‑Meteo; Windy queda únicamente como contraste manual.';return;
+    const valueText=mapAitorState.layer==='cloud'&&mapAitorState.model==='arome'?'':value!==null?' · '+mapFormatValue(config,value):'';$('mapInfo').innerHTML='<strong>'+config.title+valueText+' · '+mapNativeEntryLabel(source,entry)+'</strong>'+method+config.detail+transition+' Teselas espaciales de Open‑Meteo; Windy queda únicamente como contraste manual.';return;
   }
   const loc=mapAitorState.location;
   const value=loc?mapValueAtCoordinates(loc.latitude,loc.longitude,config.key):null;
@@ -4119,6 +4120,9 @@ function renderMapTownValues(){
 }
 function renderMapValueLabels(){
   const data=mapAitorState.data,config=mapLayerConfig();if(!data||!$('mapValueLabels').checked||!mapHasLayerData())return;
+  // AROME publica baja/media/alta por separado y no entrega un total en la
+  // pasada comprobada. No se imprime la baja como si fuese un porcentaje total.
+  if(mapAitorState.layer==='cloud'&&mapAitorState.model==='arome')return;
   const map=mapAitorState.map,zoom=map?.getZoom()||6;
   // La lluvia NOAA ya forma una superficie continua a partir de sus nodos
   // oficiales. En Mundo/Europa/ES las cifras de cada muestra tapaban el mapa
@@ -4240,6 +4244,7 @@ function renderRainViewerFrame(){
 function mapNormalizeRainViewer(data){
   const host=String(data?.host||''),frames=(Array.isArray(data?.radar?.past)?data.radar.past.map(frame=>({...frame,kind:'observed'})):[]).filter(frame=>Number.isFinite(Number(frame?.time))&&/^\/v\d+\/radar\//.test(String(frame?.path||''))).sort((a,b)=>Number(a.time)-Number(b.time)).slice(-12).map(frame=>({time:Number(frame.time),path:String(frame.path),kind:'observed'}));
   if(!host.startsWith('https://')||!frames.length)throw new Error('RainViewer no publicó fotogramas utilizables.');
+  const latestAge=Date.now()-Number(frames[frames.length-1].time)*1000;if(latestAge<-5*60*1000||latestAge>MAP_OBSERVATION_MAX_AGE)throw new Error('RainViewer no publicó un radar de la última hora.');
   return{ok:true,source:'RainViewer Weather Radar API',host,frames,generatedAt:new Date(Number(data?.generated||0)*1000).toISOString()};
 }
 async function mapFetchRainViewer(signal){
@@ -4267,7 +4272,7 @@ async function setGlobalRadar(options={}){
     clearTimeout(timeout);if(requestId===mapAitorState.requestId){mapAitorState.requestController=null;$('mapAitorStudio').classList.remove('isBusy');$('mapRefresh').disabled=false}
   }
 }
-function mapAemetDirectUrls(count=12){
+function mapAemetDirectUrls(count=6){
   const rounded=Math.floor(Date.now()/600000)*600000,pad=value=>String(value).padStart(2,'0'),urls=[];
   for(let index=0;index<count;index+=1){const date=new Date(rounded-index*600000),filename='radw'+date.getUTCFullYear()+pad(date.getUTCMonth()+1)+pad(date.getUTCDate())+pad(date.getUTCHours())+pad(date.getUTCMinutes())+'_3857.png';urls.push('https://www.aemet.es/es/api-eltiempo/radar/imagen-radar/compo/'+filename)}
   return urls;
@@ -4297,17 +4302,18 @@ function setMapLightning(){
   const requestId=++mapAitorState.radarRequestId,image=$('mapRadarImage'),stage=$('mapRadarStage');
   clearTimeout(mapAitorState.radarTimer);$('mapLegend').style.display='none';setMapBaseStyle('standard');stage.classList.add('active');image.alt='Mapa de rayos observados por AEMET';image.style.visibility='hidden';
   if($('mapRadarProductTag'))$('mapRadarProductTag').textContent='Último período estándar · AEMET OpenData';
-  if($('mapRadarCaption'))$('mapRadarCaption').innerHTML='<strong>Rayos observados · AEMET</strong><br />Producto oficial más reciente, mostrado completo y sin deformar. Es observación de descargas, no una previsión.';
+  if($('mapRadarCaption'))$('mapRadarCaption').innerHTML='<strong>Rayos observados · AEMET</strong><br />Producto oficial consultado ahora, mostrado completo y sin deformar. AEMET OpenData no publica aquí la hora exacta del PNG: no se presenta como fotograma minutado. Es observación, no previsión.';
   $('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>OBSERVACIÓN · cargando rayos AEMET…';$('mapTimeBadge').textContent='Observación oficial';$('mapTimelineLabel').textContent='Último período estándar';$('mapStatus').textContent='Consultando la red de rayos de AEMET OpenData…';
   let resolved=false;const validRequest=()=>requestId===mapAitorState.radarRequestId&&mapAitorState.layer==='lightning';
   const lightningError=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(mapAitorState.radarTimer);image.style.visibility='hidden';setMapEuskalmet('lightning',{fallbackLayer:'lightning',fallbackFrom:'AEMET'})};
-  image.onload=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(mapAitorState.radarTimer);image.style.visibility='visible';mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>OBSERVACIÓN · Rayos AEMET';$('mapTimeBadge').textContent='Observación oficial · último período';$('mapTimelineLabel').textContent='AEMET OpenData';$('mapStatus').textContent='OBSERVACIÓN · Mapa de rayos AEMET actualizado · producto oficial sin deformar';updateMapInfo()};
+  image.onload=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(mapAitorState.radarTimer);image.style.visibility='visible';mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>OBSERVACIÓN · Rayos AEMET';$('mapTimeBadge').textContent='Observación oficial · hora no publicada';$('mapTimelineLabel').textContent='Consultado '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});$('mapStatus').textContent='OBSERVACIÓN · producto AEMET consultado ahora · el PNG no publica hora exacta';updateMapInfo()};
   image.onerror=lightningError;mapAitorState.radarTimer=setTimeout(lightningError,18000);image.src='/api/aemet-radar?product=lightning&frame='+Math.floor(Date.now()/300000);
 }
 function mapEuskalmetFrameLabel(source=''){
   const match=String(source).match(/webmet00-(\d{2})(\d{2})\.png/i);if(match)return match[1]+':'+match[2]+' UTC';
   const date=new Date(source);return Number.isNaN(date.getTime())?'Último fotograma oficial útil':String(date.getUTCHours()).padStart(2,'0')+':'+String(date.getUTCMinutes()).padStart(2,'0')+' UTC';
 }
+function mapObservationTimeIsFresh(source=''){const value=mapTimeMilliseconds(source),age=Date.now()-value;return Number.isFinite(value)&&age>=-5*60*1000&&age<=MAP_OBSERVATION_MAX_AGE}
 function setMapEuskalmet(product='radar',options={}){
   const isLightning=product==='lightning',directLayer=isLightning?'euskalmet_lightning':'euskalmet_radar',equivalentLayer=isLightning?'lightning':'reflectivity',fallback=options?.fallbackFrom==='AEMET'&&options?.fallbackLayer===equivalentLayer,layer=fallback?equivalentLayer:directLayer;
   const retained=mapAitorState.euskalmetLastGood.get(product)||null;
@@ -4317,15 +4323,15 @@ function setMapEuskalmet(product='radar',options={}){
   clearTimeout(mapAitorState.radarTimer);$('mapLegend').style.display='none';setMapBaseStyle('standard');stage.classList.add('active');image.alt=isLightning?'Rayos observados por Euskalmet':'Reflectividad observada por el radar de Kapildui de Euskalmet';image.style.visibility='hidden';
   stage.dataset.radarProduct=isLightning?'euskalmet-lightning':'euskalmet-reflectivity';
   if($('mapRadarProductTag'))$('mapRadarProductTag').textContent=(fallback?'OBSERVACIÓN · respaldo oficial · ':'')+(isLightning?'Rayos':'Radar Kapildui')+' · Euskalmet';
-  if($('mapRadarCaption'))$('mapRadarCaption').innerHTML='<strong>'+(fallback?'OBSERVACIÓN · respaldo oficial · ':'')+productName+' · Euskalmet</strong><br />'+(fallback?'AEMET no publicó ahora el producto nacional utilizable. ':'')+'Último fotograma oficial utilizable de las doce horas recientes, completo y sin deformar. Es observación, no previsión. <a href="'+sourceLink+'" target="_blank" rel="noopener">Abrir fuente oficial</a>.';
+  if($('mapRadarCaption'))$('mapRadarCaption').innerHTML='<strong>'+(fallback?'OBSERVACIÓN · respaldo oficial · ':'')+productName+' · Euskalmet</strong><br />'+(fallback?'AEMET no publicó ahora el producto nacional utilizable. ':'')+'Último fotograma oficial utilizable de la última hora, completo y sin deformar. Es observación, no previsión. <a href="'+sourceLink+'" target="_blank" rel="noopener">Abrir fuente oficial</a>.';
   $('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · buscando respaldo Euskalmet…':'Cargando '+(isLightning?'rayos':'radar de Kapildui')+' Euskalmet…');$('mapTimeBadge').textContent=fallback?'OBSERVACIÓN · respaldo oficial':'Observación oficial';$('mapTimelineLabel').textContent='Último fotograma disponible';$('mapStatus').textContent=fallback?'AEMET sin producto utilizable · consultando el producto observado equivalente de Euskalmet…':'Consultando los fotogramas públicos de Euskalmet…';updateMapInfo();
   let resolved=false;const validRequest=()=>requestId===mapAitorState.radarRequestId&&mapAitorState.layer===layer;
-  const showRetained=()=>{if(!retained||Date.now()-retained.savedAt>12*60*60*1000)return false;image.src=retained.url;image.style.visibility='visible';mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · respaldo Euskalmet · ':'')+(isLightning?'Rayos observados':'Radar Kapildui')+' · último útil';$('mapTimeBadge').textContent='Euskalmet · sin fotograma nuevo';$('mapTimelineLabel').textContent=mapEuskalmetFrameLabel(retained.observedAt);$('mapStatus').textContent=(fallback?'OBSERVACIÓN · respaldo oficial · ':'')+'sin fotograma nuevo utilizable · se mantiene el último correcto';updateMapInfo();return true};
-  const imageError=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(mapAitorState.radarTimer);if(mapAitorState.euskalmetController){mapAitorState.euskalmetController.abort();mapAitorState.euskalmetController=null}if(showRetained())return;image.style.visibility='hidden';mapAitorState.lastError=new Error('Euskalmet no publicó un fotograma utilizable durante las doce últimas horas.');$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · AEMET y Euskalmet sin producto':'Euskalmet · sin fotograma reciente');$('mapTimeBadge').textContent='Fuente temporalmente sin datos';$('mapTimelineLabel').textContent='Pulsa para reintentar';$('mapStatus').textContent=fallback?'AEMET y Euskalmet no publicaron ahora un producto observado equivalente utilizable. No se sustituye por lluvia prevista ni por otra variable.':'Euskalmet no tiene ahora un fotograma reciente utilizable. No se muestra una lámina vacía ni otra capa como sustitución.';$('mapInfo').innerHTML=fallback?'<strong>OBSERVACIÓN temporalmente sin datos</strong>No hay ahora radar/rayos oficiales equivalentes utilizables de AEMET ni Euskalmet. No se mezcla ninguna previsión ni se conserva una hora del modelo.':'';if(!fallback)updateMapInfo()};
+  const showRetained=()=>{if(!retained||Date.now()-retained.savedAt>MAP_OBSERVATION_MAX_AGE||!mapObservationTimeIsFresh(retained.observedAt))return false;image.src=retained.url;image.style.visibility='visible';mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · respaldo Euskalmet · ':'')+(isLightning?'Rayos observados':'Radar Kapildui')+' · último útil';$('mapTimeBadge').textContent='Euskalmet · sin fotograma nuevo';$('mapTimelineLabel').textContent=mapEuskalmetFrameLabel(retained.observedAt);$('mapStatus').textContent=(fallback?'OBSERVACIÓN · respaldo oficial · ':'')+'sin fotograma nuevo utilizable · se mantiene el último correcto de la última hora';updateMapInfo();return true};
+  const imageError=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(mapAitorState.radarTimer);if(mapAitorState.euskalmetController){mapAitorState.euskalmetController.abort();mapAitorState.euskalmetController=null}if(showRetained())return;image.style.visibility='hidden';mapAitorState.lastError=new Error('Euskalmet no publicó un fotograma utilizable durante la última hora.');$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · AEMET y Euskalmet sin producto':'Euskalmet · sin fotograma reciente');$('mapTimeBadge').textContent='Fuente temporalmente sin datos';$('mapTimelineLabel').textContent='Pulsa para reintentar';$('mapStatus').textContent=fallback?'AEMET y Euskalmet no publicaron ahora un producto observado equivalente utilizable. No se sustituye por lluvia prevista ni por otra variable.':'Euskalmet no tiene ahora un fotograma de la última hora. No se muestra una lámina vacía ni otra capa como sustitución.';$('mapInfo').innerHTML=fallback?'<strong>OBSERVACIÓN temporalmente sin datos</strong>No hay ahora radar/rayos oficiales equivalentes utilizables de AEMET ni Euskalmet. No se mezcla ninguna previsión ni se conserva una hora del modelo.':'';if(!fallback)updateMapInfo()};
   const controller=new AbortController();mapAitorState.euskalmetController=controller;mapAitorState.radarTimer=setTimeout(imageError,18000);
   fetch('/api/euskalmet-map?product='+encodeURIComponent(product)+'&frame='+Math.floor(Date.now()/300000),{signal:controller.signal,cache:'no-store',headers:{Accept:'image/png'}}).then(async response=>{
     if(!response.ok||!String(response.headers.get('content-type')||'').toLowerCase().includes('image'))throw new Error('Fotograma no utilizable');
-    const blob=await response.blob(),url=URL.createObjectURL(blob),observedAt=response.headers.get('x-meteo-aitor-time')||'',stale=response.headers.get('x-meteo-aitor-stale')==='1',probe=new Image();
+    const blob=await response.blob(),url=URL.createObjectURL(blob),observedAt=response.headers.get('x-meteo-aitor-time')||'',stale=response.headers.get('x-meteo-aitor-stale')==='1',probe=new Image();if(!mapObservationTimeIsFresh(observedAt)){URL.revokeObjectURL(url);throw new Error('Fotograma Euskalmet anterior a la última hora')}
     probe.onload=()=>{if(!validRequest()){URL.revokeObjectURL(url);return}resolved=true;clearTimeout(mapAitorState.radarTimer);mapAitorState.euskalmetController=null;const previous=mapAitorState.euskalmetLastGood.get(product);mapAitorState.euskalmetLastGood.set(product,{url,observedAt,savedAt:Date.now()});image.src=url;image.style.visibility='visible';if(previous?.url&&previous.url!==url)setTimeout(()=>URL.revokeObjectURL(previous.url),1000);mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · respaldo Euskalmet · ':'')+(isLightning?'Rayos observados':'Radar Kapildui');$('mapTimeBadge').textContent=fallback?'OBSERVACIÓN · respaldo oficial Euskalmet':'Observación oficial · Euskalmet';$('mapTimelineLabel').textContent=mapEuskalmetFrameLabel(observedAt);$('mapStatus').textContent=(fallback?'OBSERVACIÓN · respaldo oficial Euskalmet · ':'')+(isLightning?'rayos observados':'radar de Kapildui')+(stale?' · se mantiene el último fotograma útil':' · último fotograma oficial útil')+' · sin cronología de pronóstico';updateMapInfo()};
     probe.onerror=()=>{URL.revokeObjectURL(url);imageError()};probe.src=url;
   }).catch(error=>{if(error?.name!=='AbortError'||validRequest())imageError()});
@@ -4338,14 +4344,19 @@ function setMapBusy(busy,message=''){
   if(message)$('mapStatus').textContent=message;
 }
 function mapCacheKey(query){const normalized=new URLSearchParams(query),layer=normalized.get('displayLayer');if(MAP_GFS_ONLY_LAYERS.has(layer)){normalized.set('displayLayer','mu');normalized.delete('cin')}else if(MAP_NOAA_RAIN_LAYERS.has(layer))normalized.set('displayLayer','noaa-rain');return normalized.toString()}
+function mapResponseAge(data){const generated=mapTimeMilliseconds(data?.generatedAt);return Number.isFinite(generated)?Date.now()-generated:Infinity}
+function mapResponseIsFresh(data,maxAge=MAP_FORECAST_CACHE_MAX_AGE){const age=mapResponseAge(data);return age>=-5*60*1000&&age<=maxAge}
+function mapCachedForecastResponse(cacheKey){const data=mapAitorState.cache.get(cacheKey);if(mapResponseIsFresh(data)){return data}mapAitorState.cache.delete(cacheKey);return null}
 function mapLastGoodKey(layer,model){return String(layer)+'|'+String(model)}
 function mapResponseHasCompleteSpatialGrid(data){const rows=Number(data?.grid?.rows),columns=Number(data?.grid?.columns),bounds=data?.bounds||{},finiteBounds=['south','north','west','east'].every(key=>mapValidNumber(bounds[key]));return Number.isInteger(rows)&&rows>=2&&Number.isInteger(columns)&&columns>=2&&Array.isArray(data?.points)&&data.points.length===rows*columns&&finiteBounds&&Number(bounds.north)>Number(bounds.south)&&Number(bounds.east)>Number(bounds.west)}
 function rememberMapLastGood(layer,model,data,timeIndex){
+  if(!mapResponseIsFresh(data,MAP_FORECAST_LAST_GOOD_MAX_AGE))return;
   const key=mapLastGoodKey(layer,model);mapAitorState.lastGood.delete(key);mapAitorState.lastGood.set(key,{data,timeIndex:Number(timeIndex)||0,savedAt:Date.now()});
   while(mapAitorState.lastGood.size>12)mapAitorState.lastGood.delete(mapAitorState.lastGood.keys().next().value);
 }
 function restoreMapLastGood(layer,model){
   const snapshot=mapAitorState.lastGood.get(mapLastGoodKey(layer,model));if(!snapshot?.data?.times?.length)return false;
+  if(Date.now()-Number(snapshot.savedAt)>MAP_FORECAST_LAST_GOOD_MAX_AGE||!mapResponseIsFresh(snapshot.data,MAP_FORECAST_LAST_GOOD_MAX_AGE)){mapAitorState.lastGood.delete(mapLastGoodKey(layer,model));return false}
   if(mapLayerRequiresCompleteCoverage(layer)&&(!mapResponseHasCompleteSpatialGrid(snapshot.data)||!mapDataCoversViewport(snapshot.data)))return false;
   mapAitorState.data=snapshot.data;mapAitorState.layer=layer;mapAitorState.model=model;mapAitorState.renderedLayer=layer;mapAitorState.renderedModel=model;mapAitorState.timeIndex=Math.max(0,Math.min(snapshot.timeIndex,snapshot.data.times.length-1));
   syncMapSelection(layer,model);const range=$('mapTimeRange');range.max=Math.max(0,snapshot.data.times.length-1);range.value=mapAitorState.timeIndex;unsetMapRadar();renderMapGrid();return true;
@@ -4366,7 +4377,7 @@ function mapDirectFieldsForLayer(bundle,model='ecmwf',displayLayer=bundle){
   if(displayLayer==='sea_temperature')return['sea_surface_temperature'];
   if(model==='arome'){
     if(['precipitation','forecast_reflectivity'].includes(displayLayer))return['precipitation'];
-    if(displayLayer==='cloud')return['cloud_cover_low','precipitation'];
+    if(displayLayer==='cloud')return['cloud_cover_low','cloud_cover_mid','cloud_cover_high','precipitation'];
     if(displayLayer==='temperature')return['temperature_2m'];
     if(displayLayer==='humidity')return['relative_humidity_2m'];
     if(displayLayer==='wind')return['wind_speed_10m','wind_direction_10m'];
@@ -4422,11 +4433,9 @@ async function mapFetchDirectForecast(query,signal){
     const result=await mapFetchDirectCandidate(query,candidate,signal);if(displayLayer!=='cin'||result.model.cinAvailable)return result;
     throw new Error('CIN no está publicado para esta pasada.');
   }catch(error){
-    if(error?.name==='AbortError'||Number(error?.status)===429||/minutely|rate limit|too many|l[ií]mite/i.test(String(error?.message||'')))throw error;
-    if(gfsOnly||ecmwfOnly||marine||requested==='arome')throw error;
-    const status=Number(error?.status)||0,unsupported=[400,404,422].includes(status)||/model|variable|par[aá]metro|unsupported|not available/i.test(String(error?.message||''));if(candidate==='best_match'||!unsupported)throw error;
-    const fallback=await mapFetchDirectCandidate(query,'best_match',signal);if(displayLayer!=='cin'||fallback.model.cinAvailable)return fallback;
-    throw new Error('CIN no está publicado para esta pasada.');
+    // La ruta directa conserva siempre el modelo elegido. Si ese modelo no
+    // publica la variable, se informa del fallo y nunca se cambia a best_match.
+    throw error;
   }
 }
 const MAP_AROME_15M_DOMAIN={south:37.5,north:55.4,west:-12,east:16};
@@ -4579,7 +4588,7 @@ async function loadMapForecast(fit=false,force=false,targetTime=mapCurrentForeca
   const query=new URLSearchParams({south:south.toFixed(2),north:north.toFixed(2),west:west.toFixed(2),east:east.toFixed(2),model:requestedModel,layer:requestedBundle,displayLayer:muWindow?'mu':requestedLayer,density:String(density),focusLat:Number(requestFocus.latitude).toFixed(3),focusLon:Number(requestFocus.longitude).toFixed(3),viewLat:Number(requestCenter.lat).toFixed(3),viewLon:Number(requestCenter.lng).toFixed(3)});
   if(MAP_NOAA_RAIN_LAYERS.has(requestedLayer))query.set('page','0');
   if(!muWindow&&requestedLayer==='cin')query.set('cin','1');
-  const cacheKey=mapCacheKey(query),cached=!force?mapAitorState.cache.get(cacheKey):null;
+  const cacheKey=mapCacheKey(query),cached=!force?mapCachedForecastResponse(cacheKey):null;
   setMapBusy(true,'Cargando '+($('mapModel').selectedOptions[0]?.textContent||'modelo')+' · '+requestedTitle+'…');
   const timeout=setTimeout(()=>controller.abort('timeout'),28000);
   try{
@@ -4901,6 +4910,12 @@ function scheduleMapNativeViewportSettle(){
     if(mapAitorState.playing)prefetchMapNativeWindow(mapAitorState.timeIndex,1)
   },280)
 }
+let mapAutoRefreshTimer=null,mapLastAutoRefresh=0;
+function refreshActiveMapSource(){
+  if(!mapAitorState.map||document.hidden||!navigator.onLine||mapAitorState.loading||mapAitorState.playing||mapAitorState.nativeDragging||mapAitorState.gridTimelineDragging)return;
+  mapLastAutoRefresh=Date.now();clearMapRetry();mapAitorState.retryAttempt=0;
+  if(mapAitorState.layer==='reflectivity')setMapRadar();else if(mapAitorState.layer==='rainviewer')setGlobalRadar();else if(mapAitorState.layer==='lightning')setMapLightning();else if(mapAitorState.layer==='euskalmet_radar')setMapEuskalmet('radar');else if(mapAitorState.layer==='euskalmet_lightning')setMapEuskalmet('lightning');else if(mapUsesNativeTiles())loadMapNativeLayer(true,true);else loadMapForecast(false,true)
+}
 function initMapAitor(){
   if(mapAitorState.map||!window.L||!$('mapAitorCanvas'))return;
   if((location.hostname==='127.0.0.1'||location.hostname==='localhost')&&new URLSearchParams(location.search).has('v')){
@@ -4981,7 +4996,7 @@ function initMapAitor(){
   $('mapOfficialOpen').addEventListener('click',toggleMapOfficial);
   $('mapOfficialClose').addEventListener('click',()=>closeMapOfficial());
   document.querySelectorAll('[data-official-layer]').forEach(button=>button.addEventListener('click',()=>setMapOfficialLayer(button.dataset.officialLayer)));
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)clearMapNativeWarmRequests()});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){clearMapNativeWarmRequests();return}if(Date.now()-mapLastAutoRefresh>=10*60*1000)refreshActiveMapSource()});
   document.addEventListener('keydown',handleMapKeyboard);
   document.querySelectorAll('.mapLayerButton[data-map-layer]').forEach(button=>button.addEventListener('click',()=>setMapLayer(button.dataset.mapLayer)));
   document.querySelectorAll('.mapModelButton[data-map-model]').forEach(button=>button.addEventListener('click',()=>{if($('mapModelDock'))$('mapModelDock').open=false;setMapModel(button.dataset.mapModel)}));
@@ -4992,7 +5007,7 @@ function initMapAitor(){
   requestAnimationFrame(()=>map.invalidateSize({animate:false}));setTimeout(()=>map.invalidateSize({animate:false}),140);
   // La primera malla se solicita cuando Leaflet ya conoce el ancho definitivo.
   // Así no se dibuja un rectángulo calculado con el tamaño provisional.
-  updateMapLabels();loadMapNativeLayer(false,false);
+  updateMapLabels();loadMapNativeLayer(false,false);mapLastAutoRefresh=Date.now();if(!mapAutoRefreshTimer)mapAutoRefreshTimer=setInterval(refreshActiveMapSource,10*60*1000);
 }
 
 let deferredInstallPrompt=null;
@@ -5004,10 +5019,10 @@ if(installButton)installButton.onclick=async()=>{
   if(isIosDevice)status('Para instalarla en iPhone o iPad: abre esta web en Safari, pulsa Compartir y elige «Añadir a pantalla de inicio».');
 };
 function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=navigator.onLine?'none':'block'}
-window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();if(mapUsesNativeTiles()&&mapAitorState.map)loadMapNativeLayer(true,true)});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
+window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();refreshActiveMapSource()});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.129',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.130',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });

@@ -1,5 +1,21 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
+VERSIÓN v10.130 · DATOS RECIENTES SIN SUSTITUCIÓN DE MODELO
+
+- ECMWF, AROME, ICON y GFS conservan siempre la identidad elegida; un fallo no
+  cambia la capa a un modelo automático.
+- Caché rápida de quince minutos; previsión general, marina y capas con
+  respaldo máximo de dos horas; actualización automática cada diez minutos.
+- Radar AEMET, RainViewer y productos Euskalmet solo se admiten con un
+  fotograma verificable de la última hora. Rayos AEMET avisa cuando el PNG no
+  publica la hora exacta.
+- AROME compone sus campos oficiales de nubes bajas, medias y altas; no llama
+  total a la nube baja ni calcula un total que el modelo no publique.
+- Viento y rachas declaran que son valores a 10 m, no a la altura de torre.
+- Caché PWA renovada a v10.130.
+
+VERSIÓN ANTERIOR
+
 VERSIÓN v10.129 · MUCIN Y NUBES CON LLUVIA VISIBLES
 
 - MUCIN mantiene todos los valores NOAA GFS y refuerza únicamente su paleta:

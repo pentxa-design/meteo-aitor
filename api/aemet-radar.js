@@ -1,5 +1,6 @@
 const BASE_URL = 'https://opendata.aemet.es/opendata';
 const PUBLIC_RADAR_URL = 'https://www.aemet.es/es/api-eltiempo/radar';
+const OBSERVATION_MAX_AGE = 60 * 60 * 1000;
 const euskalmetMapHandler = require('../lib/euskalmet-map');
 const webcamsHandler = require('../lib/webcams');
 
@@ -33,6 +34,10 @@ async function publicRadar() {
     filename: String(item?.['Nombre fichero'] || '')
   })).filter(item => Number.isFinite(item.date) && /^radw\d{12}_3857\.png$/.test(item.filename)).sort((a, b) => b.date - a.date);
   if (!frames.length) throw new Error('El visor público de AEMET no publicó un fotograma nacional válido.');
+  const age = Date.now() - frames[0].date;
+  if (age < -5 * 60 * 1000 || age > OBSERVATION_MAX_AGE) {
+    throw new Error('AEMET no publicó un radar nacional de la última hora.');
+  }
   const image = await fetchImage(`${PUBLIC_RADAR_URL}/imagen-radar/compo/${frames[0].filename}`);
   return { ...image, source: 'visor-oficial', observedAt: new Date(frames[0].date).toISOString() };
 }
@@ -64,6 +69,7 @@ module.exports = async function handler(req, res) {
       res.setHeader('Content-Type', image.contentType);
       res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=300');
       res.setHeader('X-Meteo-Aitor-Lightning-Source', 'AEMET-OpenData');
+      res.setHeader('X-Meteo-Aitor-Retrieved-At', new Date().toISOString());
       return res.status(200).send(image.bytes);
     } catch (error) {
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -72,16 +78,9 @@ module.exports = async function handler(req, res) {
     }
   }
   try {
-    let radar = null;
-    if (apiKey) {
-      try {
-        const imageUrl = await gateway('/red/radar/nacional', apiKey);
-        radar = { ...(await fetchImage(imageUrl)), source: 'opendata' };
-      } catch (_) {
-        radar = null;
-      }
-    }
-    if (!radar) radar = await publicRadar();
+    // El visor público aporta la hora observada exacta. No se usa como radar
+    // "actual" el PNG OpenData sin marca temporal verificable.
+    const radar = await publicRadar();
     res.setHeader('Content-Type', radar.contentType);
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=300');
     res.setHeader('X-Meteo-Aitor-Radar-Source', radar.source);

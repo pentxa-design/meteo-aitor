@@ -2,10 +2,10 @@ const OPEN_METEO = 'https://api.open-meteo.com/v1/forecast';
 const MARINE_OPEN_METEO = 'https://marine-api.open-meteo.com/v1/marine';
 
 const MODELS = {
-  ecmwf: { label: 'ECMWF IFS HRES · 9 km', candidates: ['ecmwf_ifs', 'best_match'] },
+  ecmwf: { label: 'ECMWF IFS HRES · 9 km', candidates: ['ecmwf_ifs'] },
   arome: { label: 'Météo‑France AROME HD · 1,5 km · 48 h', candidates: ['meteofrance_arome_france_hd'] },
-  icon: { label: 'DWD ICON Seamless · global/Europa según zona', candidates: ['dwd_icon_seamless', 'best_match'] },
-  gfs: { label: 'NOAA GFS Seamless', candidates: ['ncep_gfs_seamless', 'best_match'] }
+  icon: { label: 'DWD ICON Seamless · global/Europa según zona', candidates: ['dwd_icon_seamless'] },
+  gfs: { label: 'NOAA GFS Seamless', candidates: ['ncep_gfs_seamless'] }
 };
 // Las variables se mantienen en el modelo elegido. Las teselas espaciales
 // actuales publican reflectividad derivada y CAPE en los tres modelos; CIN se
@@ -52,8 +52,8 @@ const FORECAST_HOURS = VISIBLE_FORECAST_HOURS + 24;
 const POINTS_PER_REQUEST = 80;
 const BATCH_CONCURRENCY = 3;
 const FETCH_TIMEOUT = 12000;
-const CACHE_TTL = 2 * 60 * 60 * 1000;
-const MAX_STALE_AGE = 48 * 60 * 60 * 1000;
+const CACHE_TTL = 15 * 60 * 1000;
+const MAX_STALE_AGE = 2 * 60 * 60 * 1000;
 const RESPONSE_CACHE = globalThis.__METEO_AITOR_MAP_CACHE__ ||
   (globalThis.__METEO_AITOR_MAP_CACHE__ = new Map());
 
@@ -99,7 +99,7 @@ function fieldsForLayer(bundle, requested = 'ecmwf', displayLayer = bundle) {
   if (ECMWF_ONLY_LAYERS.has(displayLayer)) return LAYER_FIELDS.thunderstorms;
   if (requested === 'arome') {
     if (['precipitation', 'forecast_reflectivity'].includes(displayLayer)) return ['precipitation'];
-    if (displayLayer === 'cloud') return ['cloud_cover_low', 'precipitation'];
+    if (displayLayer === 'cloud') return ['cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high', 'precipitation'];
     if (displayLayer === 'temperature') return ['temperature_2m'];
     if (displayLayer === 'humidity') return ['relative_humidity_2m'];
     if (displayLayer === 'wind') return ['wind_speed_10m', 'wind_direction_10m'];
@@ -411,7 +411,7 @@ module.exports = async function handler(req, res) {
   const cached = RESPONSE_CACHE.get(cacheKey);
   const cachedModelIsValid = !t850Requested || cached?.payload?.model?.sourceModel === 'ecmwf_ifs025';
   if (cached && cachedModelIsValid && Date.now() - cached.savedAt < CACHE_TTL) {
-    res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=21600');
+    res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=300');
     res.setHeader('X-Map-Cache', 'HIT');
     return res.status(200).json(cached.payload);
   }
@@ -524,7 +524,7 @@ module.exports = async function handler(req, res) {
       const oldest = RESPONSE_CACHE.keys().next().value;
       RESPONSE_CACHE.delete(oldest);
     }
-    res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=21600');
+    res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=300');
     res.setHeader('X-Map-Cache', 'MISS');
     return res.status(200).json(payload);
   } catch (error) {
@@ -541,7 +541,7 @@ module.exports = async function handler(req, res) {
     const nearby = (cachedModelIsValid ? cached : null) || closestStalePayload(effectiveRequested, layer, displayLayer, { south, north, west, east }, minimumStaleRows);
     const canUseStale = nearby?.payload && Date.now() - nearby.savedAt < MAX_STALE_AGE;
     if (canUseStale) {
-      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=21600');
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=300');
       res.setHeader('X-Map-Cache', 'STALE');
       return res.status(200).json({ ...nearby.payload, stale: true, partial: nearby !== cached });
     }

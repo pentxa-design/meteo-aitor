@@ -1,4 +1,5 @@
 const RAINVIEWER_METADATA = 'https://api.rainviewer.com/public/weather-maps.json';
+const OBSERVATION_MAX_AGE_SECONDS = 60 * 60;
 
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -34,6 +35,10 @@ module.exports = async function handler(req, res) {
       .map(frame => ({ time: Number(frame.time), path: String(frame.path), kind: 'observed' }));
 
     if (!frames.length) throw new Error('RainViewer no publicó fotogramas de radar.');
+    const latestFrameAge = Math.floor(Date.now() / 1000) - Number(frames[frames.length - 1].time);
+    if (!Number.isFinite(latestFrameAge) || latestFrameAge < -300 || latestFrameAge > OBSERVATION_MAX_AGE_SECONDS) {
+      throw new Error('RainViewer no publicó un fotograma de radar de la última hora.');
+    }
 
     res.setHeader('Cache-Control', 's-maxage=240, stale-while-revalidate=600');
     return res.status(200).json({

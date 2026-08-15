@@ -1,6 +1,6 @@
 const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
 const FRESH_MS = 5 * 60 * 1000;
-const STALE_MS = 24 * 60 * 60 * 1000;
+const STALE_MS = 2 * 60 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 16;
 const ALLOWED_LIST_FIELDS = new Set(['current', 'hourly', 'daily']);
 const ALLOWED_UNITS = new Set(['wind_speed_unit', 'temperature_unit', 'precipitation_unit']);
@@ -131,7 +131,7 @@ module.exports = async function handler(req, res) {
   const cached = memoryCache.get(key);
   if (cached && Date.now() - cached.savedAt <= FRESH_MS) {
     res.setHeader('X-Meteo-Cache', 'memory-fresh');
-    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=300, stale-if-error=86400');
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=300, stale-if-error=7200');
     return res.status(200).json(payloadWithCacheInfo(cached.payload, 'fresh', cached.savedAt));
   }
 
@@ -139,13 +139,13 @@ module.exports = async function handler(req, res) {
     const payload = await fetchForecast(params);
     const savedAt = remember(key, payload);
     res.setHeader('X-Meteo-Cache', 'upstream');
-    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=300, stale-if-error=86400');
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=300, stale-if-error=7200');
     return res.status(200).json(payloadWithCacheInfo(payload, 'fresh', savedAt));
   } catch (_) {
     if (cached && Date.now() - cached.savedAt <= STALE_MS) {
       res.setHeader('X-Meteo-Cache', 'memory-stale');
       res.setHeader('Warning', '110 - "Respuesta meteorológica guardada"');
-      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300, stale-if-error=86400');
+      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300, stale-if-error=7200');
       return res.status(200).json(payloadWithCacheInfo(cached.payload, 'stale', cached.savedAt));
     }
     res.setHeader('Cache-Control', 'no-store');

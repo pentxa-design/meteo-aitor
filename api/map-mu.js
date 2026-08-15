@@ -345,7 +345,7 @@ module.exports = async function handler(req, res) {
   ].join('|');
   const cached = RESPONSE_CACHE.get(cacheKey);
   if (cached && Date.now() - cached.savedAt < CACHE_TTL) {
-    res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=3600');
+    res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=900');
     res.setHeader('X-Map-Cache', 'HIT');
     return res.status(200).json(responseWithFocus(cached.payload, focus));
   }
@@ -399,7 +399,7 @@ module.exports = async function handler(req, res) {
     };
     RESPONSE_CACHE.set(cacheKey, { savedAt: Date.now(), payload });
     trimCache();
-    res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=3600');
+    res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=900');
     res.setHeader('X-Map-Cache', 'MISS');
     return res.status(200).json(responseWithFocus(payload, focus));
   } catch (error) {

@@ -1,3 +1,26 @@
+Meteo Aitor Bermeo v10.130 · datos recientes sin sustitución de modelo
+Fecha: 2026-08-15
+
+Las capas de ECMWF, AROME, ICON y GFS ya no cambian silenciosamente a un
+modelo automático. La caché activa se comprueba cada quince minutos y una
+malla de respaldo de más de dos horas se bloquea en lugar de mostrarse como
+actual. La previsión general, marina y Euskalmet guardada también se limita a
+dos horas. La app vuelve a consultar la capa abierta cada diez minutos.
+
+Radar AEMET, RainViewer y radar/rayos Euskalmet se rechazan cuando el último
+fotograma verificable supera una hora. El mapa de rayos AEMET indica que su
+PNG OpenData no publica una hora exacta, en vez de presentarlo como minutado.
+
+AROME muestra juntas sus tres coberturas oficiales baja, media y alta. La
+pasada comprobada no publica cobertura total; ya no se etiqueta la nube baja
+como total ni se calcula un porcentaje total inexistente.
+Viento y rachas identifican expresamente que son productos a 10 m y que no
+representan por sí solos las condiciones a 80 m.
+
+La caché PWA se renueva a v10.130.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.129 · MUCIN y nubes con lluvia visibles
 Fecha: 2026-08-15
 

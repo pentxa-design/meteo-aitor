@@ -1,6 +1,6 @@
 const MARINE_URL = 'https://marine-api.open-meteo.com/v1/marine';
 const FRESH_MS = 30 * 60 * 1000;
-const STALE_MS = 12 * 60 * 60 * 1000;
+const STALE_MS = 2 * 60 * 60 * 1000;
 const cache = globalThis.__METEO_AITOR_MARINE_CACHE__ || { savedAt: 0, payload: null };
 globalThis.__METEO_AITOR_MARINE_CACHE__ = cache;
 
@@ -48,7 +48,7 @@ module.exports = async function handler(req, res) {
   try {
     const payload = await fetchMarine();
     cache.savedAt = Date.now();cache.payload = payload;
-    res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=1800, stale-if-error=43200');
+    res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=1800, stale-if-error=7200');
     return res.status(200).json({ ok: true, source: 'Open-Meteo Marine', stale: false, ...payload });
   } catch (_) {
     if (cache.payload && Date.now() - cache.savedAt <= STALE_MS) {
