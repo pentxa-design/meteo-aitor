@@ -1,3 +1,16 @@
+Meteo Aitor Bermeo v10.132 · nubes y MUCIN legibles
+Fecha: 2026-08-15
+
+El mapa de nubosidad mantiene el mar azul y pinta las masas nubosas oficiales
+solo en blanco o gris. La precipitación cuantitativa de la misma fuente, pasada
+y hora se muestra aparte mediante puntos verdes, cian o azules; nunca como un
+velo continuo. MUCIN conserva los valores NOAA y aumenta su contraste visual,
+incluidos los negativos próximos a cero, sin alterar ningún J/kg.
+
+La caché PWA se renueva a v10.132.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.131 · nubes sin verde falso
 Fecha: 2026-08-15
 
@@ -7,8 +20,6 @@ que teñían de verde todo el mapa. El gris verdoso, verde, cian y azul aparecen
 precipitación cuantitativa de la misma pasada, modelo y hora.
 
 La caché PWA se renueva a v10.131.
-
-VERSIÓN ANTERIOR
 
 Meteo Aitor Bermeo v10.130 · datos recientes sin sustitución de modelo
 Fecha: 2026-08-15

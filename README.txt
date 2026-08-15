@@ -1,3 +1,15 @@
+VERSIÓN v10.132 · NUBES Y MUCIN LEGIBLES
+
+- El mar recupera su fondo azul y la nubosidad queda exclusivamente en blanco
+  o gris, situada por la cobertura publicada por el modelo.
+- La lluvia de la misma fuente, pasada y hora ya no tiñe la nube: se muestra
+  únicamente mediante puntos verdes, cian o azules según los milímetros reales.
+- MUCIN conserva todos los J/kg oficiales NOAA y refuerza el contraste de los
+  valores negativos, incluidos los cercanos a cero; el cero exacto no se rellena.
+- Caché PWA renovada a v10.132.
+
+VERSIÓN ANTERIOR
+
 VERSIÓN v10.131 · NUBES SIN VERDE FALSO
 
 - El valor cero y las trazas de precipitación quedan transparentes en la capa
@@ -5,8 +17,6 @@ VERSIÓN v10.131 · NUBES SIN VERDE FALSO
   la precipitación cuantitativa de la misma pasada y hora supera el umbral
   visual de lluvia apreciable.
 - Caché PWA renovada a v10.131.
-
-VERSIÓN ANTERIOR
 
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 

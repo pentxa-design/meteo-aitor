@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.131" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.132" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -512,7 +512,7 @@
     .mapAitor.mapBaseStandard[data-map-layer="cape"] .mapFieldOverlay{filter:saturate(1.72) contrast(1.28) brightness(.96)}
     .mapAitor.mapBaseStandard[data-map-layer="cin"] .mapNativeWeatherTile,
     .mapAitor.mapBaseStandard[data-map-layer="cin"] .mapFieldOverlay{filter:saturate(1.82) contrast(1.34) brightness(.93)}
-    .mapAitor.mapBaseStandard[data-map-layer="cloud"] .mapNativeWeatherTileKind-cloud_rain_green{filter:saturate(1.72) contrast(1.30) brightness(.96);mix-blend-mode:normal}
+    .mapCloudRainPoint{stroke:rgba(255,255,255,.96);stroke-width:1.4px;filter:drop-shadow(0 1px 3px rgba(0,38,30,.62))}
     .mapConvectionContourLabel{border:0;background:transparent;color:#1b2730;font-size:8px;font-weight:900;line-height:1;text-align:center;text-shadow:-1px -1px 0 rgba(255,255,255,.86),1px -1px 0 rgba(255,255,255,.86),-1px 1px 0 rgba(255,255,255,.86),1px 1px 0 rgba(255,255,255,.86)}
     .mapTopRibbon{top:12px;left:58px;right:232px}.mapLayerBadge,.mapTimeBadge{border-radius:999px;background:rgba(20,25,31,.82);border-color:rgba(255,255,255,.14);box-shadow:0 8px 28px rgba(0,0,0,.32);font-size:11px}
     .mapQuickViews{position:absolute;z-index:710;left:11px;top:230px;display:grid;gap:6px}.mapQuickButton{width:38px;height:38px;padding:0;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(20,25,31,.84);color:#fff;font:850 14px/1 inherit;cursor:pointer;box-shadow:0 7px 20px rgba(0,0,0,.25);backdrop-filter:blur(12px)}.mapQuickButton:hover,.mapQuickButton.active{background:#1888df;border-color:#72d7ff}
@@ -2453,7 +2453,7 @@ const MAP_LAYERS={
   snowfall:{key:'snowfall',title:'Nieve prevista',unit:'cm / 1 h',scale:[.01,.05,.1,.2,.5,1,2,4,8,15],colors:['#efffff','#bcf6ff','#7de5ff','#3fc7f4','#2399e3','#246ed2','#3555ba','#5a45a8','#803b9d','#b43d94'],legend:['0,01','0,05','0,1','0,2','0,5','1','2','4','8','15+'],detail:'Nieve prevista durante la hora seleccionada. El blanco y cian indican nevada débil; azul, violeta y púrpura los espesores horarios más altos.'},
   precipitation_probability:{key:'precipitation_probability',title:'Probabilidad de precipitación',unit:'%',scale:[5,15,30,45,60,75,90,100],colors:['#c5efff','#85d9ff','#4ab8f2','#328ddf','#3d69cc','#594dbc','#7b42ad','#a23c9f'],legend:['5','15','30','45','60','75','90','100'],detail:'Probabilidad de que se produzca precipitación durante la hora seleccionada según el modelo. Azul claro para probabilidad baja y azul-violeta para alta.'},
   forecast_reflectivity:{key:'reflectivity_estimated',title:'Precipitación tipo reflectividad · estimada',unit:'dBZ',scale:[5,10,15,20,25,30,35,40,45,50,55,60,65,75],colors:['#70e85a','#38d642','#16bc31','#078b25','#cbe53b','#ffe52c','#ffb21f','#ff7418','#f52f1d','#d50d1f','#9b1235','#70246f','#b32aa5','#ff43d7'],legend:['5','10','15','20','25','30','35','40','45','50','55','60','65','75+'],detail:'Reflectividad estimada desde la tasa horaria real mediante la relación meteorológica Z–R: verde para ecos débiles, amarillo y naranja para precipitación moderada, rojo para núcleos fuertes y magenta para los máximos. El cero queda transparente. No sustituye al radar observado.'},
-  cloud:{key:'cloud_cover',title:'Nubosidad total',unit:'%',scale:[0,10,20,35,50,65,80,90,100],colors:['#ffffff','#ffffff','#ffffff','#ffffff','#ffffff','#ffffff','#ffffff','#ffffff','#ffffff'],legend:['Despejado','10','20','35','50','65','80','90','Muy densa'],detail:'Cobertura nubosa total oficial: toda nube sin precipitación permanece blanca y aumenta únicamente su opacidad al crecer la cobertura. La precipitación cuantitativa desde 0,02 mm del mismo modelo, pasada y hora tiñe la nube de gris verdoso y verde; pasa a cian o azul al aumentar. No se calcula ni se inventa probabilidad.'},
+  cloud:{key:'cloud_cover',title:'Nubosidad total',unit:'%',scale:[0,10,20,35,50,65,80,90,100],colors:['#ffffff','#ffffff','#ffffff','#ffffff','#ffffff','#ffffff','#ffffff','#ffffff','#ffffff'],legend:['Despejado','10','20','35','50','65','80','90','Muy densa'],detail:'Cobertura nubosa total oficial en blanco y gris, con más opacidad al crecer la cobertura. La precipitación cuantitativa de la misma fuente, pasada y hora se representa aparte mediante puntos: verde en lluvia débil, cian al aumentar y azul en la más intensa. No se calcula ni se inventa probabilidad.'},
   temperature:{key:'temperature_2m',title:'Temperatura a 2 m',unit:'°C',scale:[-40,-30,-20,-10,0,5,10,15,20,25,30,35,40,45],colors:['#54216f','#53429a','#3d65ad','#2d8aba','#34b0bd','#58c49f','#87cf72','#c4d657','#ffe22b','#ff8a21','#ef3b24','#c8172c','#8f1632','#3c102b'],legend:['−40','−30','−20','−10','0','5','10','15','20','25','30','35','40','45+'],detail:'Temperatura real del modelo, representada con una gradación continua: violeta y azul para frío, verde en valores templados, amarillo alrededor de 20 °C, naranja desde 25 °C y rojo para el calor fuerte. La paleta cambia el aspecto, nunca los grados.'},
   dewpoint:{key:'dew_point_2m',title:'Punto de rocío a 2 m',unit:'°C',scale:[-15,-5,0,6,12,17,23],colors:['#4530a4','#236fe8','#16bde7','#24d39c','#a9e63f','#f6b83c','#e95b3d'],legend:['-15','-5','0','6','12','17','23+'],detail:'Cuanto más se acerca a la temperatura, mayor sensación de bochorno.'},
   humidity:{key:'relative_humidity_2m',title:'Humedad relativa a 2 m',unit:'%',scale:[0,15,30,45,60,75,88,100],colors:['#a63d2f','#b75e50','#6e6875','#aeb7bf','#d9ef69','#5ed466','#00b89b','#138be7'],legend:['0','15','30','45','60','75','88','100'],detail:'Humedad relativa real prevista por el modelo a dos metros, sin ajustes artificiales. La ubicación marcada utiliza el punto exacto y la mejor resolución disponible.'},
@@ -2462,7 +2462,7 @@ const MAP_LAYERS={
   pressure:{key:'pressure_msl',title:'Presión a nivel del mar',unit:'hPa',scale:[960,970,980,990,1000,1010,1020,1030,1040,1050],colors:['#143854','#155b73','#197b89','#3f9ca2','#83b9b2','#c7d0c5','#d2c49f','#bc9569','#9c6647','#6f4033'],legend:['960','970','980','990','1000','1010','1020','1030','1040','1050+'],detail:'Presión reducida al nivel del mar con isobaras reales cada 4 hPa. Las bajas presiones aparecen en azul y turquesa, la presión media en gris beige y las altas en ocre y marrón; los hPa no se modifican.'},
   t850:{key:'temperature_850hPa',title:'Temperatura a 850 hPa',unit:'°C',scale:[-30,-20,-15,-10,-5,0,5,10,12,14,16,18,20,22,24,28,32],colors:['#3d0757','#612087','#563cab','#335fc0','#1e82d0','#20a9d4','#26c8bd','#35d68b','#53dc5c','#88df3d','#c8e533','#ffd22b','#ff9f24','#f56a20','#dd3c22','#a91f2e','#641a34'],legend:['−30','−20','−15','−10','−5','0','5','10','12','14','16','18','20','22','24','28','32+'],detail:'Temperatura real prevista a unos 1.500 m. La escala reforzada separa con claridad los grados habituales en Europa: azul y cian para aire frío, verde en valores suaves, amarillo desde 18 °C, naranja alrededor de 20–22 °C y rojo oscuro en las masas más cálidas.'},
   cape:{key:'cape',title:'MUCAPE · más inestable',unit:'J/kg',scale:[100,250,500,750,1000,1500,2000,3000,4000,5000,6000,7000],colors:['#55495c','#465666','#2f6f78','#16878f','#179a91','#59ae72','#c6c148','#f2aa2b','#ef6e34','#b8424f','#713458','#3b213f'],legend:['100','250','500','750','1000','1500','2000','3000','4000','5000','6000','7000+'],detail:'MUCAPE oficial NOAA GFS de la parcela más inestable 255–0 mb. La panorámica mundial conserva la malla oficial reducida y el detalle regional usa 0,25°. Menos de 100 J/kg queda transparente; los tonos gris y púrpura muestran valores bajos, el turquesa los medios y amarillo/naranja los altos. CAPE no confirma por sí solo tormenta, rayo o tornado.'},
-  cin:{key:'convective_inhibition',title:'MUCIN · inhibición más inestable',unit:'J/kg',scale:[-3000,-2000,-1500,-1200,-1000,-750,-500,-300,-200,-100,-50,-20,-5,0],colors:['#2193ae','#337f9f','#476b8c','#594f78','#713d63','#87364f','#a23443','#bd403b','#d55637','#e97943','#f2a05f','#f8c17f','#fbe0b3','#fff7e8'],legend:['−3000','−2000','−1500','−1200','−1000','−750','−500','−300','−200','−100','−50','−20','−5','0'],detail:'MUCIN oficial NOAA GFS de la parcela más inestable 255–0 mb. El signo negativo y las cifras son reales; azul y púrpura muestran la inhibición fuerte, granate y rojo la intermedia, y naranja claro los valores próximos a cero. La paleta refuerza la lectura sin modificar ningún J/kg.'},
+  cin:{key:'convective_inhibition',title:'MUCIN · inhibición más inestable',unit:'J/kg',scale:[-3000,-2000,-1500,-1200,-1000,-750,-500,-300,-200,-100,-50,-20,-5,0],colors:['#0b627f','#175b78','#244867','#4c315f','#6f274f','#912a45','#b3343c','#d34b32','#e5682f','#f58b2f','#ffb22e','#ffd23a','#ffe968','#fff1a0'],legend:['−3000','−2000','−1500','−1200','−1000','−750','−500','−300','−200','−100','−50','−20','−5','0'],detail:'MUCIN oficial NOAA GFS de la parcela más inestable 255–0 mb. El signo negativo y las cifras son reales; azul y púrpura muestran la inhibición fuerte, granate y rojo la intermedia, y amarillo los valores negativos próximos a cero. La paleta refuerza la lectura sin modificar ningún J/kg; el cero exacto queda sin relleno.'},
   sea_temperature:{key:'sea_surface_temperature',title:'Temperatura superficial del mar',unit:'°C',scale:[-2,0,5,10,14,17,20,23,26,29,32,35],colors:['#35156e','#2939a5','#176bd2','#159fcf','#20c5b7','#70d37d','#d7df48','#ffe03d','#ffad32','#f26e2c','#ce3428','#721b36'],legend:['-2','0','5','10','14','17','20','23','26','29','32','35+'],detail:'Temperatura superficial del mar de Météo‑France, distribuida por Open‑Meteo Spatial. La tierra queda transparente y la tesela marina se valida antes de dibujarse para evitar datos incompletos.'},
   waves:{key:'wave_height',title:'Altura de las olas',unit:'m',scale:[0,.25,.5,.75,1,1.5,2,3,4,6,8,12],colors:['#284675','#2c78a9','#24a8c1','#25cdc5','#64d495','#b7dc5c','#e7da49','#f4b141','#ed7c3c','#dd4f4f','#a93969','#622a72'],legend:['0','0,25','0,5','0,75','1','1,5','2','3','4','6','8','12+'],detail:'Altura significativa de las olas publicada por ECMWF WAM. La máscara propia del modelo deja la tierra transparente y evita unir puntos separados por costa.'}
 };
@@ -2620,21 +2620,13 @@ function mapNativeAdapter(kind='standard'){
   }else if(kind==='cloud'){
     // Referencia profesional: cielo despejado transparente y toda nube seca
     // blanca/gris claro, también cuando la cobertura se aproxima al 100 %.
-    // El color verde/cian pertenece exclusivamente a cloud_rain_green y a
-    // precipitación cuantitativa publicada para la misma pasada y hora.
+    // La precipitación se superpone después como puntos de la malla oficial;
+    // este raster continuo contiene exclusivamente cobertura nubosa.
     const cloudScale={type:'breakpoint',unit:'%',breakpoints:[0,8,16,25,35,46,58,70,82,92,100],colors:[[255,255,255,0],[255,255,255,0],[255,255,255,.12],[255,255,255,.20],[255,255,255,.31],[255,255,255,.43],[255,255,255,.55],[255,255,255,.66],[255,255,255,.76],[255,255,255,.85],[255,255,255,.92]]};
     settings.colorScales.cloud_cover=cloudScale;
     settings.colorScales.cloud_cover_low=cloudScale;
     settings.colorScales.cloud_cover_mid=cloudScale;
     settings.colorScales.cloud_cover_high=cloudScale;
-  }else if(kind==='cloud_rain_green'){
-    // La señal verde se calcula exclusivamente con la precipitación cuantitativa
-    // publicada por Open-Meteo para el mismo fichero, pasada y hora: cualquier
-    // valor cuantitativo apreciable entra en gris verdoso/verde y pasa a
-    // cian/azul al aumentar. Las trazas menores permanecen transparentes para no pintar
-    // de verde regiones enteras; la nubosidad por sí sola nunca crea lluvia.
-    settings.colorScales.precipitation={type:'breakpoint',unit:'mm',breakpoints:[0,.08,.15,.4,1,2,4,8,15,25],colors:[[0,0,0,0],[0,0,0,0],[92,119,109,.58],[74,213,91,.78],[34,195,78,.84],[11,171,82,.89],[0,165,151,.94],[0,160,188,.97],[0,130,210,.99],[79,55,184,1]]};
-    settings.postReadCallback=(_reader,data)=>{if(data?.values){const zoom=mapAitorState.map?.getZoom()||5,cutoff=zoom<=4?.15:zoom<=6?.08:.03;data.values=data.values.map(value=>{const rain=Number(value);return Number.isFinite(rain)&&rain>=cutoff?rain:0})}};
   }else if(kind==='rain'){
     // En la vista continental se oculta la llovizna inferior a 0,20 mm/h:
     // esa fibra residual cubría océanos enteros y lavaba la cartografía. Al
@@ -2718,10 +2710,10 @@ function mapAromeHybridTimeline(fifteenMetadata,hourlyMetadata){
 }
 function mapNativeLayerSpecs(layer,model=mapAitorState.model){
   if(layer==='precipitation_15m')return[{variable:'precipitation',factor:.82,kind:'rain_15m'}];
-  // cloud_cover y precipitation comparten siempre el mismo fichero OM base:
-  // misma fuente oficial, pasada y hora válida; no se cruzan proveedores.
-  if(layer==='cloud'&&model==='arome')return[{variable:'cloud_cover_low',factor:.52,kind:'cloud'},{variable:'cloud_cover_mid',factor:.58,kind:'cloud'},{variable:'cloud_cover_high',factor:.64,kind:'cloud'},{variable:'precipitation',factor:.88,kind:'cloud_rain_green',optional:true}];
-  if(layer==='cloud')return[{variable:'cloud_cover',factor:model==='ecmwf'?.78:.82,kind:'cloud'},{variable:'precipitation',factor:.88,kind:'cloud_rain_green',optional:true}];
+  // El raster contiene solo cobertura nubosa. La precipitación de la misma
+  // fuente, pasada y hora se solicita aparte para sus puntos cuantitativos.
+  if(layer==='cloud'&&model==='arome')return[{variable:'cloud_cover_low',factor:.70,kind:'cloud'},{variable:'cloud_cover_mid',factor:.76,kind:'cloud'},{variable:'cloud_cover_high',factor:.82,kind:'cloud'}];
+  if(layer==='cloud')return[{variable:'cloud_cover',factor:.92,kind:'cloud'}];
   if(layer==='temperature')return[{variable:'temperature_2m',factor:.98,kind:'temperature'}];
   if(layer==='thunderstorms')return[{variable:'precipitation',factor:.82,kind:'rain'},{variable:'cape',factor:.24,kind:'cape',optional:true}];
   if(layer==='electric_storms')return[{variable:'cape',factor:.78,kind:'cape'}];
@@ -2765,7 +2757,7 @@ function warmMapNativeCdn(center=mapAitorState.timeIndex,count=2,direction=1,sta
   void(async()=>{for(let offset=0;offset<count;offset+=1){const step=startStep+offset,currentConnection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;if(generation!==mapAitorState.nativeWarmGeneration||source!==mapAitorState.nativeSource||document.hidden||currentConnection?.saveData||/2g/.test(String(currentConnection?.effectiveType||'')))return;let index=center+forward*step;if(mapAitorState.playing)index=((index%(maximum+1))+(maximum+1))%(maximum+1);else if(index<0||index>maximum)continue;const warmed=await warmMapNativeFile(index,offset===0?delay:0);if(!warmed)return}})().catch(()=>{})
 }
 function mapNativeTileUrl(base,spec,quick=false){
-  const smoothKinds=['cloud','cloud_rain_green','rain','rain_15m','wind','temperature','dewpoint','dewpoint_derived','pressure','t850','cape','cin','sea_temperature','waves'],smooth=smoothKinds.includes(spec.kind),crispKinds=['temperature','t850','cloud','cape','cin'],crisp=crispKinds.includes(spec.kind),strictBreakpoints=spec.kind==='rain'||spec.kind==='rain_15m'||spec.kind==='reflectivity'||spec.kind==='cloud_rain_green',parameters=new URLSearchParams({variable:spec.variable,interpolation:quick||crisp?'linear':smooth?'monotone':'linear',tile_size:quick?'64':'256'});if(smooth&&!quick&&!strictBreakpoints&&!crisp)parameters.set('color_blend','true');return'om://'+base+'?'+parameters.toString();
+  const smoothKinds=['cloud','rain','rain_15m','wind','temperature','dewpoint','dewpoint_derived','pressure','t850','cape','cin','sea_temperature','waves'],smooth=smoothKinds.includes(spec.kind),crispKinds=['temperature','t850','cloud','cape','cin'],crisp=crispKinds.includes(spec.kind),strictBreakpoints=spec.kind==='rain'||spec.kind==='rain_15m'||spec.kind==='reflectivity',parameters=new URLSearchParams({variable:spec.variable,interpolation:quick||crisp?'linear':smooth?'monotone':'linear',tile_size:quick?'64':'256'});if(smooth&&!quick&&!strictBreakpoints&&!crisp)parameters.set('color_blend','true');return'om://'+base+'?'+parameters.toString();
 }
 function updateMapNativeReadBounds(){
   const map=mapAitorState.map,library=window.OMWeatherMapLayer;if(!map||!library?.updateCurrentBounds)return;
@@ -2846,7 +2838,7 @@ function mapNativeUsesDirectSamples(layer=mapAitorState.layer,model=mapAitorStat
   // Estas cifras se leen del mismo archivo .om que ya pinta el mapa. Evitar
   // otra consulta multipunto elimina los 429 que competían con el fotograma
   // exacto, especialmente en nubes y precipitación al mover el cursor.
-  return ['temperature','dewpoint','humidity','pressure','t850','wind','gust','cape','cin','electric_storms','sea_temperature','waves','precipitation_15m'].includes(layer)||['precipitation','forecast_reflectivity'].includes(layer)&&model!=='ecmwf'||layer==='cloud'&&model!=='arome'
+  return ['temperature','dewpoint','humidity','pressure','t850','wind','gust','cape','cin','electric_storms','sea_temperature','waves','precipitation_15m'].includes(layer)||['precipitation','forecast_reflectivity'].includes(layer)&&model!=='ecmwf'
 }
 function mapNativeVisibleSampleUrl(variable){
   let url=null;[mapAitorState.nativePreviewField,mapAitorState.nativeField].forEach(field=>field?.eachLayer?.(tile=>{if(!url&&!tile.options?.nativeSupport&&tile.options?.nativeVariable===variable)url=tile.options.nativeSourceUrl||null}));return url
@@ -3371,7 +3363,7 @@ function renderMapNativeAnnotations(){
   if(!mapAitorState.nativeDragging)mapAitorState.nativeMovieAnnotationsHidden=false;
   if(mapAitorState.values)mapAitorState.values.clearLayers();if(mapAitorState.windArrows)mapAitorState.windArrows.clearLayers();if(mapAitorState.isobars)mapAitorState.isobars.clearLayers();if(mapAitorState.labels)mapAitorState.labels.clearLayers();
   if(!mapAitorState.data){stopMapWind();renderMapLocation();if(['wind','gust'].includes(mapAitorState.layer))queueMapNativeWindSamples();else if(mapNativeUsesDirectSamples())queueMapNativeScalarSamples(mapNativeSampleVariable(),mapLayerConfig().key,80);return}
-  renderMapIsobars();renderMapValueLabels();renderMapWindArrows();if(mapAitorState.layer==='thunderstorms')renderMapWeatherSymbols();renderMapLocation();drawMapWind();
+  renderMapIsobars();renderMapValueLabels();renderMapWindArrows();if(mapAitorState.layer==='thunderstorms')renderMapWeatherSymbols();if(mapAitorState.layer==='cloud')renderMapCloudRainPoints();renderMapLocation();drawMapWind();
 }
 function queueMapNativeAnnotations(force=false,delay=420){
   clearTimeout(mapAitorState.nativeAnnotationTimer);if(!mapUsesNativeTiles()||!mapAitorState.nativeSource)return;
@@ -3385,9 +3377,6 @@ function queueMapNativeAnnotations(force=false,delay=420){
   if(mapNativeUsesDirectSamples()){
     const config=mapLayerConfig();queueMapNativeScalarSamples(mapNativeSampleVariable(),config.key,80);$('mapStatus').textContent=config.title+' activa · preparando valores de esta hora';return
   }
-  // Las teselas AROME ya contienen nube baja y precipitación verde/cian. Evita
-  // una segunda malla de puntos que no mejora la imagen y consume cuota.
-  if(mapAitorState.model==='arome'&&mapAitorState.layer==='cloud'){$('mapStatus').textContent='AROME HD · nube baja blanca/gris · lluvia cuantitativa verde/cian';return}
   mapAitorState.nativeAnnotationTimer=setTimeout(()=>{mapAitorState.nativeAnnotationTimer=null;loadMapNativeAnnotations(force)},Math.max(0,delay));
 }
 async function loadMapNativeAnnotations(force=false){
@@ -3404,7 +3393,7 @@ async function loadMapNativeAnnotations(force=false){
     const frameIndex=mapAitorState.timeIndex,targetTime=String(source.timeline?.[frameIndex]?.time||'').replace(/Z$/,''),targetEpoch=mapTimeMilliseconds(targetTime),sourceEpoch=mapTimeMilliseconds(aligned.nativeSourceTimes?.[frameIndex]),exactNativeReady=Boolean(mapAitorState.nativeFrameCache.get(mapNativeFrameKey(frameIndex))?.ready),reflectivityHonest=layer!=='forecast_reflectivity'||aligned?.diagnostics?.derived===true&&aligned?.diagnostics?.sourceVariable==='precipitation'&&aligned?.diagnostics?.formula==='Z=200·R^1.6',canBridge=!exactNativeReady&&model==='ecmwf'&&source.domain==='ecmwf_ifs'&&MAP_NATIVE_FAST_GRID_LAYERS.has(layer)&&aligned?.model?.sourceModel===source.domain&&!aligned?.model?.fallback&&Number.isFinite(targetEpoch)&&sourceEpoch===targetEpoch&&reflectivityHonest;
     if(!cached){mapAitorState.cache.set(cacheKey,aligned);while(mapAitorState.cache.size>8)mapAitorState.cache.delete(mapAitorState.cache.keys().next().value)}
     if(mapNativeMovieEligible(layer,model,source,frameIndex)&&aligned?.model?.sourceModel===(source.timeline?.[frameIndex]?.domain||source.domain)&&!aligned?.model?.fallback){mapAitorState.nativeMovieData=aligned;mapAitorState.nativeMovieIdentity=mapAitorState.nativeCacheIdentity;const desired=mapNativeDesiredIndex(),exact=mapAitorState.nativeFrameCache.get(mapNativeFrameKey(desired));if(mapAitorState.nativeDesiredTimeIndex!==null&&!exact?.ready&&mapNativeMovieReady(desired))queueMapNativeMovieFrame(desired)}
-    mapAitorState.data=aligned;mapAitorState.nativeAnnotationKey=cacheKey;if(canBridge)renderMapT850RaceGrid(aligned,frameIndex,source,targetTime);renderMapNativeAnnotations();updateMapLabels();updateMapInfo();const thunderStatus=layer==='thunderstorms'?(aligned?.diagnostics?.lightningAvailable?' · lluvia, CAPE y rayos previstos publicados activos':' · lluvia + CAPE activos · densidad de rayos no publicada'):'';if(!mapAitorState.nativeRaceGridVisible)$('mapStatus').textContent='Teselas nativas '+source.label+(['wind','gust'].includes(layer)?' · valores, barbas y vectores activos':thunderStatus||' · valores de '+config.title+' activos');
+    mapAitorState.data=aligned;mapAitorState.nativeAnnotationKey=cacheKey;if(canBridge)renderMapT850RaceGrid(aligned,frameIndex,source,targetTime);renderMapNativeAnnotations();updateMapLabels();updateMapInfo();const thunderStatus=layer==='thunderstorms'?(aligned?.diagnostics?.lightningAvailable?' · lluvia, CAPE y rayos previstos publicados activos':' · lluvia + CAPE activos · densidad de rayos no publicada'):'',cloudStatus=layer==='cloud'?' · nube blanca/gris · '+Number(mapAitorState.cloudRainPointCount||0)+' puntos de lluvia del modelo':'';if(!mapAitorState.nativeRaceGridVisible)$('mapStatus').textContent='Teselas nativas '+source.label+(['wind','gust'].includes(layer)?' · valores, barbas y vectores activos':cloudStatus||thunderStatus||' · valores de '+config.title+' activos');
   }catch(error){
     if(requestId!==mapAitorState.nativeAnnotationRequestId||error?.name==='AbortError'&&controller.signal.reason!=='timeout')return;
     if(!mapAitorState.data?.nativeTileSamples)mapAitorState.data=null;renderMapNativeAnnotations();if(['wind','gust'].includes(layer)){queueMapNativeWindSamples();$('mapStatus').textContent='Capa continua activa · preparando velocidad y flechas desde la tesela';}else $('mapStatus').textContent='Capa continua activa · valores auxiliares temporalmente no disponibles';
@@ -3412,12 +3401,13 @@ async function loadMapNativeAnnotations(force=false){
 }
 function mapBlendRgb(a,b,ratio){const mix=Math.max(0,Math.min(1,ratio));return{r:Math.round(a.r+(b.r-a.r)*mix),g:Math.round(a.g+(b.g-a.g)*mix),b:Math.round(a.b+(b.b-a.b)*mix)}}
 function mapSmoothColor(config,value,palette=null){const v=mapNumber(value),scale=config.scale,colors=palette||config.colors.map(mapHexRgb);let index=0;while(index<scale.length-1&&v>scale[index+1])index+=1;if(index>=scale.length-1)return colors[colors.length-1];const low=scale[index],high=scale[index+1],ratio=Math.max(0,Math.min(1,(v-low)/Math.max(.0001,high-low))),a=colors[index],b=colors[index+1];return{r:Math.round(a.r+(b.r-a.r)*ratio),g:Math.round(a.g+(b.g-a.g)*ratio),b:Math.round(a.b+(b.b-a.b)*ratio)}}
-const MAP_CLOUD_TONES={high:{r:255,g:255,b:255},mid:{r:250,g:251,b:253},low:{r:238,g:241,b:245},rainTrace:{r:92,g:119,b:109},rainWeak:{r:73,g:216,b:87},rainStrong:{r:0,g:132,b:207}};
-function mapCloudColor(total,low,mid,high,precipitation){
+const MAP_CLOUD_TONES={high:{r:255,g:255,b:255},mid:{r:250,g:251,b:253},low:{r:238,g:241,b:245}};
+function mapCloudColor(total,low,mid,high){
   const cover=Math.max(0,Math.min(100,mapNumber(total))),lowCloud=Math.max(0,Math.min(100,mapNumber(low))),midCloud=Math.max(0,Math.min(100,mapNumber(mid))),highCloud=Math.max(0,Math.min(100,mapNumber(high)));
   const highTone=MAP_CLOUD_TONES.high,midTone=MAP_CLOUD_TONES.mid,lowTone=MAP_CLOUD_TONES.low;
-  // Toda nube seca se mantiene blanca o gris muy claro. La precipitación
-  // colorea únicamente la propia masa nubosa, no el mapa despejado.
+  // La nubosidad se mantiene siempre blanca o gris. La lluvia se dibuja
+  // después como puntos independientes de la malla oficial: nunca vuelve a
+  // teñir el campo continuo de nubes ni el mapa despejado.
   const lowWeight=(lowCloud/100)**2.65,midWeight=(midCloud/100)**2.65,highWeight=(highCloud/100)**2.65,weight=Math.max(.0001,lowWeight+midWeight+highWeight);
   let color=weight>.001?{
     r:Math.round((lowTone.r*lowWeight+midTone.r*midWeight+highTone.r*highWeight)/weight),
@@ -3427,10 +3417,6 @@ function mapCloudColor(total,low,mid,high,precipitation){
   const dominant=Math.max(lowCloud,midCloud,highCloud),dominantTone=dominant===lowCloud?lowTone:dominant===midCloud?midTone:highTone;
   color=mapBlendRgb(color,dominantTone,mapSmoothstep(42,92,dominant)*.28);
   const totalTone=mapBlendRgb({r:255,g:255,b:255},{r:232,g:236,b:242},mapSmoothstep(22,100,cover));color=mapBlendRgb(color,totalTone,.58);
-  // Solo la precipitación oficial del mismo modelo convierte la nube en verde
-  // y después en cian/azul. La nube seca permanece blanca o gris claro.
-  const rain=Math.max(0,mapNumber(precipitation)),rainShade=mapSmoothstep(.05,2.5,rain);
-  if(rain>=.02){const weakTone=mapBlendRgb(MAP_CLOUD_TONES.rainTrace,MAP_CLOUD_TONES.rainWeak,mapSmoothstep(.02,.15,rain)),rainTone=mapBlendRgb(weakTone,MAP_CLOUD_TONES.rainStrong,rainShade);color=mapBlendRgb(color,rainTone,.58+.36*rainShade)}
   return color;
 }
 function mapCloudHash(x,y){const value=Math.sin(x*127.1+y*311.7)*43758.5453123;return value-Math.floor(value)}
@@ -3537,7 +3523,7 @@ function mapLayerOpacity(config,value,settings={}){
     const inhibition=Math.abs(Math.min(0,mapNumber(value)));if(inhibition<.5)return 0;
     // La inhibicion debil no debe teñir el mapa completo. A partir de
     // 200 J/kg la escala alcanza toda su intensidad, conservando la tierra.
-    opacity*=.55+.45*mapSmoothstep(5,120,inhibition);
+    opacity*=.78+.22*mapSmoothstep(5,120,inhibition);
   }
   return Math.max(0,Math.min(.98,opacity));
 }
@@ -3787,8 +3773,8 @@ function buildMapField(quick=false){
       const valid=mapValidNumber(value);let alpha=valid?Math.round(mapLayerOpacity(config,value,settings)*255):0,color={r:0,g:0,b:0};
       if(valid){
         if(mapAitorState.layer==='cloud'){
-          const low=mapInterpolatedValue(rowFloat,columnFloat,'cloud_cover_low'),mid=mapInterpolatedValue(rowFloat,columnFloat,'cloud_cover_mid'),high=mapInterpolatedValue(rowFloat,columnFloat,'cloud_cover_high'),rain=mapInterpolatedValue(rowFloat,columnFloat,'precipitation'),cloudSignal=Math.max(0,Math.min(100,mapNumber(value))),baseAlpha=alpha;
-          color=mapCloudColor(value,low,mid,high,rain);
+          const low=mapInterpolatedValue(rowFloat,columnFloat,'cloud_cover_low'),mid=mapInterpolatedValue(rowFloat,columnFloat,'cloud_cover_mid'),high=mapInterpolatedValue(rowFloat,columnFloat,'cloud_cover_high'),cloudSignal=Math.max(0,Math.min(100,mapNumber(value))),baseAlpha=alpha;
+          color=mapCloudColor(value,low,mid,high);
           // Corte duro y transición basada únicamente en el campo real. No se
           // añade ruido procedural: generaba manchas ajenas al modelo.
           if(cloudSignal<=threshold||baseAlpha<=0)alpha=0;
@@ -3933,12 +3919,12 @@ function renderMapConfiguredLegend(config){
   $('mapLegendScale').innerHTML=mapLegendValues(config).map(value=>'<span>'+value+' '+config.unit+'</span>').join('');
 }
 function renderMapCloudLegend(){
-  $('mapLegendBar').style.background='linear-gradient(to right,rgba(255,255,255,0) 0%,#fafbfc 24%,#d9dde2 47%,#6fe45b 64%,#12b45d 76%,#00a0b8 89%,#225dcc 100%)';
-  $('mapLegendScale').innerHTML='<span title="Nube sin precipitación publicada">Nube seca · blanca</span><span title="Precipitación cuantitativa de la misma hora">Lluvia débil · gris/verde</span><span title="Más milímetros publicados por el modelo">Más lluvia · cian</span><span title="Lluvia prevista intensa de la misma hora">Lluvia intensa · azul</span>';
+  $('mapLegendBar').style.background='linear-gradient(to right,rgba(255,255,255,0) 0%,#fafbfc 29%,#d9dde2 50%,#52d957 67%,#10a958 78%,#00a5c8 90%,#1769d2 100%)';
+  $('mapLegendScale').innerHTML='<span title="Cobertura nubosa del modelo">Nube · blanca/gris</span><span title="Punto con precipitación cuantitativa de la misma hora">Lluvia débil · punto verde</span><span title="Más milímetros publicados por el modelo">Más lluvia · punto cian</span><span title="Lluvia prevista intensa de la misma hora">Lluvia intensa · punto azul</span>';
 }
 function updateMapLabels(){
   const data=mapAitorState.data,config=mapLayerConfig();
-  const legend=$('mapLegend');if(legend){legend.classList.toggle('mapLegendCloud',mapAitorState.layer==='cloud');legend.title=mapAitorState.layer==='cloud'?(mapAitorState.model==='arome'?'AROME HD · nube baja seca blanca · precipitación real de la misma hora en gris verdoso, verde, cian o azul':'Nube seca blanca · precipitación cuantitativa del mismo modelo y hora en gris verdoso, verde, cian o azul'):''}
+  const legend=$('mapLegend');if(legend){legend.classList.toggle('mapLegendCloud',mapAitorState.layer==='cloud');legend.title=mapAitorState.layer==='cloud'?'Nubosidad blanca/gris · precipitación cuantitativa del mismo modelo y hora únicamente en puntos verdes, cian o azules':''}
   if(mapAitorState.layer==='rainviewer'){
     const frame=mapAitorState.rainviewerData?.frames?.[mapAitorState.timeIndex];
     const daylight=updateMapLightTheme(frame?.time,true);
@@ -3999,7 +3985,7 @@ function updateMapInfo(){
   }
   if(mapAitorState.layer==='electric_storms'){$('mapInfo').innerHTML='<strong>Potencial tormentoso · ECMWF CAPE</strong>'+config.detail+' No es densidad de rayos ni observación.';return}
   if(mapUsesNativeTiles()&&mapAitorState.nativeSource&&!mapAitorState.nativeRaceGridVisible){
-    const source=mapAitorState.nativeSource,entry=mapNativeEntry(),loc=mapAitorState.location,value=loc&&mapAitorState.data?mapValueAtCoordinates(loc.latitude,loc.longitude,config.key):null,method=mapAitorState.layer==='forecast_reflectivity'?'La reflectividad se estima a partir de la precipitación horaria mediante la relación Z–R. ':mapAitorState.layer==='cloud'?'La nube seca se muestra en blanco y la precipitación cuantitativa del mismo modelo, pasada y hora colorea solo la masa correspondiente: gris verdoso/verde en lluvia débil, cian o azul al aumentar; no es reflectividad de radar. ':MAP_MARINE_LAYERS.has(mapAitorState.layer)?'La tesela nativa conserva la malla marina y deja la tierra transparente. ':'',transition=mapAitorState.layer==='precipitation_15m'?' El visor usa cuartos nativos durante las 6 h publicadas y después cambia, sin interpolar, a acumulados horarios AROME HD hasta al menos +24 h. ':'';
+    const source=mapAitorState.nativeSource,entry=mapNativeEntry(),loc=mapAitorState.location,value=loc&&mapAitorState.data?mapValueAtCoordinates(loc.latitude,loc.longitude,config.key):null,method=mapAitorState.layer==='forecast_reflectivity'?'La reflectividad se estima a partir de la precipitación horaria mediante la relación Z–R. ':mapAitorState.layer==='cloud'?'La cobertura nubosa se muestra solo en blanco o gris. La precipitación cuantitativa del mismo modelo, pasada y hora aparece aparte como puntos verdes, cian o azules; no es reflectividad de radar. ':MAP_MARINE_LAYERS.has(mapAitorState.layer)?'La tesela nativa conserva la malla marina y deja la tierra transparente. ':'',transition=mapAitorState.layer==='precipitation_15m'?' El visor usa cuartos nativos durante las 6 h publicadas y después cambia, sin interpolar, a acumulados horarios AROME HD hasta al menos +24 h. ':'';
     const valueText=mapAitorState.layer==='cloud'&&mapAitorState.model==='arome'?'':value!==null?' · '+mapFormatValue(config,value):'';$('mapInfo').innerHTML='<strong>'+config.title+valueText+' · '+mapNativeEntryLabel(source,entry)+'</strong>'+method+config.detail+transition+' Teselas espaciales de Open‑Meteo; Windy queda únicamente como contraste manual.';return;
   }
   const loc=mapAitorState.location;
@@ -4086,7 +4072,7 @@ function renderMapConvectionContours(){
   const data=mapAitorState.data,map=mapAitorState.map,group=mapAitorState.contours,layer=mapAitorState.layer;if(!group)return;group.clearLayers();
   if(!data||!map||!['cape','cin'].includes(layer)||data.model?.overview)return;
   const resolution=Number(data.model?.displayResolutionDegrees??data.model?.resolutionDegrees??1);if(!Number.isFinite(resolution)||resolution>.5)return;
-  const key=layer==='cape'?'cape':'convective_inhibition',levels=layer==='cape'?[250,500,750,1000,1250,1500,1750,2000,2250,2500,2750,3000,4000,5000,6000,7000]:[-1000,-750,-500,-450,-400,-350,-300,-250,-200,-150,-100,-50,-20],rows=data.grid.rows,columns=data.grid.columns,lineColor=layer==='cape'?'#164653':'#702d34';
+  const key=layer==='cape'?'cape':'convective_inhibition',levels=layer==='cape'?[250,500,750,1000,1250,1500,1750,2000,2250,2500,2750,3000,4000,5000,6000,7000]:[-1000,-750,-500,-450,-400,-350,-300,-250,-200,-150,-100,-50,-20,-10,-5],rows=data.grid.rows,columns=data.grid.columns,lineColor=layer==='cape'?'#164653':'#702d34';
   levels.forEach(level=>{
     const segments=[];
     for(let row=0;row<rows-1;row+=1){for(let column=0;column<columns-1;column+=1){
@@ -4104,6 +4090,18 @@ function renderMapWeatherSymbols(){
   const data=mapAitorState.data,layer=mapAitorState.layer;if(!data||!['precipitation','thunderstorms','electric_storms'].includes(layer))return;
   const rows=data.grid.rows,columns=data.grid.columns,zoom=mapAitorState.map?.getZoom()||5,rowStep=zoom>=7?2:3,columnStep=zoom>=7?2:3,lightningConfig={key:'lightning_density'};
   for(let row=0;row<rows;row+=rowStep){for(let column=0;column<columns;column+=columnStep){const point=data.points[row*columns+column],rain=mapValue(point,'precipitation'),lightning=mapValue(point,'lightning_density'),snow=mapValue(point,'snowfall');let icon=null;if(layer==='electric_storms'){if(!mapPhenomenonVisible(lightningConfig,lightning))continue;icon=L.divIcon({className:'mapStormMarker',html:'⚡',iconSize:[22,24],iconAnchor:[11,12]})}else{if(!mapPhenomenonVisible(MAP_LAYERS.precipitation,rain))continue;if(mapValidNumber(snow)&&snow>=.03)icon=L.divIcon({className:'mapSnowMarker',html:'❄',iconSize:[22,24],iconAnchor:[11,12]});else if(layer==='thunderstorms'&&mapPhenomenonVisible(lightningConfig,lightning))icon=L.divIcon({className:'mapStormMarker',html:'⚡',iconSize:[22,24],iconAnchor:[11,12]})}if(icon)mapAitorState.labels.addLayer(L.marker([point.latitude,point.longitude],{icon,interactive:false,keyboard:false,zIndexOffset:300}))}}
+}
+function renderMapCloudRainPoints(){
+  mapAitorState.cloudRainPointCount=0;
+  const data=mapAitorState.data,map=mapAitorState.map,group=mapAitorState.labels;if(mapAitorState.layer!=='cloud'||!data||!map||!group)return 0;
+  const bounds=map.getBounds().pad(.03),zoom=map.getZoom(),threshold=zoom<=4?.08:zoom<=6?.05:.02,compact=window.innerWidth<650,spacing=compact?17:19,limit=compact?78:130,placed=[];
+  const samples=data.points.map(point=>({point,rain:mapValue(point,'precipitation')})).filter(sample=>mapValidNumber(sample.rain)&&Number(sample.rain)>=threshold&&bounds.contains([sample.point.latitude,sample.point.longitude])).sort((a,b)=>Number(b.rain)-Number(a.rain));
+  samples.forEach(sample=>{
+    if(placed.length>=limit)return;const pixel=map.latLngToContainerPoint([sample.point.latitude,sample.point.longitude]);if(placed.some(other=>pixel.distanceTo(other)<spacing))return;
+    const rain=Math.max(0,Number(sample.rain)),fillColor=rain>=8?'#1769d2':rain>=2?'#00a5c8':rain>=.4?'#10a958':'#52d957',radius=rain>=8?7:rain>=2?6:rain>=.4?5:4,formatted=rain.toFixed(rain<1?2:1).replace('.',',');placed.push(pixel);
+    const marker=L.circleMarker([sample.point.latitude,sample.point.longitude],{pane:'mapLabels',radius,color:'rgba(255,255,255,.96)',weight:1.4,opacity:.98,fillColor,fillOpacity:.90,className:'mapCloudRainPoint',interactive:true,bubblingMouseEvents:false});marker.bindTooltip('Precipitación prevista del modelo · '+formatted+' mm en la hora',{direction:'top',opacity:.96});group.addLayer(marker)
+  });
+  mapAitorState.cloudRainPointCount=placed.length;return placed.length
 }
 function renderMapTownValues(){
   const map=mapAitorState.map,data=mapAitorState.data,config=mapLayerConfig();if(!map||!data)return 0;
@@ -4180,7 +4178,7 @@ function renderMapGrid(quick=false){
   }
   clearMapLayers();
   const overlays=[],south=field.bounds[0][0],west=field.bounds[0][1],north=field.bounds[1][0],east=field.bounds[1][1],shifts=field.isGlobal?[-360,0,360]:[0];shifts.forEach(shift=>overlays.push(L.imageOverlay(field.url,[[south,west+shift],[north,east+shift]],{opacity:mapFieldOpacity(),interactive:false,className:'mapFieldOverlay'})));mapAitorState.field=L.layerGroup(overlays).addTo(map);
-  renderMapIsobars();renderMapConvectionContours();renderMapWeatherSymbols();renderMapValueLabels();renderMapWindArrows();
+  renderMapIsobars();renderMapConvectionContours();renderMapWeatherSymbols();if(mapAitorState.layer==='cloud')renderMapCloudRainPoints();renderMapValueLabels();renderMapWindArrows();
   renderMapLocation();updateMapLabels();updateMapInfo();renderMapPicker();drawMapWind();
   const readyStatus=$('mapStatus')?.dataset?.timelineReadyStatus;if(readyStatus&&!mapAitorState.gridTimelineDragging){$('mapStatus').textContent=readyStatus;delete $('mapStatus').dataset.timelineReadyStatus}
 }
@@ -5022,7 +5020,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();refreshActiveMapSource()});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.131',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.132',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
