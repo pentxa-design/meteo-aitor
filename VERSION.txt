@@ -1,3 +1,26 @@
+Meteo Aitor Bermeo v10.127 · cartografía y convección legibles
+Fecha: 2026-08-15
+
+Temperatura a 2 m y T850 conservan sus grados y escalas reales, mientras el
+relieve, las fronteras, las provincias y las localidades se dibujan por encima
+del campo meteorológico con contraste reforzado. Los límites provinciales de
+España proceden del WMS oficial de Unidades Administrativas del IGN.
+
+Nubosidad mantiene las nubes secas blancas o grises. La precipitación
+cuantitativa publicada por el mismo modelo para la misma pasada y hora añade
+verde y evoluciona a cian o azul al aumentar los milímetros. No se calcula una
+probabilidad nueva ni se presenta como reflectividad observada.
+
+MUCAPE refuerza el campo real desde 100 J/kg con gris/púrpura, turquesa y tonos
+cálidos. MUCIN diferencia la inhibición fuerte, intermedia y próxima a cero con
+una paleta legible. Los valores, el signo y la malla siguen siendo NOAA GFS.
+El producto de reflectividad de Kapildui usa el fondo oficial de relieve que
+Euskalmet publica para componer su PNG transparente.
+
+La caché PWA se renueva a v10.127.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.126 · slider horario más rápido
 Fecha: 2026-08-15
 

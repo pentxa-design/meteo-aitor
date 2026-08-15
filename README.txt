@@ -1,5 +1,24 @@
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
+VERSIÓN v10.127 · CARTOGRAFÍA Y CONVECCIÓN LEGIBLES
+
+- Temperatura a 2 m y T850 mantienen el color continuo del modelo, pero el
+  relieve, las fronteras, las provincias y los nombres quedan por encima del
+  raster con trazo oscuro reforzado. Los límites provinciales españoles salen
+  del WMS oficial de Unidades Administrativas del IGN.
+- Nubosidad seca continúa blanca o gris. La precipitación cuantitativa real del
+  mismo modelo, pasada y hora se añade en verde y pasa a cian o azul al aumentar
+  los milímetros; no se inventa probabilidad ni reflectividad de radar.
+- MUCAPE adopta una escala gris/púrpura, turquesa y amarillo/naranja con opacidad
+  útil desde 100 J/kg. MUCIN separa inhibición fuerte en cian/gris, intermedia en
+  púrpura/rojo y próxima a cero en naranja claro. Valores y signo siguen siendo
+  los publicados por NOAA GFS.
+- El radar de Kapildui compone el PNG transparente de reflectividad sobre el
+  mismo fondo de relieve oficial que utiliza Euskalmet.
+- Caché PWA renovada a v10.127.
+
+VERSIÓN ANTERIOR
+
 VERSIÓN v10.126 · SLIDER HORARIO MÁS RÁPIDO
 
 - El mapa acompaña al slider con una vista ligera construida únicamente con
