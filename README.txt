@@ -1,3 +1,15 @@
+VERSIÓN v10.134 · MUCIN SELECTIVO Y NUBES CON LLUVIA CONTINUA
+
+- MUCIN deja de cubrir todo el mapa: el relleno destaca de 0 a −750 J/kg y
+  conserva cifras y contornos NOAA en la inhibición más fuerte.
+- La lluvia de nubosidad deja de usar círculos. Se superpone como tesela
+  continua tipo reflectividad con la precipitación de la misma fuente y hora.
+- El color dBZ se deriva de la tasa real mediante Z=200·R^1,6; no es radar
+  observado y no se modifica ningún valor de lluvia, nube, MUCAPE o MUCIN.
+- Caché PWA renovada a v10.134.
+
+VERSIÓN ANTERIOR
+
 VERSIÓN v10.133 · MUCIN OPERATIVO SIN SATURACIÓN
 
 - La escala de MUCIN pasa a tonos profesionales azul grisáceo, malva, granate

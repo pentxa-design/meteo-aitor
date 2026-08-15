@@ -1,3 +1,18 @@
+Meteo Aitor Bermeo v10.134 · MUCIN selectivo y nubes con lluvia continua
+Fecha: 2026-08-16
+
+MUCIN deja transparente la inhibición de magnitud igual o superior a 750 J/kg
+para no cubrir todo el mapa. Las cifras y contornos NOAA continúan visibles y
+el relleno resalta los valores de 0 a −750 J/kg.
+
+La precipitación en nubosidad deja de mostrarse con círculos. Ahora utiliza la
+tesela continua de precipitación de la misma fuente, pasada y hora, coloreada
+como reflectividad estimada mediante Z=200·R^1,6. No es radar observado.
+
+La caché PWA se renueva a v10.134.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.133 · MUCIN operativo sin saturación
 Fecha: 2026-08-15
 
