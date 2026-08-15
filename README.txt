@@ -1,3 +1,13 @@
+VERSIÓN v10.135 · MUCIN EN MANCHAS CONTINUAS
+
+- MUCIN refuerza los valores NOAA más próximos a cero en masas continuas.
+- El borde pierde opacidad entre −700 y −780 J/kg; la inhibición más fuerte
+  queda transparente, pero conserva sus cifras y contornos NOAA.
+- No se modifica ni interpola ninguna hora ni ningún valor de MUCIN.
+- Caché PWA renovada a v10.135.
+
+VERSIÓN ANTERIOR
+
 VERSIÓN v10.134 · MUCIN SELECTIVO Y NUBES CON LLUVIA CONTINUA
 
 - MUCIN deja de cubrir todo el mapa: el relleno destaca de 0 a −750 J/kg y

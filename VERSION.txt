@@ -1,3 +1,15 @@
+Meteo Aitor Bermeo v10.135 · MUCIN en manchas continuas
+Fecha: 2026-08-16
+
+MUCIN conserva todos los valores NOAA GFS. El relleno se refuerza en la
+inhibición más próxima a cero, se desvanece entre −700 y −780 J/kg y deja
+transparente la inhibición más fuerte. Así aparecen masas continuas legibles
+sin volver a teñir todo el mapa.
+
+La caché PWA se renueva a v10.135.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.134 · MUCIN selectivo y nubes con lluvia continua
 Fecha: 2026-08-16
 
