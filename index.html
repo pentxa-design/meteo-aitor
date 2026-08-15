@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.130" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.131" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -2630,11 +2630,11 @@ function mapNativeAdapter(kind='standard'){
   }else if(kind==='cloud_rain_green'){
     // La señal verde se calcula exclusivamente con la precipitación cuantitativa
     // publicada por Open-Meteo para el mismo fichero, pasada y hora: cualquier
-    // valor cuantitativo desde 0,02 mm entra en gris verdoso/verde y pasa a cian/azul al
-    // aumentar. Las trazas menores permanecen transparentes para no pintar
+    // valor cuantitativo apreciable entra en gris verdoso/verde y pasa a
+    // cian/azul al aumentar. Las trazas menores permanecen transparentes para no pintar
     // de verde regiones enteras; la nubosidad por sí sola nunca crea lluvia.
-    settings.colorScales.precipitation={type:'breakpoint',unit:'mm',breakpoints:[0,.02,.05,.15,.4,1,2,4,8,15,25],colors:[[0,0,0,0],[92,119,109,.58],[74,213,91,.76],[34,195,78,.83],[11,171,82,.88],[0,151,104,.92],[0,165,151,.95],[0,160,188,.97],[0,130,210,.98],[38,90,207,.99],[79,55,184,1]]};
-    settings.postReadCallback=(_reader,data)=>{if(data?.values)data.values=data.values.map(value=>{const rain=Number(value);return Number.isFinite(rain)&&rain>=.02?rain:0})};
+    settings.colorScales.precipitation={type:'breakpoint',unit:'mm',breakpoints:[0,.08,.15,.4,1,2,4,8,15,25],colors:[[0,0,0,0],[0,0,0,0],[92,119,109,.58],[74,213,91,.78],[34,195,78,.84],[11,171,82,.89],[0,165,151,.94],[0,160,188,.97],[0,130,210,.99],[79,55,184,1]]};
+    settings.postReadCallback=(_reader,data)=>{if(data?.values){const zoom=mapAitorState.map?.getZoom()||5,cutoff=zoom<=4?.15:zoom<=6?.08:.03;data.values=data.values.map(value=>{const rain=Number(value);return Number.isFinite(rain)&&rain>=cutoff?rain:0})}};
   }else if(kind==='rain'){
     // En la vista continental se oculta la llovizna inferior a 0,20 mm/h:
     // esa fibra residual cubría océanos enteros y lavaba la cartografía. Al
@@ -5022,7 +5022,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();refreshActiveMapSource()});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.130',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.131',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });

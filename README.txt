@@ -1,3 +1,13 @@
+VERSIÓN v10.131 · NUBES SIN VERDE FALSO
+
+- El valor cero y las trazas de precipitación quedan transparentes en la capa
+  de nubes. Los colores gris verdoso, verde, cian y azul aparecen solo donde
+  la precipitación cuantitativa de la misma pasada y hora supera el umbral
+  visual de lluvia apreciable.
+- Caché PWA renovada a v10.131.
+
+VERSIÓN ANTERIOR
+
 METEO AITOR · OPEN‑METEO MULTIMODELO + AVISOS AEMET
 
 VERSIÓN v10.130 · DATOS RECIENTES SIN SUSTITUCIÓN DE MODELO
