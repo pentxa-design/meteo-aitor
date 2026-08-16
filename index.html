@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.135" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.136" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -516,8 +516,8 @@
        esa composición convertía blancos y grises en un velo verde/cian. La
        base conserva su mar azul y la tesela meteorológica aporta solamente
        los blancos/grises de cobertura; la lluvia permanece en puntos. */
-    .mapAitor.mapBaseStandard[data-map-layer="cloud"] .leaflet-container{background:#69b4df!important}
-    .mapAitor.mapBaseStandard[data-map-layer="cloud"] .leaflet-map-pane>.leaflet-tile-pane{filter:saturate(.94) contrast(1.08) brightness(1.01)!important;opacity:1!important;mix-blend-mode:normal!important}
+    .mapAitor.mapBaseStandard[data-map-layer="cloud"] .leaflet-container{background:#32a7e3!important}
+    .mapAitor.mapBaseStandard[data-map-layer="cloud"] .leaflet-map-pane>.leaflet-tile-pane{filter:saturate(2.15) contrast(1.14) brightness(.94) hue-rotate(-4deg)!important;opacity:1!important;mix-blend-mode:normal!important}
     .mapAitor.mapBaseStandard[data-map-layer="cloud"] .mapNativeWeatherTileKind-cloud{filter:grayscale(1) contrast(1.18) brightness(1.03) drop-shadow(0 0 .8px rgba(55,65,72,.28));mix-blend-mode:normal}
     .mapAitor.mapBaseStandard[data-map-layer="cloud"] .mapNativeWeatherTileKind-reflectivity{filter:saturate(1.72) contrast(1.32) brightness(1.02);mix-blend-mode:normal}
     .mapAitor.mapBaseStandard[data-map-layer="cloud"] .mapReliefOverlay{display:block!important;opacity:.20!important;filter:grayscale(1) contrast(1.82) brightness(.90);mix-blend-mode:multiply}
@@ -5019,7 +5019,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();refreshActiveMapSource()});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.135',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.136',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });

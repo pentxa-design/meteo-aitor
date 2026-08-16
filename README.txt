@@ -1,3 +1,12 @@
+VERSIÓN v10.136 · MAR AZUL CIELO EN NUBOSIDAD
+
+- El mar de la capa de nubosidad usa un azul cielo más marcado para que las
+  masas blancas y grises destaquen con claridad.
+- Tierra, fronteras, nubes, reflectividad, modelo y valores no se modifican.
+- Caché PWA renovada a v10.136.
+
+VERSIÓN ANTERIOR
+
 VERSIÓN v10.135 · MUCIN EN MANCHAS CONTINUAS
 
 - MUCIN refuerza los valores NOAA más próximos a cero en masas continuas.

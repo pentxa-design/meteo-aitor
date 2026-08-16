@@ -1,3 +1,14 @@
+Meteo Aitor Bermeo v10.136 · mar azul cielo en nubosidad
+Fecha: 2026-08-16
+
+La base de la capa de nubosidad refuerza el azul cielo del mar para separar
+visualmente el agua despejada de las nubes blancas y grises. No cambia ningún
+dato de nube, precipitación, modelo, pasada u hora.
+
+La caché PWA se renueva a v10.136.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.135 · MUCIN en manchas continuas
 Fecha: 2026-08-16
 
