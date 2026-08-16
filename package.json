@@ -1,7 +1,7 @@
 {
   "name": "meteo-aitor-bermeo",
   "private": true,
-  "version": "10.140.0",
+  "version": "10.141.0",
   "dependencies": {
     "grib2class": "1.0.7",
     "pngjs": "7.0.0"

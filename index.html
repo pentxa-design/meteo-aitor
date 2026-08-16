@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.140" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.141" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -964,7 +964,7 @@
 
     <section id="webcams" class="webcamSection" aria-labelledby="webcamTitle">
       <div class="webcamHead">
-        <div><h2 id="webcamTitle">Cámaras web · Bizkaia y España</h2><div class="sectionSub">Elige una cámara en el desplegable y aparecerá aquí, sin salir de Meteo Aitor.</div></div>
+        <div><h2 id="webcamTitle">Cámaras web · contraste de lluvia real</h2><div class="sectionSub">Compara el modelo y el radar con imágenes recientes de Bizkaia y España, sin salir de Meteo Aitor.</div></div>
         <button id="webcamRefresh" class="webcamRefresh" type="button">↻ Actualizar cámara</button>
       </div>
       <div class="webcamGrid">
@@ -985,16 +985,36 @@
               <option value="bakio" selected>Bakio · playa · directo</option>
               <option value="sopela">Sopela · olas · directo</option>
             </optgroup>
+            <optgroup id="webcamCantabriaGroup" label="Cantabria · CANTUR" disabled>
+              <option value="">Comprobando hora de las cámaras…</option>
+            </optgroup>
             <optgroup label="Asturias">
               <option value="asturias_vidosa">Vidosa · desfiladero de los Beyos</option>
               <option value="asturias_gijon">Gijón · La Escalerona</option>
               <option value="asturias_xago">Playa de Xagó</option>
+            </optgroup>
+            <optgroup id="webcamBurgosGroup" label="Castilla y León · Burgos" disabled>
+              <option value="">Cargando cámaras municipales…</option>
+            </optgroup>
+            <optgroup id="webcamAvilaGroup" label="Castilla y León · Ávila" disabled>
+              <option value="">Comprobando estaciones meteorológicas…</option>
+            </optgroup>
+            <optgroup label="Castilla y León · Medina de Pomar">
+              <option value="medina_pomar_sur">Medina de Pomar · acceso sur · directo</option>
+              <option value="medina_pomar_norte">Medina de Pomar · acceso norte · directo</option>
+              <option value="medina_pomar_este">Medina de Pomar · vista este · directo</option>
+            </optgroup>
+            <optgroup id="webcamMadridGroup" label="Centro · Madrid" disabled>
+              <option value="">Comprobando cámaras municipales…</option>
             </optgroup>
             <optgroup id="webcamGaliciaGroup" label="Galicia · MeteoGalicia" disabled>
               <option value="">Cargando cámaras oficiales…</option>
             </optgroup>
             <optgroup id="webcamCataloniaGroup" label="Cataluña · 3Cat" disabled>
               <option value="">Cargando cámaras oficiales…</option>
+            </optgroup>
+            <optgroup id="webcamRosesGroup" label="Cataluña · Roses en directo" disabled>
+              <option value="">Cargando directos de Roses…</option>
             </optgroup>
             <optgroup id="webcamAmetllaGroup" label="Cataluña · l’Ametlla en directo" disabled>
               <option value="">Cargando directos municipales…</option>
@@ -1011,8 +1031,8 @@
               <option value="baleares_la_savina">Formentera · La Savina</option>
             </optgroup>
           </select>
-          <span id="webcamSelectStatus" class="webcamPickerStatus" aria-live="polite">Cargando Galicia, Cataluña, Comunitat Valenciana y Cádiz…</span>
-          <div class="webcamSelectorHint"><strong>Solo señales recientes:</strong> las capturas fijas se muestran únicamente si la fuente publica una hora verificable de los últimos 60 minutos. Los directos se identifican aparte porque su hora depende del reproductor.</div>
+          <span id="webcamSelectStatus" class="webcamPickerStatus" aria-live="polite">Cargando Cantabria, Burgos, Madrid, Galicia, Cataluña, Comunitat Valenciana y Cádiz…</span>
+          <div class="webcamSelectorHint"><strong>Solo señales recientes:</strong> las capturas fijas se muestran únicamente si la fuente publica una hora verificable de los últimos 20 minutos. Los directos muestran la hora exacta de consulta, ya que la fuente no publica siempre el retraso interno del vídeo.</div>
           <details class="webcamSourceDetails">
             <summary>Otras fuentes de Bizkaia</summary>
             <div class="webcamLinks webcamCompactLinks">
@@ -1048,7 +1068,7 @@
           </div>
         </div>
       </details>
-      <div class="webcamNote">La hora mostrada es la publicada por la fuente y se convierte a horario peninsular. “Hace X min” nunca se calcula con la hora de apertura de la página. Si una captura supera 60 minutos o no permite verificar su hora, desaparece del selector actual.</div>
+      <div class="webcamNote">La hora de una captura es la publicada por la fuente y se convierte a horario peninsular. “Hace X min” nunca se calcula con la hora de apertura. Si supera 20 minutos o no permite verificar su hora, desaparece del selector. Las cámaras permiten un contraste visual de la lluvia; no sustituyen un pluviómetro para medir cuánto cayó.</div>
     </section>
 
   </section>
@@ -1073,6 +1093,9 @@ const WEBCAM_SOURCES=Object.freeze({
   asturias_vidosa:{key:'asturias_vidosa',mode:'iframe',url:'https://www.hispacams.com/cam_embedded.php?id=000283',title:'Asturias · Vidosa · directo',description:'Emisión de la red Webcams de Asturias / Hispacams en el desfiladero de los Beyos.',alt:'Cámara en directo de Vidosa y la cascada de Aguasaliu',status:'Directo cargado',originalUrl:'https://www.webcamsdeasturias.com/asturias/ponga/desfiladero-de-los-beyos/vidosa/cascada-aguasaliu-hd/207/',sourceUrl:'https://www.webcamsdeasturias.com/',sourceLabel:'Red de cámaras'},
   asturias_gijon:{key:'asturias_gijon',mode:'iframe',url:'https://www.hispacams.com/cam_embedded.php?id=000183',title:'Asturias · Gijón · La Escalerona',description:'Emisión de la red Webcams de Asturias / Hispacams desde la playa de San Lorenzo.',alt:'Cámara en directo de La Escalerona en Gijón',status:'Directo cargado',originalUrl:'https://www.webcamsdeasturias.com/asturias/centro/gijon/gijon/la-escalerona-playa-de-san-lorenzo-hd/148/',sourceUrl:'https://www.webcamsdeasturias.com/',sourceLabel:'Red de cámaras'},
   asturias_xago:{key:'asturias_xago',mode:'iframe',url:'https://www.hispacams.com/cam_embedded.php?id=000132',title:'Asturias · playa de Xagó · directo',description:'Emisión panorámica de la red Webcams de Asturias / Hispacams.',alt:'Cámara en directo de la playa de Xagó',status:'Directo cargado',originalUrl:'https://www.webcamsdeasturias.com/asturias/cabo-penas/gozon/xago/playa-xago-panoramica-hd/204/',sourceUrl:'https://www.webcamsdeasturias.com/',sourceLabel:'Red de cámaras'},
+  medina_pomar_sur:{key:'medina_pomar_sur',mode:'iframe',url:'https://v.angelcam.com/iframe?v=oxynbzxgy8&autoplay=1',title:'Medina de Pomar · acceso sur · directo',description:'Vista pública de la entrada por la N-629 desde el sur, orientada hacia Sierra Tesla.',alt:'Cámara en directo del acceso sur de Medina de Pomar',status:'Directo cargado',originalUrl:'https://zunegas1.click2stream.com/',sourceUrl:'https://www.zunegas.com/Webcam.html',sourceLabel:'Zunegas · cámaras públicas'},
+  medina_pomar_norte:{key:'medina_pomar_norte',mode:'iframe',url:'https://v.angelcam.com/iframe?v=jzl12m7orn&autoplay=1',title:'Medina de Pomar · acceso norte · directo',description:'Vista pública de la entrada por la N-629 desde el norte, orientada hacia Santurde.',alt:'Cámara en directo del acceso norte de Medina de Pomar',status:'Directo cargado',originalUrl:'https://zunegas2.click2stream.com/',sourceUrl:'https://www.zunegas.com/Webcam.html',sourceLabel:'Zunegas · cámaras públicas'},
+  medina_pomar_este:{key:'medina_pomar_este',mode:'iframe',url:'https://v.angelcam.com/iframe?v=v8rpkd56y6&autoplay=1',title:'Medina de Pomar · vista este · directo',description:'Vista pública hacia el este y el Alto de Rosales.',alt:'Cámara en directo de la vista este de Medina de Pomar',status:'Directo cargado',originalUrl:'https://zunegas31.click2stream.com/',sourceUrl:'https://www.zunegas.com/Webcam.html',sourceLabel:'Zunegas · cámaras públicas'},
   madrid_alcala_goya:{key:'madrid_alcala_goya',mode:'snapshot',url:'https://informo.madrid.es/cameras/Camara04307.jpg',refreshMs:30000,title:'Madrid · Alcalá con Goya',description:'Imagen actual publicada por el sistema municipal Informo Madrid.',alt:'Cámara municipal de Alcalá con Goya',status:'Imagen municipal actualizada',originalUrl:'https://informo.madrid.es/',sourceUrl:'https://informo.madrid.es/'},
   madrid_alcala_sevilla:{key:'madrid_alcala_sevilla',mode:'snapshot',url:'https://informo.madrid.es/cameras/Camara01316.jpg',refreshMs:30000,title:'Madrid · Alcalá con Sevilla',description:'Imagen actual publicada por el sistema municipal Informo Madrid.',alt:'Cámara municipal de Alcalá con Sevilla',status:'Imagen municipal actualizada',originalUrl:'https://informo.madrid.es/',sourceUrl:'https://informo.madrid.es/'},
   madrid_castellana_ortega:{key:'madrid_castellana_ortega',mode:'snapshot',url:'https://informo.madrid.es/cameras/Camara07303.jpg',refreshMs:30000,title:'Madrid · Castellana con Ortega y Gasset',description:'Imagen actual publicada por el sistema municipal Informo Madrid.',alt:'Cámara municipal de Castellana con Ortega y Gasset',status:'Imagen municipal actualizada',originalUrl:'https://informo.madrid.es/',sourceUrl:'https://informo.madrid.es/'},
@@ -1096,13 +1119,18 @@ let webcamCatalogTimer=null;
 let webcamCatalogPromise=null;
 const catalogWebcams=new Map();
 const WEBCAM_CATALOG_GROUPS=Object.freeze({
+  cantabria:'webcamCantabriaGroup',
+  burgos:'webcamBurgosGroup',
+  avila:'webcamAvilaGroup',
+  madrid:'webcamMadridGroup',
   galicia:'webcamGaliciaGroup',
   catalonia:'webcamCataloniaGroup',
+  roses:'webcamRosesGroup',
   ametlla:'webcamAmetllaGroup',
   valencia:'webcamValenciaGroup',
   cadiz:'webcamCadizGroup'
 });
-const WEBCAM_SNAPSHOT_MAX_AGE_MS=60*60*1000;
+const WEBCAM_SNAPSHOT_MAX_AGE_MS=20*60*1000;
 const WEBCAM_SNAPSHOT_FUTURE_TOLERANCE_MS=5*60*1000;
 const webcamSpainTimeFormatter=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
 function webcamSnapshotInfo(source,now=Date.now()){
@@ -1112,11 +1140,12 @@ function webcamSnapshotInfo(source,now=Date.now()){
   const minutes=Math.max(0,Math.floor(ageMs/60000));return{valid,timestamp,minutes,relative:minutes<1?'ahora':`hace ${minutes} min`,exact:`${webcamSpainTimeFormatter.format(new Date(timestamp))} (hora peninsular)`};
 }
 function visibleStaticWebcamCount(){
-  const selector=$('webcamAllSelect');if(!selector)return 0;return[...selector.options].filter(option=>option.value&&Object.prototype.hasOwnProperty.call(WEBCAM_SOURCES,option.value)).length;
+  const selector=$('webcamAllSelect');if(!selector)return 0;return[...selector.options].filter(option=>option.value&&Object.prototype.hasOwnProperty.call(WEBCAM_SOURCES,option.value)&&!catalogWebcams.has(option.value)).length;
 }
 function setWebcamState(text,stateName=''){
   const badge=$('webcamViewerState');if(!badge)return;badge.classList.toggle('isLive',stateName==='live');badge.classList.toggle('isDirect',stateName==='direct');badge.classList.toggle('isError',stateName==='error');const label=badge.querySelector('span');if(label)label.textContent=text;
 }
+function webcamDirectTimeText(){return`Directo · consulta ${webcamSpainTimeFormatter.format(new Date())} · hora peninsular`}
 function webcamCacheUrl(value){
   try{const url=new URL(value,location.href);url.searchParams.set('_meteo',Date.now());return url.toString()}catch(_){return value}
 }
@@ -1132,16 +1161,16 @@ function renderActiveWebcam(announce=true){
   const source=activeWebcam;if(!source)return;
   const image=$('webcamViewerImage');const frame=$('webcamViewerFrame');if(!image||!frame)return;
   const snapshotInfo=webcamSnapshotInfo(source);
-  if(source.mode==='snapshot'&&!snapshotInfo.valid){selectWebcam(WEBCAM_SOURCES.bakio,{scroll:false});setWebcamState('Captura retirada: supera 60 min','error');return}
+  if(source.mode==='snapshot'&&!snapshotInfo.valid){selectWebcam(WEBCAM_SOURCES.bakio,{scroll:false});setWebcamState('Captura retirada: supera 20 min','error');return}
   const requestId=++webcamRequestId;clearTimeout(webcamWatchdog);
   if(announce)setWebcamState(source.mode==='iframe'?'Abriendo directo…':'Cargando imagen…');
   webcamWatchdog=setTimeout(()=>{if(requestId===webcamRequestId)setWebcamState('La cámara tarda en responder · prueba de nuevo','error')},20000);
   if(source.mode==='iframe'){
     image.classList.add('isHidden');image.removeAttribute('src');frame.classList.remove('isHidden');frame.title=source.alt;
-    frame.onload=null;frame.src='about:blank';requestAnimationFrame(()=>{if(requestId!==webcamRequestId)return;const target=source.url;frame.onload=()=>{if(requestId!==webcamRequestId||frame.src!==target)return;clearTimeout(webcamWatchdog);setWebcamState('Señal directa · comprueba el reloj del visor','direct')};frame.src=target});
+    frame.onload=null;frame.src='about:blank';requestAnimationFrame(()=>{if(requestId!==webcamRequestId)return;const target=source.url;frame.onload=()=>{if(requestId!==webcamRequestId||frame.src!==target)return;clearTimeout(webcamWatchdog);setWebcamState(webcamDirectTimeText(),'direct')};frame.src=target});
   }else{
     frame.classList.add('isHidden');frame.removeAttribute('src');image.classList.remove('isHidden');image.alt=source.alt;
-    image.onload=()=>{if(requestId!==webcamRequestId)return;clearTimeout(webcamWatchdog);if(source.mode!=='snapshot'){setWebcamState('Señal directa · comprueba el reloj de la cámara','direct');return}const current=webcamSnapshotInfo(source);setWebcamState(current.valid?`Actualizada · ${current.relative}`:'Captura fuera de hora',current.valid?'live':'error')};
+    image.onload=()=>{if(requestId!==webcamRequestId)return;clearTimeout(webcamWatchdog);if(source.mode!=='snapshot'){setWebcamState(webcamDirectTimeText(),'direct');return}const current=webcamSnapshotInfo(source);setWebcamState(current.valid?`Captura ${current.exact} · ${current.relative}`:'Captura fuera de hora',current.valid?'live':'error')};
     image.onerror=()=>{if(requestId!==webcamRequestId)return;clearTimeout(webcamWatchdog);setWebcamState('Señal temporalmente no disponible','error')};
     image.src=webcamCacheUrl(source.url);
   }
@@ -1154,7 +1183,7 @@ function selectWebcam(source,{scroll=true}={}){
 document.querySelectorAll('[data-webcam]').forEach(button=>{if(!button.hasAttribute('aria-pressed'))button.setAttribute('aria-pressed','false');button.addEventListener('click',()=>selectWebcam(WEBCAM_SOURCES[button.dataset.webcam]))});
 if($('webcamAllSelect'))$('webcamAllSelect').addEventListener('change',event=>selectWebcam(WEBCAM_SOURCES[event.target.value]||catalogWebcams.get(event.target.value)));
 function safeCatalogUrl(value,{embed=false}={}){
-  try{const url=new URL(String(value||''),location.href);if(url.protocol!=='https:')return'';if(embed&&url.hostname!=='www.youtube-nocookie.com')return'';return url.toString()}catch(_){return''}
+  try{const url=new URL(String(value||''),location.href);if(url.protocol!=='https:')return'';if(embed&&!['www.youtube-nocookie.com','services.whatsupcams.com'].includes(url.hostname))return'';return url.toString()}catch(_){return''}
 }
 function normalizeCatalogWebcam(camera,catalogId,catalog){
   const key=String(camera?.key||'').trim();const mode=camera?.mode==='iframe'?'iframe':'snapshot';const url=safeCatalogUrl(camera?.url,{embed:mode==='iframe'});if(!key||!url)return null;
@@ -1170,7 +1199,7 @@ async function loadWebcamCatalogs({silent=false,refreshActive=false}={}){
   if(webcamCatalogPromise)return webcamCatalogPromise;
   webcamCatalogPromise=(async()=>{
     const status=$('webcamSelectStatus');if(!status)return;
-    if(!silent){status.style.color='';status.textContent='Cargando Galicia, Cataluña, Comunitat Valenciana y Cádiz…'}
+    if(!silent){status.style.color='';status.textContent='Cargando Cantabria, Burgos, Madrid, Galicia, Cataluña, Comunitat Valenciana y Cádiz…'}
     try{
       const response=await fetch('/api/webcams',{headers:{Accept:'application/json'},cache:'no-store'});const payload=await response.json().catch(()=>null);
       if(!response.ok||!payload?.ok||!payload.catalogs)throw new Error(payload?.error||'No se pudo cargar el catálogo de cámaras.');
@@ -1191,7 +1220,7 @@ async function loadWebcamCatalogs({silent=false,refreshActive=false}={}){
 if($('webcamRefresh'))$('webcamRefresh').addEventListener('click',async()=>{if(activeWebcam?.catalogId)await loadWebcamCatalogs({silent:true,refreshActive:true});else renderActiveWebcam()});
 if($('webcamViewerImage')){
   const viewerImage=$('webcamViewerImage');
-  if(viewerImage.complete&&viewerImage.naturalWidth>0)setWebcamState('Señal directa · comprueba el reloj de la cámara','direct');
+  if(viewerImage.complete&&viewerImage.naturalWidth>0)setWebcamState(webcamDirectTimeText(),'direct');
   if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{if(!entries.some(entry=>entry.isIntersecting))return;renderActiveWebcam();loadWebcamCatalogs();observer.disconnect()},{rootMargin:'280px'});observer.observe($('webcams'))}
   else{renderActiveWebcam();loadWebcamCatalogs()}
 }
@@ -5072,7 +5101,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();refreshActiveMapSource()});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.140',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.141',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
