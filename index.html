@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.138" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.139" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -3363,7 +3363,10 @@ function renderMapNativeMovie(index=mapNativeDesiredIndex()){
 }
 function queueMapNativeMovieFrame(index=mapNativeDesiredIndex()){
   mapAitorState.nativeMovieRenderIndex=index;if(mapAitorState.nativeMovieRenderFrame||mapAitorState.nativeMovieThrottleTimer)return;
-  const elapsed=performance.now()-mapAitorState.nativeMovieLastRenderAt,wait=Math.max(0,120-elapsed);
+  // En móvil una rasterización de cada 120 ms aún podía competir con el
+  // gesto. Cinco fotogramas reales por segundo son suficientes para seguir
+  // la evolución y dejan libre el hilo principal para mover el pulgar.
+  const minimumInterval=window.innerWidth<=820?210:155,elapsed=performance.now()-mapAitorState.nativeMovieLastRenderAt,wait=Math.max(0,minimumInterval-elapsed);
   if(wait>0){mapAitorState.nativeMovieThrottleTimer=setTimeout(()=>{mapAitorState.nativeMovieThrottleTimer=null;queueMapNativeMovieFrame(mapAitorState.nativeMovieRenderIndex)},wait);return}
   mapAitorState.nativeMovieRenderFrame=requestAnimationFrame(()=>{mapAitorState.nativeMovieRenderFrame=null;const target=mapAitorState.nativeMovieRenderIndex;mapAitorState.nativeMovieRenderIndex=null;mapAitorState.nativeMovieLastRenderAt=performance.now();if(renderMapNativeMovie(target)&&mapAitorState.playing)scheduleMapNativePlayback()})
 }
@@ -4919,13 +4922,6 @@ function scheduleMapGridRefine(delay=180){
   if(mapUsesNativeTiles()||MAP_OBSERVATION_LAYERS.has(mapAitorState.layer)||mapAitorState.playing||mapAitorState.gridTimelineDragging)return;
   mapAitorState.gridRefineTimer=setTimeout(()=>{mapAitorState.gridRefineTimer=null;if(!mapUsesNativeTiles()&&!MAP_OBSERVATION_LAYERS.has(mapAitorState.layer)&&!mapAitorState.playing&&!mapAitorState.gridTimelineDragging)scheduleMapRender(false)},Math.max(0,delay));
 }
-function queueMapGridTimelinePreview(delay=90){
-  if(mapUsesNativeTiles()||MAP_OBSERVATION_LAYERS.has(mapAitorState.layer)||!mapAitorState.gridTimelineDragging||mapAitorState.gridTimelinePreviewTimer)return;
-  // Como máximo se dibuja una vista reducida cada 90 ms y siempre de la
-  // última hora solicitada. Mantiene el pulgar fluido aunque lleguen muchos
-  // eventos input seguidos.
-  mapAitorState.gridTimelinePreviewTimer=setTimeout(()=>{mapAitorState.gridTimelinePreviewTimer=null;if(!mapUsesNativeTiles()&&!MAP_OBSERVATION_LAYERS.has(mapAitorState.layer)&&mapAitorState.gridTimelineDragging)scheduleMapRender(true)},Math.max(0,delay))
-}
 function scheduleMapRender(quick=false){
   if(mapAitorState.renderFrame)cancelAnimationFrame(mapAitorState.renderFrame);
   mapAitorState.renderFrame=requestAnimationFrame(()=>{mapAitorState.renderFrame=null;renderMapGrid(quick)});
@@ -5045,7 +5041,7 @@ function initMapAitor(){
       // deja para el reposo del cursor y no bloquea el siguiente movimiento.
       if(mapNativeMovieReady(index))queueMapNativeMovieFrame(index);return
     }
-    if(!mapAitorState.gridTimelineDragging)$('mapStatus').dataset.timelineReadyStatus=$('mapStatus').textContent;mapAitorState.timeIndex=index;mapAitorState.gridTimelineDragging=true;clearTimeout(mapAitorState.gridRefineTimer);previewMapGridTime(index);queueMapGridTimelinePreview(90)
+    if(!mapAitorState.gridTimelineDragging)$('mapStatus').dataset.timelineReadyStatus=$('mapStatus').textContent;mapAitorState.timeIndex=index;mapAitorState.gridTimelineDragging=true;clearTimeout(mapAitorState.gridRefineTimer);clearTimeout(mapAitorState.gridTimelinePreviewTimer);mapAitorState.gridTimelinePreviewTimer=null;previewMapGridTime(index)
   });
   $('mapTimeRange').addEventListener('change',finishMapTimelineScrub);
   $('mapTimeRange').addEventListener('pointerup',finishMapTimelineScrub,{passive:true});
@@ -5084,7 +5080,7 @@ function updateOnlineState(){if($('offlineNote'))$('offlineNote').style.display=
 window.addEventListener('online',()=>{updateOnlineState();clearWeatherRetry();loadWeather({...state.location||BERMEO});loadBermeoTides();loadBermeoMarine();refreshActiveMapSource()});window.addEventListener('offline',()=>{updateOnlineState();clearWeatherRetry()});updateOnlineState();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',async()=>{
   try{
-    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.138',{updateViaCache:'none'});
+    const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.139',{updateViaCache:'none'});
     await registration.update();
   }catch(_){}
 });
