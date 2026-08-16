@@ -1012,7 +1012,7 @@
             </optgroup>
           </select>
           <span id="webcamSelectStatus" class="webcamPickerStatus" aria-live="polite">Cargando Galicia, Cataluña, Comunitat Valenciana y Cádiz…</span>
-          <div class="webcamSelectorHint"><strong>Solo señales recientes:</strong> las capturas fijas se muestran únicamente si la fuente publica una hora verificable de los últimos 45 minutos. Los directos se identifican aparte porque su hora depende del reproductor.</div>
+          <div class="webcamSelectorHint"><strong>Solo señales recientes:</strong> las capturas fijas se muestran únicamente si la fuente publica una hora verificable de los últimos 60 minutos. Los directos se identifican aparte porque su hora depende del reproductor.</div>
           <details class="webcamSourceDetails">
             <summary>Otras fuentes de Bizkaia</summary>
             <div class="webcamLinks webcamCompactLinks">
@@ -1048,7 +1048,7 @@
           </div>
         </div>
       </details>
-      <div class="webcamNote">La hora mostrada es la publicada por la fuente y se convierte a horario peninsular. “Hace X min” nunca se calcula con la hora de apertura de la página. Si una captura supera 45 minutos o no permite verificar su hora, desaparece del selector actual.</div>
+      <div class="webcamNote">La hora mostrada es la publicada por la fuente y se convierte a horario peninsular. “Hace X min” nunca se calcula con la hora de apertura de la página. Si una captura supera 60 minutos o no permite verificar su hora, desaparece del selector actual.</div>
     </section>
 
   </section>
@@ -1102,7 +1102,7 @@ const WEBCAM_CATALOG_GROUPS=Object.freeze({
   valencia:'webcamValenciaGroup',
   cadiz:'webcamCadizGroup'
 });
-const WEBCAM_SNAPSHOT_MAX_AGE_MS=45*60*1000;
+const WEBCAM_SNAPSHOT_MAX_AGE_MS=60*60*1000;
 const WEBCAM_SNAPSHOT_FUTURE_TOLERANCE_MS=5*60*1000;
 const webcamSpainTimeFormatter=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
 function webcamSnapshotInfo(source,now=Date.now()){
@@ -1132,7 +1132,7 @@ function renderActiveWebcam(announce=true){
   const source=activeWebcam;if(!source)return;
   const image=$('webcamViewerImage');const frame=$('webcamViewerFrame');if(!image||!frame)return;
   const snapshotInfo=webcamSnapshotInfo(source);
-  if(source.mode==='snapshot'&&!snapshotInfo.valid){selectWebcam(WEBCAM_SOURCES.bakio,{scroll:false});setWebcamState('Captura retirada: supera 45 min','error');return}
+  if(source.mode==='snapshot'&&!snapshotInfo.valid){selectWebcam(WEBCAM_SOURCES.bakio,{scroll:false});setWebcamState('Captura retirada: supera 60 min','error');return}
   const requestId=++webcamRequestId;clearTimeout(webcamWatchdog);
   if(announce)setWebcamState(source.mode==='iframe'?'Abriendo directo…':'Cargando imagen…');
   webcamWatchdog=setTimeout(()=>{if(requestId===webcamRequestId)setWebcamState('La cámara tarda en responder · prueba de nuevo','error')},20000);
