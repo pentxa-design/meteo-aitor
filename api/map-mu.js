@@ -324,6 +324,13 @@ function responseWithFocus(payload, focus) {
   return { ...payload, focus, focusPoint: payload.model.resolutionDegrees <= 0.25 ? nearest : null };
 }
 
+function responseForRequestedLayer(payload, focus, product, displayLayer) {
+  const requestedLayer = product === 'reflectivity_1km'
+    ? 'reflectivity_1km'
+    : ['cape', 'cin', 'mu'].includes(displayLayer) ? displayLayer : 'mu';
+  return responseWithFocus({ ...payload, displayLayer: requestedLayer }, focus);
+}
+
 function trimCache() {
   for (const [key, entry] of RESPONSE_CACHE.entries()) {
     if (!entry || Date.now() - entry.savedAt > MAX_STALE_AGE) RESPONSE_CACHE.delete(key);
@@ -383,7 +390,7 @@ module.exports = async function handler(req, res) {
   if (cached && Date.now() - cached.savedAt < CACHE_TTL) {
     res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=900');
     res.setHeader('X-Map-Cache', 'HIT');
-    return res.status(200).json(responseWithFocus(cached.payload, focus));
+    return res.status(200).json(responseForRequestedLayer(cached.payload, focus, product, displayLayer));
   }
 
   try {
@@ -454,13 +461,13 @@ module.exports = async function handler(req, res) {
     trimCache();
     res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=900');
     res.setHeader('X-Map-Cache', 'MISS');
-    return res.status(200).json(responseWithFocus(payload, focus));
+    return res.status(200).json(responseForRequestedLayer(payload, focus, product, displayLayer));
   } catch (error) {
     const stale = RESPONSE_CACHE.get(cacheKey);
     if (stale && Date.now() - stale.savedAt < MAX_STALE_AGE) {
       res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=900');
       res.setHeader('X-Map-Cache', 'STALE');
-      return res.status(200).json({ ...responseWithFocus(stale.payload, focus), stale: true });
+      return res.status(200).json({ ...responseForRequestedLayer(stale.payload, focus, product, displayLayer), stale: true });
     }
     res.setHeader('Cache-Control', 'no-store');
     return res.status(502).json({
