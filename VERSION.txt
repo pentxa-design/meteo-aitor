@@ -1,3 +1,18 @@
+Meteo Aitor Bermeo v10.143 · reflectividad GFS 1 km estable
+Fecha: 2026-08-17
+
+La capa exclusiva Reflectividad GFS · 1 km mantiene la variable oficial REFD
+de NOAA a 1.000 m sobre el terreno. En las vistas mundial y europea carga nueve
+plazos exactos cada 3 horas para cubrir 24 horas sin bloquear la primera imagen;
+el zoom de detalle conserva los plazos horarios. La selección de pasada deja de
+depender de que NOAA haya publicado ya el extremo +24 h.
+
+No cambia ninguna otra capa ni se sustituye GFS por otro modelo.
+
+La caché PWA se renueva a v10.143.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.136 · mar azul cielo en nubosidad
 Fecha: 2026-08-16
 

@@ -4,6 +4,7 @@ const rain3hHandler = require('../lib/map-rain3h');
 const NOAA_FILTER_ROOT = 'https://nomads.ncep.noaa.gov/cgi-bin';
 const HOUR_MS = 60 * 60 * 1000;
 const FRAME_HOURS = 24;
+const REFLECTIVITY_OVERVIEW_STEP_HOURS = 3;
 const FETCH_TIMEOUT = 10000;
 const FETCH_CONCURRENCY = 6;
 const CACHE_TTL = 15 * 60 * 1000;
@@ -60,6 +61,15 @@ function gridResolution(bounds) {
     return { code: '0p25', degrees: 0.25, displayDegrees: 0.5, stepHours: 1, scope: 'wide' };
   }
   return { code: '0p25', degrees: 0.25, displayDegrees: 0.25, stepHours: 1, scope: 'detail' };
+}
+
+function resolutionForProduct(resolution, product) {
+  if (product !== 'reflectivity_1km' || resolution.scope === 'detail') return resolution;
+  // La reflectividad continental de 0,25° conserva los nodos oficiales de
+  // NOAA, pero una película horaria de 25 GRIB bloquea la primera imagen en
+  // una función fría. Nueve plazos exactos cada 3 h cubren las mismas 24 h y
+  // dejan el paso horario únicamente para el zoom de detalle.
+  return { ...resolution, stepHours: REFLECTIVITY_OVERVIEW_STEP_HOURS };
 }
 
 function canonicalRegionalBounds(center, resolution) {
@@ -220,14 +230,23 @@ async function fetchFrame(run, forecastHour, bounds, resolution, product = 'conv
 async function selectRun(bounds, resolution, product = 'convection') {
   const now = Date.now();
   let lastError;
-  for (const run of candidateRuns(now)) {
+  const runs = candidateRuns(now);
+  const probeRun = async run => {
     const elapsedHours = Math.max(0, Math.round((now - run.getTime()) / HOUR_MS));
     // NOAA publica la rejilla de 1° cada tres horas. Se toma el último plazo
     // ya válido; la malla regional de 0,25° conserva sus pasos horarios.
     const currentHour = resolution.stepHours > 1
       ? Math.floor(elapsedHours / resolution.stepHours) * resolution.stepHours
       : elapsedHours;
-    const finalHour = currentHour + FRAME_HOURS;
+    // Para REFD basta validar tres plazos consecutivos de la misma pasada.
+    // Exigir aquí el extremo +24 h hacía fallar toda la capa cuando NOAA
+    // estaba terminando de publicar la pasada, aunque las horas inmediatas
+    // ya fuesen válidas. fetchFrames conserva después todos los plazos que
+    // realmente estén disponibles, siempre sin mezclar pasadas.
+    const probeSpan = product === 'reflectivity_1km'
+      ? resolution.stepHours * 2
+      : FRAME_HOURS;
+    const finalHour = currentHour + probeSpan;
     try {
       const [current, final] = await Promise.all([
         fetchFrame(run, currentHour, bounds, resolution, product),
@@ -236,6 +255,20 @@ async function selectRun(bounds, resolution, product = 'convection') {
       return { run, currentHour, probes: new Map([[currentHour, current], [finalHour, final]]) };
     } catch (error) {
       lastError = error;
+      return null;
+    }
+  };
+  if (product === 'reflectivity_1km') {
+    // Las tres pasadas se comprueban a la vez. Si NOMADS está terminando una
+    // publicación o un archivo puntual tarda, la app puede usar enseguida la
+    // pasada completa anterior sin encadenar tres esperas de 10 segundos.
+    const attempts = await Promise.all(runs.map(probeRun));
+    const selected = attempts.find(Boolean);
+    if (selected) return selected;
+  } else {
+    for (const run of runs) {
+      const selected = await probeRun(run);
+      if (selected) return selected;
     }
   }
   throw lastError || new Error('NOAA no publicó todavía una pasada GFS completa.');
@@ -256,7 +289,10 @@ async function fetchFrames(run, offsets, bounds, probes, resolution, product = '
       }
     }
   }
-  await Promise.all(Array.from({ length: Math.min(FETCH_CONCURRENCY, offsets.length) }, () => worker()));
+  const concurrency = product === 'reflectivity_1km'
+    ? Math.min(9, offsets.length)
+    : Math.min(FETCH_CONCURRENCY, offsets.length);
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
   return results.filter(Boolean);
 }
 
@@ -372,7 +408,7 @@ module.exports = async function handler(req, res) {
     latitude: clamp(req.query?.viewLat, -80, 85, (requestedBounds.south + requestedBounds.north) / 2),
     longitude: clamp(req.query?.viewLon, -179.75, 179.75, (requestedBounds.west + requestedBounds.east) / 2)
   };
-  const resolution = gridResolution(requestedBounds);
+  const resolution = resolutionForProduct(gridResolution(requestedBounds), product);
   const bounds = resolution.degrees >= 1
     ? { ...WORLD_BOUNDS }
     : canonicalRegionalBounds(viewportCenter, resolution);
