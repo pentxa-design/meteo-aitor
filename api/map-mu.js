@@ -116,13 +116,10 @@ function grid(bounds, minimumRows, resolution) {
   return { rows, columns, points };
 }
 
-function noaaUrl(run, forecastHour, bounds, resolution) {
+function noaaUrl(run, forecastHour, bounds, resolution, product = 'convection') {
   const identity = runIdentity(run);
   const parameters = new URLSearchParams({
     file: `gfs.t${identity.hour}z.pgrb2.${resolution.code}.f${pad(forecastHour, 3)}`,
-    'lev_255-0_mb_above_ground': 'on',
-    var_CAPE: 'on',
-    var_CIN: 'on',
     subregion: '',
     leftlon: String(bounds.west),
     rightlon: String(bounds.east),
@@ -130,6 +127,14 @@ function noaaUrl(run, forecastHour, bounds, resolution) {
     bottomlat: String(bounds.south),
     dir: `/gfs.${identity.date}/${identity.hour}/atmos`
   });
+  if (product === 'reflectivity_1km') {
+    parameters.set('lev_1000_m_above_ground', 'on');
+    parameters.set('var_REFD', 'on');
+  } else {
+    parameters.set('lev_255-0_mb_above_ground', 'on');
+    parameters.set('var_CAPE', 'on');
+    parameters.set('var_CIN', 'on');
+  }
   return `${NOAA_FILTER_ROOT}/filter_gfs_${resolution.code}.pl?${parameters.toString()}`;
 }
 
@@ -159,7 +164,7 @@ function parsedMessage(buffer) {
   return parser;
 }
 
-function parseFrame(buffer) {
+function parseFrame(buffer, product = 'convection') {
   const fields = {};
   let cursor = 0;
   while (cursor < buffer.length) {
@@ -171,10 +176,24 @@ function parseFrame(buffer) {
     const parameter = String(parser.meta?.ParameterNumberByProductDisciplineAndParameterCategory || '').toLowerCase();
     const values = parser.DataValues?.[0];
     if (values?.length) {
+      if (parameter.includes('reflectivity')) fields.reflectivity = { parser, values };
       if (parameter.includes('available potential energy')) fields.cape = { parser, values };
       if (parameter.includes('convective inhibition')) fields.cin = { parser, values };
     }
     cursor = start + length;
+  }
+  if (product === 'reflectivity_1km') {
+    if (!fields.reflectivity) throw new Error('NOAA no devolvió la reflectividad de base a 1 km.');
+    const geometry = fields.reflectivity.parser;
+    return {
+      nx: geometry.Nx,
+      ny: geometry.Ny,
+      latitude1: geometry.La1,
+      latitude2: geometry.La2,
+      longitude1: geometry.Lo1,
+      longitude2: geometry.Lo2,
+      reflectivity: fields.reflectivity.values
+    };
   }
   if (!fields.cape || !fields.cin) throw new Error('NOAA no devolvió la pareja MUCAPE/MUCIN completa.');
   const geometry = fields.cape.parser;
@@ -193,12 +212,12 @@ function parseFrame(buffer) {
   };
 }
 
-async function fetchFrame(run, forecastHour, bounds, resolution) {
-  const buffer = await fetchBuffer(noaaUrl(run, forecastHour, bounds, resolution));
-  return { forecastHour, frame: parseFrame(buffer) };
+async function fetchFrame(run, forecastHour, bounds, resolution, product = 'convection') {
+  const buffer = await fetchBuffer(noaaUrl(run, forecastHour, bounds, resolution, product));
+  return { forecastHour, frame: parseFrame(buffer, product) };
 }
 
-async function selectRun(bounds, resolution) {
+async function selectRun(bounds, resolution, product = 'convection') {
   const now = Date.now();
   let lastError;
   for (const run of candidateRuns(now)) {
@@ -211,8 +230,8 @@ async function selectRun(bounds, resolution) {
     const finalHour = currentHour + FRAME_HOURS;
     try {
       const [current, final] = await Promise.all([
-        fetchFrame(run, currentHour, bounds, resolution),
-        fetchFrame(run, finalHour, bounds, resolution)
+        fetchFrame(run, currentHour, bounds, resolution, product),
+        fetchFrame(run, finalHour, bounds, resolution, product)
       ]);
       return { run, currentHour, probes: new Map([[currentHour, current], [finalHour, final]]) };
     } catch (error) {
@@ -222,7 +241,7 @@ async function selectRun(bounds, resolution) {
   throw lastError || new Error('NOAA no publicó todavía una pasada GFS completa.');
 }
 
-async function fetchFrames(run, offsets, bounds, probes, resolution) {
+async function fetchFrames(run, offsets, bounds, probes, resolution, product = 'convection') {
   const results = new Array(offsets.length);
   let next = 0;
   async function worker() {
@@ -231,7 +250,7 @@ async function fetchFrames(run, offsets, bounds, probes, resolution) {
       next += 1;
       const forecastHour = offsets[index];
       try {
-        results[index] = probes.get(forecastHour) || await fetchFrame(run, forecastHour, bounds, resolution);
+        results[index] = probes.get(forecastHour) || await fetchFrame(run, forecastHour, bounds, resolution, product);
       } catch {
         results[index] = null;
       }
@@ -257,7 +276,18 @@ function validFieldValue(value) {
   return Number.isFinite(numeric) && Math.abs(numeric) < 100000 ? numeric : null;
 }
 
-function compactPoint(point, frames) {
+function compactPoint(point, frames, product = 'convection') {
+  if (product === 'reflectivity_1km') {
+    const reflectivity = frames.map(item => {
+      const index = gridIndex(item.frame, point.latitude, point.longitude);
+      return validFieldValue(item.frame.reflectivity[index]);
+    });
+    return {
+      latitude: point.latitude,
+      longitude: point.longitude,
+      hourly: { reflectivity_1km: reflectivity }
+    };
+  }
   const cape = [];
   const cin = [];
   for (const item of frames) {
@@ -313,6 +343,11 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ ok: false, error: 'Método no permitido' });
   }
 
+  const displayLayer = String(req.query?.displayLayer || 'cape');
+  const product = req.query?.product === 'reflectivity_1km' || displayLayer === 'reflectivity_1km'
+    ? 'reflectivity_1km'
+    : 'convection';
+
   const requestedBounds = {
     south: clamp(req.query?.south, -80, 80, 35),
     north: clamp(req.query?.north, -79, 85, 47),
@@ -338,6 +373,7 @@ module.exports = async function handler(req, res) {
   const density = clamp(req.query?.density, 6, 18, 18);
   const outputGrid = grid(bounds, density, resolution);
   const cacheKey = [
+    product,
     resolution.code, resolution.scope,
     density,
     bounds.south.toFixed(2), bounds.north.toFixed(2),
@@ -351,13 +387,15 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const selected = await selectRun(noaaBounds, resolution);
+    const selected = await selectRun(noaaBounds, resolution, product);
     const offsets = Array.from(
       { length: Math.floor(FRAME_HOURS / resolution.stepHours) + 1 },
       (_, index) => selected.currentHour + index * resolution.stepHours
     );
-    const frames = await fetchFrames(selected.run, offsets, noaaBounds, selected.probes, resolution);
-    if (frames.length < 3) throw new Error('NOAA no devolvió suficientes horas MUCAPE/MUCIN.');
+    const frames = await fetchFrames(selected.run, offsets, noaaBounds, selected.probes, resolution, product);
+    if (frames.length < 3) throw new Error(product === 'reflectivity_1km'
+      ? 'NOAA no devolvió suficientes horas de reflectividad a 1 km.'
+      : 'NOAA no devolvió suficientes horas MUCAPE/MUCIN.');
     frames.sort((a, b) => a.forecastHour - b.forecastHour);
     const times = frames.map(item => new Date(selected.run.getTime() + item.forecastHour * HOUR_MS).toISOString().replace(/:00\.000Z$/, ':00'));
     const run = runIdentity(selected.run);
@@ -365,18 +403,26 @@ module.exports = async function handler(req, res) {
       ok: true,
       generatedAt: new Date().toISOString(),
       transport: 'noaa-nomads-grib2',
-      bundle: 'convection',
-      displayLayer: String(req.query?.displayLayer || 'cape'),
+      bundle: product === 'reflectivity_1km' ? 'reflectivity_1km' : 'convection',
+      displayLayer: product === 'reflectivity_1km' ? 'reflectivity_1km' : displayLayer,
       model: {
         requested: 'gfs',
-        label: resolution.scope === 'world'
-          ? 'NOAA GFS · fuente 1° · vista mundial reducida · MUCAPE/MUCIN'
-          : resolution.scope === 'wide'
-            ? 'NOAA GFS 0,25° · superficie europea 0,5° · MUCAPE/MUCIN'
-            : 'NOAA GFS 0,25° · MUCAPE/MUCIN',
+        label: product === 'reflectivity_1km'
+          ? resolution.scope === 'world'
+            ? 'NOAA GFS · fuente 1° · vista mundial reducida · reflectividad 1 km'
+            : resolution.scope === 'wide'
+              ? 'NOAA GFS 0,25° · superficie europea 0,5° · reflectividad 1 km'
+              : 'NOAA GFS 0,25° · reflectividad de base a 1 km'
+          : resolution.scope === 'world'
+            ? 'NOAA GFS · fuente 1° · vista mundial reducida · MUCAPE/MUCIN'
+            : resolution.scope === 'wide'
+              ? 'NOAA GFS 0,25° · superficie europea 0,5° · MUCAPE/MUCIN'
+              : 'NOAA GFS 0,25° · MUCAPE/MUCIN',
         sourceModel: `ncep_gfs_${resolution.code}_nomads`,
         run: run.iso,
-        parcelLayer: '255–0 mb sobre el suelo',
+        ...(product === 'reflectivity_1km'
+          ? { reflectivityLevel: '1000 m sobre el suelo' }
+          : { parcelLayer: '255–0 mb sobre el suelo' }),
         resolutionDegrees: resolution.degrees,
         displayResolutionDegrees: Math.max(
           (bounds.north - bounds.south) / Math.max(1, outputGrid.rows - 1),
@@ -385,8 +431,15 @@ module.exports = async function handler(req, res) {
         overview: resolution.scope === 'world',
         timeStepHours: resolution.stepHours,
         fallback: false,
-        cinAvailable: true
+        cinAvailable: product !== 'reflectivity_1km'
       },
+      diagnostics: product === 'reflectivity_1km' ? {
+        native: true,
+        derived: false,
+        sourceVariable: 'REFD',
+        level: '1000 m above ground',
+        units: 'dBZ'
+      } : undefined,
       bounds,
       grid: {
         rows: outputGrid.rows,
@@ -395,7 +448,7 @@ module.exports = async function handler(req, res) {
         stepLongitude: (bounds.east - bounds.west) / (outputGrid.columns - 1)
       },
       times,
-      points: outputGrid.points.map(point => compactPoint(point, frames))
+      points: outputGrid.points.map(point => compactPoint(point, frames, product))
     };
     RESPONSE_CACHE.set(cacheKey, { savedAt: Date.now(), payload });
     trimCache();
@@ -412,7 +465,7 @@ module.exports = async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     return res.status(502).json({
       ok: false,
-      error: `NOAA GFS no pudo servir ahora MUCAPE/MUCIN. ${String(error?.message || '')}`.trim(),
+      error: `NOAA GFS no pudo servir ahora ${product === 'reflectivity_1km' ? 'la reflectividad de base a 1 km' : 'MUCAPE/MUCIN'}. ${String(error?.message || '')}`.trim(),
       retryAfter: 120
     });
   }
