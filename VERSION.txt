@@ -1,3 +1,21 @@
+Meteo Aitor Bermeo v10.150 · capas NOAA estables y anomalía calculada a 850 hPa
+
+CAMBIO PRINCIPAL v10.150
+
+- MUCAPE y MUCIN comparten una petición sin que el cambio rápido de capa valide o guarde el campo equivocado.
+- La reutilización de la malla comprueba encuadre y resolución. Un zoom o movimiento durante la carga provoca una sola refinación posterior.
+- La aplicación respeta Retry-After de NOAA y elimina el doble intento inmediato que podía agravar un 429/5xx.
+- MUCAPE, MUCIN y reflectividad GFS a 1 km mantienen la última imagen válida mientras actualizan y recuperan las horas ausentes del deslizador.
+- Se añade «Anomalía de temperatura · 850 hPa», derivada de ECMWF IFS 0,25° frente a la normal diaria NOAA PSL/NCEP-NCAR Reanalysis 1 1991–2020 a 2,5°.
+- La anomalía muestra frío en azul, cero blanco/neutro y calor en amarillo, naranja y rojo; su densidad se limita para no superar el tiempo de ejecución.
+- Temperatura a 2 m, temperatura absoluta a 850 hPa y colores de lluvia permanecen intactos.
+- Se conservan las etiquetas legibles de localidades y el buscador de ciudad o pueblo.
+Fecha: 2026-08-17
+
+La caché PWA se renueva a v10.150.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.149 · MUCIN como la referencia, con fondo azul visible
 
 CAMBIO PRINCIPAL v10.149

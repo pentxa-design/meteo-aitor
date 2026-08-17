@@ -1,3 +1,18 @@
+VERSIÓN v10.150 · CAPAS NOAA ESTABLES Y ANOMALÍA CALCULADA A 850 hPa
+
+CAMBIO v10.150
+- MUCAPE y MUCIN comparten una sola petición sin carreras al cambiar rápidamente de capa.
+- Zoom, movimiento y buscador revalidan cobertura y detalle; si ocurren durante una descarga, se ejecuta una única actualización al terminar.
+- Se respeta el tiempo de espera indicado por NOAA y se evita duplicar peticiones inmediatas ante 429/5xx.
+- MUCAPE, MUCIN y reflectividad GFS a 1 km conservan la última malla válida mientras actualizan; el deslizador recupera una hora ausente sin vaciar el mapa.
+- Nueva capa independiente «Anomalía de temperatura · 850 hPa»: ECMWF IFS 0,25° menos normal diaria NOAA PSL/NCEP-NCAR R1 1991–2020 a 2,5°.
+- Paleta de anomalía: frío azul, cero blanco/neutro y calor amarillo, naranja y rojo. La densidad queda limitada para completar dentro del tiempo de Vercel.
+- Se mantienen sin cambios la temperatura a 2 m, la temperatura absoluta a 850 hPa y todos los colores de lluvia.
+- Los nombres de ciudades y pueblos continúan por encima de las capas y el buscador centra el mapa al pulsar Enter o «Ir».
+- Caché PWA renovada a v10.150.
+
+VERSIÓN ANTERIOR
+
 VERSIÓN v10.149 · MUCIN COMO LA REFERENCIA, CON FONDO AZUL VISIBLE
 
 CAMBIO v10.149

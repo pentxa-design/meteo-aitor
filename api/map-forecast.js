@@ -1,5 +1,6 @@
 const OPEN_METEO = 'https://api.open-meteo.com/v1/forecast';
 const MARINE_OPEN_METEO = 'https://marine-api.open-meteo.com/v1/marine';
+const { withTemperature850Anomaly } = require('../lib/t850-climatology');
 
 const MODELS = {
   ecmwf: { label: 'ECMWF IFS HRES · 9 km', candidates: ['ecmwf_ifs'] },
@@ -20,9 +21,11 @@ function modelForLayer(requested, layer) {
   // La temperatura a 850 hPa no se mezcla con el selector general. Open‑Meteo
   // la publica para ECMWF IFS 0,25° y esta ruta es una malla de puntos de ese
   // campo: si falla, se informa del fallo en lugar de cambiar a GFS/best_match.
-  if (layer === 't850') {
+  if (layer === 't850' || layer === 't850_anomaly') {
     return {
-      label: 'ECMWF IFS 0,25° · temperatura a 850 hPa · malla oficial muestreada',
+      label: layer === 't850_anomaly'
+        ? 'ECMWF IFS 0,25° · anomalía T850 frente a normal NOAA NCEP/NCAR 1991-2020'
+        : 'ECMWF IFS 0,25° · temperatura a 850 hPa · malla oficial muestreada',
       candidates: ['ecmwf_ifs025'],
       sourceResolutionDegrees: 0.25
     };
@@ -90,12 +93,14 @@ const LAYER_FIELDS = {
   cloud: ['cloud_cover', 'precipitation'],
   pressure: ['pressure_msl'],
   t850: ['temperature_850hPa'],
+  t850_anomaly: ['temperature_850hPa'],
   convection: ['cape', 'convective_inhibition'],
   thunderstorms: ['precipitation', 'cape', 'lightning_density'],
   marine: ['wave_height', 'wave_direction', 'wave_period', 'sea_surface_temperature']
 };
 
 function fieldsForLayer(bundle, requested = 'ecmwf', displayLayer = bundle) {
+  if (displayLayer === 't850' || displayLayer === 't850_anomaly') return LAYER_FIELDS.t850;
   if (ECMWF_ONLY_LAYERS.has(displayLayer)) return LAYER_FIELDS.thunderstorms;
   if (requested === 'arome') {
     if (['precipitation', 'forecast_reflectivity'].includes(displayLayer)) return ['precipitation'];
@@ -317,6 +322,7 @@ function compactPoint(result, fallbackPoint) {
       wind_gusts_10m: hourly.wind_gusts_10m || [],
       pressure_msl: hourly.pressure_msl || [],
       temperature_850hPa: hourly.temperature_850hPa || [],
+      temperature_850hPa_anomaly: hourly.temperature_850hPa_anomaly || [],
       cape: hourly.cape || [],
       lightning_density: hourly.lightning_density || [],
       convective_inhibition: cin,
@@ -342,6 +348,10 @@ function boundsOverlapScore(a, b) {
   return (lat * lon / smaller) * scale;
 }
 
+function isT850Layer(displayLayer) {
+  return displayLayer === 't850' || displayLayer === 't850_anomaly';
+}
+
 function closestStalePayload(requested, layer, displayLayer, bounds, minimumRows = 0) {
   let best = null;
   for (const entry of RESPONSE_CACHE.values()) {
@@ -350,7 +360,7 @@ function closestStalePayload(requested, layer, displayLayer, bounds, minimumRows
       entry.payload.bundle !== layer ||
       entry.payload.displayLayer !== displayLayer ||
       entry.payload.model?.requested !== requested ||
-      (displayLayer === 't850' && entry.payload.model?.sourceModel !== 'ecmwf_ifs025') ||
+      (isT850Layer(displayLayer) && entry.payload.model?.sourceModel !== 'ecmwf_ifs025') ||
       Number(entry.payload.grid?.rows || 0) < minimumRows
     ) continue;
     const score = boundsOverlapScore(bounds, entry.payload.bounds);
@@ -388,7 +398,8 @@ module.exports = async function handler(req, res) {
   const layer = String(req.query?.layer || 'thermo').toLowerCase();
   const displayLayer = String(req.query?.displayLayer || layer).toLowerCase();
   const ecmwfOnlyRequested = ECMWF_ONLY_LAYERS.has(displayLayer);
-  const t850Requested = displayLayer === 't850';
+  const t850AnomalyRequested = displayLayer === 't850_anomaly';
+  const t850Requested = isT850Layer(displayLayer);
   if (requested === 'arome' && !ecmwfOnlyRequested && !t850Requested && !AROME_LAYERS.has(displayLayer)) {
     return res.status(422).json({ ok: false, error: 'AROME HD no publica esta capa en la salida utilizada; no se sustituye por otro modelo.' });
   }
@@ -427,6 +438,17 @@ module.exports = async function handler(req, res) {
     let { result: locations, sourceModel } = forecast;
     if (t850Requested && sourceModel !== 'ecmwf_ifs025') {
       throw new Error('La temperatura a 850 hPa solo admite ECMWF IFS 0,25°; no se sustituye por otro modelo.');
+    }
+    if (t850AnomalyRequested) {
+      locations = locations.map((location, index) => withTemperature850Anomaly(location, requestPoints[index]));
+      const anomalyAvailable = locations.some(location =>
+        location?.hourly?.temperature_850hPa_anomaly?.some(value =>
+          value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
+        )
+      );
+      if (!anomalyAvailable) {
+        throw new Error('No se pudo calcular la anomalía T850 con la malla ECMWF y la normal NOAA 1991-2020.');
+      }
     }
     if (cinRequested && cinAvailable) {
       cinAvailable = locations.some(location =>
@@ -477,11 +499,19 @@ module.exports = async function handler(req, res) {
         fallback: !marineRequested && sourceModel === 'best_match',
         sampled: t850Requested,
         sampledFallback: false,
-        provider: marineRequested ? 'Open-Meteo Marine' : t850Requested ? 'Open‑Meteo / ECMWF' : 'Open-Meteo',
+        provider: marineRequested
+          ? 'Open-Meteo Marine'
+          : t850AnomalyRequested
+            ? 'Open‑Meteo / ECMWF + NOAA PSL'
+            : t850Requested
+              ? 'Open‑Meteo / ECMWF'
+              : 'Open-Meteo',
         resolution: marineRequested
           ? 'Mejor modelo marino disponible'
           : t850Requested
-            ? `Fuente ECMWF IFS 0,25° · visualización muestreada ${displayResolutionLabel}`
+            ? t850AnomalyRequested
+              ? `Pronóstico ECMWF IFS 0,25° · normal NOAA 2,5° interpolada · visualización muestreada ${displayResolutionLabel}`
+              : `Fuente ECMWF IFS 0,25° · visualización muestreada ${displayResolutionLabel}`
             : effectiveRequested === 'arome'
               ? 'AROME France HD 0.01° · 1,5 km'
               : effectiveRequested === 'gfs'
@@ -490,6 +520,7 @@ module.exports = async function handler(req, res) {
                   ? 'ICON seamless'
                   : 'ECMWF IFS HRES',
         sourceResolutionDegrees: t850Requested ? model.sourceResolutionDegrees : undefined,
+        normalResolutionDegrees: t850AnomalyRequested ? 2.5 : undefined,
         displayResolutionDegrees
       },
       diagnostics: displayLayer === 'forecast_reflectivity'
@@ -498,6 +529,27 @@ module.exports = async function handler(req, res) {
           ? { native: true, derived: false, sourceVariable: displayLayer === 'electric_storms' ? 'cape' : 'precipitation', supportVariable: 'cape', lightningVariable: 'lightning_density', lightningAvailable, interval: displayLayer === 'electric_storms' ? 'instantaneous' : 'preceding_hour_sum', units: displayLayer === 'electric_storms' ? 'J/kg' : 'mm', phenomenon: displayLayer === 'electric_storms' ? 'ECMWF CAPE; convective potential, not observed lightning' : 'ECMWF precipitation plus CAPE; lightning density is optional and observed lightning remains on official AEMET/Euskalmet layers' }
         : displayLayer === 'precipitation_3h'
           ? { native: false, derived: true, sourceVariable: 'precipitation', interval: 'three-hour-forward-sum', units: 'mm', samples: 3 }
+        : displayLayer === 't850_anomaly'
+          ? {
+            native: false,
+            derived: true,
+            sampled: true,
+            sourceVariable: 'temperature_850hPa',
+            sourceModel: 'ecmwf_ifs025',
+            forecastProvider: 'Open-Meteo Forecast API / ECMWF IFS',
+            normalProvider: 'NOAA PSL / NCEP/NCAR Reanalysis 1',
+            normalPeriod: '1991-2020',
+            normalVariable: 'air',
+            normalLevelHpa: 850,
+            sourceResolutionDegrees: model.sourceResolutionDegrees,
+            normalResolutionDegrees: 2.5,
+            displayResolutionDegrees,
+            units: '°C',
+            formula: 'forecast_temperature_850hPa_celsius - daily_climatology_850hPa_celsius',
+            climatologyInterpolation: 'bilinear on the NOAA 2.5-degree grid',
+            leapDay: 'mean of February 28 and March 1',
+            climatologyDelivery: 'bundled static gzip; memory-cached; no NOAA request during pan, zoom or slider'
+          }
         : displayLayer === 't850'
           ? { native: false, derived: false, sampled: true, sourceVariable: 'temperature_850hPa', sourceModel: 'ecmwf_ifs025', sourceResolutionDegrees: model.sourceResolutionDegrees, displayResolutionDegrees, units: '°C', interpolation: 'solo visual; los valores de origen no se alteran' }
         : displayLayer === 'cape'
@@ -549,7 +601,7 @@ module.exports = async function handler(req, res) {
     if (rateLimited) res.setHeader('Retry-After', dailyLimited ? '3600' : '60');
     return res.status(rateLimited ? 429 : 502).json({
       ok: false,
-      source: 'Open‑Meteo',
+      source: t850AnomalyRequested ? 'Open‑Meteo / ECMWF + NOAA PSL' : 'Open‑Meteo',
       retryAfter: dailyLimited ? 3600 : 60,
       error: rateLimited
         ? (dailyLimited

@@ -19,7 +19,8 @@
       "maxDuration": 10
     },
     "api/map-forecast.js": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "data/t850-climatology-1991-2020.u16.gz"
     },
     "api/map-mu.js": {
       "maxDuration": 30
