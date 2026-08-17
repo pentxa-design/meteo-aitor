@@ -1,3 +1,33 @@
+Meteo Aitor Bermeo v10.148 · MUCIN estable al ampliar y color saturado
+Fecha: 2026-08-17
+
+Todas las capas conservan su última imagen válida de la misma variable y
+modelo mientras el zoom o el deslizador solicitan una nueva hora o cobertura.
+La nubosidad tampoco baja ya a opacidad cero al comenzar el zoom. No se cambia
+la escala, el color ni la intensidad de la lluvia.
+
+Los nombres de ciudades y pueblos usan una sola cartografía de referencia por
+encima del campo meteorológico. Se elimina la superposición de dos juegos de
+rótulos que los duplicaba y deformaba al ampliar.
+
+El propio mapa incorpora un buscador de ciudad o pueblo junto a los controles.
+Al pulsar Enter o «Ir», centra el mapa, acerca la vista y marca la localidad sin
+cambiar la capa meteorológica activa.
+
+MUCAPE y MUCIN conservan la malla NOAA GFS válida cuando el usuario amplía
+dentro del área que ya cubre. El zoom actualiza cifras, pueblos y contornos,
+pero no repite la descarga ni oculta MUCIN si NOAA tarda en responder. Cuando
+se necesita una cobertura realmente mayor, la última malla válida permanece
+visible durante la actualización.
+
+MUCIN adopta la paleta saturada de referencia: azul/gris para la inhibición
+fuerte, granate para la intermedia y rojo/naranja cerca de 0 J/kg. Los valores
+NOAA, el signo, los contornos y las etiquetas territoriales no se modifican.
+
+La caché PWA se renueva a v10.148.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.146 · nubes suavizadas y lluvia menos dominante
 Fecha: 2026-08-17
 

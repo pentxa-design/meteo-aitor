@@ -1,3 +1,22 @@
+VERSIÓN v10.148 · MUCIN ESTABLE AL AMPLIAR Y COLOR SATURADO
+
+- Todas las capas conservan la última imagen válida al mover la hora o hacer
+  zoom; nubosidad tampoco parpadea ni baja a cero durante la ampliación.
+- Los nombres de ciudades y pueblos quedan en una única capa nítida por encima
+  del mapa, sin rótulos duplicados al acercar.
+- Nuevo buscador dentro del mapa: escribe ciudad o pueblo y pulsa Enter o Ir
+  para centrar y marcar el lugar sin cambiar la capa activa.
+- El color, la escala y la intensidad de la lluvia no se modifican.
+- MUCAPE y MUCIN reutilizan la malla NOAA GFS completa mientras cubra el
+  encuadre; el zoom ya no repite la descarga ni deja MUCIN offline.
+- Si hace falta una cobertura mayor, permanece visible la última malla válida
+  mientras se actualiza.
+- MUCIN usa azul/gris, granate, rojo y naranja más saturados, manteniendo por
+  encima pueblos, fronteras, contornos y valores NOAA originales.
+- Caché PWA renovada a v10.148.
+
+VERSIÓN ANTERIOR
+
 VERSIÓN v10.136 · MAR AZUL CIELO EN NUBOSIDAD
 
 - El mar de la capa de nubosidad usa un azul cielo más marcado para que las
