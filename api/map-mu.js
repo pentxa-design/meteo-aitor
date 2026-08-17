@@ -5,10 +5,12 @@ const NOAA_FILTER_ROOT = 'https://nomads.ncep.noaa.gov/cgi-bin';
 const HOUR_MS = 60 * 60 * 1000;
 const FRAME_HOURS = 24;
 const REFLECTIVITY_OVERVIEW_STEP_HOURS = 3;
+const CONVECTION_OVERVIEW_STEP_HOURS = 3;
 const FETCH_TIMEOUT = 10000;
 const FETCH_CONCURRENCY = 6;
+const FETCH_ATTEMPTS = 2;
 const CACHE_TTL = 15 * 60 * 1000;
-const MAX_STALE_AGE = 2 * 60 * 60 * 1000;
+const MAX_STALE_AGE = 6 * 60 * 60 * 1000;
 const DETAIL_LATITUDE_SPAN = 12;
 const DETAIL_LONGITUDE_SPAN = 20;
 const WIDE_LATITUDE_SPAN = 30;
@@ -39,9 +41,9 @@ function runIdentity(runTime) {
 }
 
 function candidateRuns(now = Date.now()) {
-  // Se usa una pasada con al menos cinco horas de antigüedad: así NOAA ya ha
-  // publicado tanto la hora actual como las 24 horas posteriores. Si todavía
-  // faltase algún fichero, se prueba la pasada anterior sin mezclar modelos.
+  // Se usa una pasada con al menos cinco horas de antigüedad. Si todavía
+  // faltase algún fichero inmediato, se prueba la pasada anterior sin mezclar
+  // modelos ni horas de distintas ejecuciones.
   const delayed = new Date(now - 5 * HOUR_MS);
   delayed.setUTCMinutes(0, 0, 0);
   delayed.setUTCHours(Math.floor(delayed.getUTCHours() / 6) * 6);
@@ -64,12 +66,21 @@ function gridResolution(bounds) {
 }
 
 function resolutionForProduct(resolution, product) {
-  if (product !== 'reflectivity_1km' || resolution.scope === 'detail') return resolution;
-  // La reflectividad continental de 0,25° conserva los nodos oficiales de
-  // NOAA, pero una película horaria de 25 GRIB bloquea la primera imagen en
-  // una función fría. Nueve plazos exactos cada 3 h cubren las mismas 24 h y
-  // dejan el paso horario únicamente para el zoom de detalle.
-  return { ...resolution, stepHours: REFLECTIVITY_OVERVIEW_STEP_HOURS };
+  if (resolution.scope === 'detail') return resolution;
+  if (product === 'reflectivity_1km') {
+    // La reflectividad continental de 0,25° conserva los nodos oficiales de
+    // NOAA, pero una película horaria de 25 GRIB bloquea la primera imagen en
+    // una función fría. Nueve plazos exactos cada 3 h cubren las mismas 24 h.
+    return { ...resolution, stepHours: REFLECTIVITY_OVERVIEW_STEP_HOURS };
+  }
+  if (product === 'convection') {
+    // MUCAPE y MUCIN viajan juntos en cada GRIB. En la vista europea, pedir 25
+    // plazos horarios duplica más de 430.000 valores y puede superar el tiempo
+    // de la primera carga. Nueve plazos NOAA exactos cubren las mismas 24 h;
+    // el zoom de detalle conserva la evolución horaria.
+    return { ...resolution, stepHours: CONVECTION_OVERVIEW_STEP_HOURS };
+  }
+  return resolution;
 }
 
 function canonicalRegionalBounds(center, resolution) {
@@ -149,23 +160,34 @@ function noaaUrl(run, forecastHour, bounds, resolution, product = 'convection') 
 }
 
 async function fetchBuffer(url, timeout = FETCH_TIMEOUT) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: { Accept: 'application/octet-stream' }
-    });
-    const buffer = Buffer.from(await response.arrayBuffer());
-    if (!response.ok || buffer.length < 32 || buffer.toString('ascii', 0, 4) !== 'GRIB') {
-      const error = new Error(`NOAA NOMADS respondió HTTP ${response.status}`);
-      error.statusCode = response.status;
-      throw error;
+  let lastError;
+  for (let attempt = 0; attempt < FETCH_ATTEMPTS; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: { Accept: 'application/octet-stream' }
+      });
+      const buffer = Buffer.from(await response.arrayBuffer());
+      if (!response.ok || buffer.length < 32 || buffer.toString('ascii', 0, 4) !== 'GRIB') {
+        const error = new Error(`NOAA NOMADS respondió HTTP ${response.status}`);
+        error.statusCode = response.status;
+        throw error;
+      }
+      return buffer;
+    } catch (error) {
+      lastError = error;
+      const status = Number(error?.statusCode);
+      const transient = error?.name === 'AbortError' || error instanceof TypeError ||
+        status === 408 || status === 425 || status === 429 || status >= 500;
+      if (!transient || attempt + 1 >= FETCH_ATTEMPTS) throw error;
+      await new Promise(resolve => setTimeout(resolve, 250 * (attempt + 1)));
+    } finally {
+      clearTimeout(timer);
     }
-    return buffer;
-  } finally {
-    clearTimeout(timer);
   }
+  throw lastError || new Error('NOAA NOMADS no respondió.');
 }
 
 function parsedMessage(buffer) {
@@ -238,14 +260,12 @@ async function selectRun(bounds, resolution, product = 'convection') {
     const currentHour = resolution.stepHours > 1
       ? Math.floor(elapsedHours / resolution.stepHours) * resolution.stepHours
       : elapsedHours;
-    // Para REFD basta validar tres plazos consecutivos de la misma pasada.
-    // Exigir aquí el extremo +24 h hacía fallar toda la capa cuando NOAA
-    // estaba terminando de publicar la pasada, aunque las horas inmediatas
-    // ya fuesen válidas. fetchFrames conserva después todos los plazos que
-    // realmente estén disponibles, siempre sin mezclar pasadas.
-    const probeSpan = product === 'reflectivity_1km'
-      ? resolution.stepHours * 2
-      : FRAME_HOURS;
+    // Basta validar el inicio y el final de los tres primeros plazos de una
+    // misma pasada. Exigir aquí el extremo +24 h hacía fallar MUCAPE/MUCIN
+    // cuando NOAA estaba terminando de publicar la ejecución, aunque las horas
+    // inmediatas ya fuesen válidas. fetchFrames conserva después todos los
+    // plazos disponibles sin mezclar pasadas.
+    const probeSpan = resolution.stepHours * 2;
     const finalHour = currentHour + probeSpan;
     try {
       const [current, final] = await Promise.all([
@@ -258,19 +278,12 @@ async function selectRun(bounds, resolution, product = 'convection') {
       return null;
     }
   };
-  if (product === 'reflectivity_1km') {
-    // Las tres pasadas se comprueban a la vez. Si NOMADS está terminando una
-    // publicación o un archivo puntual tarda, la app puede usar enseguida la
-    // pasada completa anterior sin encadenar tres esperas de 10 segundos.
-    const attempts = await Promise.all(runs.map(probeRun));
-    const selected = attempts.find(Boolean);
-    if (selected) return selected;
-  } else {
-    for (const run of runs) {
-      const selected = await probeRun(run);
-      if (selected) return selected;
-    }
-  }
+  // Las tres pasadas se comprueban a la vez. Si NOMADS está terminando una
+  // publicación o un archivo puntual tarda, MUCAPE/MUCIN y REFD pueden usar
+  // enseguida la pasada completa anterior sin encadenar tres esperas de 10 s.
+  const attempts = await Promise.all(runs.map(probeRun));
+  const selected = attempts.find(Boolean);
+  if (selected) return selected;
   throw lastError || new Error('NOAA no publicó todavía una pasada GFS completa.');
 }
 
@@ -289,9 +302,10 @@ async function fetchFrames(run, offsets, bounds, probes, resolution, product = '
       }
     }
   }
-  const concurrency = product === 'reflectivity_1km'
-    ? Math.min(9, offsets.length)
-    : Math.min(FETCH_CONCURRENCY, offsets.length);
+  const concurrency = Math.min(
+    resolution.scope === 'detail' ? FETCH_CONCURRENCY : 9,
+    offsets.length
+  );
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
   return results.filter(Boolean);
 }
@@ -424,7 +438,7 @@ module.exports = async function handler(req, res) {
   ].join('|');
   const cached = RESPONSE_CACHE.get(cacheKey);
   if (cached && Date.now() - cached.savedAt < CACHE_TTL) {
-    res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=900');
+    res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=21600, stale-if-error=21600');
     res.setHeader('X-Map-Cache', 'HIT');
     return res.status(200).json(responseForRequestedLayer(cached.payload, focus, product, displayLayer));
   }
@@ -495,13 +509,13 @@ module.exports = async function handler(req, res) {
     };
     RESPONSE_CACHE.set(cacheKey, { savedAt: Date.now(), payload });
     trimCache();
-    res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=900');
+    res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=21600, stale-if-error=21600');
     res.setHeader('X-Map-Cache', 'MISS');
     return res.status(200).json(responseForRequestedLayer(payload, focus, product, displayLayer));
   } catch (error) {
     const stale = RESPONSE_CACHE.get(cacheKey);
     if (stale && Date.now() - stale.savedAt < MAX_STALE_AGE) {
-      res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=900');
+      res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=21600, stale-if-error=21600');
       res.setHeader('X-Map-Cache', 'STALE');
       return res.status(200).json({ ...responseForRequestedLayer(stale.payload, focus, product, displayLayer), stale: true });
     }

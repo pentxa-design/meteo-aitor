@@ -1,3 +1,35 @@
+Meteo Aitor Bermeo v10.144 · MUCAPE y MUCIN GFS estables
+Fecha: 2026-08-17
+
+Las capas MUCAPE y MUCIN conservan los dos campos oficiales de NOAA GFS del
+nivel 255–0 mb sobre el suelo. En las vistas mundial y europea cargan nueve
+plazos exactos cada 3 horas para cubrir 24 horas sin bloquear la primera imagen;
+el zoom de detalle mantiene los plazos horarios. Las pasadas GFS se comprueban
+en paralelo y ya no dependen de que NOAA haya publicado el extremo +24 h. Las
+descargas NOAA reintentan los fallos transitorios, conservan una caché segura y
+el cliente realiza un segundo intento silencioso antes de mostrar «sin datos».
+La PWA guarda además hasta doce respuestas válidas de MUCAPE, MUCIN y
+reflectividad 1 km en el dispositivo. Si la red o NOAA fallan después, mantiene
+la copia con su hora de origen visible y reintenta la actualización; nunca la
+presenta como una pasada nueva.
+
+La PWA se recarga automáticamente cuando entra una versión nueva, evitando que
+una ventana reanudada siga ejecutando el visor anterior. Nubosidad mantiene la
+composición ya existente de nube blanca/gris y precipitación ECMWF continua de
+la misma pasada y hora, coloreada como reflectividad estimada. Esa tesela de
+lluvia pasa a ser obligatoria para dar por completa la composición y muestra
+también las trazas útiles desde 0,05 mm en vista continental, en verde.
+
+Los mapas son previsiones de modelos, no una autorización de seguridad para
+trabajos en altura. Fuente, modelo y hora permanecen visibles para poder
+contrastarlos con AEMET, Euskalmet, radar/rayos observados y medición local.
+
+No cambia ninguna otra capa ni se sustituye GFS por otro modelo.
+
+La caché PWA se renueva a v10.144.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.143 · reflectividad GFS 1 km estable
 Fecha: 2026-08-17
 
