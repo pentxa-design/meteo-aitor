@@ -1,4 +1,11 @@
-VERSIÓN v10.148 · MUCIN ESTABLE AL AMPLIAR Y COLOR SATURADO
+VERSIÓN v10.149 · MUCIN COMO LA REFERENCIA, CON FONDO AZUL VISIBLE
+
+CAMBIO v10.149
+- MUCIN conserva los valores NOAA, pero el relleno solo aparece donde existe parcela convectiva MUCAPE/MUCIN.
+- El mar y las zonas sin señal quedan transparentes y muestran el azul del mapa base; se elimina el aspecto rojo/magenta uniforme.
+- La escala mantiene azul/gris en inhibición fuerte, granate en la intermedia y rojo/naranja cerca de 0 J/kg, como en la referencia aportada.
+- La primera carga MUCAPE/MUCIN hace un segundo intento inmediato ante un fallo transitorio del servidor antes de mostrar «sin datos».
+- No se modifica ningún color ni comportamiento de las capas de lluvia.
 
 - Todas las capas conservan la última imagen válida al mover la hora o hacer
   zoom; nubosidad tampoco parpadea ni baja a cero durante la ampliación.
@@ -13,7 +20,7 @@ VERSIÓN v10.148 · MUCIN ESTABLE AL AMPLIAR Y COLOR SATURADO
   mientras se actualiza.
 - MUCIN usa azul/gris, granate, rojo y naranja más saturados, manteniendo por
   encima pueblos, fronteras, contornos y valores NOAA originales.
-- Caché PWA renovada a v10.148.
+- Caché PWA renovada a v10.149.
 
 VERSIÓN ANTERIOR
 

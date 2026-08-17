@@ -1,4 +1,12 @@
-Meteo Aitor Bermeo v10.148 · MUCIN estable al ampliar y color saturado
+Meteo Aitor Bermeo v10.149 · MUCIN como la referencia, con fondo azul visible
+
+CAMBIO PRINCIPAL v10.149
+
+- El campo MUCIN mantiene los J/kg oficiales de NOAA y usa MUCAPE únicamente como máscara de presencia convectiva.
+- Fuera de esa parcela, el campo queda transparente: el mar recupera el azul del mapa base y desaparece el rojo mundial uniforme.
+- La escala visual sigue la referencia: azul/gris para inhibición fuerte, granate para intermedia y rojo/naranja al acercarse a 0 J/kg.
+- Ante un 429/5xx transitorio de /api/map-mu, la aplicación realiza un segundo intento inmediato antes de declarar la capa sin datos.
+- Las capas y colores de lluvia no cambian.
 Fecha: 2026-08-17
 
 Todas las capas conservan su última imagen válida de la misma variable y
@@ -24,7 +32,7 @@ MUCIN adopta la paleta saturada de referencia: azul/gris para la inhibición
 fuerte, granate para la intermedia y rojo/naranja cerca de 0 J/kg. Los valores
 NOAA, el signo, los contornos y las etiquetas territoriales no se modifican.
 
-La caché PWA se renueva a v10.148.
+La caché PWA se renueva a v10.149.
 
 VERSIÓN ANTERIOR
 
