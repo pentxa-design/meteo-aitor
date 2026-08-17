@@ -1,3 +1,17 @@
+Meteo Aitor Bermeo v10.145 · nubes y precipitación coloreada
+Fecha: 2026-08-17
+
+Nubosidad combina la nube blanca/gris con una única tesela de precipitación
+ECMWF de la misma pasada y hora. La escala de lluvia se convierte directamente
+a sus colores equivalentes en dBZ mediante Z=200·R^1,6. Así la precipitación
+desde 0,12 mm/h aparece en verde y las intensidades superiores avanzan por amarillo,
+naranja, rojo y magenta, aunque el dato ya estuviera guardado por otra capa.
+Se elimina la lectura duplicada que podía dejar transparente el color.
+
+La caché PWA se renueva a v10.145.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.144 · MUCAPE y MUCIN GFS estables
 Fecha: 2026-08-17
 

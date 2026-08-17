@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.144" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.145" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -516,7 +516,7 @@
     .mapAitor.mapBaseStandard[data-map-layer="cape"] .mapFieldOverlay{filter:saturate(1.72) contrast(1.28) brightness(.96)}
     .mapAitor.mapBaseStandard[data-map-layer="cin"] .mapNativeWeatherTile,
     .mapAitor.mapBaseStandard[data-map-layer="cin"] .mapFieldOverlay{filter:saturate(1.28) contrast(1.22) brightness(.99)}
-    /* v10.144 · En nubosidad no se mezcla la cartografía con el fondo azul:
+    /* v10.145 · En nubosidad no se mezcla la cartografía con el fondo azul:
        esa composición convertía blancos y grises en un velo verde/cian. La
        base conserva su mar azul y la tesela meteorológica aporta solamente
        los blancos/grises de cobertura; la lluvia de la misma hora conserva
@@ -2680,9 +2680,14 @@ function mapNativeAdapter(kind='standard'){
   const library=window.OMWeatherMapLayer;if(!library?.addLeafletProtocolSupport||!library?.omProtocol)throw new Error('El motor de teselas meteorológicas no se cargó.');
   const defaults=library.defaultOmProtocolSettings,settings={...defaults,colorScales:{...(defaults?.colorScales||{})}};
   if(kind==='reflectivity'||kind==='cloud_reflectivity'){
-    const config=MAP_LAYERS.forecast_reflectivity;
-    settings.colorScales.precipitation={type:'breakpoint',unit:'dBZ',breakpoints:[0,...config.scale],colors:[[0,0,0,0],...config.colors.map((color,index)=>mapNativeRgba(color,Math.min(1,.68+index*.025)))]};
-    settings.postReadCallback=(_reader,data)=>{if(data?.values){const zoom=mapAitorState.map?.getZoom()||5,cloudOverlay=kind==='cloud_reflectivity',cutoff=cloudOverlay?(zoom<=4?.10:zoom<=6?.05:.03):(zoom<=4?.25:zoom<=6?.18:.08);data.values=data.values.map(value=>{const rain=Math.max(0,Number(value)||0),dbz=rain<cutoff?0:Math.max(0,10*Math.log10(200*Math.pow(rain,1.6)));if(cloudOverlay)return dbz<3?0:Math.max(5,dbz);return dbz<8?0:dbz})}};
+    const config=MAP_LAYERS.forecast_reflectivity,cloudOverlay=kind==='cloud_reflectivity',minimumRain=cloudOverlay?.12:.08;
+    // El motor espacial comparte internamente la lectura de una variable entre
+    // capas. Convertir el array mediante postReadCallback dejaba transparente
+    // la reflectividad cuando "precipitation" ya estaba en caché. La escala
+    // se expresa directamente en mm/h equivalentes a cada dBZ (Z=200·R^1,6),
+    // así el color siempre se aplica al dato real, cargado o reutilizado.
+    const rainBreakpoints=config.scale.map((dbz,index)=>index===0?minimumRain:Math.pow(Math.pow(10,dbz/10)/200,1/1.6));
+    settings.colorScales.precipitation={type:'breakpoint',unit:'mm/h · equivalente dBZ',breakpoints:[0,...rainBreakpoints],colors:[[0,0,0,0],...config.colors.map((color,index)=>mapNativeRgba(color,Math.min(1,(cloudOverlay?.62:.72)+index*.025)))]};
   }else if(kind==='cloud'){
     // Cielo despejado transparente. La cobertura débil se muestra blanca y
     // la nube más cerrada pasa progresivamente a gris usando exclusivamente
@@ -2784,8 +2789,8 @@ function mapNativeLayerSpecs(layer,model=mapAitorState.model){
   if(layer==='precipitation_15m')return[{variable:'precipitation',factor:.82,kind:'rain_15m'}];
   // La precipitación de la misma fuente, pasada y hora se superpone como
   // reflectividad continua estimada, conservando la nube blanca/gris debajo.
-  if(layer==='cloud'&&model==='arome')return[{variable:'cloud_cover_low',factor:.70,kind:'cloud'},{variable:'cloud_cover_mid',factor:.76,kind:'cloud'},{variable:'cloud_cover_high',factor:.82,kind:'cloud'},{variable:'precipitation',factor:.72,kind:'cloud_rain_arome',optional:true},{variable:'precipitation',factor:.94,kind:'cloud_reflectivity'}];
-  if(layer==='cloud')return[{variable:'cloud_cover',factor:.92,kind:'cloud'},{variable:'precipitation',factor:.72,kind:'cloud_rain',optional:true},{variable:'precipitation',factor:.94,kind:'cloud_reflectivity'}];
+  if(layer==='cloud'&&model==='arome')return[{variable:'cloud_cover_low',factor:.70,kind:'cloud'},{variable:'cloud_cover_mid',factor:.76,kind:'cloud'},{variable:'cloud_cover_high',factor:.82,kind:'cloud'},{variable:'precipitation',factor:.90,kind:'cloud_reflectivity'}];
+  if(layer==='cloud')return[{variable:'cloud_cover',factor:.92,kind:'cloud'},{variable:'precipitation',factor:.90,kind:'cloud_reflectivity'}];
   if(layer==='temperature')return[{variable:'temperature_2m',factor:.98,kind:'temperature'}];
   if(layer==='thunderstorms')return[{variable:'precipitation',factor:.82,kind:'rain'},{variable:'cape',factor:.24,kind:'cape',optional:true}];
   if(layer==='electric_storms')return[{variable:'cape',factor:.78,kind:'cape'}];
@@ -5127,7 +5132,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(serviceWorkerReloading)return;serviceWorkerReloading=true;location.reload()});
   window.addEventListener('load',async()=>{
     try{
-      const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.144',{updateViaCache:'none'});
+      const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.145',{updateViaCache:'none'});
       await registration.update();
     }catch(_){}
   });
