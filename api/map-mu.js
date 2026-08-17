@@ -3,6 +3,7 @@ const rain3hHandler = require('../lib/map-rain3h');
 
 const NOAA_FILTER_ROOT = 'https://nomads.ncep.noaa.gov/cgi-bin';
 const HOUR_MS = 60 * 60 * 1000;
+const DATA_REVISION = '10.151';
 const FRAME_HOURS = 24;
 const REFLECTIVITY_OVERVIEW_STEP_HOURS = 3;
 const CONVECTION_OVERVIEW_STEP_HOURS = 3;
@@ -41,13 +42,13 @@ function runIdentity(runTime) {
 }
 
 function candidateRuns(now = Date.now()) {
-  // Se usa una pasada con al menos cinco horas de antigüedad. Si todavía
-  // faltase algún fichero inmediato, se prueba la pasada anterior sin mezclar
-  // modelos ni horas de distintas ejecuciones.
-  const delayed = new Date(now - 5 * HOUR_MS);
-  delayed.setUTCMinutes(0, 0, 0);
-  delayed.setUTCHours(Math.floor(delayed.getUTCHours() / 6) * 6);
-  return [0, 1, 2].map(index => new Date(delayed.getTime() - index * 6 * HOUR_MS));
+  // Se prueba primero la pasada programada más reciente. selectRun confirma que
+  // NOAA ya publicó los campos necesarios y solo entonces la utiliza; si está
+  // incompleta, continúa automáticamente con la anterior.
+  const latest = new Date(now);
+  latest.setUTCMinutes(0, 0, 0);
+  latest.setUTCHours(Math.floor(latest.getUTCHours() / 6) * 6);
+  return [0, 1, 2].map(index => new Date(latest.getTime() - index * 6 * HOUR_MS));
 }
 
 function gridResolution(bounds) {
@@ -254,7 +255,7 @@ async function selectRun(bounds, resolution, product = 'convection') {
   let lastError;
   const runs = candidateRuns(now);
   const probeRun = async run => {
-    const elapsedHours = Math.max(0, Math.round((now - run.getTime()) / HOUR_MS));
+    const elapsedHours = Math.max(0, Math.floor((now - run.getTime()) / HOUR_MS));
     // NOAA publica la rejilla de 1° cada tres horas. Se toma el último plazo
     // ya válido; la malla regional de 0,25° conserva sus pasos horarios.
     const currentHour = resolution.stepHours > 1
@@ -323,7 +324,11 @@ function gridIndex(frame, latitude, longitude) {
 
 function validFieldValue(value) {
   const numeric = Number(value);
-  return Number.isFinite(numeric) && Math.abs(numeric) < 100000 ? numeric : null;
+  if (!Number.isFinite(numeric) || Math.abs(numeric) >= 100000) return null;
+  // GRIB2 usa valores IEEE diminutos y no nulos como sentinela de dato ausente.
+  // El cero exacto sí es un valor meteorológico válido y se conserva.
+  if (numeric !== 0 && Math.abs(numeric) < 1e-20) return null;
+  return numeric;
 }
 
 function compactPoint(point, frames, product = 'convection') {
@@ -344,8 +349,9 @@ function compactPoint(point, frames, product = 'convection') {
     const index = gridIndex(item.frame, point.latitude, point.longitude);
     const capeValue = validFieldValue(item.frame.cape[index]);
     const cinValue = validFieldValue(item.frame.cin[index]);
+    const capeUsable = capeValue !== null && capeValue > 0;
     cape.push(capeValue === null ? null : Math.max(0, capeValue));
-    cin.push(cinValue === null ? null : -Math.abs(cinValue));
+    cin.push(!capeUsable || cinValue === null ? null : -Math.abs(cinValue));
   }
   return {
     latitude: point.latitude,
@@ -395,6 +401,7 @@ module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('X-Map-Data-Revision', DATA_REVISION);
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ ok: false, error: 'Método no permitido' });
@@ -430,6 +437,7 @@ module.exports = async function handler(req, res) {
   const density = clamp(req.query?.density, 6, 18, 18);
   const outputGrid = grid(bounds, density, resolution);
   const cacheKey = [
+    DATA_REVISION,
     product,
     resolution.code, resolution.scope,
     density,
@@ -458,6 +466,7 @@ module.exports = async function handler(req, res) {
     const run = runIdentity(selected.run);
     const payload = {
       ok: true,
+      dataRevision: DATA_REVISION,
       generatedAt: new Date().toISOString(),
       transport: 'noaa-nomads-grib2',
       bundle: product === 'reflectivity_1km' ? 'reflectivity_1km' : 'convection',
@@ -527,3 +536,5 @@ module.exports = async function handler(req, res) {
     });
   }
 };
+
+module.exports.__test = { candidateRuns, validFieldValue, parseFrame, compactPoint, gridIndex };

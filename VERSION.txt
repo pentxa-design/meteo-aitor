@@ -1,3 +1,18 @@
+Meteo Aitor Bermeo v10.151 · MUCIN NOAA validado con MUCAPE
+
+CAMBIO PRINCIPAL v10.151
+
+- La app prueba primero la pasada GFS más reciente y retrocede automáticamente solo si NOAA aún no la ha publicado completa.
+- Los sentinelas GRIB2 de dato ausente ya no se aceptan como MUCAPE.
+- MUCIN solo se muestra si la misma celda y hora contiene MUCAPE NOAA positivo, evitando falsos valores extremos sobre zonas sin parcela convectiva.
+- El plazo de pronóstico se redondea hacia abajo para no pedir una hora futura aún sin publicar.
+- Paletas, lluvia, T2m, T850 absoluta y anomalía T850 permanecen intactas.
+Fecha: 2026-08-18
+
+La caché PWA/API se renueva a v10.151.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.150 · capas NOAA estables y anomalía calculada a 850 hPa
 
 CAMBIO PRINCIPAL v10.150

@@ -1,3 +1,15 @@
+VERSIÓN v10.151 · MUCIN NOAA VALIDADO CON MUCAPE
+
+CAMBIO v10.151
+- La app usa automáticamente la pasada GFS más reciente que NOAA haya publicado completa; solo retrocede si la última aún está incompleta.
+- Se descartan correctamente los sentinelas de dato ausente del GRIB2, que antes podían pasar por MUCAPE válido.
+- MUCIN solo se publica cuando la misma celda y hora tiene MUCAPE NOAA positivo; desaparecen los falsos −800/−1000 J/kg de zonas sin parcela convectiva.
+- La hora de pronóstico se calcula siempre hacia abajo, evitando pedir un plazo futuro aún no publicado.
+- Se mantienen intactos los valores NOAA válidos, la paleta, lluvia, T2m, T850 y anomalía T850.
+- Caché PWA/API renovada a v10.151.
+
+VERSIÓN ANTERIOR
+
 VERSIÓN v10.150 · CAPAS NOAA ESTABLES Y ANOMALÍA CALCULADA A 850 hPa
 
 CAMBIO v10.150

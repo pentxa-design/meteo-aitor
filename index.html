@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.150" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.151" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -4229,7 +4229,7 @@ function renderMapWeatherSymbols(){
 function renderMapTownValues(){
   const map=mapAitorState.map,data=mapAitorState.data,config=mapLayerConfig();if(!map||!data)return 0;
   const bounds=map.getBounds(),center=map.getCenter(),zoom=map.getZoom(),size=map.getSize(),thermal=['temperature_2m','temperature_850hPa_anomaly'].includes(config.key),noaaRain=MAP_NOAA_RAIN_LAYERS.has(config.key),muOverview=MAP_GFS_ONLY_LAYERS.has(mapAitorState.layer)&&(data.model?.overview||Number(data.model?.resolutionDegrees||.25)>.25),compact=window.innerWidth<650,limit=noaaRain?(compact?4:10):compact?(thermal?9:7):(thermal?(zoom<=3?30:zoom<=5?52:zoom>=8?64:58):(zoom<=3?16:zoom<=5?26:zoom>=8?42:34)),placed=[],spacingX=noaaRain?(compact?132:150):compact?(thermal?86:102):(thermal?50:66),spacingY=noaaRain?(compact?76:64):compact?56:(thermal?23:28);
-  const raw=MAP_KNOWN_PLACES.filter(place=>bounds.contains([place.latitude,place.longitude])).map(place=>({...place,value:mapValueAtCoordinates(place.latitude,place.longitude,config.key),point:map.latLngToContainerPoint([place.latitude,place.longitude])})).filter(place=>config.key==='convective_inhibition'?mapValidNumber(place.value)&&place.value<-.5:muOverview?mapValidNumber(place.value):mapPhenomenonVisible(config,place.value));
+  const raw=MAP_KNOWN_PLACES.filter(place=>bounds.contains([place.latitude,place.longitude])).map(place=>({...place,value:mapValueAtCoordinates(place.latitude,place.longitude,config.key),capeValue:config.key==='convective_inhibition'?mapValueAtCoordinates(place.latitude,place.longitude,'cape'):null,point:map.latLngToContainerPoint([place.latitude,place.longitude])})).filter(place=>config.key==='convective_inhibition'?mapValidNumber(place.value)&&place.value<-.5&&mapValidNumber(place.capeValue)&&place.capeValue>0:muOverview?mapValidNumber(place.value):mapPhenomenonVisible(config,place.value));
   let towns=raw;
   // En la vista Península-Europa se reserva una localidad por zona. Así los
   // valores llegan también a Francia, Reino Unido, Italia y Europa central.
@@ -4271,7 +4271,7 @@ function renderMapValueLabels(){
   // en el encuadre hay menos de tres localidades con lluvia.
   const exactAccumulation=mapAccumulationUsesExactSamples(config),continuousAccumulation=MAP_NOAA_RAIN_LAYERS.has(config.key)&&!exactAccumulation,marine=MAP_MARINE_LAYERS.has(mapAitorState.layer),townCount=marine?0:renderMapTownValues();if(townCount>=3||window.innerWidth<650&&!marine&&!exactAccumulation&&!continuousAccumulation)return;
   const rows=data.grid.rows,columns=data.grid.columns,rowStep=exactAccumulation?1:continuousAccumulation?2:zoom>=8?1:(rows>7?2:1),columnStep=exactAccumulation?1:continuousAccumulation?2:zoom>=8?2:(columns>9?2:1),placed=[],size=map?.getSize?.()||{x:1200,y:700},spacing=exactAccumulation?44:continuousAccumulation?62:zoom>=8?56:zoom>=6?72:90,maxLabels=exactAccumulation?80:continuousAccumulation?34:zoom>=8?48:zoom>=6?30:18;
-  for(let row=0;row<rows&&placed.length<maxLabels;row+=rowStep){for(let column=0;column<columns&&placed.length<maxLabels;column+=columnStep){const point=data.points[row*columns+column],value=mapValue(point,config.key);if(!mapPhenomenonVisible(config,value))continue;const pixel=map?.latLngToContainerPoint?.([point.latitude,point.longitude]);if(!pixel||pixel.x<-20||pixel.y<-20||pixel.x>size.x+20||pixel.y>size.y+20||placed.some(other=>pixel.distanceTo(other)<spacing))continue;placed.push(pixel);const color=exactAccumulation?mapColor(config,value):'',icon=L.divIcon({className:'mapValueLabel'+(exactAccumulation?' mapAccumulationPoint':'')+(config.key==='convective_inhibition'?' mapNegativeValue':''),html:'<span'+(exactAccumulation?' style="--map-value-color:'+color+'"':'')+'>'+mapShortValue(config,value)+'</span>',iconSize:[40,24],iconAnchor:[20,12]});mapAitorState.values.addLayer(L.marker([point.latitude,point.longitude],{icon,interactive:false,keyboard:false}))}}
+  for(let row=0;row<rows&&placed.length<maxLabels;row+=rowStep){for(let column=0;column<columns&&placed.length<maxLabels;column+=columnStep){const point=data.points[row*columns+column],value=mapValue(point,config.key);if(config.key==='convective_inhibition'){const capeValue=mapValue(point,'cape');if(!mapValidNumber(capeValue)||capeValue<=0)continue}if(!mapPhenomenonVisible(config,value))continue;const pixel=map?.latLngToContainerPoint?.([point.latitude,point.longitude]);if(!pixel||pixel.x<-20||pixel.y<-20||pixel.x>size.x+20||pixel.y>size.y+20||placed.some(other=>pixel.distanceTo(other)<spacing))continue;placed.push(pixel);const color=exactAccumulation?mapColor(config,value):'',icon=L.divIcon({className:'mapValueLabel'+(exactAccumulation?' mapAccumulationPoint':'')+(config.key==='convective_inhibition'?' mapNegativeValue':''),html:'<span'+(exactAccumulation?' style="--map-value-color:'+color+'"':'')+'>'+mapShortValue(config,value)+'</span>',iconSize:[40,24],iconAnchor:[20,12]});mapAitorState.values.addLayer(L.marker([point.latitude,point.longitude],{icon,interactive:false,keyboard:false}))}}
 }
 function mapWindBarbKnots(speedKmh){return Math.max(0,Math.round((mapNumber(speedKmh)/1.852)/5)*5)}
 function mapWindBarbAngle(fromDegrees){return((Number(fromDegrees)%360)+360)%360}
@@ -4763,6 +4763,7 @@ async function loadMapForecast(fit=false,force=false,targetTime=mapCurrentForeca
   if(MAP_NOAA_RAIN_LAYERS.has(requestedLayer))query.set('page','0');
   if(MAP_NOAA_REFLECTIVITY_LAYERS.has(requestedLayer))query.set('product','reflectivity_1km');
   if(!muWindow&&requestedLayer==='cin')query.set('cin','1');
+  if(muWindow||MAP_NOAA_REFLECTIVITY_LAYERS.has(requestedLayer))query.set('dataVersion','10.151');
   const cacheKey=mapCacheKey(query),cached=!force?mapCachedForecastResponse(cacheKey):null;
   setMapBusy(true,'Cargando '+($('mapModel').selectedOptions[0]?.textContent||'modelo')+' · '+requestedTitle+'…');
   const timeout=setTimeout(()=>controller.abort('timeout'),32000);
@@ -5243,7 +5244,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(serviceWorkerReloading)return;serviceWorkerReloading=true;location.reload()});
   window.addEventListener('load',async()=>{
     try{
-      const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.150',{updateViaCache:'none'});
+      const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.151',{updateViaCache:'none'});
       await registration.update();
     }catch(_){}
   });

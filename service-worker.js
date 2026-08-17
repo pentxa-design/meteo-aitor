@@ -1,5 +1,5 @@
-const CACHE='meteo-aitor-v10-150-noaa-estable-anomalia-t850';
-const MAP_DATA_CACHE='meteo-aitor-map-data-v1';
+const CACHE='meteo-aitor-v10-151-mucin-validado';
+const MAP_DATA_CACHE='meteo-aitor-map-data-v10-151';
 const MAP_DATA_LIMIT=20;
 const SHELL=['./','./index.html','./manifest.webmanifest','./vendor/leaflet/leaflet.css','./vendor/leaflet/leaflet.js','./vendor/openmeteo-weather-map-layer-0.0.20.js','./vendor/leaflet/images/layers.png','./vendor/leaflet/images/layers-2x.png','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-1024.png','./icons/icon-180.png','./icons/brand-gaztelugatxe.png','./assets/sky-real-sunny-v10-7.jpg','./assets/sky-real-partly-v10-7.jpg','./assets/isla-izaro-bermeo-2013-cc-by-sa-3.jpg','./assets/sky-real-light-rain-v10-7.jpg','./assets/sky-real-heavy-rain-v10-7.jpg','./assets/sky-bermeo-night-v9-12.webp'];
 self.trimMapDataCache=async cache=>{const keys=await cache.keys();await Promise.all(keys.slice(0,Math.max(0,keys.length-MAP_DATA_LIMIT)).map(key=>cache.delete(key)))};
