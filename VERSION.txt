@@ -1,3 +1,16 @@
+Meteo Aitor Bermeo v10.146 · nubes suavizadas y lluvia menos dominante
+Fecha: 2026-08-17
+
+La capa de nubosidad usa interpolación continua y un suavizado visual ligero
+para evitar bordes poligonales al ampliar. La precipitación combinada conserva
+los mismos datos, umbral y escala meteorológica, pero reduce su saturación y
+opacidad para que las nubes permanezcan visibles debajo. El suavizado no añade
+detalle ni modifica la resolución real de 9 km del ECMWF IFS HRES.
+
+La caché PWA se renueva a v10.146.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.145 · nubes y precipitación coloreada
 Fecha: 2026-08-17
 
