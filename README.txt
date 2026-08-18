@@ -1,12 +1,12 @@
-VERSIÓN v10.151 · MUCIN NOAA VALIDADO CON MUCAPE
+VERSIÓN v10.152 · MUCIN NOAA GRIB2 CORREGIDO Y CONTRASTADO
 
-CAMBIO v10.151
-- La app usa automáticamente la pasada GFS más reciente que NOAA haya publicado completa; solo retrocede si la última aún está incompleta.
-- Se descartan correctamente los sentinelas de dato ausente del GRIB2, que antes podían pasar por MUCAPE válido.
-- MUCIN solo se publica cuando la misma celda y hora tiene MUCAPE NOAA positivo; desaparecen los falsos −800/−1000 J/kg de zonas sin parcela convectiva.
-- La hora de pronóstico se calcula siempre hacia abajo, evitando pedir un plazo futuro aún no publicado.
-- Se mantienen intactos los valores NOAA válidos, la paleta, lluvia, T2m, T850 y anomalía T850.
-- Caché PWA/API renovada a v10.151.
+CAMBIO v10.152
+- Corregida la decodificación del valor de referencia negativo del empaquetado simple GRIB2 de NOAA. El lector anterior omitía esa referencia y desplazaba MUCIN aproximadamente −809 J/kg.
+- MUCIN se obtiene ahora del valor oficial del archivo GFS y se mantiene independiente de MUCAPE; un MUCAPE cero ya no oculta un MUCIN válido.
+- Los valores cercanos a cero conservan un decimal para no confundir −0,3 J/kg con 0 J/kg.
+- La prueba con el archivo oficial NOAA GFS del 17/08/2026 18Z F009 reproduce Madrid −0,27, Sevilla −158,27, Murcia −392,27 y Barcelona −93,27 J/kg.
+- Se mantienen intactas MUCAPE, lluvia, T2m, T850 y anomalía T850.
+- Caché PWA/API renovada a v10.152.
 
 VERSIÓN ANTERIOR
 

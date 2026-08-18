@@ -3,7 +3,7 @@ const rain3hHandler = require('../lib/map-rain3h');
 
 const NOAA_FILTER_ROOT = 'https://nomads.ncep.noaa.gov/cgi-bin';
 const HOUR_MS = 60 * 60 * 1000;
-const DATA_REVISION = '10.151';
+const DATA_REVISION = '10.152';
 const FRAME_HOURS = 24;
 const REFLECTIVITY_OVERVIEW_STEP_HOURS = 3;
 const CONVECTION_OVERVIEW_STEP_HOURS = 3;
@@ -197,6 +197,46 @@ function parsedMessage(buffer) {
   return parser;
 }
 
+function gribSigned16(buffer, offset) {
+  const raw = buffer.readUInt16BE(offset);
+  return raw & 0x8000 ? -(raw & 0x7fff) : raw;
+}
+
+function simplePackingMetadata(buffer) {
+  let cursor = 16;
+  while (cursor + 5 <= buffer.length) {
+    const length = buffer.readUInt32BE(cursor);
+    if (!Number.isInteger(length) || length < 5 || cursor + length > buffer.length) return null;
+    if (buffer[cursor + 4] === 5) {
+      if (length < 21 || buffer.readUInt16BE(cursor + 9) !== 0) return null;
+      return {
+        referenceValue: buffer.readFloatBE(cursor + 11),
+        binaryScaleFactor: gribSigned16(buffer, cursor + 15),
+        decimalScaleFactor: gribSigned16(buffer, cursor + 17)
+      };
+    }
+    cursor += length;
+  }
+  return null;
+}
+
+function correctSimplePackingValues(parser, messageBuffer) {
+  const values = parser.DataValues?.[0];
+  if (!values?.length) return values;
+  const metadata = simplePackingMetadata(messageBuffer);
+  if (!metadata) return values;
+  const parserReference = Number(parser.ReferenceValue);
+  const divisor = 10 ** metadata.decimalScaleFactor;
+  const delta = (metadata.referenceValue - (Number.isFinite(parserReference) ? parserReference : 0)) / divisor;
+  if (!Number.isFinite(delta) || Math.abs(delta) < 1e-12) return values;
+  return Array.from(values, value => {
+    if (value === undefined || value === null) return value;
+    const numeric = Number(value);
+    if (numeric !== 0 && Math.abs(numeric) < 1e-20) return value;
+    return Number.isFinite(numeric) ? numeric + delta : value;
+  });
+}
+
 function parseFrame(buffer, product = 'convection') {
   const fields = {};
   let cursor = 0;
@@ -205,9 +245,10 @@ function parseFrame(buffer, product = 'convection') {
     if (start < 0 || start + 16 > buffer.length) break;
     const length = Number(buffer.readBigUInt64BE(start + 8));
     if (!Number.isSafeInteger(length) || length < 32 || start + length > buffer.length) break;
-    const parser = parsedMessage(buffer.subarray(start, start + length));
+    const messageBuffer = buffer.subarray(start, start + length);
+    const parser = parsedMessage(messageBuffer);
     const parameter = String(parser.meta?.ParameterNumberByProductDisciplineAndParameterCategory || '').toLowerCase();
-    const values = parser.DataValues?.[0];
+    const values = correctSimplePackingValues(parser, messageBuffer);
     if (values?.length) {
       if (parameter.includes('reflectivity')) fields.reflectivity = { parser, values };
       if (parameter.includes('available potential energy')) fields.cape = { parser, values };
@@ -349,9 +390,8 @@ function compactPoint(point, frames, product = 'convection') {
     const index = gridIndex(item.frame, point.latitude, point.longitude);
     const capeValue = validFieldValue(item.frame.cape[index]);
     const cinValue = validFieldValue(item.frame.cin[index]);
-    const capeUsable = capeValue !== null && capeValue > 0;
     cape.push(capeValue === null ? null : Math.max(0, capeValue));
-    cin.push(!capeUsable || cinValue === null ? null : -Math.abs(cinValue));
+    cin.push(cinValue === null ? null : -Math.abs(cinValue));
   }
   return {
     latitude: point.latitude,
@@ -537,4 +577,12 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports.__test = { candidateRuns, validFieldValue, parseFrame, compactPoint, gridIndex };
+module.exports.__test = {
+  candidateRuns,
+  validFieldValue,
+  parseFrame,
+  compactPoint,
+  gridIndex,
+  simplePackingMetadata,
+  correctSimplePackingValues
+};

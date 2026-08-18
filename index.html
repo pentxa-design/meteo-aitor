@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.151" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.152" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -2550,7 +2550,7 @@ const MAP_LAYERS={
   t850:{key:'temperature_850hPa',title:'Temperatura a 850 hPa',unit:'°C',scale:[-30,-20,-15,-10,-5,0,5,10,12,14,16,18,20,22,24,28,32],colors:['#3d0757','#612087','#563cab','#335fc0','#1e82d0','#20a9d4','#26c8bd','#35d68b','#53dc5c','#88df3d','#c8e533','#ffd22b','#ff9f24','#f56a20','#dd3c22','#a91f2e','#641a34'],legend:['−30','−20','−15','−10','−5','0','5','10','12','14','16','18','20','22','24','28','32+'],detail:'Temperatura real prevista a unos 1.500 m. La escala reforzada separa con claridad los grados habituales en Europa: azul y cian para aire frío, verde en valores suaves, amarillo desde 18 °C, naranja alrededor de 20–22 °C y rojo oscuro en las masas más cálidas.'},
   t850_anomaly:{key:'temperature_850hPa_anomaly',title:'Anomalía de temperatura a 850 hPa',unit:'°C',scale:[-16,-12,-10,-8,-6,-4,-3,-2,-1,0,1,2,3,4,6,8,10,12,16],colors:['#081d58','#123b8d','#1857b6','#1d72cf','#2d8fdb','#4fabdf','#76c0e6','#a5d5ec','#d6eaf4','#f7f7f4','#fff0b3','#ffdd75','#ffc34a','#f6a134','#ed732b','#da4526','#bc2927','#8f1c25','#57121f'],legend:['−16','−12','−10','−8','−6','−4','−3','−2','−1','0','1','2','3','4','6','8','10','12','16'],detail:'Diferencia de la temperatura prevista por ECMWF IFS 0,25° a 850 hPa respecto de la normal climatológica NOAA NCEP/NCAR Reanalysis 1 del periodo 1991–2020. Azul indica más frío de lo normal, el cero queda neutro y amarillo, naranja o rojo indican más calor de lo normal.'},
   cape:{key:'cape',title:'MUCAPE · más inestable',unit:'J/kg',scale:[100,250,500,750,1000,1500,2000,3000,4000,5000,6000,7000],colors:['#55495c','#465666','#2f6f78','#16878f','#179a91','#59ae72','#c6c148','#f2aa2b','#ef6e34','#b8424f','#713458','#3b213f'],legend:['100','250','500','750','1000','1500','2000','3000','4000','5000','6000','7000+'],detail:'MUCAPE oficial NOAA GFS de la parcela más inestable 255–0 mb. La panorámica mundial conserva la malla oficial reducida y el detalle regional usa 0,25°. Menos de 100 J/kg queda transparente; los tonos gris y púrpura muestran valores bajos, el turquesa los medios y amarillo/naranja los altos. CAPE no confirma por sí solo tormenta, rayo o tornado.'},
-  cin:{key:'convective_inhibition',title:'MUCIN · inhibición más inestable',unit:'J/kg',scale:[-3000,-2000,-1500,-1200,-1000,-750,-500,-300,-200,-100,-50,-20,-5,0],colors:['#9bcbd4','#88a7ae','#777f88','#6c6872','#625d67','#695c64','#7c5b61','#94545b','#ab5352','#c25b4b','#d96b48','#ea7a4b','#f48c55','#f7a06a'],legend:['−3000','−2000','−1500','−1200','−1000','−750','−500','−300','−200','−100','−50','−20','−5','0'],detail:'MUCIN oficial NOAA GFS de la parcela más inestable 255–0 mb. Azul/gris representa inhibición fuerte, granate la intermedia y rojo o naranja los valores próximos a 0 J/kg. Como en la referencia, el relleno se limita a la zona con parcela convectiva disponible: el mar y las áreas sin señal quedan transparentes y muestran el azul del mapa base. Las cifras y contornos conservan el valor NOAA original.'},
+  cin:{key:'convective_inhibition',title:'MUCIN · inhibición más inestable',unit:'J/kg',scale:[-3000,-2000,-1500,-1200,-1000,-750,-500,-300,-200,-100,-50,-20,-5,0],colors:['#9bcbd4','#88a7ae','#777f88','#6c6872','#625d67','#695c64','#7c5b61','#94545b','#ab5352','#c25b4b','#d96b48','#ea7a4b','#f48c55','#f7a06a'],legend:['−3000','−2000','−1500','−1200','−1000','−750','−500','−300','−200','−100','−50','−20','−5','0'],detail:'MUCIN oficial NOAA GFS de la parcela más inestable 255–0 mb. Azul/gris representa inhibición fuerte, granate la intermedia y rojo o naranja los valores próximos a 0 J/kg. Los valores próximos a 0 indican poca inhibición, pero no garantizan tormenta: también hacen falta MUCAPE, humedad y forzamiento. Las cifras, el relleno y los contornos conservan el valor NOAA original.'},
   sea_temperature:{key:'sea_surface_temperature',title:'Temperatura superficial del mar',unit:'°C',scale:[-2,0,5,10,14,17,20,23,26,29,32,35],colors:['#35156e','#2939a5','#176bd2','#159fcf','#20c5b7','#70d37d','#d7df48','#ffe03d','#ffad32','#f26e2c','#ce3428','#721b36'],legend:['-2','0','5','10','14','17','20','23','26','29','32','35+'],detail:'Temperatura superficial del mar de Météo‑France, distribuida por Open‑Meteo Spatial. La tierra queda transparente y la tesela marina se valida antes de dibujarse para evitar datos incompletos.'},
   waves:{key:'wave_height',title:'Altura de las olas',unit:'m',scale:[0,.25,.5,.75,1,1.5,2,3,4,6,8,12],colors:['#284675','#2c78a9','#24a8c1','#25cdc5','#64d495','#b7dc5c','#e7da49','#f4b141','#ed7c3c','#dd4f4f','#a93969','#622a72'],legend:['0','0,25','0,5','0,75','1','1,5','2','3','4','6','8','12+'],detail:'Altura significativa de las olas publicada por ECMWF WAM. La máscara propia del modelo deja la tierra transparente y evita unir puntos separados por costa.'}
 };
@@ -3555,8 +3555,8 @@ function refreshMapOceanOverlay(){
   // deformaba el norte de Galicia y tapaba el agua; no se vuelve a dibujar.
 }
 const MAP_RAIN_FIELD_KEYS=new Set(['precipitation','precipitation_15m','precipitation_3h','precipitation_accumulated','precipitation_6h','precipitation_12h','precipitation_24h','rain','showers','snowfall']);
-function mapFormatValue(config,value){const v=mapNumber(value);if(MAP_RAIN_FIELD_KEYS.has(config.key)||config.key==='wave_height')return (v<1?v.toFixed(2):v.toFixed(1))+' '+config.unit;if(config.key==='lightning_density')return (v<1?v.toFixed(2):v<10?v.toFixed(1):String(Math.round(v)))+' '+config.unit;if(config.key==='sea_surface_temperature')return v.toFixed(1)+' '+config.unit;if(config.key==='temperature_850hPa_anomaly'){const shown=Math.abs(v)<.05?0:v;return (shown>0?'+':'')+shown.toFixed(1)+' '+config.unit}return Math.round(v)+' '+config.unit}
-function mapShortValue(config,value){const v=mapNumber(value);if(config.key==='temperature_850hPa_anomaly'){const shown=Math.abs(v)<.05?0:v;return (shown>0?'+':'')+shown.toFixed(1)+'°'}if(['temperature_2m','dew_point_2m','temperature_850hPa'].includes(config.key))return Math.round(v)+'°';if(config.key==='sea_surface_temperature')return v.toFixed(1)+'°';if(config.key==='wave_height')return (v<1?v.toFixed(2):v.toFixed(1))+'m';if(config.key==='lightning_density')return v<1?v.toFixed(2):v<10?v.toFixed(1):String(Math.round(v));if(MAP_RAIN_FIELD_KEYS.has(config.key))return v<1?v.toFixed(1):String(Math.round(v*10)/10);if(['cloud_cover','relative_humidity_2m','precipitation_probability'].includes(config.key))return Math.round(v)+'%';if(config.key==='convective_inhibition')return '−'+Math.abs(Math.round(v));return String(Math.round(v))}
+function mapFormatValue(config,value){const v=mapNumber(value);if(MAP_RAIN_FIELD_KEYS.has(config.key)||config.key==='wave_height')return (v<1?v.toFixed(2):v.toFixed(1))+' '+config.unit;if(config.key==='lightning_density')return (v<1?v.toFixed(2):v<10?v.toFixed(1):String(Math.round(v)))+' '+config.unit;if(config.key==='sea_surface_temperature')return v.toFixed(1)+' '+config.unit;if(config.key==='temperature_850hPa_anomaly'){const shown=Math.abs(v)<.05?0:v;return (shown>0?'+':'')+shown.toFixed(1)+' '+config.unit}if(config.key==='convective_inhibition'){const shown=Math.abs(v)<.05?0:v;return (shown<0?'−':'')+Math.abs(shown).toFixed(Math.abs(shown)<1?1:0)+' '+config.unit}return Math.round(v)+' '+config.unit}
+function mapShortValue(config,value){const v=mapNumber(value);if(config.key==='temperature_850hPa_anomaly'){const shown=Math.abs(v)<.05?0:v;return (shown>0?'+':'')+shown.toFixed(1)+'°'}if(['temperature_2m','dew_point_2m','temperature_850hPa'].includes(config.key))return Math.round(v)+'°';if(config.key==='sea_surface_temperature')return v.toFixed(1)+'°';if(config.key==='wave_height')return (v<1?v.toFixed(2):v.toFixed(1))+'m';if(config.key==='lightning_density')return v<1?v.toFixed(2):v<10?v.toFixed(1):String(Math.round(v));if(MAP_RAIN_FIELD_KEYS.has(config.key))return v<1?v.toFixed(1):String(Math.round(v*10)/10);if(['cloud_cover','relative_humidity_2m','precipitation_probability'].includes(config.key))return Math.round(v)+'%';if(config.key==='convective_inhibition'){const shown=Math.abs(v)<.05?0:v;return shown<0?'−'+Math.abs(shown).toFixed(Math.abs(shown)<1?1:0):'0'}return String(Math.round(v))}
 const MAP_TIME_FORMATTER=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false});
 function mapTimeText(time){if(!time)return '—';try{return MAP_TIME_FORMATTER.format(new Date(time+'Z'))}catch(_){return time.replace('T',' ')}}
 function mapEpochText(time){if(!time)return '—';try{return MAP_TIME_FORMATTER.format(new Date(Number(time)*1000))}catch(_){return 'Radar mundial'}}
@@ -3600,7 +3600,7 @@ function mapPrecipitationSampleNote(config=mapLayerConfig()){
 }
 function mapHasWindData(){const data=mapAitorState.data,index=mapAitorState.timeIndex;return !!data?.points?.some(point=>mapValidNumber(point?.hourly?.wind_speed_10m?.[index])&&mapValidNumber(point?.hourly?.wind_direction_10m?.[index]))}
 function mapPhenomenonThreshold(config){const zoom=mapAitorState.map?.getZoom()||5;if(config.key==='precipitation_15m')return .08;if(['precipitation','rain','showers'].includes(config.key))return zoom<=3?.25:zoom<=5?.18:zoom<=7?.10:.05;if(config.key==='lightning_density')return zoom<=3?.5:zoom<=5?.25:.1;if(config.key==='precipitation_3h')return zoom<=3?.50:zoom<=5?.30:zoom<=7?.20:.10;if(config.key==='precipitation_accumulated')return zoom<=3?2:zoom<=5?1:zoom<=7?.50:.25;if(config.key==='precipitation_6h')return zoom<=3?.60:zoom<=5?.35:zoom<=7?.20:.10;if(config.key==='precipitation_12h')return zoom<=3?1:zoom<=5?.50:zoom<=7?.30:.15;if(config.key==='precipitation_24h')return zoom<=3?1.5:zoom<=5?.75:zoom<=7?.40:.20;if(config.key==='snowfall')return zoom<=3?.04:zoom<=5?.02:.01;if(config.key==='precipitation_probability')return 5;if(['reflectivity_estimated','reflectivity_1km'].includes(config.key))return 5;if(config.key==='cloud_cover')return zoom<=3?12:zoom<=5?10:zoom<=7?8:5;if(config.key==='cape')return 100;return-Infinity}
-function mapPhenomenonVisible(config,value){if(!mapValidNumber(value))return false;if([...MAP_RAIN_FIELD_KEYS,'lightning_density','precipitation_probability','reflectivity_estimated','reflectivity_1km','cloud_cover','cape'].includes(config.key))return Number(value)>mapPhenomenonThreshold(config);if(config.key==='convective_inhibition')return Number(value)<-.5;return true}
+function mapPhenomenonVisible(config,value){if(!mapValidNumber(value))return false;if([...MAP_RAIN_FIELD_KEYS,'lightning_density','precipitation_probability','reflectivity_estimated','reflectivity_1km','cloud_cover','cape'].includes(config.key))return Number(value)>mapPhenomenonThreshold(config);if(config.key==='convective_inhibition')return Number(value)<0;return true}
 function mapSmoothstep(start,end,value){const t=Math.max(0,Math.min(1,(Number(value)-start)/Math.max(.0001,end-start)));return t*t*(3-2*t)}
 function mapLayerOpacity(config,value,settings={}){
   let opacity=1;const factor={temperature:.99,wind:.92,gust:.94,pressure:.84,cloud:.95,precipitation:.99,thunderstorms:.98,precipitation_15m:.99,precipitation_3h:.99,precipitation_accumulated:.99,precipitation_6h:.97,precipitation_12h:.97,precipitation_24h:.97,rain:.98,showers:.98,snowfall:.98,precipitation_probability:.88,forecast_reflectivity:.99,reflectivity_1km:.99,dewpoint:.98,humidity:.90,t850:.99,t850_anomaly:.96,cape:1,cin:1,sea_temperature:.96,waves:.94}[mapAitorState.layer]??.94;opacity*=factor;
@@ -3649,7 +3649,7 @@ function mapLayerOpacity(config,value,settings={}){
     opacity*=.58+.42*mapSmoothstep(threshold,750,cape);
   }
   if(config.key==='convective_inhibition'){
-    const inhibition=Math.abs(Math.min(0,mapNumber(value)));if(inhibition<.5)return 0;
+    const inhibition=Math.abs(Math.min(0,mapNumber(value)));if(inhibition<=0)return 0;
     // Todo valor MUCIN negativo publicado conserva relleno. La inhibición
     // fuerte queda más transparente y fría; al acercarse a cero gana opacidad
     // y color cálido. Solo el cero exacto queda transparente.
@@ -3684,11 +3684,11 @@ function mapFocusAdjustedValue(value,latitude,longitude,key){
 }
 function mapPhenomenonCoverage(rowFloat,columnFloat,key,threshold){
   const samples=mapGridSamples(rowFloat,columnFloat,key);let covered=0,total=0;
-  samples.forEach(([value,weight])=>{if(!mapValidNumber(value)||weight<=0)return;total+=weight;const numeric=Number(value),active=key==='convective_inhibition'?numeric<-.5:numeric>threshold;if(active)covered+=weight});
+  samples.forEach(([value,weight])=>{if(!mapValidNumber(value)||weight<=0)return;total+=weight;const numeric=Number(value),active=key==='convective_inhibition'?numeric<0:numeric>threshold;if(active)covered+=weight});
   return total>0?covered/total:0;
 }
 function mapPhenomenonActiveCorners(rowFloat,columnFloat,key,threshold){
-  return mapGridSamples(rowFloat,columnFloat,key).reduce((total,[value])=>total+(mapValidNumber(value)&&(key==='convective_inhibition'?Number(value)<-.5:Number(value)>threshold)?1:0),0);
+  return mapGridSamples(rowFloat,columnFloat,key).reduce((total,[value])=>total+(mapValidNumber(value)&&(key==='convective_inhibition'?Number(value)<0:Number(value)>threshold)?1:0),0);
 }
 function mapFeatureFade(coverage,key){
   const zoom=mapAitorState.map?.getZoom()||5,rainLike=MAP_RAIN_FIELD_KEYS.has(key)||key==='lightning_density'||key==='precipitation_probability'||key==='reflectivity_estimated'||key==='reflectivity_1km',convective=key==='cape'||key==='convective_inhibition',minimum=key==='precipitation_15m'?(zoom<=3?.34:zoom<=6?.24:zoom<=7?.12:.05):MAP_NOAA_RAIN_LAYERS.has(key)?(zoom<=3?.08:zoom<=6?.04:.02):rainLike?(zoom<=3?.08:zoom<=6?.055:.03):convective?(zoom<=2?.64:zoom<=3?.56:zoom<=4?.48:zoom<=6?.36:.20):key==='cloud_cover'?(zoom<=3?.06:zoom<=6?.04:.025):(zoom<=2?.56:zoom<=3?.45:zoom<=4?.34:zoom<=6?.20:.08);
@@ -3705,7 +3705,7 @@ function mapFeatureFade(coverage,key){
 const MAP_SPARSE_FIELD_KEYS=new Set(['precipitation','lightning_density','precipitation_15m','precipitation_3h','precipitation_accumulated','precipitation_6h','precipitation_12h','precipitation_24h','rain','showers','snowfall','precipitation_probability','reflectivity_estimated','reflectivity_1km','cape','convective_inhibition']);
 function mapSparseSampleActive(key,value,threshold){
   if(!mapValidNumber(value))return false;
-  const numeric=Number(value);return key==='convective_inhibition'?numeric<-.5:numeric>threshold;
+  const numeric=Number(value);return key==='convective_inhibition'?numeric<0:numeric>threshold;
 }
 function mapSparseSupport(rowFloat,columnFloat,key,threshold){
   const samples=mapGridSamples(rowFloat,columnFloat,key),rowMix=Math.max(0,Math.min(1,rowFloat-Math.floor(rowFloat))),columnMix=Math.max(0,Math.min(1,columnFloat-Math.floor(columnFloat))),distances=[Math.hypot(rowMix,columnMix),Math.hypot(rowMix,1-columnMix),Math.hypot(1-rowMix,columnMix),Math.hypot(1-rowMix,1-columnMix)];
@@ -3724,15 +3724,6 @@ function mapSparseSupport(rowFloat,columnFloat,key,threshold){
   const coverageFloor=activeCount===1?.42:activeCount===2?.54:activeCount===3?.72:1;
   const coverageFade=coverageFloor+(1-coverageFloor)*mapSmoothstep(0,1,coverage);
   return{hasData:true,fade:Math.max(0,Math.min(1,radial*coverageFade)),nearestValue};
-}
-function mapCinConvectiveSupport(rowFloat,columnFloat,capeThreshold=25){
-  // CAPE y CIN proceden de los mismos cuatro nodos NOAA y de la misma hora.
-  // La referencia MUCIN deja ver el mapa base fuera de la parcela convectiva:
-  // se usa CAPE solo como mascara de presencia, nunca para cambiar los J/kg.
-  const cin=mapInterpolatedValue(rowFloat,columnFloat,'convective_inhibition'),cape=mapInterpolatedValue(rowFloat,columnFloat,'cape');
-  if(!mapValidNumber(cin)||!mapValidNumber(cape)||Number(cin)>=-.5||Number(cape)<=capeThreshold)return{hasData:false,fade:0};
-  const global=Number(mapAitorState.data?.bounds?.east)-Number(mapAitorState.data?.bounds?.west)>=350,upper=global?550:400,fade=.66+.34*mapSmoothstep(capeThreshold,upper,Number(cape));
-  return{hasData:true,fade:Math.max(0,Math.min(1,fade))};
 }
 function mapValueAtCoordinates(latitude,longitude,key){
   const data=mapAitorState.data,bounds=data?.bounds;if(!data||!bounds)return null;
@@ -3928,12 +3919,6 @@ function buildMapField(quick=false){
             // Pintarlo mediante bilineal generaba los óvalos gigantes vistos
             // en móvil. Se espera al menos una pareja de nodos coherentes.
             alpha=Math.round(alpha*shape*(isolatedRain?0:1));
-          }else if(config.key==='convective_inhibition'){
-            // Reproduce la lectura visual de la referencia: el valor y color
-            // siguen siendo MUCIN NOAA, pero el relleno aparece únicamente
-            // donde la pareja MUCAPE/MUCIN define una parcela convectiva. Así
-            // el océano y las zonas sin señal conservan el azul del mapa base.
-            const support=mapCinConvectiveSupport(rowFloat,columnFloat);alpha=Math.round(alpha*support.fade);
           }else if(config.key==='cape'&&!data.model?.overview&&Number(data.model?.displayResolutionDegrees??data.model?.resolutionDegrees??1)<=.5){
             // La malla regional NOAA de 0,25° ya define una superficie real.
           }else{
@@ -4229,7 +4214,7 @@ function renderMapWeatherSymbols(){
 function renderMapTownValues(){
   const map=mapAitorState.map,data=mapAitorState.data,config=mapLayerConfig();if(!map||!data)return 0;
   const bounds=map.getBounds(),center=map.getCenter(),zoom=map.getZoom(),size=map.getSize(),thermal=['temperature_2m','temperature_850hPa_anomaly'].includes(config.key),noaaRain=MAP_NOAA_RAIN_LAYERS.has(config.key),muOverview=MAP_GFS_ONLY_LAYERS.has(mapAitorState.layer)&&(data.model?.overview||Number(data.model?.resolutionDegrees||.25)>.25),compact=window.innerWidth<650,limit=noaaRain?(compact?4:10):compact?(thermal?9:7):(thermal?(zoom<=3?30:zoom<=5?52:zoom>=8?64:58):(zoom<=3?16:zoom<=5?26:zoom>=8?42:34)),placed=[],spacingX=noaaRain?(compact?132:150):compact?(thermal?86:102):(thermal?50:66),spacingY=noaaRain?(compact?76:64):compact?56:(thermal?23:28);
-  const raw=MAP_KNOWN_PLACES.filter(place=>bounds.contains([place.latitude,place.longitude])).map(place=>({...place,value:mapValueAtCoordinates(place.latitude,place.longitude,config.key),capeValue:config.key==='convective_inhibition'?mapValueAtCoordinates(place.latitude,place.longitude,'cape'):null,point:map.latLngToContainerPoint([place.latitude,place.longitude])})).filter(place=>config.key==='convective_inhibition'?mapValidNumber(place.value)&&place.value<-.5&&mapValidNumber(place.capeValue)&&place.capeValue>0:muOverview?mapValidNumber(place.value):mapPhenomenonVisible(config,place.value));
+  const raw=MAP_KNOWN_PLACES.filter(place=>bounds.contains([place.latitude,place.longitude])).map(place=>({...place,value:mapValueAtCoordinates(place.latitude,place.longitude,config.key),point:map.latLngToContainerPoint([place.latitude,place.longitude])})).filter(place=>config.key==='convective_inhibition'?mapValidNumber(place.value)&&place.value<0:muOverview?mapValidNumber(place.value):mapPhenomenonVisible(config,place.value));
   let towns=raw;
   // En la vista Península-Europa se reserva una localidad por zona. Así los
   // valores llegan también a Francia, Reino Unido, Italia y Europa central.
@@ -4271,7 +4256,7 @@ function renderMapValueLabels(){
   // en el encuadre hay menos de tres localidades con lluvia.
   const exactAccumulation=mapAccumulationUsesExactSamples(config),continuousAccumulation=MAP_NOAA_RAIN_LAYERS.has(config.key)&&!exactAccumulation,marine=MAP_MARINE_LAYERS.has(mapAitorState.layer),townCount=marine?0:renderMapTownValues();if(townCount>=3||window.innerWidth<650&&!marine&&!exactAccumulation&&!continuousAccumulation)return;
   const rows=data.grid.rows,columns=data.grid.columns,rowStep=exactAccumulation?1:continuousAccumulation?2:zoom>=8?1:(rows>7?2:1),columnStep=exactAccumulation?1:continuousAccumulation?2:zoom>=8?2:(columns>9?2:1),placed=[],size=map?.getSize?.()||{x:1200,y:700},spacing=exactAccumulation?44:continuousAccumulation?62:zoom>=8?56:zoom>=6?72:90,maxLabels=exactAccumulation?80:continuousAccumulation?34:zoom>=8?48:zoom>=6?30:18;
-  for(let row=0;row<rows&&placed.length<maxLabels;row+=rowStep){for(let column=0;column<columns&&placed.length<maxLabels;column+=columnStep){const point=data.points[row*columns+column],value=mapValue(point,config.key);if(config.key==='convective_inhibition'){const capeValue=mapValue(point,'cape');if(!mapValidNumber(capeValue)||capeValue<=0)continue}if(!mapPhenomenonVisible(config,value))continue;const pixel=map?.latLngToContainerPoint?.([point.latitude,point.longitude]);if(!pixel||pixel.x<-20||pixel.y<-20||pixel.x>size.x+20||pixel.y>size.y+20||placed.some(other=>pixel.distanceTo(other)<spacing))continue;placed.push(pixel);const color=exactAccumulation?mapColor(config,value):'',icon=L.divIcon({className:'mapValueLabel'+(exactAccumulation?' mapAccumulationPoint':'')+(config.key==='convective_inhibition'?' mapNegativeValue':''),html:'<span'+(exactAccumulation?' style="--map-value-color:'+color+'"':'')+'>'+mapShortValue(config,value)+'</span>',iconSize:[40,24],iconAnchor:[20,12]});mapAitorState.values.addLayer(L.marker([point.latitude,point.longitude],{icon,interactive:false,keyboard:false}))}}
+  for(let row=0;row<rows&&placed.length<maxLabels;row+=rowStep){for(let column=0;column<columns&&placed.length<maxLabels;column+=columnStep){const point=data.points[row*columns+column],value=mapValue(point,config.key);if(!mapPhenomenonVisible(config,value))continue;const pixel=map?.latLngToContainerPoint?.([point.latitude,point.longitude]);if(!pixel||pixel.x<-20||pixel.y<-20||pixel.x>size.x+20||pixel.y>size.y+20||placed.some(other=>pixel.distanceTo(other)<spacing))continue;placed.push(pixel);const color=exactAccumulation?mapColor(config,value):'',icon=L.divIcon({className:'mapValueLabel'+(exactAccumulation?' mapAccumulationPoint':'')+(config.key==='convective_inhibition'?' mapNegativeValue':''),html:'<span'+(exactAccumulation?' style="--map-value-color:'+color+'"':'')+'>'+mapShortValue(config,value)+'</span>',iconSize:[40,24],iconAnchor:[20,12]});mapAitorState.values.addLayer(L.marker([point.latitude,point.longitude],{icon,interactive:false,keyboard:false}))}}
 }
 function mapWindBarbKnots(speedKmh){return Math.max(0,Math.round((mapNumber(speedKmh)/1.852)/5)*5)}
 function mapWindBarbAngle(fromDegrees){return((Number(fromDegrees)%360)+360)%360}
@@ -4763,7 +4748,7 @@ async function loadMapForecast(fit=false,force=false,targetTime=mapCurrentForeca
   if(MAP_NOAA_RAIN_LAYERS.has(requestedLayer))query.set('page','0');
   if(MAP_NOAA_REFLECTIVITY_LAYERS.has(requestedLayer))query.set('product','reflectivity_1km');
   if(!muWindow&&requestedLayer==='cin')query.set('cin','1');
-  if(muWindow||MAP_NOAA_REFLECTIVITY_LAYERS.has(requestedLayer))query.set('dataVersion','10.151');
+  if(muWindow||MAP_NOAA_REFLECTIVITY_LAYERS.has(requestedLayer))query.set('dataVersion','10.152');
   const cacheKey=mapCacheKey(query),cached=!force?mapCachedForecastResponse(cacheKey):null;
   setMapBusy(true,'Cargando '+($('mapModel').selectedOptions[0]?.textContent||'modelo')+' · '+requestedTitle+'…');
   const timeout=setTimeout(()=>controller.abort('timeout'),32000);
@@ -5244,7 +5229,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(serviceWorkerReloading)return;serviceWorkerReloading=true;location.reload()});
   window.addEventListener('load',async()=>{
     try{
-      const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.151',{updateViaCache:'none'});
+      const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.152',{updateViaCache:'none'});
       await registration.update();
     }catch(_){}
   });

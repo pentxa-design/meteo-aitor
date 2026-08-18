@@ -1,15 +1,15 @@
-Meteo Aitor Bermeo v10.151 · MUCIN NOAA validado con MUCAPE
+Meteo Aitor Bermeo v10.152 · MUCIN NOAA GRIB2 corregido y contrastado
 
-CAMBIO PRINCIPAL v10.151
+CAMBIO PRINCIPAL v10.152
 
-- La app prueba primero la pasada GFS más reciente y retrocede automáticamente solo si NOAA aún no la ha publicado completa.
-- Los sentinelas GRIB2 de dato ausente ya no se aceptan como MUCAPE.
-- MUCIN solo se muestra si la misma celda y hora contiene MUCAPE NOAA positivo, evitando falsos valores extremos sobre zonas sin parcela convectiva.
-- El plazo de pronóstico se redondea hacia abajo para no pedir una hora futura aún sin publicar.
-- Paletas, lluvia, T2m, T850 absoluta y anomalía T850 permanecen intactas.
+- Se corrige la lectura del valor de referencia negativo del empaquetado simple GRIB2 de NOAA. El error anterior desplazaba MUCIN aproximadamente −809 J/kg.
+- MUCIN usa el valor oficial GFS y ya no se oculta cuando MUCAPE es cero.
+- Los valores próximos a cero conservan un decimal.
+- La comprobación con el archivo oficial NOAA GFS 17/08/2026 18Z F009 reproduce los valores de referencia en Madrid, Sevilla, Murcia y Barcelona.
+- MUCAPE, lluvia, T2m, T850 absoluta y anomalía T850 permanecen intactas.
 Fecha: 2026-08-18
 
-La caché PWA/API se renueva a v10.151.
+La caché PWA/API se renueva a v10.152.
 
 VERSIÓN ANTERIOR
 
