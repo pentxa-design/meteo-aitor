@@ -1,3 +1,26 @@
+Meteo Aitor Bermeo v10.154 · deslizador fluido, valores por punto y MUCIN 0,25°
+
+CAMBIO PRINCIPAL v10.154
+
+- El deslizador de horas y días muestra una vista rápida real durante el arrastre y carga la tesela exacta al soltar, sin bloquear el control.
+- La película temporal en memoria se amplía a lluvia, tormentas, nubes, temperatura, humedad, viento, rachas, presión, T850, mar y oleaje.
+- El raster provisional reduce su coste y las anotaciones se reconstruyen después del gesto.
+- Al pulsar cualquier punto se muestran el valor de la capa activa y los demás campos disponibles para esa misma hora.
+- MUCAPE y MUCIN regionales conservan todos los nodos NOAA GFS de 0,25° en una ventana estable de 20 × 40 grados.
+- Se fijan las identidades exactas de ECMWF, ICON, GFS, Météo-France SST y ECMWF WAM para reutilizar correctamente la película temporal.
+Fecha: 2026-08-20
+
+La caché PWA/API se renueva a v10.154.
+
+VERSIÓN ANTERIOR
+
+Meteo Aitor Bermeo v10.153 · consulta puntual y malla MUCIN regional
+
+- MUCIN deja de saltarse nodos alternos de la malla GFS regional.
+- El selector de punto permanece activo también sobre las teselas nativas.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.152 · MUCIN NOAA GRIB2 corregido y contrastado
 
 CAMBIO PRINCIPAL v10.152

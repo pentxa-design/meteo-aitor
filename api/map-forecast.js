@@ -5,8 +5,8 @@ const { withTemperature850Anomaly } = require('../lib/t850-climatology');
 const MODELS = {
   ecmwf: { label: 'ECMWF IFS HRES · 9 km', candidates: ['ecmwf_ifs'] },
   arome: { label: 'Météo‑France AROME HD · 1,5 km · 48 h', candidates: ['meteofrance_arome_france_hd'] },
-  icon: { label: 'DWD ICON Seamless · global/Europa según zona', candidates: ['dwd_icon_seamless'] },
-  gfs: { label: 'NOAA GFS Seamless', candidates: ['ncep_gfs_seamless'] }
+  icon: { label: 'DWD ICON Global · 13 km', candidates: ['dwd_icon'] },
+  gfs: { label: 'NOAA GFS Global · 13 km', candidates: ['ncep_gfs013'] }
 };
 // Las variables se mantienen en el modelo elegido. Las teselas espaciales
 // actuales publican reflectividad derivada y CAPE en los tres modelos; CIN se
@@ -38,8 +38,14 @@ function modelForLayer(requested, layer) {
       candidates: ['ecmwf_ifs']
     };
   }
+  if (requested === 'ecmwf' && layer === 'humidity') {
+    return { label: 'ECMWF IFS 0,25° · humedad a 2 m', candidates: ['ecmwf_ifs025'] };
+  }
+  if (requested === 'gfs' && (layer === 'gust' || layer === 'pressure')) {
+    return { label: 'NOAA GFS 0,25°', candidates: ['ncep_gfs025'] };
+  }
   if (GFS_ONLY_LAYERS.has(layer)) {
-    return { label: layer === 'cin' ? 'NOAA GFS · CIN' : 'NOAA GFS Seamless', candidates: ['ncep_gfs_seamless'] };
+    return { label: layer === 'cin' ? 'NOAA GFS · CIN' : 'NOAA GFS Global · 13 km', candidates: ['ncep_gfs013'] };
   }
   return MODELS[requested] || MODELS.ecmwf;
 }
@@ -199,7 +205,7 @@ async function requestCandidate(points, candidate, hourlyFields) {
   return responses.flat();
 }
 
-async function requestMarine(points, hourlyFields) {
+async function requestMarine(points, hourlyFields, sourceModel = 'best_match') {
   const batches = chunks(points, POINTS_PER_REQUEST);
   const responses = new Array(batches.length);
   let nextBatch = 0;
@@ -216,6 +222,9 @@ async function requestMarine(points, hourlyFields) {
         timezone: 'UTC',
         cell_selection: 'sea'
       });
+      // La SST oficial de Météo-France se selecciona por la variable. Su
+      // identidad interna no es un valor aceptado por el parámetro models.
+      if (sourceModel !== 'best_match' && sourceModel !== 'meteofrance_sea_surface_temperature') values.set('models', sourceModel);
       const payload = await fetchJson(`${MARINE_OPEN_METEO}?${values.toString()}`);
       const locations = Array.isArray(payload) ? payload : [payload];
       if (locations.length !== batch.length) throw new Error('El modelo marino devolvió una malla incompleta.');
@@ -223,7 +232,7 @@ async function requestMarine(points, hourlyFields) {
     }
   }
   await Promise.all(Array.from({ length: Math.min(BATCH_CONCURRENCY, batches.length) }, () => worker()));
-  return { result: responses.flat(), sourceModel: 'best_match' };
+  return { result: responses.flat(), sourceModel };
 }
 
 async function requestForecast(points, model, hourlyFields = HOURLY_FIELDS) {
@@ -409,7 +418,11 @@ module.exports = async function handler(req, res) {
   // se sirve por tanto con GFS y se identifica expresamente en la respuesta.
   const marineRequested = displayLayer === 'sea_temperature' || displayLayer === 'waves';
   const effectiveRequested = marineRequested ? 'marine' : (ecmwfOnlyRequested || t850Requested) ? 'ecmwf' : GFS_ONLY_LAYERS.has(displayLayer) ? 'gfs' : requested;
-  const model = marineRequested ? { label: 'Open‑Meteo Marine', candidates: ['best_match'] } : modelForLayer(effectiveRequested, displayLayer);
+  const model = marineRequested
+    ? displayLayer === 'sea_temperature'
+      ? { label: 'Météo‑France · temperatura superficial del mar', candidates: ['meteofrance_sea_surface_temperature'] }
+      : { label: 'ECMWF WAM 0,25°', candidates: ['ecmwf_wam025'] }
+    : modelForLayer(effectiveRequested, displayLayer);
   const focusLatitude = clamp(req.query?.focusLat, -80, 85, 43.4201);
   const focusLongitude = clamp(req.query?.focusLon, -180, 180, -2.7224);
   const focusPoint = { latitude: Number(focusLatitude.toFixed(4)), longitude: Number(focusLongitude.toFixed(4)) };
@@ -434,7 +447,7 @@ module.exports = async function handler(req, res) {
     let forecast;
     let cinAvailable = cinRequested;
     const requestedFields = fieldsForLayer(layer, effectiveRequested, displayLayer);
-    forecast = marineRequested ? await requestMarine(requestPoints, requestedFields) : await requestForecast(requestPoints, model, requestedFields);
+    forecast = marineRequested ? await requestMarine(requestPoints, requestedFields, model.candidates[0]) : await requestForecast(requestPoints, model, requestedFields);
     let { result: locations, sourceModel } = forecast;
     if (t850Requested && sourceModel !== 'ecmwf_ifs025') {
       throw new Error('La temperatura a 850 hPa solo admite ECMWF IFS 0,25°; no se sustituye por otro modelo.');
@@ -507,7 +520,7 @@ module.exports = async function handler(req, res) {
               ? 'Open‑Meteo / ECMWF'
               : 'Open-Meteo',
         resolution: marineRequested
-          ? 'Mejor modelo marino disponible'
+          ? model.label
           : t850Requested
             ? t850AnomalyRequested
               ? `Pronóstico ECMWF IFS 0,25° · normal NOAA 2,5° interpolada · visualización muestreada ${displayResolutionLabel}`

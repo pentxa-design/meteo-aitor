@@ -3,7 +3,7 @@ const rain3hHandler = require('../lib/map-rain3h');
 
 const NOAA_FILTER_ROOT = 'https://nomads.ncep.noaa.gov/cgi-bin';
 const HOUR_MS = 60 * 60 * 1000;
-const DATA_REVISION = '10.152';
+const DATA_REVISION = '10.154';
 const FRAME_HOURS = 24;
 const REFLECTIVITY_OVERVIEW_STEP_HOURS = 3;
 const CONVECTION_OVERVIEW_STEP_HOURS = 3;
@@ -12,8 +12,8 @@ const FETCH_CONCURRENCY = 6;
 const FETCH_ATTEMPTS = 2;
 const CACHE_TTL = 15 * 60 * 1000;
 const MAX_STALE_AGE = 6 * 60 * 60 * 1000;
-const DETAIL_LATITUDE_SPAN = 12;
-const DETAIL_LONGITUDE_SPAN = 20;
+const DETAIL_LATITUDE_SPAN = 20;
+const DETAIL_LONGITUDE_SPAN = 40;
 const WIDE_LATITUDE_SPAN = 30;
 const WIDE_LONGITUDE_SPAN = 70;
 const WORLD_BOUNDS = Object.freeze({ south: -80, north: 85, west: -180, east: 180 });
@@ -67,6 +67,14 @@ function gridResolution(bounds) {
 }
 
 function resolutionForProduct(resolution, product) {
+  // MUCAPE/MUCIN deben conservar todos los nodos oficiales de 0,25° en la
+  // ventana regional. La versión anterior clasificaba la vista ibérica como
+  // panorámica y descartaba uno de cada dos nodos (0,5°), por lo que ciudades
+  // cercanas podían mostrar el valor del nodo vecino. Nueve horas exactas cada
+  // 3 h mantienen 24 h de evolución sin inflar la respuesta.
+  if (product === 'convection' && resolution.scope !== 'world') {
+    return { ...resolution, code: '0p25', degrees: 0.25, displayDegrees: 0.25, stepHours: CONVECTION_OVERVIEW_STEP_HOURS, scope: 'detail' };
+  }
   if (resolution.scope === 'detail') return resolution;
   if (product === 'reflectivity_1km') {
     // La reflectividad continental de 0,25° conserva los nodos oficiales de
@@ -74,13 +82,7 @@ function resolutionForProduct(resolution, product) {
     // una función fría. Nueve plazos exactos cada 3 h cubren las mismas 24 h.
     return { ...resolution, stepHours: REFLECTIVITY_OVERVIEW_STEP_HOURS };
   }
-  if (product === 'convection') {
-    // MUCAPE y MUCIN viajan juntos en cada GRIB. En la vista europea, pedir 25
-    // plazos horarios duplica más de 430.000 valores y puede superar el tiempo
-    // de la primera carga. Nueve plazos NOAA exactos cubren las mismas 24 h;
-    // el zoom de detalle conserva la evolución horaria.
-    return { ...resolution, stepHours: CONVECTION_OVERVIEW_STEP_HOURS };
-  }
+  if (product === 'convection') return { ...resolution, stepHours: CONVECTION_OVERVIEW_STEP_HOURS };
   return resolution;
 }
 
@@ -123,9 +125,9 @@ function grid(bounds, minimumRows, resolution) {
   // quedar absorbida por una celda enorme aun usando la fuente GFS de 1°.
   // Esta densidad coincide con la usada por Lluvia 3 h y sigue siendo apta
   // para la película mundial de CAPE/CIN.
-  const rowLimit = resolution.scope === 'world' ? 84 : resolution.scope === 'wide' ? 61 : 49;
+  const rowLimit = resolution.scope === 'world' ? 84 : resolution.scope === 'wide' ? 61 : 81;
   const rows = Math.max(minimumRows, Math.min(rowLimit, Math.round((bounds.north - bounds.south) * nativeSteps) + 1));
-  const columnLimit = resolution.scope === 'world' ? 181 : resolution.scope === 'wide' ? 141 : 81;
+  const columnLimit = resolution.scope === 'world' ? 181 : resolution.scope === 'wide' ? 141 : 161;
   const columns = Math.max(8, Math.min(columnLimit, Math.round((bounds.east - bounds.west) * nativeSteps) + 1));
   const points = [];
   for (let row = 0; row < rows; row += 1) {
