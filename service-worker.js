@@ -1,4 +1,6 @@
-const CACHE='meteo-aitor-v10-155-capas-rapidas-y-veraces';
+const CACHE='meteo-aitor-v10-156-zoom-suave-y-dbz-claro';
+// La estructura meteorológica no cambia en esta revisión: conservar esta
+// caché evita descargar de nuevo las mallas NOAA pesadas tras actualizar.
 const MAP_DATA_CACHE='meteo-aitor-map-data-v10-155';
 const MAP_DATA_LIMIT=32;
 const SHELL=['./','./index.html','./manifest.webmanifest','./vendor/leaflet/leaflet.css','./vendor/leaflet/leaflet.js','./vendor/openmeteo-weather-map-layer-0.0.20.js','./vendor/leaflet/images/layers.png','./vendor/leaflet/images/layers-2x.png','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-1024.png','./icons/icon-180.png','./icons/brand-gaztelugatxe.png','./assets/sky-real-sunny-v10-7.jpg','./assets/sky-real-partly-v10-7.jpg','./assets/isla-izaro-bermeo-2013-cc-by-sa-3.jpg','./assets/sky-real-light-rain-v10-7.jpg','./assets/sky-real-heavy-rain-v10-7.jpg','./assets/sky-bermeo-night-v9-12.webp'];

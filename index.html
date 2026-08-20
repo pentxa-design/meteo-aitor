@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.155" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.156" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -3791,6 +3791,14 @@ function mapDirectionLabel(value){
   const degrees=((Math.round(mapNumber(value))%360)+360)%360,directions=['N','NE','E','SE','S','SO','O','NO'];
   return directions[Math.round(degrees/45)%8]+' · '+degrees+'°';
 }
+function mapReflectivityMeaning(value){
+  const dbz=Number(value);if(!Number.isFinite(dbz))return'';
+  // Conversión Z–R de Marshall–Palmer (Z=200·R^1,6). Es únicamente una
+  // equivalencia orientativa: tamaño/fase de los hidrometeoros y la altura de
+  // la capa pueden cambiar mucho la lluvia que finalmente llega al suelo.
+  const rainRate=dbz<5?0:Math.pow(Math.pow(10,dbz/10)/200,1/1.6),intensity=rainRate<.1?'eco muy débil':rainRate<2?'lluvia débil':rainRate<15?'lluvia moderada':rainRate<30?'lluvia fuerte':rainRate<60?'lluvia muy fuerte':'intensidad extrema / granizo posible',formatted=rainRate<.1?'<0,1':rainRate<10?rainRate.toFixed(1).replace('.',','):Math.round(rainRate).toString();
+  return'Equivalencia Z–R orientativa: ≈'+formatted+' mm/h · '+intensity+(dbz>=50?' · vigilar granizo':'');
+}
 function hideMapPickerMarker(){
   if(mapAitorState.pickerMarker){mapAitorState.pickerMarker.remove();mapAitorState.pickerMarker=null}
 }
@@ -3833,6 +3841,7 @@ function renderMapPicker(){
     else extra.push('ECMWF no publicó densidad de rayos en esta pasada');
     extra.push('Los rayos observados se consultan en AEMET o Euskalmet');
   }
+  if(available&&['forecast_reflectivity','reflectivity_1km'].includes(mapAitorState.layer))extra.push(mapReflectivityMeaning(value));
   if(mapAitorState.layer==='waves'){
     const waveDirection=mapValueAtCoordinates(latitude,longitude,'wave_direction'),wavePeriod=mapValueAtCoordinates(latitude,longitude,'wave_period');
     if(waveDirection!==null)extra.push('Oleaje de '+mapDirectionLabel(waveDirection));
@@ -4429,7 +4438,7 @@ function setMapRadar(){
   const radarError=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(candidateTimer);clearTimeout(mapAitorState.radarTimer);image.style.visibility='hidden';setMapEuskalmet('radar',{fallbackLayer:'reflectivity',fallbackFrom:'AEMET'})};
   const loadNext=()=>{if(resolved||!validRequest())return;clearTimeout(candidateTimer);if(candidateIndex>=candidates.length){radarError();return}const source=candidates[candidateIndex++];image.dataset.radarSource=source.startsWith('/api/')?'api':'visor';image.src=source;candidateTimer=setTimeout(loadNext,4500)};
   mapAitorState.radarTimer=setTimeout(radarError,32000);
-  image.onload=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(candidateTimer);clearTimeout(mapAitorState.radarTimer);image.style.visibility='hidden';if(mapAitorState.aemetRadarLayer)mapAitorState.aemetRadarLayer.remove();mapAitorState.aemetRadarLayer=L.imageOverlay(image.currentSrc||image.src,MAP_AEMET_IMAGE_BOUNDS,{pane:'mapWeatherRadar',opacity:Math.max(.58,mapFieldOpacity()),interactive:false,className:'aemetRadarOverlay',attribution:'Radar © AEMET'}).addTo(mapAitorState.map);mapAitorState.map.fitBounds(MAP_AEMET_VIEW_BOUNDS,{animate:false,padding:[18,18]});mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapTimelineLabel').textContent='Último producto nacional';$('mapStatus').textContent='OBSERVACIÓN · Radar AEMET actualizado · '+(image.dataset.radarSource==='api'?'API oficial':'visor oficial de respaldo')+' · georreferenciado sobre el mapa';renderMapLocation();};
+  image.onload=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(candidateTimer);clearTimeout(mapAitorState.radarTimer);image.style.visibility='hidden';if(mapAitorState.aemetRadarLayer)mapAitorState.aemetRadarLayer.remove();mapAitorState.aemetRadarLayer=L.imageOverlay(image.currentSrc||image.src,MAP_AEMET_IMAGE_BOUNDS,{pane:'mapWeatherRadar',opacity:Math.max(.58,mapFieldOpacity()),interactive:false,className:'aemetRadarOverlay',attribution:'Radar © AEMET'}).addTo(mapAitorState.map);mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapTimelineLabel').textContent='Último producto nacional';$('mapStatus').textContent='OBSERVACIÓN · Radar AEMET actualizado · '+(image.dataset.radarSource==='api'?'API oficial':'visor oficial de respaldo')+' · georreferenciado sobre el mapa · encuadre conservado';renderMapLocation();};
   image.onerror=loadNext;loadNext();updateMapInfo();
 }
 function unsetMapRadar(){clearTimeout(mapAitorState.radarTimer);mapAitorState.radarRequestId+=1;mapAitorState.observationFallback=null;if(mapAitorState.euskalmetController){mapAitorState.euskalmetController.abort();mapAitorState.euskalmetController=null}const image=$('mapRadarImage'),stage=$('mapRadarStage');if(image){image.onload=null;image.onerror=null;image.style.visibility='hidden'}if(stage)delete stage.dataset.radarProduct;if(mapAitorState.aemetRadarLayer){mapAitorState.aemetRadarLayer.remove();mapAitorState.aemetRadarLayer=null}stage?.classList.remove('active','hasRadarFrame','sourceUnavailable');$('mapLegend').style.display='flex'}
@@ -4837,7 +4846,8 @@ function setMapLayer(layer){
   if(mapAitorState.playing)stopMapPlayback();
   clearMapRetry();clearMapNativePending();clearMapNativePrefetch(false);clearMapNativePreview(false);clearMapNativeAnnotations(!switchingMuPair);mapAitorState.retryAttempt=0;mapAitorState.nativeRequestId+=1;if(mapAitorState.requestController&&!sharedMuRequest)mapAitorState.requestController.abort();
   syncMapSelection(layer,selectedModel);updateMapReliefStrength();
-  if(MAP_GFS_ONLY_LAYERS.has(layer)&&mapAitorState.map?.getZoom?.()<6){const currentZoom=mapAitorState.map.getZoom(),center=currentZoom<=3?L.latLng(42,-1):mapAitorState.map.getCenter();mapAitorState.map.setView(center,6,{animate:false})}
+  // Cambiar de capa conserva siempre centro y escala. Antes las capas NOAA
+  // forzaban zoom 6 y el mapa parecía saltar o volverse enorme al alternar.
   if($('mapOfficialEmbed')?.classList.contains('active'))setMapOfficialLayer(mapOfficialLayerFor(layer));
   if(MAP_OBSERVATION_LAYERS.has(layer))hideMapPickerMarker();
   if(layer==='reflectivity'){setMapRadar();return}
@@ -5152,7 +5162,15 @@ function initMapAitor(){
     if(previewBadge){previewBadge.classList.add('mapPreview');previewBadge.innerHTML='<i aria-hidden="true"></i>Datos de muestra · prueba visual'}
   }
   const loc=mapAitorState.location||BERMEO;
-  const compactViewport=window.matchMedia('(max-width: 650px)').matches,initialZoom=compactViewport?6:4,initialCenter=compactViewport?[41.2,-2.2]:[44,4],map=L.map('mapAitorCanvas',{zoomControl:true,attributionControl:true,worldCopyJump:true,preferCanvas:true,minZoom:2,maxZoom:11,maxBounds:[[-80,-180],[85,180]],maxBoundsViscosity:.55}).setView(initialCenter,initialZoom);
+  const compactViewport=window.matchMedia('(max-width: 650px)').matches,initialZoom=compactViewport?6:4,initialCenter=compactViewport?[41.2,-2.2]:[44,4],map=L.map('mapAitorCanvas',{
+    zoomControl:true,attributionControl:true,worldCopyJump:true,preferCanvas:true,
+    minZoom:2,maxZoom:11,maxBounds:[[-80,-180],[85,180]],maxBoundsViscosity:.72,
+    // Trackpad y rueda: pasos pequeños y más recorrido por nivel evitan los
+    // saltos bruscos de dos o tres escalas que tenía la configuración base.
+    zoomSnap:.25,zoomDelta:.5,wheelPxPerZoomLevel:170,wheelDebounceTime:36,
+    zoomAnimation:true,zoomAnimationThreshold:4,fadeAnimation:true,
+    markerZoomAnimation:true,bounceAtZoomLimits:false
+  }).setView(initialCenter,initialZoom);
   const reliefUrl='https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}';
   const cartoAttribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · © <a href="https://carto.com/attributions">CARTO</a>';
   // Fondo profesional claro. El relieve se añade en una capa independiente;
@@ -5235,7 +5253,10 @@ function initMapAitor(){
   document.addEventListener('click',event=>{const dock=$('mapModelDock');if(dock?.open&&!dock.contains(event.target))dock.open=false});
   document.querySelectorAll('[data-map-view]').forEach(button=>button.addEventListener('click',()=>setMapView(button.dataset.mapView)));
   $('mapLayerBadge').addEventListener('click',()=>{if(!mapAitorState.lastError)return;const pending=mapAitorState.retryRequest;clearMapRetry();mapAitorState.retryAttempt=0;if(pending){syncMapSelection(pending.layer,pending.model);queueMapLoad(true,0,pending.fit)}else if(mapAitorState.layer==='reflectivity')setMapRadar();else if(mapAitorState.layer==='rainviewer')setGlobalRadar();else if(mapAitorState.layer==='lightning')setMapLightning();else if(mapAitorState.layer==='euskalmet_radar')setMapEuskalmet('radar');else if(mapAitorState.layer==='euskalmet_lightning')setMapEuskalmet('lightning');else if(mapUsesNativeTiles())loadMapNativeLayer(true,true);else loadMapForecast(false,true)});
-  $('mapPrev').addEventListener('click',()=>mapStep(-1));$('mapPlay').addEventListener('click',toggleMapPlayback);$('mapNext').addEventListener('click',()=>mapStep(1));$('mapSpeed').addEventListener('click',cycleMapPlaybackSpeed);$('mapAitorCanvas').addEventListener('dblclick',()=>{if(!MAP_OBSERVATION_LAYERS.has(mapAitorState.layer)&&!mapUsesNativeTiles())loadMapForecast()});
+  $('mapPrev').addEventListener('click',()=>mapStep(-1));$('mapPlay').addEventListener('click',toggleMapPlayback);$('mapNext').addEventListener('click',()=>mapStep(1));$('mapSpeed').addEventListener('click',cycleMapPlaybackSpeed);
+  // Leaflet ya usa doble clic para acercar y zoomend actualiza la malla. El
+  // segundo listener anterior iniciaba otra petición con los límites viejos,
+  // abortaba la nueva y hacía que el zoom pareciera nervioso o lento.
   requestAnimationFrame(()=>map.invalidateSize({animate:false}));setTimeout(()=>map.invalidateSize({animate:false}),140);
   // La primera malla se solicita cuando Leaflet ya conoce el ancho definitivo.
   // Así no se dibuja un rectángulo calculado con el tamaño provisional.
@@ -5257,7 +5278,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(serviceWorkerReloading)return;serviceWorkerReloading=true;location.reload()});
   window.addEventListener('load',async()=>{
     try{
-      const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.155',{updateViaCache:'none'});
+      const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.156',{updateViaCache:'none'});
       await registration.update();
     }catch(_){}
   });

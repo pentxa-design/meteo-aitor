@@ -1,3 +1,17 @@
+Meteo Aitor Bermeo v10.156 · zoom suave y lectura dBZ explicada
+
+CAMBIO PRINCIPAL v10.156
+
+- La rueda y el trackpad avanzan en pasos de 0,5 con ajuste de 0,25 y necesitan más recorrido por nivel: el zoom deja de saltar varias escalas de golpe.
+- Cambiar entre capas NOAA ya no fuerza zoom 6 ni cambia el centro elegido por el usuario.
+- El radar AEMET conserva el encuadre actual al terminar de cargar, en vez de reajustar silenciosamente toda la Península.
+- El doble clic deja una sola ruta de actualización: Leaflet acerca y después se refresca la vista, sin una petición duplicada con límites antiguos.
+- El valor puntual de reflectividad añade una equivalencia Z–R orientativa en mm/h y una categoría de intensidad, recordando que la capa REFD GFS es previsión a 1 km y no radar observado.
+- La caché meteorológica v10.155 se conserva para no repetir descargas pesadas; solo se renueva la interfaz PWA v10.156.
+Fecha: 2026-08-20
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.155 · capas rápidas, cobertura NOAA corregida y radar veraz
 
 CAMBIO PRINCIPAL v10.155
