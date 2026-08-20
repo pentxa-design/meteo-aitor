@@ -1,3 +1,20 @@
+Meteo Aitor Bermeo v10.155 · capas rápidas, cobertura NOAA corregida y radar veraz
+
+CAMBIO PRINCIPAL v10.155
+
+- MUCAPE, MUCIN y reflectividad NOAA vuelven a cubrir por completo el encuadre europeo; el detalle local conserva cada nodo GFS 0,25° y la panorámica usa nodos oficiales alternos de 0,5°.
+- Se elimina el rectángulo provisional de “Lluvia + potencial tormentoso”: la vista rápida procede ahora de la tesela nativa real de la misma hora.
+- “Nubosidad” muestra exclusivamente nubes, sin lluvia ni reflectividad superpuestas.
+- La primera página de lluvia acumulada baja de ocho a cuatro intervalos GRIB, por lo que dibuja antes mientras completa +168 h en segundo plano.
+- MUCAPE/MUCIN, anomalía T850, reflectividad y acumulados reutilizan inmediatamente la última respuesta válida del dispositivo y la actualizan en segundo plano.
+- Si Euskalmet no publica un fotograma reciente, el visor muestra un aviso neutro y nunca el relieve vacío como si fuera radar.
+- La vista rápida nativa se inicia al cambiar de capa y el raster NOAA de acumulación reduce su coste durante el deslizador.
+Fecha: 2026-08-20
+
+La caché PWA/API se renueva a v10.155.
+
+VERSIÓN ANTERIOR
+
 Meteo Aitor Bermeo v10.154 · deslizador fluido, valores por punto y MUCIN 0,25°
 
 CAMBIO PRINCIPAL v10.154

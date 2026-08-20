@@ -1,6 +1,6 @@
-const CACHE='meteo-aitor-v10-154-slider-rapido-y-valores';
-const MAP_DATA_CACHE='meteo-aitor-map-data-v10-154';
-const MAP_DATA_LIMIT=20;
+const CACHE='meteo-aitor-v10-155-capas-rapidas-y-veraces';
+const MAP_DATA_CACHE='meteo-aitor-map-data-v10-155';
+const MAP_DATA_LIMIT=32;
 const SHELL=['./','./index.html','./manifest.webmanifest','./vendor/leaflet/leaflet.css','./vendor/leaflet/leaflet.js','./vendor/openmeteo-weather-map-layer-0.0.20.js','./vendor/leaflet/images/layers.png','./vendor/leaflet/images/layers-2x.png','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-1024.png','./icons/icon-180.png','./icons/brand-gaztelugatxe.png','./assets/sky-real-sunny-v10-7.jpg','./assets/sky-real-partly-v10-7.jpg','./assets/isla-izaro-bermeo-2013-cc-by-sa-3.jpg','./assets/sky-real-light-rain-v10-7.jpg','./assets/sky-real-heavy-rain-v10-7.jpg','./assets/sky-bermeo-night-v9-12.webp'];
 self.trimMapDataCache=async cache=>{const keys=await cache.keys();await Promise.all(keys.slice(0,Math.max(0,keys.length-MAP_DATA_LIMIT)).map(key=>cache.delete(key)))};
 self.mapDataCacheKey=request=>{const url=new URL(request.url),displayLayer=url.searchParams.get('displayLayer'),layer=url.searchParams.get('layer');if(['cape','cin','mu'].includes(displayLayer)||layer==='convection'){url.searchParams.set('displayLayer','mu');url.searchParams.set('layer','convection');url.searchParams.delete('cin')}url.searchParams.delete('_retry');return new Request(url.toString(),{headers:{Accept:'application/json'}})};
@@ -15,14 +15,15 @@ self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET')return;
   const url=new URL(event.request.url);
   if(url.origin!==self.location.origin)return;
-  if(url.pathname==='/api/map-mu'){
+  if(['/api/map-mu','/api/map-forecast','/api/map-rain3h'].includes(url.pathname)){
     event.respondWith((async()=>{
       const cache=await caches.open(MAP_DATA_CACHE),key=self.mapDataCacheKey(event.request);
       const saved=await cache.match(key);
       const network=fetch(event.request).then(async response=>{if(response.ok){await cache.put(key,response.clone());await self.trimMapDataCache(cache)}return response});
       if(saved){
-        const quick=await Promise.race([network,new Promise(resolve=>setTimeout(()=>resolve(null),7000))]).catch(()=>null);
-        if(quick?.ok)return quick;
+        // La última respuesta válida aparece inmediatamente y se renueva en
+        // segundo plano. El cliente comprueba su generatedAt y nunca acepta
+        // una previsión caducada como si fuera nueva.
         event.waitUntil(network.then(()=>undefined).catch(()=>undefined));
         return self.mapDataResponse(saved);
       }

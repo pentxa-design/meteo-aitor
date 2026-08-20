@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.154" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.155" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -584,10 +584,14 @@
     .mapRadarStage{box-sizing:border-box;padding:56px 224px 145px 58px!important;background:radial-gradient(circle at 50% 15%,#48545e,#20262c 70%)!important}
     .mapRadarProduct{position:relative;display:block;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:#dfe5e8;box-shadow:0 15px 40px rgba(0,0,0,.36)}
     .mapRadarProduct img{position:absolute;inset:0;display:block;width:100%!important;height:100%!important;min-width:0;min-height:0;max-width:none;max-height:none;object-fit:contain;background:#dfe5e8;filter:contrast(1.08) saturate(1.12)}
-    /* El PNG de máxima reflectividad es transparente. Euskalmet lo publica
-       sobre este relieve oficial; sin él aparecía el círculo blanco aislado. */
-    .mapRadarStage[data-radar-product="euskalmet-reflectivity"] .mapRadarProduct{background:#dfe5e8 url("https://www.euskalmet.euskadi.eus/media/assets/imgs/webmet00-relieve_max.png") center/contain no-repeat}
+    /* El PNG válido de máxima reflectividad es transparente y necesita su
+       relieve oficial. El relieve se activa únicamente después de validar un
+       fotograma reciente: nunca vuelve a parecer un radar cuando la fuente
+       está sin datos. */
+    .mapRadarStage.hasRadarFrame[data-radar-product="euskalmet-reflectivity"] .mapRadarProduct{background:#dfe5e8 url("https://www.euskalmet.euskadi.eus/media/assets/imgs/webmet00-relieve_max.png") center/contain no-repeat}
     .mapRadarStage[data-radar-product="euskalmet-reflectivity"] .mapRadarProduct img{background:transparent;filter:contrast(1.12) saturate(1.18)}
+    .mapRadarStage.sourceUnavailable .mapRadarProduct{background:linear-gradient(145deg,#e8edf0,#cdd6dc)!important}
+    .mapRadarStage.sourceUnavailable .mapRadarProduct::after{content:'Euskalmet no ha publicado un fotograma reciente utilizable';position:absolute;inset:0;display:grid;place-items:center;padding:28px;text-align:center;color:#263640;font-size:14px;font-weight:900;line-height:1.35}
     .mapRadarProductTag{position:absolute;top:9px;left:9px;padding:6px 9px;border-radius:999px;background:rgba(20,25,31,.84);border:1px solid rgba(255,255,255,.18);color:#f4f8fa;font-size:9px;font-weight:900;letter-spacing:.03em;pointer-events:none}
     .aemetRadarOverlay{mix-blend-mode:multiply;filter:saturate(1.72) contrast(1.32) brightness(.98);image-rendering:auto}
     .mapRadarCaption{left:58px!important;right:224px!important;bottom:76px!important}
@@ -2540,7 +2544,7 @@ const MAP_LAYERS={
   precipitation_probability:{key:'precipitation_probability',title:'Probabilidad de precipitación',unit:'%',scale:[5,15,30,45,60,75,90,100],colors:['#c5efff','#85d9ff','#4ab8f2','#328ddf','#3d69cc','#594dbc','#7b42ad','#a23c9f'],legend:['5','15','30','45','60','75','90','100'],detail:'Probabilidad de que se produzca precipitación durante la hora seleccionada según el modelo. Azul claro para probabilidad baja y azul-violeta para alta.'},
   forecast_reflectivity:{key:'reflectivity_estimated',title:'Precipitación tipo reflectividad · estimada',unit:'dBZ',scale:[5,10,15,20,25,30,35,40,45,50,55,60,65,75],colors:['#70e85a','#38d642','#16bc31','#078b25','#cbe53b','#ffe52c','#ffb21f','#ff7418','#f52f1d','#d50d1f','#9b1235','#70246f','#b32aa5','#ff43d7'],legend:['5','10','15','20','25','30','35','40','45','50','55','60','65','75+'],detail:'Reflectividad estimada desde la tasa horaria real mediante la relación meteorológica Z–R: verde para ecos débiles, amarillo y naranja para precipitación moderada, rojo para núcleos fuertes y magenta para los máximos. El cero queda transparente. No sustituye al radar observado.'},
   reflectivity_1km:{key:'reflectivity_1km',title:'Reflectividad de base a 1 km · NOAA GFS',unit:'dBZ',scale:[5,10,15,20,25,30,35,40,45,50,55,60,65,70,80],colors:['#8bd8ff','#5db8f5','#348ce0','#365fbd','#2a9b9a','#39b85a','#8bc83f','#d7d73a','#ffd33d','#f59b35','#e94f39','#c8293d','#89365f','#733b82','#6f468f'],legend:['5','10','15','20','25','30','35','40','45','50','55','60','65','70','80'],detail:'Reflectividad prevista directamente por NOAA GFS: variable REFD en dBZ a 1.000 m sobre el terreno. Los ecos débiles empiezan en azul; verde, amarillo, naranja, rojo y violeta aparecen solo cuando aumentan los dBZ del modelo. El cero queda transparente. Es previsión del modelo, no radar observado.'},
-  cloud:{key:'cloud_cover',title:'Nubosidad total',unit:'%',scale:[0,10,20,35,50,65,80,90,100],colors:['#ffffff','#ffffff','#ffffff','#f9fafb','#eef0f2','#d9dde1','#bcc2c8','#9ea7b0','#88929c'],legend:['Despejado','10','20','35','50','65','80','90','Muy densa'],detail:'Cobertura nubosa total oficial: blanca en coberturas débiles y progresivamente gris cuando el porcentaje de nube es alto; ese gris no implica por sí solo lluvia. Donde la precipitación de la misma fuente, pasada y hora supera la traza útil, se añade una sombra más oscura y encima aparece la reflectividad estimada verde, amarilla, naranja o roja. Se deriva solamente el aspecto dBZ mediante Z=200·R^1,6; no sustituye al radar observado.'},
+  cloud:{key:'cloud_cover',title:'Nubosidad total',unit:'%',scale:[0,10,20,35,50,65,80,90,100],colors:['#ffffff','#ffffff','#ffffff','#f9fafb','#eef0f2','#d9dde1','#bcc2c8','#9ea7b0','#88929c'],legend:['Despejado','10','20','35','50','65','80','90','Muy densa'],detail:'Cobertura nubosa oficial sin precipitación, reflectividad ni otra variable superpuesta. La nube aparece blanca en coberturas débiles y progresivamente gris cuando el porcentaje aumenta; el cero queda transparente.'},
   temperature:{key:'temperature_2m',title:'Temperatura a 2 m',unit:'°C',scale:[-40,-30,-20,-10,0,5,10,15,20,25,30,35,40,45],colors:['#54216f','#53429a','#3d65ad','#2d8aba','#34b0bd','#58c49f','#87cf72','#c4d657','#ffe22b','#ff8a21','#ef3b24','#c8172c','#8f1632','#3c102b'],legend:['−40','−30','−20','−10','0','5','10','15','20','25','30','35','40','45+'],detail:'Temperatura real del modelo, representada con una gradación continua: violeta y azul para frío, verde en valores templados, amarillo alrededor de 20 °C, naranja desde 25 °C y rojo para el calor fuerte. La paleta cambia el aspecto, nunca los grados.'},
   dewpoint:{key:'dew_point_2m',title:'Punto de rocío a 2 m',unit:'°C',scale:[-15,-5,0,6,12,17,23],colors:['#4530a4','#236fe8','#16bde7','#24d39c','#a9e63f','#f6b83c','#e95b3d'],legend:['-15','-5','0','6','12','17','23+'],detail:'Cuanto más se acerca a la temperatura, mayor sensación de bochorno.'},
   humidity:{key:'relative_humidity_2m',title:'Humedad relativa a 2 m',unit:'%',scale:[0,15,30,45,60,75,88,100],colors:['#a63d2f','#b75e50','#6e6875','#aeb7bf','#d9ef69','#5ed466','#00b89b','#138be7'],legend:['0','15','30','45','60','75','88','100'],detail:'Humedad relativa real prevista por el modelo a dos metros, sin ajustes artificiales. La ubicación marcada utiliza el punto exacto y la mejor resolución disponible.'},
@@ -2573,8 +2577,13 @@ const MAP_ACTIVE_PRECIPITATION_LAYERS=new Set(['precipitation','thunderstorms','
 const MAP_FIXED_OBSERVATION_LAYERS=new Set(['reflectivity','lightning','euskalmet_radar','euskalmet_lightning']);
 const MAP_OBSERVATION_LAYERS=new Set(['reflectivity','rainviewer','lightning','euskalmet_radar','euskalmet_lightning']);
 const MAP_NATIVE_TILE_LAYERS=new Set(['precipitation','precipitation_15m','thunderstorms','electric_storms','forecast_reflectivity','cloud','temperature','dewpoint','humidity','wind','gust','pressure','t850','sea_temperature','waves']);
-const MAP_NATIVE_GRID_FALLBACK_LAYERS=new Set(['precipitation','thunderstorms','forecast_reflectivity','cloud','temperature','dewpoint','humidity','wind','gust','pressure','t850']);
-const MAP_NATIVE_FAST_GRID_LAYERS=new Set(['precipitation','thunderstorms','forecast_reflectivity']);
+// Las capas con manchas discontinuas (lluvia y reflectividad) nunca se
+// reconstruyen como una malla reducida: ese respaldo producía el rectángulo
+// verde de bordes duros mientras llegaba la tesela nativa. La vista rápida
+// procede ahora del mismo archivo .om y solo se muestra al validar todas sus
+// teselas visibles.
+const MAP_NATIVE_GRID_FALLBACK_LAYERS=new Set(['cloud','temperature','dewpoint','humidity','wind','gust','pressure','t850']);
+const MAP_NATIVE_FAST_GRID_LAYERS=new Set([]);
 // Estas capas pueden reutilizar la malla horaria oficial ya descargada para
 // responder al cursor al instante. La tesela .om de la misma hora continúa
 // cargando en segundo plano y la sustituye al quedar completa.
@@ -2582,7 +2591,7 @@ const MAP_NATIVE_FAST_GRID_LAYERS=new Set(['precipitation','thunderstorms','fore
 // superficie continua fabrica rombos grises que pueden confundirse con nubes.
 // T850 sí dispone de una malla ECMWF IFS 0,25° validada para cada hora; sirve
 // como vista inmediata real hasta que termina su tesela nativa exacta.
-const MAP_NATIVE_TIMELINE_MOVIE_LAYERS=new Set(['precipitation','thunderstorms','electric_storms','forecast_reflectivity','cloud','temperature','dewpoint','humidity','wind','gust','pressure','t850','sea_temperature','waves']);
+const MAP_NATIVE_TIMELINE_MOVIE_LAYERS=new Set(['precipitation','electric_storms','forecast_reflectivity','cloud','temperature','dewpoint','humidity','wind','gust','pressure','t850','sea_temperature','waves']);
 const MAP_FORECAST_OBSERVATION_MISMATCH_LAYERS=new Set(['precipitation','precipitation_15m','thunderstorms','forecast_reflectivity','reflectivity_1km']);
 function mapObservationSeparationNote(layer=mapAitorState.layer){return MAP_FORECAST_OBSERVATION_MISMATCH_LAYERS.has(layer)?' AEMET y Euskalmet publican radar o rayos observados, no esta hora de pronóstico; por eso esas observaciones permanecen en sus capas propias y no se colocan como sustitución.':''}
 const MAP_AROME_LAYERS=new Set(['reflectivity','rainviewer','lightning','euskalmet_radar','euskalmet_lightning','precipitation','precipitation_15m','forecast_reflectivity','cloud','temperature','dewpoint','humidity','wind','gust']);
@@ -2814,10 +2823,11 @@ function mapAromeHybridTimeline(fifteenMetadata,hourlyMetadata){
 }
 function mapNativeLayerSpecs(layer,model=mapAitorState.model){
   if(layer==='precipitation_15m')return[{variable:'precipitation',factor:.82,kind:'rain_15m'}];
-  // La precipitación de la misma fuente, pasada y hora se superpone como
-  // reflectividad continua estimada, conservando la nube blanca/gris debajo.
-  if(layer==='cloud'&&model==='arome')return[{variable:'cloud_cover_low',factor:.70,kind:'cloud'},{variable:'cloud_cover_mid',factor:.76,kind:'cloud'},{variable:'cloud_cover_high',factor:.82,kind:'cloud'},{variable:'precipitation',factor:.72,kind:'cloud_reflectivity'}];
-  if(layer==='cloud')return[{variable:'cloud_cover',factor:.92,kind:'cloud'},{variable:'precipitation',factor:.72,kind:'cloud_reflectivity'}];
+  // Nubosidad significa solo nubosidad. AROME publica baja/media/alta por
+  // separado; los demás modelos publican cobertura total. La lluvia y la
+  // reflectividad permanecen exclusivamente en sus propias capas.
+  if(layer==='cloud'&&model==='arome')return[{variable:'cloud_cover_low',factor:.70,kind:'cloud'},{variable:'cloud_cover_mid',factor:.76,kind:'cloud'},{variable:'cloud_cover_high',factor:.82,kind:'cloud'}];
+  if(layer==='cloud')return[{variable:'cloud_cover',factor:.92,kind:'cloud'}];
   if(layer==='temperature')return[{variable:'temperature_2m',factor:.98,kind:'temperature'}];
   if(layer==='thunderstorms')return[{variable:'precipitation',factor:.82,kind:'rain'},{variable:'cape',factor:.24,kind:'cape',optional:true}];
   if(layer==='electric_storms')return[{variable:'cape',factor:.78,kind:'cape'}];
@@ -3364,7 +3374,7 @@ async function loadMapNativeLayer(force=false,preserveTime=false,targetTime=null
     if(!timeline.length)throw new Error(source.label+' no publicó horas válidas para '+requestedSpecs[0].variable+'.');
     mapAitorState.nativeSource={...source,metadataUrl:'https://map-tiles.open-meteo.com/data_spatial/'+source.domain+'/latest.json',hourlyMetadataUrl:hourlyMetadata?'https://map-tiles.open-meteo.com/data_spatial/'+source.hourlyDomain+'/latest.json':null,referenceTime:metadata.reference_time,timeline,layerSpecs};mapAitorState.nativeGridFallbackLayer=null;mapAitorState.nativeGridFallbackModel=null;mapAitorState.nativeVectorSource=layer==='wind'?mapAitorState.nativeSource:null;
     if(layer==='gust'){const candidate=mapNativeSourceFor('wind',model);try{const vectorMetadata=candidate.domain===source.domain?metadata:await mapNativeMetadata(candidate,force),vectorTimeline=mapNativeTimeline(vectorMetadata);if(mapNativeVariableAvailable(vectorMetadata,'wind_u_component_10m')&&vectorTimeline.length)mapAitorState.nativeVectorSource={...candidate,metadataUrl:'https://map-tiles.open-meteo.com/data_spatial/'+candidate.domain+'/latest.json',referenceTime:vectorMetadata.reference_time,timeline:vectorTimeline}}catch{mapAitorState.nativeVectorSource=null}}
-    if(requestId!==mapAitorState.nativeRequestId||layer!==mapAitorState.layer||model!==mapAitorState.model)return;const timelineTimes=timeline.map(item=>item.time),currentIndex=mapNearestTimeIndex(timelineTimes,new Date().toISOString());mapAitorState.timeIndex=requestedTime?mapNearestTimeIndex(timelineTimes,requestedTime):preserveTime?Math.min(mapAitorState.timeIndex,timeline.length-1):currentIndex;mapAitorState.lastError=null;renderMapNativeFrame();queueMapNativeMovie(force,40);queueMapNativeAnnotations(force,model==='ecmwf'&&MAP_NATIVE_FAST_GRID_LAYERS.has(layer)?0:900);
+    if(requestId!==mapAitorState.nativeRequestId||layer!==mapAitorState.layer||model!==mapAitorState.model)return;const timelineTimes=timeline.map(item=>item.time),currentIndex=mapNearestTimeIndex(timelineTimes,new Date().toISOString());mapAitorState.timeIndex=requestedTime?mapNearestTimeIndex(timelineTimes,requestedTime):preserveTime?Math.min(mapAitorState.timeIndex,timeline.length-1):currentIndex;mapAitorState.lastError=null;prefetchMapNativePreview(mapAitorState.timeIndex,0,true);renderMapNativeFrame();queueMapNativeMovie(force,40);queueMapNativeAnnotations(force,model==='ecmwf'&&MAP_NATIVE_FAST_GRID_LAYERS.has(layer)?0:900);
   }catch(error){
     if(requestId!==mapAitorState.nativeRequestId)return;mapAitorState.lastError=error;
     // Actualizar el catálogo no debe apagar una tesela que ya se validó. Solo
@@ -3525,7 +3535,7 @@ async function loadMapNativeAnnotations(force=false){
     const frameIndex=mapAitorState.timeIndex,targetTime=String(source.timeline?.[frameIndex]?.time||'').replace(/Z$/,''),targetEpoch=mapTimeMilliseconds(targetTime),sourceEpoch=mapTimeMilliseconds(aligned.nativeSourceTimes?.[frameIndex]),exactNativeReady=Boolean(mapAitorState.nativeFrameCache.get(mapNativeFrameKey(frameIndex))?.ready),reflectivityHonest=layer!=='forecast_reflectivity'||aligned?.diagnostics?.derived===true&&aligned?.diagnostics?.sourceVariable==='precipitation'&&aligned?.diagnostics?.formula==='Z=200·R^1.6',canBridge=!exactNativeReady&&model==='ecmwf'&&source.domain==='ecmwf_ifs'&&MAP_NATIVE_FAST_GRID_LAYERS.has(layer)&&aligned?.model?.sourceModel===source.domain&&!aligned?.model?.fallback&&Number.isFinite(targetEpoch)&&sourceEpoch===targetEpoch&&reflectivityHonest;
     if(!cached){mapAitorState.cache.set(cacheKey,aligned);while(mapAitorState.cache.size>8)mapAitorState.cache.delete(mapAitorState.cache.keys().next().value)}
     if(mapNativeMovieEligible(layer,model,source,frameIndex)&&aligned?.model?.sourceModel===(source.timeline?.[frameIndex]?.domain||source.domain)&&!aligned?.model?.fallback){mapAitorState.nativeMovieData=aligned;mapAitorState.nativeMovieIdentity=mapAitorState.nativeCacheIdentity;const desired=mapNativeDesiredIndex(),exact=mapAitorState.nativeFrameCache.get(mapNativeFrameKey(desired));if(mapAitorState.nativeDesiredTimeIndex!==null&&!exact?.ready&&mapNativeMovieReady(desired))queueMapNativeMovieFrame(desired)}
-    mapAitorState.data=aligned;mapAitorState.nativeAnnotationKey=cacheKey;if(canBridge)renderMapT850RaceGrid(aligned,frameIndex,source,targetTime);renderMapNativeAnnotations();updateMapLabels();updateMapInfo();const thunderStatus=layer==='thunderstorms'?(aligned?.diagnostics?.lightningAvailable?' · lluvia, CAPE y rayos previstos publicados activos':' · lluvia + CAPE activos · densidad de rayos no publicada'):'',cloudStatus=layer==='cloud'?' · nube blanca/gris + precipitación continua tipo reflectividad de la misma hora':'';if(!mapAitorState.nativeRaceGridVisible)$('mapStatus').textContent='Teselas nativas '+source.label+(['wind','gust'].includes(layer)?' · valores, barbas y vectores activos':cloudStatus||thunderStatus||' · valores de '+config.title+' activos');
+    mapAitorState.data=aligned;mapAitorState.nativeAnnotationKey=cacheKey;if(canBridge)renderMapT850RaceGrid(aligned,frameIndex,source,targetTime);renderMapNativeAnnotations();updateMapLabels();updateMapInfo();const thunderStatus=layer==='thunderstorms'?(aligned?.diagnostics?.lightningAvailable?' · lluvia, CAPE y rayos previstos publicados activos':' · lluvia + CAPE activos · densidad de rayos no publicada'):'',cloudStatus=layer==='cloud'?' · cobertura nubosa blanca/gris activa · sin lluvia superpuesta':'';if(!mapAitorState.nativeRaceGridVisible)$('mapStatus').textContent='Teselas nativas '+source.label+(['wind','gust'].includes(layer)?' · valores, barbas y vectores activos':cloudStatus||thunderStatus||' · valores de '+config.title+' activos');
   }catch(error){
     if(requestId!==mapAitorState.nativeAnnotationRequestId||error?.name==='AbortError'&&controller.signal.reason!=='timeout')return;
     if(!mapAitorState.data?.nativeTileSamples)mapAitorState.data=null;renderMapNativeAnnotations();if(['wind','gust'].includes(layer)){queueMapNativeWindSamples();$('mapStatus').textContent='Capa continua activa · preparando velocidad y flechas desde la tesela';}else $('mapStatus').textContent='Capa continua activa · valores auxiliares temporalmente no disponibles';
@@ -3537,9 +3547,8 @@ const MAP_CLOUD_TONES={high:{r:255,g:255,b:255},mid:{r:250,g:251,b:253},low:{r:2
 function mapCloudColor(total,low,mid,high){
   const cover=Math.max(0,Math.min(100,mapNumber(total))),lowCloud=Math.max(0,Math.min(100,mapNumber(low))),midCloud=Math.max(0,Math.min(100,mapNumber(mid))),highCloud=Math.max(0,Math.min(100,mapNumber(high)));
   const highTone=MAP_CLOUD_TONES.high,midTone=MAP_CLOUD_TONES.mid,lowTone=MAP_CLOUD_TONES.low;
-  // La nubosidad se mantiene siempre blanca o gris. La lluvia se dibuja
-  // después como puntos independientes de la malla oficial: nunca vuelve a
-  // teñir el campo continuo de nubes ni el mapa despejado.
+  // La nubosidad se mantiene siempre blanca o gris. No se mezcla lluvia ni
+  // reflectividad en esta capa.
   const lowWeight=(lowCloud/100)**2.65,midWeight=(midCloud/100)**2.65,highWeight=(highCloud/100)**2.65,weight=Math.max(.0001,lowWeight+midWeight+highWeight);
   let color=weight>.001?{
     r:Math.round((lowTone.r*lowWeight+midTone.r*midWeight+highTone.r*highWeight)/weight),
@@ -3890,11 +3899,11 @@ function buildMapField(quick=false){
   if(cached)return cached;
   // El lienzo se calcula en la misma proyección Web Mercator que Leaflet. Así
   // lluvia, nubes e isotermas conservan su latitud real al ver Europa/mundo.
-  const northY=mapMercatorY(data.bounds.north),southY=mapMercatorY(data.bounds.south),projectedHeight=Math.max(.0001,northY-southY),projectedWidth=Math.max(.0001,longitudeSpan*Math.PI/180),aspect=Math.max(.48,Math.min(3.5,projectedWidth/projectedHeight)),arome15=config.key==='precipitation_15m',globalConvection=isGlobal&&MAP_GFS_ONLY_LAYERS.has(mapAitorState.layer),pixelBudget=quick?(isCompact?42000:60000):globalConvection?(isCompact?72000:105000):arome15?(isCompact?100000:165000):(isCompact?190000:440000);
+  const northY=mapMercatorY(data.bounds.north),southY=mapMercatorY(data.bounds.south),projectedHeight=Math.max(.0001,northY-southY),projectedWidth=Math.max(.0001,longitudeSpan*Math.PI/180),aspect=Math.max(.48,Math.min(3.5,projectedWidth/projectedHeight)),arome15=config.key==='precipitation_15m',noaaRain=MAP_NOAA_RAIN_LAYERS.has(config.key),globalConvection=isGlobal&&MAP_GFS_ONLY_LAYERS.has(mapAitorState.layer),pixelBudget=quick?(isCompact?42000:60000):globalConvection?(isCompact?72000:105000):noaaRain?(isCompact?105000:180000):arome15?(isCompact?100000:165000):(isCompact?190000:440000);
   // La panorámica convectiva ya llega reducida para cubrir el planeta. Un
   // lienzo de 440.000 píxeles no añade detalle y bloqueaba los controles al
   // alternar CAPE/CIN; 72–105 mil píxeles conservan el campo y responden rápido.
-  const minimumWidth=quick?(isCompact?230:260):globalConvection?(isCompact?280:320):380,minimumHeight=quick?(isCompact?135:150):globalConvection?(isCompact?170:190):280;
+  const minimumWidth=quick?(isCompact?230:260):globalConvection?(isCompact?280:320):noaaRain?(isCompact?300:360):380,minimumHeight=quick?(isCompact?135:150):globalConvection?(isCompact?170:190):noaaRain?(isCompact?180:220):280;
   let width=Math.max(minimumWidth,Math.min(isCompact?680:980,columns*(isCompact?24:32))),height=Math.max(minimumHeight,Math.round(width/aspect));
   if(width*height>pixelBudget){const ratio=Math.sqrt(pixelBudget/(width*height));width=Math.max(minimumWidth,Math.round(width*ratio));height=Math.max(minimumHeight,Math.round(height*ratio))}
   const canvas=document.createElement('canvas');
@@ -4060,12 +4069,12 @@ function renderMapConfiguredLegend(config){
   $('mapLegendScale').innerHTML=mapLegendValues(config).map(value=>'<span>'+value+' '+config.unit+'</span>').join('');
 }
 function renderMapCloudLegend(){
-  $('mapLegendBar').style.background='linear-gradient(to right,#f7f8fa 0%,#d9dde2 22%,#70e85a 34%,#16bc31 44%,#ffe52c 58%,#ff7418 72%,#d50d1f 86%,#b32aa5 100%)';
-  $('mapLegendScale').innerHTML='<span title="Cobertura nubosa del modelo">Nube · blanca/gris</span><span title="Precipitación débil derivada de la tasa real">Lluvia · 5 dBZ</span><span title="Precipitación moderada derivada de la tasa real">30 dBZ</span><span title="Núcleos intensos previstos por el modelo">55 dBZ</span>';
+  $('mapLegendBar').style.background='linear-gradient(to right,rgba(255,255,255,0) 0%,#ffffff 12%,#f4f5f7 32%,#e2e5e9 52%,#c9ced4 72%,#aeb5bd 88%,#88929c 100%)';
+  $('mapLegendScale').innerHTML='<span>Despejado · 0 %</span><span>Nube débil · 20 %</span><span>Nube media · 50 %</span><span>Nube densa · 80 %</span><span>Cubierto · 100 %</span>';
 }
 function updateMapLabels(){
   const data=mapAitorState.data,config=mapLayerConfig();
-  const legend=$('mapLegend');if(legend){legend.classList.toggle('mapLegendCloud',mapAitorState.layer==='cloud');legend.title=mapAitorState.layer==='cloud'?'Nubosidad blanca/gris con precipitación continua tipo reflectividad de la misma fuente, pasada y hora':''}
+  const legend=$('mapLegend');if(legend){legend.classList.toggle('mapLegendCloud',mapAitorState.layer==='cloud');legend.title=mapAitorState.layer==='cloud'?'Cobertura nubosa blanca/gris del modelo, sin precipitación ni reflectividad superpuesta':''}
   if(mapAitorState.layer==='rainviewer'){
     const frame=mapAitorState.rainviewerData?.frames?.[mapAitorState.timeIndex];
     const daylight=updateMapLightTheme(frame?.time,true);
@@ -4423,7 +4432,7 @@ function setMapRadar(){
   image.onload=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(candidateTimer);clearTimeout(mapAitorState.radarTimer);image.style.visibility='hidden';if(mapAitorState.aemetRadarLayer)mapAitorState.aemetRadarLayer.remove();mapAitorState.aemetRadarLayer=L.imageOverlay(image.currentSrc||image.src,MAP_AEMET_IMAGE_BOUNDS,{pane:'mapWeatherRadar',opacity:Math.max(.58,mapFieldOpacity()),interactive:false,className:'aemetRadarOverlay',attribution:'Radar © AEMET'}).addTo(mapAitorState.map);mapAitorState.map.fitBounds(MAP_AEMET_VIEW_BOUNDS,{animate:false,padding:[18,18]});mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapTimelineLabel').textContent='Último producto nacional';$('mapStatus').textContent='OBSERVACIÓN · Radar AEMET actualizado · '+(image.dataset.radarSource==='api'?'API oficial':'visor oficial de respaldo')+' · georreferenciado sobre el mapa';renderMapLocation();};
   image.onerror=loadNext;loadNext();updateMapInfo();
 }
-function unsetMapRadar(){clearTimeout(mapAitorState.radarTimer);mapAitorState.radarRequestId+=1;mapAitorState.observationFallback=null;if(mapAitorState.euskalmetController){mapAitorState.euskalmetController.abort();mapAitorState.euskalmetController=null}const image=$('mapRadarImage'),stage=$('mapRadarStage');if(image){image.onload=null;image.onerror=null;image.style.visibility='hidden'}if(stage)delete stage.dataset.radarProduct;if(mapAitorState.aemetRadarLayer){mapAitorState.aemetRadarLayer.remove();mapAitorState.aemetRadarLayer=null}stage?.classList.remove('active');$('mapLegend').style.display='flex'}
+function unsetMapRadar(){clearTimeout(mapAitorState.radarTimer);mapAitorState.radarRequestId+=1;mapAitorState.observationFallback=null;if(mapAitorState.euskalmetController){mapAitorState.euskalmetController.abort();mapAitorState.euskalmetController=null}const image=$('mapRadarImage'),stage=$('mapRadarStage');if(image){image.onload=null;image.onerror=null;image.style.visibility='hidden'}if(stage)delete stage.dataset.radarProduct;if(mapAitorState.aemetRadarLayer){mapAitorState.aemetRadarLayer.remove();mapAitorState.aemetRadarLayer=null}stage?.classList.remove('active','hasRadarFrame','sourceUnavailable');$('mapLegend').style.display='flex'}
 function setMapLightning(){
   if(mapAitorState.requestController)mapAitorState.requestController.abort();
   unsetMapRadar();clearMapNativeAnnotations();clearMapLayers();stopMapWind();mapAitorState.data=null;mapAitorState.rainviewerData=null;mapAitorState.loading=false;mapAitorState.lastError=null;resetMapFixedObservationTimeline();
@@ -4448,19 +4457,19 @@ function setMapEuskalmet(product='radar',options={}){
   if(mapAitorState.requestController)mapAitorState.requestController.abort();
   unsetMapRadar();clearMapNativeAnnotations();clearMapLayers();stopMapWind();mapAitorState.data=null;mapAitorState.rainviewerData=null;mapAitorState.loading=false;mapAitorState.lastError=null;mapAitorState.observationFallback=fallback?{source:'Euskalmet',from:'AEMET',product}:null;resetMapFixedObservationTimeline();
   const requestId=++mapAitorState.radarRequestId,image=$('mapRadarImage'),stage=$('mapRadarStage'),productName=isLightning?'Rayos observados':'Radar Kapildui · máxima reflectividad',sourceLink=isLightning?'https://www.euskalmet.euskadi.eus':'https://www.euskalmet.euskadi.eus/observacion/radar-kapildui-precipitaciones/';
-  clearTimeout(mapAitorState.radarTimer);$('mapLegend').style.display='none';setMapBaseStyle('standard');stage.classList.add('active');image.alt=isLightning?'Rayos observados por Euskalmet':'Reflectividad observada por el radar de Kapildui de Euskalmet';image.style.visibility='hidden';
+  clearTimeout(mapAitorState.radarTimer);$('mapLegend').style.display='none';setMapBaseStyle('standard');stage.classList.add('active');stage.classList.remove('hasRadarFrame','sourceUnavailable');image.alt=isLightning?'Rayos observados por Euskalmet':'Reflectividad observada por el radar de Kapildui de Euskalmet';image.style.visibility='hidden';
   stage.dataset.radarProduct=isLightning?'euskalmet-lightning':'euskalmet-reflectivity';
   if($('mapRadarProductTag'))$('mapRadarProductTag').textContent=(fallback?'OBSERVACIÓN · respaldo oficial · ':'')+(isLightning?'Rayos':'Radar Kapildui')+' · Euskalmet';
   if($('mapRadarCaption'))$('mapRadarCaption').innerHTML='<strong>'+(fallback?'OBSERVACIÓN · respaldo oficial · ':'')+productName+' · Euskalmet</strong><br />'+(fallback?'AEMET no publicó ahora el producto nacional utilizable. ':'')+'Último fotograma oficial utilizable de la última hora, completo y sin deformar. Es observación, no previsión. <a href="'+sourceLink+'" target="_blank" rel="noopener">Abrir fuente oficial</a>.';
   $('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · buscando respaldo Euskalmet…':'Cargando '+(isLightning?'rayos':'radar de Kapildui')+' Euskalmet…');$('mapTimeBadge').textContent=fallback?'OBSERVACIÓN · respaldo oficial':'Observación oficial';$('mapTimelineLabel').textContent='Último fotograma disponible';$('mapStatus').textContent=fallback?'AEMET sin producto utilizable · consultando el producto observado equivalente de Euskalmet…':'Consultando los fotogramas públicos de Euskalmet…';updateMapInfo();
   let resolved=false;const validRequest=()=>requestId===mapAitorState.radarRequestId&&mapAitorState.layer===layer;
-  const showRetained=()=>{if(!retained||Date.now()-retained.savedAt>MAP_OBSERVATION_MAX_AGE||!mapObservationTimeIsFresh(retained.observedAt))return false;image.src=retained.url;image.style.visibility='visible';mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · respaldo Euskalmet · ':'')+(isLightning?'Rayos observados':'Radar Kapildui')+' · último útil';$('mapTimeBadge').textContent='Euskalmet · sin fotograma nuevo';$('mapTimelineLabel').textContent=mapEuskalmetFrameLabel(retained.observedAt);$('mapStatus').textContent=(fallback?'OBSERVACIÓN · respaldo oficial · ':'')+'sin fotograma nuevo utilizable · se mantiene el último correcto de la última hora';updateMapInfo();return true};
-  const imageError=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(mapAitorState.radarTimer);if(mapAitorState.euskalmetController){mapAitorState.euskalmetController.abort();mapAitorState.euskalmetController=null}if(showRetained())return;image.style.visibility='hidden';mapAitorState.lastError=new Error('Euskalmet no publicó un fotograma utilizable durante la última hora.');$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · AEMET y Euskalmet sin producto':'Euskalmet · sin fotograma reciente');$('mapTimeBadge').textContent='Fuente temporalmente sin datos';$('mapTimelineLabel').textContent='Pulsa para reintentar';$('mapStatus').textContent=fallback?'AEMET y Euskalmet no publicaron ahora un producto observado equivalente utilizable. No se sustituye por lluvia prevista ni por otra variable.':'Euskalmet no tiene ahora un fotograma de la última hora. No se muestra una lámina vacía ni otra capa como sustitución.';$('mapInfo').innerHTML=fallback?'<strong>OBSERVACIÓN temporalmente sin datos</strong>No hay ahora radar/rayos oficiales equivalentes utilizables de AEMET ni Euskalmet. No se mezcla ninguna previsión ni se conserva una hora del modelo.':'';if(!fallback)updateMapInfo()};
+  const showRetained=()=>{if(!retained||Date.now()-retained.savedAt>MAP_OBSERVATION_MAX_AGE||!mapObservationTimeIsFresh(retained.observedAt))return false;stage.classList.remove('sourceUnavailable');stage.classList.add('hasRadarFrame');image.src=retained.url;image.style.visibility='visible';mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · respaldo Euskalmet · ':'')+(isLightning?'Rayos observados':'Radar Kapildui')+' · último útil';$('mapTimeBadge').textContent='Euskalmet · sin fotograma nuevo';$('mapTimelineLabel').textContent=mapEuskalmetFrameLabel(retained.observedAt);$('mapStatus').textContent=(fallback?'OBSERVACIÓN · respaldo oficial · ':'')+'sin fotograma nuevo utilizable · se mantiene el último correcto de la última hora';updateMapInfo();return true};
+  const imageError=()=>{if(resolved||!validRequest())return;resolved=true;clearTimeout(mapAitorState.radarTimer);if(mapAitorState.euskalmetController){mapAitorState.euskalmetController.abort();mapAitorState.euskalmetController=null}if(showRetained())return;stage.classList.remove('hasRadarFrame');stage.classList.add('sourceUnavailable');image.style.visibility='hidden';mapAitorState.lastError=new Error('Euskalmet no publicó un fotograma utilizable durante la última hora.');$('mapLayerBadge').classList.add('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · AEMET y Euskalmet sin producto':'Euskalmet · sin fotograma reciente');$('mapTimeBadge').textContent='Fuente temporalmente sin datos';$('mapTimelineLabel').textContent='Pulsa para reintentar';$('mapStatus').textContent=fallback?'AEMET y Euskalmet no publicaron ahora un producto observado equivalente utilizable. No se sustituye por lluvia prevista ni por otra variable.':'Euskalmet no tiene ahora un fotograma de la última hora. No se muestra una lámina vacía ni otra capa como sustitución.';$('mapInfo').innerHTML=fallback?'<strong>OBSERVACIÓN temporalmente sin datos</strong>No hay ahora radar/rayos oficiales equivalentes utilizables de AEMET ni Euskalmet. No se mezcla ninguna previsión ni se conserva una hora del modelo.':'';if(!fallback)updateMapInfo()};
   const controller=new AbortController();mapAitorState.euskalmetController=controller;mapAitorState.radarTimer=setTimeout(imageError,18000);
   fetch('/api/euskalmet-map?product='+encodeURIComponent(product)+'&frame='+Math.floor(Date.now()/300000),{signal:controller.signal,cache:'no-store',headers:{Accept:'image/png'}}).then(async response=>{
     if(!response.ok||!String(response.headers.get('content-type')||'').toLowerCase().includes('image'))throw new Error('Fotograma no utilizable');
     const blob=await response.blob(),url=URL.createObjectURL(blob),observedAt=response.headers.get('x-meteo-aitor-time')||'',stale=response.headers.get('x-meteo-aitor-stale')==='1',probe=new Image();if(!mapObservationTimeIsFresh(observedAt)){URL.revokeObjectURL(url);throw new Error('Fotograma Euskalmet anterior a la última hora')}
-    probe.onload=()=>{if(!validRequest()){URL.revokeObjectURL(url);return}resolved=true;clearTimeout(mapAitorState.radarTimer);mapAitorState.euskalmetController=null;const previous=mapAitorState.euskalmetLastGood.get(product);mapAitorState.euskalmetLastGood.set(product,{url,observedAt,savedAt:Date.now()});image.src=url;image.style.visibility='visible';if(previous?.url&&previous.url!==url)setTimeout(()=>URL.revokeObjectURL(previous.url),1000);mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · respaldo Euskalmet · ':'')+(isLightning?'Rayos observados':'Radar Kapildui');$('mapTimeBadge').textContent=fallback?'OBSERVACIÓN · respaldo oficial Euskalmet':'Observación oficial · Euskalmet';$('mapTimelineLabel').textContent=mapEuskalmetFrameLabel(observedAt);$('mapStatus').textContent=(fallback?'OBSERVACIÓN · respaldo oficial Euskalmet · ':'')+(isLightning?'rayos observados':'radar de Kapildui')+(stale?' · se mantiene el último fotograma útil':' · último fotograma oficial útil')+' · sin cronología de pronóstico';updateMapInfo()};
+    probe.onload=()=>{if(!validRequest()){URL.revokeObjectURL(url);return}resolved=true;clearTimeout(mapAitorState.radarTimer);mapAitorState.euskalmetController=null;stage.classList.remove('sourceUnavailable');stage.classList.add('hasRadarFrame');const previous=mapAitorState.euskalmetLastGood.get(product);mapAitorState.euskalmetLastGood.set(product,{url,observedAt,savedAt:Date.now()});image.src=url;image.style.visibility='visible';if(previous?.url&&previous.url!==url)setTimeout(()=>URL.revokeObjectURL(previous.url),1000);mapAitorState.lastError=null;$('mapLayerBadge').classList.remove('mapLoadError');$('mapLayerBadge').innerHTML='<span></span>'+(fallback?'OBSERVACIÓN · respaldo Euskalmet · ':'')+(isLightning?'Rayos observados':'Radar Kapildui');$('mapTimeBadge').textContent=fallback?'OBSERVACIÓN · respaldo oficial Euskalmet':'Observación oficial · Euskalmet';$('mapTimelineLabel').textContent=mapEuskalmetFrameLabel(observedAt);$('mapStatus').textContent=(fallback?'OBSERVACIÓN · respaldo oficial Euskalmet · ':'')+(isLightning?'rayos observados':'radar de Kapildui')+(stale?' · se mantiene el último fotograma útil':' · último fotograma oficial útil')+' · sin cronología de pronóstico';updateMapInfo()};
     probe.onerror=()=>{URL.revokeObjectURL(url);imageError()};probe.src=url;
   }).catch(error=>{if(error?.name!=='AbortError'||validRequest())imageError()});
 }
@@ -4653,7 +4662,8 @@ function mapMergeNoaaRainPoint(current,page,expectedCurrentLength,expectedPageLe
 }
 function mapMergeNoaaRainPage(current,page){
   const currentTimes=current?.times||[],pageTimes=page?.times||[],nextPage=Number(current?.pagination?.nextPage),receivedPage=Number(page?.pagination?.page),step=3*60*60*1000;
-  if(!mapSameNoaaRainGrid(current,page)||!Number.isInteger(nextPage)||receivedPage!==nextPage||pageTimes.length!==8||Number(page.pagination?.intervalsInPage)!==8)throw new Error('La página NOAA no pertenece a la misma malla o pasada.');
+  const intervalsInPage=Number(page?.pagination?.intervalsInPage);
+  if(!mapSameNoaaRainGrid(current,page)||!Number.isInteger(nextPage)||receivedPage!==nextPage||!Number.isInteger(intervalsInPage)||intervalsInPage<1||pageTimes.length!==intervalsInPage)throw new Error('La página NOAA no pertenece a la misma malla o pasada.');
   const chronology=currentTimes.concat(pageTimes).map(mapTimeMilliseconds);if(chronology.some(value=>!Number.isFinite(value)))throw new Error('NOAA devolvió una cronología no válida.');
   for(let index=1;index<chronology.length;index+=1){if(chronology[index]-chronology[index-1]!==step)throw new Error('La cronología NOAA tiene un salto o un intervalo duplicado.');}
   const points=current.points.map((point,index)=>mapMergeNoaaRainPoint(point,page.points[index],currentTimes.length,pageTimes.length));
@@ -4767,7 +4777,7 @@ async function loadMapForecast(fit=false,force=false,targetTime=mapCurrentForeca
   if(MAP_NOAA_RAIN_LAYERS.has(requestedLayer))query.set('page','0');
   if(MAP_NOAA_REFLECTIVITY_LAYERS.has(requestedLayer))query.set('product','reflectivity_1km');
   if(!muWindow&&requestedLayer==='cin')query.set('cin','1');
-  if(muWindow||MAP_NOAA_REFLECTIVITY_LAYERS.has(requestedLayer))query.set('dataVersion','10.154');
+  if(muWindow||MAP_NOAA_REFLECTIVITY_LAYERS.has(requestedLayer))query.set('dataVersion','10.155');
   const cacheKey=mapCacheKey(query),cached=!force?mapCachedForecastResponse(cacheKey):null;
   setMapBusy(true,'Cargando '+($('mapModel').selectedOptions[0]?.textContent||'modelo')+' · '+requestedTitle+'…');
   const timeout=setTimeout(()=>controller.abort('timeout'),32000);
@@ -5098,11 +5108,10 @@ function finishMapTimelineScrub(){
     // La vista ligera real permanece visible mientras llega la tesela exacta.
     // Así el cursor responde al instante sin inventar ni interpolar valores.
     const targetKey=mapNativeFrameKey(target);pauseMapNativePrefetchTimers(targetKey);clearMapNativePreviewCache(Boolean(mapAitorState.nativePreviewField));
-    if(mapAitorState.layer==='thunderstorms')queueMapNativeMovie(false,0);
     if(!quick?.ready)prefetchMapNativePreview(target,0,true);
     scheduleMapNativeRefine(target,quick?.ready?520:900);
     if(!mapAitorState.nativePreviewField&&mapAitorState.nativeField?._mapNativeFrameIndex===target){mapAitorState.nativeDesiredTimeIndex=null;finalizeMapNativeTimelineUi();prefetchMapNativeWindow(target,mapAitorState.nativePrefetchDirection);if(mapAitorState.playing)scheduleMapNativePlayback();return}
-    $('mapStatus').textContent=(mapAitorState.nativePreviewField?'Vista inmediata real activa':mapAitorState.layer==='thunderstorms'?'Cargando puente oficial exacto o última malla de esta misma capa':'Se conserva la última imagen correcta')+' · cargando hora exacta · '+$('mapTimelineLabel').textContent;return
+    $('mapStatus').textContent=(mapAitorState.nativePreviewField?'Vista inmediata real activa':'Se conserva la última imagen correcta')+' · cargando hora exacta · '+$('mapTimelineLabel').textContent;return
   }
   if(!mapAitorState.gridTimelineDragging)return;mapAitorState.gridTimelineDragging=false;clearTimeout(mapAitorState.gridTimelinePreviewTimer);mapAitorState.gridTimelinePreviewTimer=null;
   const requestedIndex=mapAitorState.timeIndex,nearestIndex=mapNearestValidLayerTimeIndex(mapAitorState.data,mapAitorState.layer,requestedIndex),range=$('mapTimeRange');
@@ -5248,7 +5257,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(serviceWorkerReloading)return;serviceWorkerReloading=true;location.reload()});
   window.addEventListener('load',async()=>{
     try{
-      const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.154',{updateViaCache:'none'});
+      const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.155',{updateViaCache:'none'});
       await registration.update();
     }catch(_){}
   });

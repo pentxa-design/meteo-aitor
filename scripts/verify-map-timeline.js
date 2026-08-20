@@ -4,13 +4,14 @@ const fs = require('node:fs');
 const html = fs.readFileSync(require.resolve('../index.html'), 'utf8');
 
 const requiredMovieLayers = [
-  'precipitation', 'thunderstorms', 'electric_storms', 'forecast_reflectivity',
+  'precipitation', 'electric_storms', 'forecast_reflectivity',
   'cloud', 'temperature', 'dewpoint', 'humidity', 'wind', 'gust', 'pressure',
   't850', 'sea_temperature', 'waves'
 ];
 
 const movieSet = html.match(/const MAP_NATIVE_TIMELINE_MOVIE_LAYERS=new Set\(\[([^\]]+)\]\)/)?.[1] || '';
 requiredMovieLayers.forEach(layer => assert.match(movieSet, new RegExp(`['"]${layer}['"]`), `Falta película rápida para ${layer}`));
+assert.doesNotMatch(movieSet, /['"]thunderstorms['"]/, 'Tormentas no debe usar la malla rectangular provisional');
 
 assert.match(html, /gridQuickPreview:false/);
 assert.match(html, /scheduleMapRender\(true\);scheduleMapGridRefine/);

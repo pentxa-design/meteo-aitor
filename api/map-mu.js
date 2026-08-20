@@ -3,7 +3,7 @@ const rain3hHandler = require('../lib/map-rain3h');
 
 const NOAA_FILTER_ROOT = 'https://nomads.ncep.noaa.gov/cgi-bin';
 const HOUR_MS = 60 * 60 * 1000;
-const DATA_REVISION = '10.154';
+const DATA_REVISION = '10.155';
 const FRAME_HOURS = 24;
 const REFLECTIVITY_OVERVIEW_STEP_HOURS = 3;
 const CONVECTION_OVERVIEW_STEP_HOURS = 3;
@@ -12,8 +12,8 @@ const FETCH_CONCURRENCY = 6;
 const FETCH_ATTEMPTS = 2;
 const CACHE_TTL = 15 * 60 * 1000;
 const MAX_STALE_AGE = 6 * 60 * 60 * 1000;
-const DETAIL_LATITUDE_SPAN = 20;
-const DETAIL_LONGITUDE_SPAN = 40;
+const DETAIL_LATITUDE_SPAN = 12;
+const DETAIL_LONGITUDE_SPAN = 20;
 const WIDE_LATITUDE_SPAN = 30;
 const WIDE_LONGITUDE_SPAN = 70;
 const WORLD_BOUNDS = Object.freeze({ south: -80, north: 85, west: -180, east: 180 });
@@ -67,14 +67,11 @@ function gridResolution(bounds) {
 }
 
 function resolutionForProduct(resolution, product) {
-  // MUCAPE/MUCIN deben conservar todos los nodos oficiales de 0,25° en la
-  // ventana regional. La versión anterior clasificaba la vista ibérica como
-  // panorámica y descartaba uno de cada dos nodos (0,5°), por lo que ciudades
-  // cercanas podían mostrar el valor del nodo vecino. Nueve horas exactas cada
-  // 3 h mantienen 24 h de evolución sin inflar la respuesta.
-  if (product === 'convection' && resolution.scope !== 'world') {
-    return { ...resolution, code: '0p25', degrees: 0.25, displayDegrees: 0.25, stepHours: CONVECTION_OVERVIEW_STEP_HOURS, scope: 'detail' };
-  }
+  // La panorámica europea conserva sus 30 × 70 grados y reduce únicamente la
+  // salida visual a nodos NOAA alternos de 0,5°. Convertirla a "detail" hacía
+  // que el servidor devolviera solo 20 × 40 grados: la respuesta era pesada y,
+  // además, no cubría el propio encuadre. Al acercar a 12 × 20 grados vuelve
+  // automáticamente cada nodo oficial de 0,25° para la consulta local exacta.
   if (resolution.scope === 'detail') return resolution;
   if (product === 'reflectivity_1km') {
     // La reflectividad continental de 0,25° conserva los nodos oficiales de
@@ -581,6 +578,10 @@ module.exports = async function handler(req, res) {
 
 module.exports.__test = {
   candidateRuns,
+  gridResolution,
+  resolutionForProduct,
+  canonicalRegionalBounds,
+  grid,
   validFieldValue,
   parseFrame,
   compactPoint,
