@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Meteo Aitor" />
-  <link rel="manifest" href="manifest.webmanifest?v=10.156" />
+  <link rel="manifest" href="manifest.webmanifest?v=10.157" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-180.png" />
   <link rel="preload" as="image" href="assets/sky-real-sunny-v10-7.jpg" type="image/jpeg" />
@@ -62,7 +62,7 @@
     .hero>*:not(.skyFx){position:relative;z-index:3}.photoSource{position:absolute!important;right:14px;bottom:11px;z-index:4!important;font-size:10px;color:rgba(255,255,255,.74);text-decoration:none;background:rgba(0,0,0,.22);padding:4px 7px;border-radius:999px;display:none}.photoSource:hover{color:white}
     .place{font-size:clamp(23px,5vw,38px);font-weight:850;text-shadow:0 2px 12px rgba(0,0,0,.42)}.country{color:rgba(255,255,255,.88);margin-top:3px;text-shadow:0 2px 10px rgba(0,0,0,.42)}.now{display:flex;justify-content:space-between;align-items:flex-end;margin-top:42px;gap:15px}.temp{font-size:clamp(62px,18vw,108px);line-height:.8;font-weight:900;letter-spacing:-6px;text-shadow:0 4px 18px rgba(0,0,0,.40)}.condition{font-size:19px;font-weight:700;margin-top:12px;text-shadow:0 2px 10px rgba(0,0,0,.50)}.bigIcon{font-size:clamp(70px,18vw,125px);filter:drop-shadow(0 10px 15px rgba(0,0,0,.28))}
     .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:11px}.card{background:rgba(13,38,57,.92);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:11px 14px;box-shadow:0 9px 20px rgba(0,0,0,.14)}.label{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}.value{font-size:20px;line-height:1.05;font-weight:820;margin-top:4px}
-    h2{margin:28px 3px 13px}.days{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}.days>.day{text-align:center;background:rgba(13,38,57,.92);border:1px solid rgba(255,255,255,.09);border-radius:19px;padding:15px 8px}.dayName{font-weight:780}.dayIcon{font-size:34px;margin:11px 0}.max{font-weight:850}.min{color:var(--muted)}.rainp{font-size:12px;color:#9bddff;margin-top:8px}
+    h2{margin:28px 3px 13px}.days{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}.days>.day{width:100%;font:inherit;color:inherit;cursor:pointer;text-align:center;background:rgba(13,38,57,.92);border:1px solid rgba(255,255,255,.09);border-radius:19px;padding:15px 8px}.days>.day.isSelected{border-color:#6feaff;box-shadow:0 0 0 3px rgba(22,217,255,.18),0 18px 34px rgba(0,20,66,.30)}.dayName{font-weight:780}.dayIcon{font-size:34px;margin:11px 0}.max{font-weight:850}.min{color:var(--muted)}.rainp{font-size:12px;color:#9bddff;margin-top:8px}
     .footer{color:var(--muted);font-size:12px;text-align:center;margin-top:25px}.homeCover{display:none!important}.fav{float:right;background:rgba(255,255,255,.12);color:white;padding:10px 13px;font-size:14px;position:relative;z-index:8;touch-action:manipulation}.fav.isSaved{background:linear-gradient(135deg,#ffd84d,#ff7d5b);border-color:rgba(255,246,179,.82);color:#17264a}.favoritesBar{display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.10)}.favoritesBar.hasFavs{display:flex}.favoritesLabel{font-size:12px;font-weight:850;color:#bfeaff;margin-right:2px}.favoriteChip{padding:8px 11px;border-radius:999px;background:rgba(63,156,219,.18);border:1px solid rgba(142,225,255,.28);color:#f2fbff;font-size:12px;line-height:1;touch-action:manipulation}.favoriteChip.active{background:linear-gradient(135deg,rgba(22,217,255,.32),rgba(99,86,255,.42));border-color:rgba(181,246,255,.70)}.saveNotice{display:none;margin:0 3px 13px;padding:10px 12px;border-radius:13px;background:rgba(25,207,145,.14);border:1px solid rgba(86,239,182,.34);color:#d7ffed;font-size:13px;font-weight:700}.saveNotice.show{display:block}.saveNotice.removed{background:rgba(255,208,77,.13);border-color:rgba(255,216,77,.38);color:#fff0bb}
     @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:720px){.days{grid-template-columns:repeat(4,1fr)}.searchRow{grid-template-columns:1fr}.searchRow button{height:50px}.results{top:134px}.hero{padding:21px}.now{align-items:center}.temp{letter-spacing:-4px}}
     @media(max-width:430px){
@@ -2254,17 +2254,19 @@ function windLevel(gust){
   if(value<70)return {label:'Ráfagas fuertes',className:'windStrong'};
   return {label:'Ráfagas muy fuertes',className:'windSevere'};
 }
-function renderHourly(d,loc={}){
+let selectedHourlyDate='';
+function renderHourly(d,loc={},requestedDate=''){
   const box=$('hourly');if(!box)return;box.innerHTML='';
   const h=d.hourly||{},times=h.time||[];
   const officialOnly=['euskalmet-only','official-forecast-backup'].includes(d?._dataPolicy);
   const emptyMessage=officialOnly?`${d?._backupSource||'La fuente oficial'} no ha publicado ahora franjas de previsión equivalentes. Los campos ausentes quedan como —; no se usan radar ni observaciones.`:'Open‑Meteo no ha publicado ahora un avance horario utilizable.';
   if(!times.length){box.innerHTML=`<div class="weatherEmpty">${emptyMessage}</div>`;return}
-  const now=localCurrentTime(d.timezone||timezoneForLocation(loc)),nowHour=now.slice(0,13);
-  const start=times.findIndex((time,index)=>String(h.end_time?.[index]||time)>now);
+  const availableDate=requestedDate&&times.some(time=>String(time).slice(0,10)===requestedDate)?requestedDate:'',now=localCurrentTime(d.timezone||timezoneForLocation(loc)),nowHour=now.slice(0,13);
+  const start=availableDate?times.findIndex(time=>String(time).slice(0,10)===availableDate):times.findIndex((time,index)=>String(h.end_time?.[index]||time)>now);
   if(start<0){box.innerHTML=`<div class="weatherEmpty">${emptyMessage}</div>`;return}
-  times.slice(start,start+24).forEach((time,offset)=>{
-    const i=start+offset;
+  const indexes=availableDate?times.map((time,index)=>String(time).slice(0,10)===availableDate?index:-1).filter(index=>index>=0):times.slice(start,start+24).map((_,offset)=>start+offset);
+  indexes.slice(0,24).forEach(i=>{
+    const time=times[i];
     const code=finiteWeatherNumber(h.weather_code?.[i]);
     const wm=code===null?['Datos parciales','🌦️','cloudy']:(weatherMap[code]||['Variable','🌦️','cloudy']);
     const hour=Number(String(time).slice(11,13)),isDay=finiteWeatherNumber(h.is_day?.[i])===null?(hour>=7&&hour<21):Number(h.is_day[i])===1;
@@ -2282,6 +2284,21 @@ function renderHourly(d,loc={}){
     cell.innerHTML=`<div class="hourTime">${isNow?'Ahora':esc(rangeLabel)}</div><div class="hourDay">${esc(isNow?rangeLabel:day)}</div><div class="hourIcon">${iconHTML(weatherSymbolsForCode(code,isDay,precipitation,convective.active))}</div><div class="hourTemp">${weatherRound(h.temperature_2m?.[i],'°')}</div><div class="hourRain">${rainLine}</div>${convectiveLabel}<div class="hourWind">💨 ${weatherRound(h.wind_speed_10m?.[i],' km/h')} · ${windDirection(h.wind_direction_10m?.[i]).split(' · ')[0]}</div>${secondary}${gust!==null?`<div class="hourGust ${risk.className}">Racha ${weatherRound(gust,' km/h')}</div>`:''}${officialSource?`<div class="hourOfficial">✓ ${esc(officialSource)}</div>`:''}`;
     box.appendChild(cell);
   });
+}
+
+function showHourlyDate(d,loc,date=''){
+  selectedHourlyDate=date;
+  const title=$('hourlyTitle'),hourly=$('hourly'),days=$('days');
+  if(date){
+    const label=new Date(date+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+    if(title)title.textContent=label.charAt(0).toUpperCase()+label.slice(1)+' · hora por hora';
+    if(hourly)hourly.setAttribute('aria-label','Previsión meteorológica hora por hora para '+label);
+  }else{
+    if(title)title.textContent=isBermeoLocation(loc)?'Próximas 24 horas · Open‑Meteo':'Próximas 24 horas';
+    if(hourly)hourly.setAttribute('aria-label',isBermeoLocation(loc)?'Previsión multimodelo de Open‑Meteo para las próximas 24 horas':'Previsión meteorológica de las próximas 24 horas');
+  }
+  days?.querySelectorAll('.day').forEach(card=>{const active=card.dataset.date===date;card.classList.toggle('isSelected',active);card.setAttribute('aria-pressed',String(active))});
+  renderHourly(d,loc,date);
 }
 
 function isSpainLocation(loc={}){
@@ -2430,9 +2447,8 @@ function render(loc,d){
   $('windPanel').className='windPanel '+currentWindLevel.className;
   $('windRisk').textContent=currentWindLevel.label;
   $('windRiskDetail').textContent=`Viento ${weatherRound(c.wind_speed_10m,' km/h')} · rachas ${weatherRound(c.wind_gusts_10m,' km/h')} · ${windDirection(c.wind_direction_10m)}`;
-  if($('hourlyTitle'))$('hourlyTitle').textContent=isBermeoLocation(loc)?'Próximas 24 horas · Open‑Meteo':'Próximas 24 horas';
-  if($('hourly'))$('hourly').setAttribute('aria-label',isBermeoLocation(loc)?'Previsión multimodelo de Open‑Meteo para las próximas 24 horas':'Previsión meteorológica de las próximas 24 horas');
-  renderHourly(d,loc);
+  if(!d.hourly?.time?.some(time=>String(time).slice(0,10)===selectedHourlyDate))selectedHourlyDate='';
+  showHourlyDate(d,loc,selectedHourlyDate);
   const days=$('days');days.innerHTML='';
   const names=['dom','lun','mar','mié','jue','vie','sáb'];
   const today=localCurrentTime(d.timezone||timezoneForLocation(loc)).slice(0,10);
@@ -2446,9 +2462,9 @@ function render(loc,d){
     const stormText=flags.storm||convectiveDay?'<div class="rainp" style="color:#ffe56b;font-weight:800">⚡ Riesgo de tormenta</div>':'';
     const officialText=d.daily?.official_text?.[i]||'';const officialSource=d.daily?.official_source?.[i]||'';const official=officialText?`<div class="officialTag">✓ ${esc(officialSource||'Fuente oficial')}</div><div class="officialText" title="${esc(officialText)}">${esc(shortOfficialText(officialText))}</div>`:'';
     const rawMaxGust=actualDailyMaxGust(d,t),maxGust=Number.isFinite(rawMaxGust)?rawMaxGust:null;const dailyRisk=windLevel(maxGust),rainPeriod=dailyRainPeriod(d,t),rainPeriodLabel=rainPeriod?`${esc(rainPeriod)} · `:'';
-    const el=document.createElement('div');el.className='day';
+    const el=document.createElement('button');el.type='button';el.className='day'+(selectedHourlyDate===t?' isSelected':'');el.dataset.date=t;el.setAttribute('aria-pressed',String(selectedHourlyDate===t));el.setAttribute('aria-label','Ver el pronóstico hora por hora del '+date.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'}));
     el.innerHTML=`<div class="dayName">${!loc._dailyStale&&t===today?'Hoy':names[date.getDay()]}</div><div class="dayIcon">${iconHTML(symbols)}</div><div><span class="max">${weatherRound(d.daily.temperature_2m_max?.[i],'°')}</span> <span class="min">${weatherRound(d.daily.temperature_2m_min?.[i],'°')}</span></div><div class="rainp">💧 ${rainPeriodLabel}${weatherRound(d.daily.precipitation_probability_max?.[i],'%')} · ${weatherFixed(d.daily.precipitation_sum?.[i],1,' mm')}</div>${maxGust!==null?`<div class="dailyWind ${dailyRisk.className}">Racha ${Math.round(maxGust)} km/h</div>`:''}${stormText}${official}`;
-    days.appendChild(el)
+    el.addEventListener('click',()=>{showHourlyDate(d,loc,t);requestAnimationFrame(()=>$('hourlyTitle')?.scrollIntoView({behavior:'smooth',block:'start'}))});days.appendChild(el)
   });
   $('main').style.display='block';updateFav();
   setTimeout(()=>{initMapAitor();updateMapAitorLocation(loc)},0);
@@ -3467,7 +3483,7 @@ function queueMapNativeMovieFrame(index=mapNativeDesiredIndex()){
   // En móvil una rasterización de cada 120 ms aún podía competir con el
   // gesto. Cinco fotogramas reales por segundo son suficientes para seguir
   // la evolución y dejan libre el hilo principal para mover el pulgar.
-  const minimumInterval=window.innerWidth<=820?210:155,elapsed=performance.now()-mapAitorState.nativeMovieLastRenderAt,wait=Math.max(0,minimumInterval-elapsed);
+  const fullscreen=$('mapAitorStudio')?.classList.contains('isFullscreen'),minimumInterval=window.innerWidth<=820?190:fullscreen?105:125,elapsed=performance.now()-mapAitorState.nativeMovieLastRenderAt,wait=Math.max(0,minimumInterval-elapsed);
   if(wait>0){mapAitorState.nativeMovieThrottleTimer=setTimeout(()=>{mapAitorState.nativeMovieThrottleTimer=null;queueMapNativeMovieFrame(mapAitorState.nativeMovieRenderIndex)},wait);return}
   mapAitorState.nativeMovieRenderFrame=requestAnimationFrame(()=>{mapAitorState.nativeMovieRenderFrame=null;const target=mapAitorState.nativeMovieRenderIndex;mapAitorState.nativeMovieRenderIndex=null;mapAitorState.nativeMovieLastRenderAt=performance.now();if(renderMapNativeMovie(target)&&mapAitorState.playing)scheduleMapNativePlayback()})
 }
@@ -3908,11 +3924,11 @@ function buildMapField(quick=false){
   if(cached)return cached;
   // El lienzo se calcula en la misma proyección Web Mercator que Leaflet. Así
   // lluvia, nubes e isotermas conservan su latitud real al ver Europa/mundo.
-  const northY=mapMercatorY(data.bounds.north),southY=mapMercatorY(data.bounds.south),projectedHeight=Math.max(.0001,northY-southY),projectedWidth=Math.max(.0001,longitudeSpan*Math.PI/180),aspect=Math.max(.48,Math.min(3.5,projectedWidth/projectedHeight)),arome15=config.key==='precipitation_15m',noaaRain=MAP_NOAA_RAIN_LAYERS.has(config.key),globalConvection=isGlobal&&MAP_GFS_ONLY_LAYERS.has(mapAitorState.layer),pixelBudget=quick?(isCompact?42000:60000):globalConvection?(isCompact?72000:105000):noaaRain?(isCompact?105000:180000):arome15?(isCompact?100000:165000):(isCompact?190000:440000);
+  const northY=mapMercatorY(data.bounds.north),southY=mapMercatorY(data.bounds.south),projectedHeight=Math.max(.0001,northY-southY),projectedWidth=Math.max(.0001,longitudeSpan*Math.PI/180),aspect=Math.max(.48,Math.min(3.5,projectedWidth/projectedHeight)),arome15=config.key==='precipitation_15m',noaaRain=MAP_NOAA_RAIN_LAYERS.has(config.key),globalConvection=isGlobal&&MAP_GFS_ONLY_LAYERS.has(mapAitorState.layer),fullscreen=$('mapAitorStudio')?.classList.contains('isFullscreen'),pixelBudget=quick?(isCompact?36000:fullscreen?42000:50000):globalConvection?(isCompact?72000:105000):noaaRain?(isCompact?105000:180000):arome15?(isCompact?100000:165000):(isCompact?190000:440000);
   // La panorámica convectiva ya llega reducida para cubrir el planeta. Un
   // lienzo de 440.000 píxeles no añade detalle y bloqueaba los controles al
   // alternar CAPE/CIN; 72–105 mil píxeles conservan el campo y responden rápido.
-  const minimumWidth=quick?(isCompact?230:260):globalConvection?(isCompact?280:320):noaaRain?(isCompact?300:360):380,minimumHeight=quick?(isCompact?135:150):globalConvection?(isCompact?170:190):noaaRain?(isCompact?180:220):280;
+  const minimumWidth=quick?(isCompact?220:fullscreen?230:250):globalConvection?(isCompact?280:320):noaaRain?(isCompact?300:360):380,minimumHeight=quick?(isCompact?130:fullscreen?135:145):globalConvection?(isCompact?170:190):noaaRain?(isCompact?180:220):280;
   let width=Math.max(minimumWidth,Math.min(isCompact?680:980,columns*(isCompact?24:32))),height=Math.max(minimumHeight,Math.round(width/aspect));
   if(width*height>pixelBudget){const ratio=Math.sqrt(pixelBudget/(width*height));width=Math.max(minimumWidth,Math.round(width*ratio));height=Math.max(minimumHeight,Math.round(height*ratio))}
   const canvas=document.createElement('canvas');
@@ -4774,19 +4790,27 @@ function mapCanonicalRainWindow(raw,zoom,center){
   const centerLat=Math.max(latitudeLimitSouth,Math.min(latitudeLimitNorth,Math.round(Number(center.lat)/2)*2)),centerLon=Math.max(-longitudeLimit,Math.min(longitudeLimit,Math.round(longitude/2)*2));
   return{south:centerLat-latitudeRadius,north:centerLat+latitudeRadius,west:centerLon-longitudeRadius,east:centerLon+longitudeRadius,centerLat,centerLon};
 }
+function mapCanonicalAnomalyWindow(raw,zoom,center){
+  const world={south:-80,north:85,west:-180,east:180,centerLat:2.5,centerLon:0},rawSouth=Math.max(-80,raw.getSouth()),rawNorth=Math.min(85,raw.getNorth()),rawWest=raw.getWest(),rawEast=raw.getEast(),latitudeSpan=rawNorth-rawSouth,longitudeSpan=rawEast-rawWest;
+  if(zoom<3||latitudeSpan>48||longitudeSpan>100||rawWest<-180||rawEast>180)return world;
+  const latitudeRadius=Math.min(30,Math.max(14,Math.ceil(latitudeSpan/2)+4)),longitudeRadius=Math.min(60,Math.max(25,Math.ceil(longitudeSpan/2)+7)),longitude=((Number(center.lng)+540)%360)-180,latitudeLimitSouth=-80+latitudeRadius,latitudeLimitNorth=85-latitudeRadius,longitudeLimit=179.75-longitudeRadius;
+  if(Math.abs(longitude)>longitudeLimit)return world;
+  const centerLat=Math.max(latitudeLimitSouth,Math.min(latitudeLimitNorth,Math.round(Number(center.lat)/4)*4)),centerLon=Math.max(-longitudeLimit,Math.min(longitudeLimit,Math.round(longitude/4)*4));
+  return{south:centerLat-latitudeRadius,north:centerLat+latitudeRadius,west:centerLon-longitudeRadius,east:centerLon+longitudeRadius,centerLat,centerLon}
+}
 async function loadMapForecast(fit=false,force=false,targetTime=mapCurrentForecastTime()){
   const map=mapAitorState.map;if(!map||MAP_OBSERVATION_LAYERS.has(mapAitorState.layer))return;
   clearMapNoaaRainPagination();
   clearTimeout(mapAitorState.viewportTimer);clearTimeout(mapAitorState.selectionTimer);mapAitorState.selectionTimer=null;
   if(mapAitorState.requestController)mapAitorState.requestController.abort();
   const requestId=++mapAitorState.requestId,controller=new AbortController();mapAitorState.requestController=controller;
-  const requestedLayer=mapAitorState.layer,requestedBundle=mapRequestBundle(requestedLayer),requestedModel=mapLayerForcesGfs(requestedLayer)?'gfs':mapLayerForcesEcmwf(requestedLayer)?'ecmwf':$('mapModel').value,requestedTitle=mapLayerConfig().title,zoom=map.getZoom(),sparseLayer=['precipitation','thunderstorms','electric_storms','precipitation_15m','precipitation_3h','precipitation_accumulated','precipitation_6h','precipitation_12h','precipitation_24h','rain','showers','snowfall','precipitation_probability','forecast_reflectivity','reflectivity_1km','cloud','cape','cin'].includes(requestedLayer),padding=sparseLayer?(zoom>=7?.08:zoom>=5?.12:zoom>=3?.14:.06):(zoom>=7?.14:zoom>=5?.20:.24),raw=map.getBounds().pad(padding),snap=zoom<=2?2:zoom<=3?.75:zoom<=5?.25:zoom>=8?.05:.10,nativeGridFallback=mapAitorState.nativeGridFallbackLayer===requestedLayer&&mapAitorState.nativeGridFallbackModel===requestedModel,density=nativeGridFallback?Math.min(mapLayerDensity(requestedLayer,zoom),requestedLayer==='cloud'?12:14):mapLayerDensity(requestedLayer,zoom),focus=mapAitorState.location||BERMEO,viewCenter=map.getCenter(),muWindow=MAP_MU_PAIR_LAYERS.has(requestedLayer)?mapCanonicalMuWindow(raw,zoom,viewCenter):null,rainWindow=MAP_NOAA_RAIN_LAYERS.has(requestedLayer)?mapCanonicalRainWindow(raw,zoom,viewCenter):null,reflectivityWindow=MAP_NOAA_REFLECTIVITY_LAYERS.has(requestedLayer)?mapCanonicalMuWindow(raw,zoom,viewCenter):null,requestWindow=muWindow||rainWindow||reflectivityWindow,south=requestWindow?requestWindow.south:Math.max(-80,Math.floor(raw.getSouth()/snap)*snap),north=requestWindow?requestWindow.north:Math.min(85,Math.ceil(raw.getNorth()/snap)*snap),west=requestWindow?requestWindow.west:Math.max(-180,Math.floor(raw.getWest()/snap)*snap),east=requestWindow?requestWindow.east:Math.min(180,Math.ceil(raw.getEast()/snap)*snap),requestCenter=requestWindow?{lat:requestWindow.centerLat,lng:requestWindow.centerLon}:viewCenter,requestFocus=requestWindow?{latitude:requestCenter.lat,longitude:requestCenter.lng}:focus;
+  const requestedLayer=mapAitorState.layer,requestedBundle=mapRequestBundle(requestedLayer),requestedModel=mapLayerForcesGfs(requestedLayer)?'gfs':mapLayerForcesEcmwf(requestedLayer)?'ecmwf':$('mapModel').value,requestedTitle=mapLayerConfig().title,zoom=map.getZoom(),sparseLayer=['precipitation','thunderstorms','electric_storms','precipitation_15m','precipitation_3h','precipitation_accumulated','precipitation_6h','precipitation_12h','precipitation_24h','rain','showers','snowfall','precipitation_probability','forecast_reflectivity','reflectivity_1km','cloud','cape','cin'].includes(requestedLayer),padding=sparseLayer?(zoom>=7?.08:zoom>=5?.12:zoom>=3?.14:.06):(zoom>=7?.14:zoom>=5?.20:.24),raw=map.getBounds().pad(padding),snap=zoom<=2?2:zoom<=3?.75:zoom<=5?.25:zoom>=8?.05:.10,nativeGridFallback=mapAitorState.nativeGridFallbackLayer===requestedLayer&&mapAitorState.nativeGridFallbackModel===requestedModel,density=nativeGridFallback?Math.min(mapLayerDensity(requestedLayer,zoom),requestedLayer==='cloud'?12:14):mapLayerDensity(requestedLayer,zoom),focus=mapAitorState.location||BERMEO,viewCenter=map.getCenter(),muWindow=MAP_MU_PAIR_LAYERS.has(requestedLayer)?mapCanonicalMuWindow(raw,zoom,viewCenter):null,rainWindow=MAP_NOAA_RAIN_LAYERS.has(requestedLayer)?mapCanonicalRainWindow(raw,zoom,viewCenter):null,reflectivityWindow=MAP_NOAA_REFLECTIVITY_LAYERS.has(requestedLayer)?mapCanonicalMuWindow(raw,zoom,viewCenter):null,anomalyWindow=requestedLayer==='t850_anomaly'?mapCanonicalAnomalyWindow(raw,zoom,viewCenter):null,requestWindow=muWindow||rainWindow||reflectivityWindow||anomalyWindow,south=requestWindow?requestWindow.south:Math.max(-80,Math.floor(raw.getSouth()/snap)*snap),north=requestWindow?requestWindow.north:Math.min(85,Math.ceil(raw.getNorth()/snap)*snap),west=requestWindow?requestWindow.west:Math.max(-180,Math.floor(raw.getWest()/snap)*snap),east=requestWindow?requestWindow.east:Math.min(180,Math.ceil(raw.getEast()/snap)*snap),requestCenter=requestWindow?{lat:requestWindow.centerLat,lng:requestWindow.centerLon}:viewCenter,requestFocus=requestWindow?{latitude:requestCenter.lat,longitude:requestCenter.lng}:focus;
   mapAitorState.requestLayer=requestedLayer;mapAitorState.requestBundle=requestedBundle;
   const query=new URLSearchParams({south:south.toFixed(2),north:north.toFixed(2),west:west.toFixed(2),east:east.toFixed(2),model:requestedModel,layer:requestedBundle,displayLayer:muWindow?'mu':requestedLayer,density:String(density),focusLat:Number(requestFocus.latitude).toFixed(3),focusLon:Number(requestFocus.longitude).toFixed(3),viewLat:Number(requestCenter.lat).toFixed(3),viewLon:Number(requestCenter.lng).toFixed(3)});
   if(MAP_NOAA_RAIN_LAYERS.has(requestedLayer))query.set('page','0');
   if(MAP_NOAA_REFLECTIVITY_LAYERS.has(requestedLayer))query.set('product','reflectivity_1km');
   if(!muWindow&&requestedLayer==='cin')query.set('cin','1');
-  if(muWindow||MAP_NOAA_REFLECTIVITY_LAYERS.has(requestedLayer))query.set('dataVersion','10.155');
+  if(muWindow||MAP_NOAA_REFLECTIVITY_LAYERS.has(requestedLayer)||anomalyWindow)query.set('dataVersion','10.157');
   const cacheKey=mapCacheKey(query),cached=!force?mapCachedForecastResponse(cacheKey):null;
   setMapBusy(true,'Cargando '+($('mapModel').selectedOptions[0]?.textContent||'modelo')+' · '+requestedTitle+'…');
   const timeout=setTimeout(()=>controller.abort('timeout'),32000);
@@ -5278,7 +5302,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(serviceWorkerReloading)return;serviceWorkerReloading=true;location.reload()});
   window.addEventListener('load',async()=>{
     try{
-      const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.156',{updateViaCache:'none'});
+      const registration=await navigator.serviceWorker.register('./service-worker.js?v=10.157',{updateViaCache:'none'});
       await registration.update();
     }catch(_){}
   });

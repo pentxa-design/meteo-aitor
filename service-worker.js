@@ -1,4 +1,4 @@
-const CACHE='meteo-aitor-v10-156-zoom-suave-y-dbz-claro';
+const CACHE='meteo-aitor-v10-157-horas-fluidas-y-detalle-diario';
 // La estructura meteorológica no cambia en esta revisión: conservar esta
 // caché evita descargar de nuevo las mallas NOAA pesadas tras actualizar.
 const MAP_DATA_CACHE='meteo-aitor-map-data-v10-155';

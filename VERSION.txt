@@ -1,14 +1,14 @@
-Meteo Aitor Bermeo v10.156 · zoom suave y lectura dBZ explicada
+Meteo Aitor Bermeo v10.157 · horas fluidas y detalle diario
 
-CAMBIO PRINCIPAL v10.156
+CAMBIO PRINCIPAL v10.157
 
-- La rueda y el trackpad avanzan en pasos de 0,5 con ajuste de 0,25 y necesitan más recorrido por nivel: el zoom deja de saltar varias escalas de golpe.
-- Cambiar entre capas NOAA ya no fuerza zoom 6 ni cambia el centro elegido por el usuario.
-- El radar AEMET conserva el encuadre actual al terminar de cargar, en vez de reajustar silenciosamente toda la Península.
-- El doble clic deja una sola ruta de actualización: Leaflet acerca y después se refresca la vista, sin una petición duplicada con límites antiguos.
-- El valor puntual de reflectividad añade una equivalencia Z–R orientativa en mm/h y una categoría de intensidad, recordando que la capa REFD GFS es previsión a 1 km y no radar observado.
-- La caché meteorológica v10.155 se conserva para no repetir descargas pesadas; solo se renueva la interfaz PWA v10.156.
-Fecha: 2026-08-20
+- El deslizador de horas reduce el trabajo provisional y responde con mayor frecuencia también en pantalla completa.
+- Nubosidad y las demás películas temporales conservan el último fotograma válido de la misma capa mientras llega la hora solicitada; una respuesta lenta no deja el mapa en blanco.
+- La anomalía de temperatura a 850 hPa usa una ventana espacial estable y reutilizable para evitar peticiones frágiles al cambiar de hora o encuadre.
+- Los siete días son botones accesibles: al pulsar un día se muestran exclusivamente sus 24 horas, sin desplegar nada hasta que el usuario lo elige.
+- Las mallas MUCAPE, MUCIN y reflectividad mantienen su identificación de datos v10.157 y no se mezclan entre variables.
+- Se conservan los ajustes de zoom suave, consulta puntual y encuadre introducidos en v10.156.
+Fecha: 2026-08-21
 
 VERSIÓN ANTERIOR
 
