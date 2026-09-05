@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.05-0616';
+const BUILD = '2026.09.05-1548';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -533,6 +533,7 @@ function dir16(deg) {
 /** Códigos WMO → texto. Fuente: tabla WMO 4677 usada por Open-Meteo. */
 const WMO = {
   0:'Despejado', 1:'Mayormente despejado', 2:'Parcialmente nuboso', 3:'Cubierto',
+  4:'Sol velado',
   45:'Niebla', 48:'Niebla engelante',
   51:'Llovizna débil', 53:'Llovizna moderada', 55:'Llovizna intensa',
   56:'Llovizna engelante débil', 57:'Llovizna engelante intensa',
@@ -545,6 +546,40 @@ const WMO = {
 };
 const wmoText = c => WMO[c] ?? (has(c) ? `Código ${c}` : null);
 const isStormCode = c => c === 95 || c === 96 || c === 99;
+
+/* ── EL SOL VELADO NO ES «CUBIERTO» ──────────────────────────────────
+   Puesto el 05-09-2026 desde Calpe, con él en la calle a pleno sol y la
+   app diciendo **«Cubierto»** con nube gris a las 13:00. Medido a esa
+   hora en los tres modelos: nube BAJA 0 %, MEDIA 0 %, ALTA 100 %, y
+   784 W/m² de radiación — sol de agosto con un velo de cirros a diez
+   kilómetros. Open-Meteo saca el código 0-3 de la nubosidad TOTAL, así
+   que un cielo de cirros finos sale «cubierto» igual que un techo de
+   estratos, y son cielos que no se parecen en nada: bajo el velo se
+   trabaja al sol.
+
+   Suyo, ese día: *«en uno nublado, en otro sol y nublado… eso creo que
+   está mal»*. Y llevaba razón en las dos cosas: el rótulo mentía y cada
+   pestaña lo calculaba a su manera.
+
+   La regla, y es UNA para todas las pantallas porque entra por
+   `codigoQueSeVe()`, que es por donde pasa todo código antes de
+   dibujarse: si el modelo dice nuboso o cubierto (2 o 3) pero entre
+   bajas y medias no llegan al 40 % y las altas pasan del 50 %, eso es
+   **sol velado** — código propio 4, que Open-Meteo no usa nunca. Solo
+   se REBAJA lo que el modelo tapa de más; nunca se tapa lo que el
+   modelo deja al sol. Para torre da igual: los cirros no traen racha ni
+   rayo.                                                                */
+const VELADO = 4;
+function veladoSiToca(code, h) {
+  if (code !== 2 && code !== 3) return code;
+  const b = h?.nubesBajas, m = h?.nubesMedias, a = h?.nubesAltas;
+  if (!has(b) || !has(m) || !has(a)) return code;
+  return (b + m < 40 && a >= 50) ? VELADO : code;
+}
+/* Cuánto tapa cada código, para los empates: el velado va entre el
+   «mayormente despejado» y el «parcialmente nuboso», no por encima de
+   «cubierto» como haría el número 4 a secas. */
+const tapado = c => (c === VELADO ? 1.5 : c);
 
 /* ---------- 3. Iconos SVG (sin dependencias, sin emoji) ---------- */
 
@@ -619,6 +654,11 @@ function icon(code, day = 1) {
   if (code === 0 || code === 1)                    g = day ? sun : moon;
   else if (code === 2)                             g = (day ? `<g transform="translate(-2.4 -2.4) scale(.8)">${sun}</g>` : `<g transform="translate(-1.6 -1.6) scale(.8)">${moon}</g>`) + cloud(2.4, 2.4);
   else if (code === 3)                             g = cloud(0, 1.2, '#9fb0cf');
+  /* Sol velado: el sol entero —se ve, y calienta— con dos velos finos
+     por delante. Ni la nube pequeña del «parcialmente» ni el nubarrón. */
+  else if (code === VELADO)                        g = (day ? sun : moon)
+    + `<g stroke="#dfe6f4" stroke-opacity=".75" stroke-width="1.7" stroke-linecap="round">
+         <path d="M3.2 9.6c3.2-1.4 6.2-1.4 9.4 0s6.2 1.4 8.6 0M5.2 15.2c3.2 1.4 6.2 1.4 9.4 0s5-1.4 6.8 0"/></g>`;
   else if (code === 45 || code === 48)             g = cloud(0, -1.6, '#a9b6cd') + `<g stroke="#a9b6cd" stroke-width="1.9" stroke-linecap="round"><path d="M4.6 19.4h14.8M6.6 22.2h10.8"/></g>` + (code === 48 ? hielo : '');
   // Llovizna (51-57): dos gotitas. Mojar el suelo, poco más.
   else if (code >= 51 && code <= 57)               g = cloud(0, -1.6) + drops('#7fb6ff', 'fina') + (code >= 56 ? hielo : '');
@@ -795,7 +835,7 @@ function codigoQueSeVe(h, codigoDelCielo, thr = S.thr) {
     if (mm >= (thr?.rainWarn ?? 0.2)) return 61;  // llueve poco
     return 51;                                    // sirimiri: moja igual
   }
-  return codigoDelCielo;
+  return veladoSiToca(codigoDelCielo, h);
 }
 
 function comoLlueve(h, thr = S.thr) {
@@ -3343,6 +3383,11 @@ function buildHours(fc, height, place = null) {
       hum: H.relative_humidity_2m?.[i], dew: H.dew_point_2m?.[i],
       prec: H.precipitation?.[i], pop: H.precipitation_probability?.[i],
       code: H.weather_code?.[i], cloud: H.cloud_cover?.[i], vis: H.visibility?.[i],
+      /* Las tres capas viajan con la hora: sin ellas no se puede
+         distinguir el velo de cirros del techo de estratos. Ver
+         `veladoSiToca()`. */
+      nubesBajas: H.cloud_cover_low?.[i], nubesMedias: H.cloud_cover_mid?.[i],
+      nubesAltas: H.cloud_cover_high?.[i],
       /* is_day con respaldo: Open-Meteo devuelve null en los huecos y
          null NO activa el valor por defecto de icon() — salía luna a
          mediodía. Mismo criterio 8-19 h que deDia(). Cazado 31-08. */
@@ -4365,7 +4410,7 @@ function fotoZona(place, hour) {
   if (!z) return null;
   const c = hour?.code;
   // Despejado o pocas nubes → la de cielo azul. Lo demás, la cargada.
-  const despejado = has(c) ? (c === 0 || c === 1) : true;
+  const despejado = has(c) ? (c === 0 || c === 1 || c === VELADO) : true;
   return { ...(despejado ? z.sol : z.gris), zona: true };
 }
 
@@ -4379,7 +4424,7 @@ function ambiente(hour) {
   else if (has(c) && ((c >= 51 && c <= 67) || (c >= 80 && c <= 86))) partes.push('amb-lluvia');
   else if (has(c) && (c >= 71 && c <= 77))         partes.push('amb-nieve');
   else if (has(c) && (c === 45 || c === 48))       partes.push('amb-niebla');
-  else if (!noche && has(c) && (c === 0 || c === 1)) partes.push('amb-sol');
+  else if (!noche && has(c) && (c === 0 || c === 1 || c === VELADO)) partes.push('amb-sol');
   return partes.join(' ');
 }
 
@@ -4448,7 +4493,7 @@ function puntuarFoto(f, hour) {
   if (has(c)) {
     const conAgua  = (c >= 51 && c <= 67) || (c >= 80 && c <= 86) || isStormCode(c);
     const conNubes = c === 2 || c === 3;
-    const raso     = c === 0 || c === 1;
+    const raso     = c === 0 || c === 1 || c === VELADO;
     const conNiebla = c === 45 || c === 48;
     if (esNiebla) p += conNiebla ? 25 : -15;
     if (esLluvia) p += (conAgua || conNubes) ? 15 : -15;
@@ -4550,6 +4595,7 @@ const Cover = {
     let g;
     if (!has(c))                       g = dia ? '#2b4a7a,#4c7ab5' : '#0b1730,#1b2c50';
     else if (c === 0 || c === 1)       g = dia ? '#1d64c2,#57a8ee,#a9d6f7' : '#050b1c,#0f1f42,#22345f';
+    else if (c === VELADO)             g = dia ? '#2c66b4,#6da4d9,#d3dde8' : '#060c1e,#122344,#26385e';
     else if (c === 2)                  g = dia ? '#2a6bb0,#6fa3d6,#c2d4e4' : '#070f24,#152747,#2b3d63';
     else if (c === 3)                  g = dia ? '#4a5a72,#8695a8,#b9c3cf' : '#0a1020,#1a2233,#2c3547';
     else if (c === 45 || c === 48)     g = dia ? '#6b7683,#a3acb6,#cdd3d9' : '#12161d,#232a33,#39414b';
@@ -10458,13 +10504,22 @@ const HAY_AGUA = 51;          // de aquí para arriba, moja
    saliendo despejado y uno tapado entero sigue saliendo tapado.
    ═══════════════════════════════════════════════════════════════════ */
 function cieloDelDia(sel) {
-  const nubes = sel.map(h => h.nubes).filter(has);
+  const prom = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
+  /* Con capas, el día se mide por lo que TAPA: bajas y medias. Las altas
+     solo velan el sol (05-09-2026, ver `veladoSiToca`). Sin capas, la
+     total, como antes. */
+  const bm = sel.map(h => has(h.nubesBajas) && has(h.nubesMedias)
+                          ? Math.min(100, h.nubesBajas + h.nubesMedias) : null).filter(has);
+  const altas = sel.map(h => h.nubesAltas).filter(has);
+  const conCapas = bm.length && bm.length * 2 >= sel.length;
+  const nubes = conCapas ? bm : sel.map(h => h.nubes).filter(has);
   if (!nubes.length) return null;
-  const media = nubes.reduce((a, b) => a + b, 0) / nubes.length;
-  if (media < 12) return 0;    // despejado
-  if (media < 50) return 1;    // poco nuboso
-  if (media < 80) return 2;    // nuboso
-  return 3;                    // cubierto
+  const media = prom(nubes);
+  const velado = conCapas && altas.length && prom(altas) >= 50;
+  if (media < 12) return velado ? VELADO : 0;    // despejado
+  if (media < 50) return velado ? VELADO : 1;    // poco nuboso
+  if (media < 80) return 2;                      // nuboso
+  return 3;                                      // cubierto
 }
 
 function codigoFranja(sel) {
@@ -10488,7 +10543,7 @@ function codigoFranja(sel) {
   const cuenta = new Map();
   for (const c of cs) cuenta.set(c, (cuenta.get(c) ?? 0) + 1);
   return [...cuenta.entries()]
-    .sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0];
+    .sort((a, b) => b[1] - a[1] || tapado(b[0]) - tapado(a[0]))[0][0];
 }
 
 /* ═══ EL RÓTULO DE LA FRANJA DICE LAS DOS COSAS ══════════════════════
@@ -10523,7 +10578,7 @@ function cieloPartido(sel) {
   if (cs.length < 4 || cs.some(c => c >= HAY_AGUA)) return null;
   const gana = xs => { const c = new Map();
     for (const x of xs) c.set(x, (c.get(x) ?? 0) + 1);
-    return [...c.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0]; };
+    return [...c.entries()].sort((a, b) => b[1] - a[1] || tapado(b[0]) - tapado(a[0]))[0][0]; };
   /* ── EL CORTE VA DONDE CAMBIA EL CIELO, NO POR LA MITAD ────────────
      Suyo, 01-09-2026, y llevaba días diciéndolo:
 
@@ -10544,7 +10599,7 @@ function cieloPartido(sel) {
 
      Es UNA función y la usan las tres cosas: el texto de la franja, sus
      dos iconos, y el dibujo partido del día en «10 días». */
-  const grupo = c => (c <= 1 ? 0 : 1);
+  const grupo = c => (c <= 1 || c === VELADO ? 0 : 1);   // el velado es del bando del sol
   let mejor = null;
   for (let k = 2; k <= cs.length - 2; k++) {
     const a1 = cs.slice(0, k), a2 = cs.slice(k);
@@ -10596,7 +10651,7 @@ function tituloFranja(sel, code, desde = '') {
   if (!secas.length) return base;
   const cuenta = new Map();
   for (const c of secas) cuenta.set(c, (cuenta.get(c) ?? 0) + 1);
-  const cielo = [...cuenta.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0];
+  const cielo = [...cuenta.entries()].sort((a, b) => b[1] - a[1] || tapado(b[0]) - tapado(a[0]))[0][0];
   const txtCielo = wmoText(cielo);
   if (!txtCielo) return base;
 
@@ -10609,7 +10664,13 @@ function renderNow() {
   /* Ver `codigoQueSeVe()`: si el dueño de la lluvia ve agua, eso manda
      sobre el código del cielo — el rótulo no puede decir «Cubierto»
      mientras la tarjeta de al lado dice que llueve. */
-  const codVisto = codigoQueSeVe(c, C.weather_code);
+  /* Las capas de AHORA, si el modelo las trae en `current`; si no, las
+     de la hora en curso. Con ellas el velo de cirros no sale «Cubierto». */
+  const cAhora = { ...c,
+    nubesBajas:  C.cloud_cover_low  ?? c?.nubesBajas,
+    nubesMedias: C.cloud_cover_mid  ?? c?.nubesMedias,
+    nubesAltas:  C.cloud_cover_high ?? c?.nubesAltas };
+  const codVisto = codigoQueSeVe(cAhora, C.weather_code);
   $('#nowIco').innerHTML = icon(codVisto, C.is_day);
   $('#nowT').className = ''; $('#nowT').textContent = num(C.temperature_2m, 0) ?? '--';
   /* ── EL SÍMBOLO GRANDE NO PUEDE IR SOLO ───────────────────────────
@@ -11741,6 +11802,8 @@ function renderDays() {
           /* La nubosidad viaja con la hora: el cielo de un día se MIDE
              con ella, no se vota entre códigos. Ver `cieloDelDia`. */
           nubes: H.cloud_cover?.[i],
+          nubesBajas: H.cloud_cover_low?.[i], nubesMedias: H.cloud_cover_mid?.[i],
+          nubesAltas: H.cloud_cover_high?.[i],
         });
       }
     }
