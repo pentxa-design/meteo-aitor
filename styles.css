@@ -1,0 +1,2720 @@
+/* SUELO DE 13 PX, PASADA DEL 29-08-2026: las 39 reglas a 0,7188rem
+   (11,5 px) venían de la conversión px→rem del día 28, que convirtió
+   tal cual sin subirlas al suelo. «Casi no veo» manda: todas a 0,8125rem.
+   Los .38em/.42em del ° en la temperatura grande se quedan: en relativo
+   son 20 px. El <small> global (.72em) se queda: va dentro de textos
+   grandes; donde iba dentro de texto pequeño ya se fijó en rem aparte. */
+/* ── TODOS LOS TAMAÑOS EN `rem`, NO EN PÍXELES ───────────────────────
+   Cambiado el 28-08-2026. Suyo, dos veces en cinco minutos: «esto más
+   grande, casi no veo» y «pequeño, con todo el sitio que hay, cuesta
+   leerlos». La app no tenía ningún ajuste de tamaño, así que lo que no
+   leía no lo leía y punto.
+
+   Con `px` no hay nada que hacer: un tamaño fijo es fijo. En `rem` todos
+   los textos cuelgan de la raíz, y la raíz se multiplica por `--zoom`
+   —el mando que él tiene ahora en Ajustes—. Un solo número mueve la app
+   entera y no se descuadra nada.
+
+   Convertidos 261 tamaños de una vez. Regla para lo que venga: **en esta
+   hoja no se escribe font-size en px**. */
+
+/* Cualquier `display:` propio pisa al [hidden] del navegador. Eso dejó
+   el fondo del panel de móvil tapando la pantalla entera y comiéndose
+   los clics del mapa, y la barra de color montada encima del mapa.
+   Con esto, `hidden` significa oculto y punto. */
+[hidden]{display:none!important}
+
+/* ============ Aitor Meteo · trabajo en altura ============ */
+
+a{color:var(--acc);text-decoration:none}
+a:hover{text-decoration:underline}
+h1,h2{margin:0;font-weight:650;letter-spacing:-.02em}
+small{font-size:.72em;font-weight:500}
+.dim{color:var(--dim)}
+.faint{color:var(--faint)}
+svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;display:block}
+
+/* ---------- Cabecera ---------- */
+.top{position:sticky;top:0;z-index:40;padding-top:var(--sat);
+  background:linear-gradient(180deg,rgba(7,11,20,.94),rgba(7,11,20,.72));
+  backdrop-filter:blur(18px) saturate(1.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);
+  border-bottom:1px solid var(--line)}
+.top__in{display:flex;gap:10px;align-items:center;padding-top:10px;padding-bottom:8px}
+.brand{display:flex;align-items:center;gap:8px;font-size:1.0625rem;letter-spacing:-.02em;flex:none}
+.brand b{font-weight:700}
+.brand__m{width:28px;height:28px;border-radius:8px;flex:none;
+  /* CON SELLO DE VERSIÓN. Lo encontró él, 27-08-2026: la app del Mac y la
+     del móvil ya tenían el icono nuevo, pero **el de dentro de la página
+     —el cuadradito de al lado de «Aitor»— seguía siendo el viejo**. Y era
+     esto: el 26-08 puse `?v=` en el manifest, en el `index.html` y en el
+     service worker… y me dejé el CSS. El navegador seguía sirviendo el PNG
+     viejo de su caché. Un solo sitio sin sellar y el icono viejo sobrevive. */
+  background:url("icons/icon-192.png?v=20260827") center/cover no-repeat;
+  box-shadow:0 0 0 1px rgba(255,255,255,.16),0 5px 14px -6px rgba(0,0,0,.8)}
+.top__a{display:flex;gap:6px;flex:none}
+
+.ib{width:40px;height:40px;flex:none;border:1px solid var(--line);border-radius:12px;
+  background:rgba(255,255,255,.045);color:var(--ink);cursor:pointer;padding:10px;
+  display:grid;place-items:center;transition:.16s}
+.ib:hover{background:rgba(255,255,255,.1)}
+.ib:active{transform:scale(.93)}
+.ib--in{position:absolute;right:5px;top:5px;width:32px;height:32px;padding:7px;border:0;background:transparent}
+.ib.is-on{color:var(--no);border-color:rgba(255,77,94,.45);background:rgba(255,77,94,.12)}
+.ib.is-on svg{fill:currentColor}
+#reloadSvg.spin{animation:spin .8s linear infinite;transform-origin:center}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- Búsqueda ---------- */
+.search{position:relative;flex:1;min-width:0}
+.search__i{position:absolute;left:12px;top:11px;width:18px;height:18px;color:var(--faint);pointer-events:none}
+#q{width:100%;height:42px;padding:0 44px 0 38px;border-radius:13px;
+  border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink);
+  font:inherit;font-size:0.9375rem;outline:none;transition:.16s}
+#q::placeholder{color:var(--faint)}
+#q:focus{border-color:rgba(77,157,255,.55);background:rgba(77,157,255,.09);
+  box-shadow:0 0 0 3px rgba(77,157,255,.13)}
+#q::-webkit-search-cancel-button{display:none}
+/* Al escribir, el buscador se lleva toda la fila: en el móvil no hay sitio
+   para teclear el nombre de una estación compartiendo la barra con el logo
+   y los botones. Al salir, vuelve todo a su sitio. */
+@media(max-width:640px){
+  .top__in.searching .brand,
+  .top__in.searching .top__a{display:none}
+}
+.ac{position:absolute;top:48px;left:0;right:0;z-index:60;margin:0;padding:5px;list-style:none;
+  background:#111a2e;border:1px solid var(--line);border-radius:14px;
+  box-shadow:0 26px 60px -18px rgba(0,0,0,.9);max-height:min(58vh,380px);overflow:auto}
+.ac li{padding:10px 12px;border-radius:10px;cursor:pointer;display:flex;
+  justify-content:space-between;gap:10px;align-items:center;font-size:0.9375rem}
+.ac li:hover,.ac li.is-sel{background:rgba(77,157,255,.16)}
+.ac small{color:var(--dim);text-align:right;flex:none}
+
+/* ---------- Pills ---------- */
+.pills{display:flex;gap:7px;overflow-x:auto;padding-bottom:9px;scrollbar-width:none}
+.pills::-webkit-scrollbar{display:none}
+.pill{flex:none;padding:6px 13px;border-radius:999px;border:1px solid var(--line);
+  background:rgba(255,255,255,.045);color:var(--dim);font-size:0.8438rem;font-weight:550;
+  cursor:pointer;white-space:nowrap;transition:.16s;display:flex;align-items:center;gap:7px}
+.pill:hover{color:var(--ink);background:rgba(255,255,255,.1)}
+.pill.is-on{color:#fff;border-color:rgba(77,157,255,.5);background:rgba(77,157,255,.2)}
+.pill .x{opacity:.45;font-size:1.0rem;line-height:1}
+.pill .x:hover{opacity:1;color:var(--no)}
+
+/* ---------- Pestañas ---------- */
+/* Con 12 pestañas y sitio para cuatro, la mitad quedaban fuera SIN NINGUNA
+   pista de que la fila se desliza (la barra de scroll va oculta). Se perdía
+   el mapa y parecía que la pestaña había desaparecido. Este degradado en el
+   borde derecho dice que hay más. */
+.tabs{overflow:hidden;position:relative}
+.tabs::after{content:"";position:absolute;top:0;right:0;bottom:0;width:28px;
+  pointer-events:none;
+  background:linear-gradient(90deg,rgba(7,11,20,0),rgba(7,11,20,.92))}
+.tabs__in{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabs__in::-webkit-scrollbar{display:none}
+.tab{flex:none;padding:11px 15px 12px;border:0;background:transparent;color:var(--dim);
+  font:inherit;font-size:0.9062rem;font-weight:600;cursor:pointer;position:relative;
+  border-bottom:2px solid transparent;transition:.16s;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab.is-on{color:#fff;border-bottom-color:var(--acc)}
+
+/* ---------- Vistas ---------- */
+.view{display:none;padding:14px 0 8px;animation:fade .22s ease}
+.view.is-on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  padding:16px;margin-bottom:13px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  box-shadow:0 16px 44px -26px rgba(0,0,0,.9)}
+.card--flush{padding:0;overflow:hidden}
+.ch{font-size:0.875rem;font-weight:650;letter-spacing:.02em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:13px;display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}
+.ch small{text-transform:none;letter-spacing:0}
+.cols{display:grid;gap:13px;grid-template-columns:1fr}
+@media(min-width:820px){.cols{grid-template-columns:1fr 1fr}}
+
+.place{margin-bottom:13px}
+.place h1{font-size:clamp(24px,5.4vw,34px);line-height:1.1}
+.place p{margin:3px 0 0;font-size:0.875rem}
+
+/* ---------- Veredicto ---------- */
+.verdict{display:flex;gap:16px;justify-content:space-between;align-items:center;flex-wrap:wrap;
+  border-width:1px;position:relative;overflow:hidden}
+.verdict::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--vc,var(--faint))}
+.verdict__l{display:flex;gap:14px;align-items:center;min-width:min(100%,260px);flex:1}
+.verdict__badge{flex:none;min-width:96px;padding:11px 14px;border-radius:14px;text-align:center;
+  font-weight:800;font-size:1.0625rem;letter-spacing:.03em;
+  background:color-mix(in srgb,var(--vc,#888) 20%,transparent);
+  color:var(--vc,#888);border:1px solid color-mix(in srgb,var(--vc,#888) 45%,transparent)}
+.verdict__l b{display:block;font-size:1.0625rem;letter-spacing:-.01em}
+.verdict__l p{margin:3px 0 0;font-size:0.875rem;line-height:1.4}
+.verdict__r{display:flex;flex-direction:column;gap:7px;font-size:0.8125rem}
+.hsel{display:flex;gap:5px;flex-wrap:wrap}
+.hbtn{padding:7px 11px;border-radius:10px;border:1px solid var(--line);cursor:pointer;
+  background:rgba(255,255,255,.05);color:var(--dim);font:inherit;font-size:0.8438rem;font-weight:600;transition:.16s}
+.hbtn:hover{color:var(--ink);background:rgba(255,255,255,.1)}
+.hbtn.is-on{background:rgba(77,157,255,.22);border-color:rgba(77,157,255,.5);color:#fff}
+/* Qué trabajo vas a hacer: manda sobre todo lo demás, así que se ve
+   más que la altura. Con su aclaración debajo en pequeño. */
+.psel{margin-bottom:9px}
+.pbtn{padding:7px 13px;text-align:left;line-height:1.25}
+.pbtn i{display:block;font-style:normal;font-size:0.8125rem;opacity:.62;font-weight:500}
+.pbtn.is-on{background:rgba(77,157,255,.3);border-color:rgba(77,157,255,.62)}
+#hsel[hidden],#hlbl[hidden]{display:none}
+
+/* ---------- Selector de modelo ---------- */
+.msel{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:13px;
+  padding:11px 13px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.035)}
+.msel__k{font-size:0.8125rem;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.msel__d{font-size:0.8125rem;color:var(--faint);flex-basis:100%;line-height:1.4}
+.mbtn{padding:6px 12px;border-radius:9px;border:1px solid var(--line);cursor:pointer;
+  background:rgba(255,255,255,.05);color:var(--dim);font:inherit;font-size:0.8125rem;font-weight:650;transition:.16s}
+.mbtn:hover{color:var(--ink);background:rgba(255,255,255,.1)}
+.mbtn.is-on{background:rgba(139,123,255,.24);border-color:rgba(139,123,255,.55);color:#fff}
+
+/* ---------- Altitud del emplazamiento ---------- */
+.elev{border:1px solid var(--line);border-radius:15px;padding:12px 14px;margin-bottom:13px;
+  background:rgba(255,255,255,.035);display:flex;flex-direction:column;gap:8px}
+.elev.is-warn{border-color:rgba(255,77,94,.45);background:rgba(255,77,94,.07)}
+.elev__r{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.elev__k{font-size:0.8125rem;color:var(--dim)}
+.elev__r b{font-size:1.0rem;font-weight:650}
+.elev__r input{width:110px;height:34px;padding:0 10px;border-radius:9px;border:1px solid var(--line);
+  background:rgba(255,255,255,.06);color:var(--ink);font:inherit;font-size:0.9375rem;outline:none;text-align:right}
+.elev__r input:focus{border-color:rgba(77,157,255,.55)}
+.elev__d{font-size:0.8125rem;color:var(--faint);line-height:1.5;padding-top:8px;border-top:1px solid var(--line)}
+.elev__d b{color:var(--ink)}
+.elev.is-warn .elev__d b{color:var(--no)}
+/* La nota de «las dos cifras salen del mismo mapa» NO es una alarma: es
+   una aclaración. El recuadro puede estar en rojo por otra cosa —el nudo
+   a 19 km—, pero este párrafo no puede leerse como un fallo. Suyo, con
+   el pantallazo del móvil el 30-08-2026: «me sale esto». */
+.elev.is-warn .elev__nota b{color:var(--fg)}
+.elev__nota{opacity:.9}
+
+/* Las filas «de cada modelo» de Mis estaciones, en barras — pedido por él
+   el 31-08-2026 («como lo de las rachas, que se lean bien»). El mismo
+   lenguaje que .cmp__f de la ficha: nombre | barra | valor. */
+.pt__uno--b{display:block}   /* la variante en barras deja el flujo de chips */
+.pt__uno--b>span{display:block;margin-bottom:4px}
+.ptb__f{display:grid;grid-template-columns:92px 1fr auto;gap:10px;align-items:center;
+  padding:3px 0;font-size:0.8438rem}
+.ptb__n{font-weight:650;color:var(--fg)}
+.ptb__b{height:12px;border-radius:5px;background:rgba(255,255,255,.07);
+  position:relative;overflow:hidden;min-width:60px}
+.ptb__b i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;
+  background:linear-gradient(90deg,#2f8ad0,#63d2ff)}
+.ptb__f[data-max="1"] .ptb__b i{background:linear-gradient(90deg,#ffb02e,#ff8a3d)}
+.ptb__f[data-max="1"] .ptb__v b{color:var(--warn)}
+.ptb__f[data-mudo="1"]{opacity:.55}
+.ptb__v{white-space:nowrap;text-align:right}
+
+/* Dos cielos en la franja = dos dibujos, en su orden. Suyo, 31-08-2026:
+   «¿por qué no pinta un sol también?». Los dos iconos comparten el hueco
+   del icono grande, algo más pequeños. */
+.part__i2{display:inline-flex;align-items:center;gap:2px}
+.part__i2 svg{width:72%;height:72%}
+.ptb__v small{color:var(--faint)}
+
+/* «Esto no es tu estación». Va en ámbar suave y con su botón: no es una
+   alarma —buscar un pueblo es legítimo, él lo dijo: «estoy de vacaciones
+   en Santander y quiero saber si cenar fuera»—, es un aviso de que hay
+   otro punto suyo al lado y más alto. Solo en Torre, la de trabajo. */
+.ojo{display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  border:1px solid color-mix(in srgb,var(--warn) 42%,transparent);
+  background:color-mix(in srgb,var(--warn) 9%,rgba(0,0,0,.2));
+  color:var(--warn);border-radius:12px;padding:9px 12px;margin-bottom:12px;
+  font-size:0.875rem;line-height:1.45}
+.ojo b{font-weight:700}
+.ojo__b{margin-left:auto;border:1px solid color-mix(in srgb,var(--warn) 55%,transparent);
+  background:transparent;color:var(--warn);border-radius:9px;padding:5px 11px;
+  font:inherit;font-weight:650;cursor:pointer}
+.ojo__b:hover{background:color-mix(in srgb,var(--warn) 16%,transparent)}
+.elev__wt{display:block;margin-top:5px;color:#e9b6bb}
+.elev__wt b{color:var(--no)}
+
+/* ---------- Parte de decisión ---------- */
+.parte{display:flex;align-items:center;gap:9px;width:100%;justify-content:center;
+  padding:13px 18px;margin-bottom:13px;border-radius:15px;cursor:pointer;
+  border:1px solid rgba(77,157,255,.45);background:rgba(77,157,255,.14);color:#cfe2ff;
+  font:inherit;font-size:0.9375rem;font-weight:650;transition:.16s}
+.parte:hover{background:rgba(77,157,255,.24)}
+.parte:active{transform:scale(.99)}
+.parte svg{width:18px;height:18px;flex:none}
+
+/* ---------- Capas de modelo / mapa Windy ---------- */
+.ovl{display:flex;gap:6px;overflow-x:auto;padding:11px 13px;scrollbar-width:none;
+  border-bottom:1px solid var(--line)}
+.ovl::-webkit-scrollbar{display:none}
+.ovb{flex:none;padding:7px 13px;border-radius:999px;border:1px solid var(--line);cursor:pointer;
+  background:rgba(255,255,255,.05);color:var(--dim);font:inherit;font-size:0.8125rem;font-weight:600;
+  white-space:nowrap;transition:.16s}
+.ovb:hover{color:var(--ink);background:rgba(255,255,255,.11)}
+.ovb.is-on{background:rgba(77,157,255,.24);border-color:rgba(77,157,255,.55);color:#fff}
+.ovl--flat{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  padding:0;border:0;overflow:visible}
+.ovl--flat .ovb{border-radius:12px;text-align:left;padding:11px 13px;white-space:normal}
+.ovl--flat .ovb b{display:block;font-size:0.875rem;color:inherit}
+.ovl--flat .ovb span{font-size:0.8125rem;color:var(--faint);font-weight:500}
+.ovl--flat .ovb.is-on span{color:rgba(255,255,255,.75)}
+
+/* ---------- Visor cartográfico (MapLibre + teselas Open-Meteo) ---------- */
+.mapcard{overflow:visible}
+.msel--map{margin:0;border:0;border-radius:0;border-bottom:1px solid var(--line);
+  background:rgba(255,255,255,.03);padding:10px 13px;row-gap:6px}
+
+/* Capas agrupadas por familia */
+.ovl{display:flex;gap:14px;overflow-x:auto;padding:10px 13px;scrollbar-width:thin;
+  border-bottom:1px solid var(--line);align-items:flex-start}
+.lgrp{display:flex;flex-direction:column;gap:5px;flex:none}
+.lgrp__k{font-size:0.8125rem;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);
+  font-weight:700;padding-left:2px}
+.lgrp .ovb{margin-right:5px}
+.lgrp{flex-direction:row;flex-wrap:nowrap;align-items:center;
+  padding-right:14px;border-right:1px solid var(--line)}
+.lgrp:last-child{border-right:0}
+.lgrp__k{padding-right:4px}
+
+.mapwrap{position:relative}
+/* El mapa se lleva la pantalla que sobra.
+   Aitor, 23-08-2026: «el recuadro se queda pequeño, para andar con
+   modelos así está mal». Antes tenía tope de 760 px y con la portada
+   encima quedaba una franja. Ahora ocupa lo que haya, descontando la
+   cabecera compacta y los mandos de abajo. */
+/* Altura de respaldo. La buena la calcula ajustarAltoMapa() midiendo lo
+   que ocupan de verdad la cabecera y los mandos, para que el deslizador
+   nunca quede por debajo del borde de la pantalla. */
+.mapc{height:clamp(420px, calc(100vh - 430px), 1200px);
+  background:#eef1f6;position:relative;z-index:1}
+.mapc .maplibregl-map{font:inherit!important}
+.maplibregl-ctrl-group{border-radius:10px!important;overflow:hidden}
+.maplibregl-ctrl-attrib{font-size:0.8125rem!important}
+.maplibregl-popup-content{color:#111;border-radius:10px;font:inherit;font-size:0.8125rem}
+
+.opa{display:flex;align-items:center;gap:7px;flex:none}
+.opa label{font-size:0.8125rem;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:650}
+.opa input[type=range]{width:92px;accent-color:var(--acc);height:4px}
+
+.mapfoot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:9px 13px 12px;font-size:0.8125rem;color:var(--dim);border-top:1px solid var(--line)}
+
+@media(max-width:560px){
+  .mapc{height:clamp(360px, calc(100vh - 300px), 700px)}
+  .opa{display:none}
+  .ovl{gap:10px}
+  .lgrp{padding-right:10px}
+}
+
+/* ---------- KPIs ---------- */
+.kpis{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));margin-bottom:13px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:13px 14px;
+  position:relative;overflow:hidden}
+.kpi__k{font-size:0.8125rem;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);font-weight:650}
+.kpi__v{font-size:1.6875rem;font-weight:700;letter-spacing:-.03em;margin-top:5px;line-height:1.05}
+.kpi__v i{font-size:0.875rem;font-weight:600;color:var(--dim);font-style:normal;margin-left:3px}
+.kpi__s{font-size:0.8125rem;color:var(--faint);margin-top:4px;line-height:1.35}
+.kpi[data-s=go]{border-color:rgba(47,208,122,.4)}   .kpi[data-s=go]  .kpi__v{color:var(--go)}
+.kpi[data-s=warn]{border-color:rgba(255,176,46,.42)} .kpi[data-s=warn].kpi__v,.kpi[data-s=warn] .kpi__v{color:var(--warn)}
+.kpi[data-s=no]{border-color:rgba(255,77,94,.45)}    .kpi[data-s=no]  .kpi__v{color:var(--no)}
+.est{display:inline-block;font-size:0.8125rem;font-weight:700;letter-spacing:.05em;padding:2px 6px;
+  border-radius:5px;background:rgba(255,176,46,.18);color:var(--warn);vertical-align:middle;margin-left:5px}
+
+/* ---------- Timeline GO/NO-GO ---------- */
+.tl{display:flex;gap:2px;overflow-x:auto;padding-bottom:8px;scrollbar-width:thin}
+.tlh{flex:none;width:26px;cursor:pointer;text-align:center;border-radius:7px;padding:5px 0 4px;
+  transition:.14s;border:1px solid transparent}
+.tlh:hover{background:rgba(255,255,255,.07)}
+.tlh.is-sel{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.09)}
+.tlh__b{height:52px;border-radius:5px;margin-bottom:4px;position:relative;overflow:hidden;
+  background:rgba(255,255,255,.07)}
+.tlh__f{position:absolute;left:0;right:0;bottom:0;border-radius:5px}
+.tlh__t{font-size:0.8125rem;color:var(--faint);font-weight:600}
+.tlh__d{font-size:0.8125rem;color:var(--faint);opacity:.7}
+.tlh[data-s=go]   .tlh__f{background:linear-gradient(180deg,#3ee08c,#1fa860)}
+.tlh[data-s=warn] .tlh__f{background:linear-gradient(180deg,#ffc357,#e8880f)}
+.tlh[data-s=no]   .tlh__f{background:linear-gradient(180deg,#ff6b7a,#d61f33)}
+.tlh[data-s=nd]   .tlh__f{background:repeating-linear-gradient(45deg,#3b4460,#3b4460 3px,#2a3148 3px,#2a3148 6px)}
+.tl__leg{display:flex;gap:14px;flex-wrap:wrap;font-size:0.8125rem;color:var(--dim);margin-top:2px}
+.tl__leg span{display:flex;align-items:center;gap:6px}
+.d{width:10px;height:10px;border-radius:3px;display:inline-block}
+.d--go{background:#2fd07a}.d--warn{background:#ffb02e}.d--no{background:#ff4d5e}
+.d--nd{background:repeating-linear-gradient(45deg,#3b4460,#3b4460 2px,#2a3148 2px,#2a3148 4px)}
+.tl__detail{margin-top:13px;padding-top:13px;border-top:1px solid var(--line);font-size:0.875rem;min-height:54px}
+.tl__detail h3{margin:0 0 8px;font-size:0.9375rem;font-weight:650}
+.rz{display:flex;gap:8px;align-items:flex-start;padding:5px 0;line-height:1.4}
+.rz i{flex:none;width:8px;height:8px;border-radius:50%;margin-top:6px}
+.rz--go i{background:var(--go)}.rz--warn i{background:var(--warn)}.rz--no i{background:var(--no)}
+.rz--nd i{background:var(--faint)}
+
+/* ---------- Perfil de viento ---------- */
+.prof{display:flex;flex-direction:column;gap:9px}
+.pr{display:grid;grid-template-columns:56px 1fr 92px;gap:10px;align-items:center;font-size:0.8438rem}
+.pr__h{color:var(--dim);text-align:right;font-weight:600}
+.pr__bar{height:22px;border-radius:7px;background:rgba(255,255,255,.06);overflow:hidden;position:relative}
+.pr__f{height:100%;border-radius:7px;background:linear-gradient(90deg,#4d9dff,#8b7bff);transition:width .4s}
+.pr__v{font-weight:650}
+.pr.is-est .pr__f{background:linear-gradient(90deg,rgba(77,157,255,.5),rgba(139,123,255,.5));
+  background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.14) 0 5px,transparent 5px 10px),
+    linear-gradient(90deg,#4d9dff,#8b7bff)}
+.pr.is-work{outline:1px solid rgba(255,255,255,.28);outline-offset:3px;border-radius:9px}
+
+/* ---------- Tormenta ---------- */
+.storm{display:flex;flex-direction:column;gap:11px}
+.st{display:flex;justify-content:space-between;gap:12px;align-items:baseline;
+  padding-bottom:9px;border-bottom:1px solid var(--line);font-size:0.875rem}
+.st:last-child{border:0;padding-bottom:0}
+.st__k{color:var(--dim)}
+.st__k small{display:block;color:var(--faint);font-size:0.8125rem;margin-top:2px}
+.st__v{font-weight:650;text-align:right;flex:none}
+.st__v small{display:block;font-weight:500;font-size:0.8125rem;margin-top:2px}
+
+/* ── COLOR EN LAS CIFRAS DE RIESGO ELÉCTRICO ─────────────────────────
+   Suyo, 28-08-2026: «aquí está soso, en blanco y negro; pon algo en azul
+   etc., verdes», «el pantallazo de arriba, monocromo: ponlo más
+   colorido».
+
+   Con su regla del 26-08 delante: **el color significa algo o no se
+   pone**. Verde tranquilo, azul dato de referencia, ámbar ojo, rojo el
+   tramo que preocupa. El cual es cual lo decide `app.js`, no esta hoja:
+   aquí solo están los colores.
+
+   Se pinta la cifra y se le deja una banda de color a la izquierda, que
+   es lo que se ve de un vistazo bajando con el pulgar. El fondo va muy
+   suave a propósito: si se pinta fuerte, cinco filas de colores compiten
+   entre ellas y no se lee ninguna. */
+.st[data-t]{position:relative;padding-left:12px;border-radius:0 8px 8px 0}
+.st[data-t]::before{content:'';position:absolute;left:0;top:6px;bottom:6px;
+  width:3px;border-radius:2px;background:var(--ct)}
+.st[data-t=go]  {--ct:var(--go)}
+.st[data-t=warn]{--ct:var(--warn)}
+.st[data-t=no]  {--ct:var(--no)}
+.st[data-t=dato]{--ct:#4da3ff}
+.st[data-t] .st__v{color:var(--ct)}
+.st[data-t] .st__v small{color:var(--ct);opacity:.8}
+.st[data-t]{background:linear-gradient(90deg,
+  color-mix(in srgb,var(--ct) 9%,transparent), transparent 62%)}
+
+/* ---------- Umbrales ---------- */
+.thr summary{cursor:pointer;font-size:0.9375rem;list-style:none;padding:2px 0}
+.thr summary::-webkit-details-marker{display:none}
+.thr summary::before{content:"▸";display:inline-block;margin-right:8px;color:var(--dim);transition:.2s}
+.thr[open] summary::before{transform:rotate(90deg)}
+.thr__grid{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));margin:15px 0 4px}
+.tf{display:flex;flex-direction:column;gap:5px;font-size:0.8125rem}
+.tf label{color:var(--dim)}
+.tf input{height:38px;padding:0 11px;border-radius:10px;border:1px solid var(--line);
+  background:rgba(255,255,255,.05);color:var(--ink);font:inherit;font-size:0.9375rem;outline:none;width:100%}
+.tf input:focus{border-color:rgba(77,157,255,.55)}
+.note{font-size:0.8125rem;color:var(--faint);line-height:1.5;margin:10px 0 0}
+.disc{border:1px solid rgba(255,176,46,.32);background:rgba(255,176,46,.07);
+  border-radius:15px;padding:14px 15px;font-size:0.8125rem;line-height:1.55;color:#e5d6bb;margin-bottom:13px}
+.disc b{color:var(--warn)}
+
+/* ---------- Ahora ---------- */
+.hero__m{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.hero__ic{width:78px;height:78px;flex:none}
+.hero__t{font-size:clamp(52px,13vw,80px);font-weight:250;letter-spacing:-.05em;line-height:.9}
+.hero__t i{font-size:.42em;font-style:normal;vertical-align:top;color:var(--dim)}
+.hero__d{display:flex;flex-direction:column;gap:2px;font-size:0.875rem;color:var(--dim)}
+.hero__d b{font-size:1.125rem;color:var(--ink);font-weight:600}
+.hero__clock{margin-left:auto;text-align:right}
+.hero__clock b{display:block;font-size:1.4375rem;font-weight:600;letter-spacing:-.02em}
+.hero__clock span{font-size:0.8125rem;color:var(--faint)}
+.parts{display:grid;gap:9px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-top:16px}
+.part{background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:13px;padding:11px}
+.part__k{font-size:0.8125rem;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:650}
+.part__b{display:flex;align-items:center;gap:8px;margin-top:6px}
+.part__i{width:28px;height:28px;flex:none}
+.part__t{font-size:1.0625rem;font-weight:600}
+.part__s{font-size:0.8125rem;color:var(--dim);margin-top:4px;line-height:1.35}
+
+.det{display:grid;gap:1px;background:var(--line);border-radius:13px;overflow:hidden;
+  grid-template-columns:repeat(auto-fit,minmax(132px,1fr))}
+.dt{background:#0e1526;padding:11px 12px}
+.dt__k{font-size:0.8125rem;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:650}
+.dt__v{font-size:1.1875rem;font-weight:600;margin-top:4px;letter-spacing:-.02em}
+.dt__v small{font-size:0.8125rem;color:var(--dim);font-weight:500}
+.dt__s{font-size:0.8125rem;color:var(--faint);margin-top:2px}
+.sun{margin-bottom:13px}
+
+/* ---------- Gráficos ---------- */
+.graph{width:100%;height:210px;position:relative}
+.graph--sm{height:150px}
+.graph svg{overflow:visible}
+/* Aquí había una regla `.hlist{display:flex;flex-direction:column}` que
+   sobraba del diseño anterior, cuando las horas iban en lista vertical
+   con la clase `.hr`. Ese diseño ya no existe —ahora son tarjetas
+   `.hcard` en fila— pero la regla seguía viva, y como la de más abajo NO
+   declara la dirección, ganaba esta: las 48 tarjetas se apilaban en una
+   columna de 132 px y dejaban la pantalla vacía a la derecha. */
+.hr{display:grid;grid-template-columns:58px 34px 1fr auto;gap:11px;align-items:center;
+  padding:10px 2px;border-bottom:1px solid var(--line);font-size:0.875rem}
+.hr:last-child{border:0}
+.hr__t{color:var(--dim);font-weight:600;font-size:0.8125rem}
+.hr__t small{display:block;color:var(--faint);font-size:0.8125rem;text-transform:uppercase}
+.hr__i{width:30px;height:30px}
+.hr__m{display:flex;gap:12px;flex-wrap:wrap;color:var(--dim);font-size:0.8125rem}
+.hr__temp{font-size:1.1875rem;font-weight:600;text-align:right;letter-spacing:-.02em}
+
+.dlist{list-style:none;margin:0;padding:0}
+.dr{display:grid;grid-template-columns:76px 34px 1fr 116px;gap:11px;align-items:center;
+  padding:11px 2px;border-bottom:1px solid var(--line)}
+.dr:last-child{border:0}
+.dr__d{font-weight:600;font-size:0.875rem;text-transform:capitalize}
+.dr__d small{display:block;color:var(--faint);font-weight:500;text-transform:none;font-size:0.8125rem}
+.dr__i{width:30px;height:30px}
+.dr__m{font-size:0.8125rem;color:var(--dim);display:flex;gap:11px;flex-wrap:wrap}
+.dr__r{display:flex;align-items:center;gap:8px;font-size:0.875rem;font-weight:600}
+.dr__bar{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.1);position:relative;min-width:32px}
+.dr__fill{position:absolute;height:100%;border-radius:3px;background:linear-gradient(90deg,#4d9dff,#ffb02e)}
+.dr__lo{color:var(--dim);font-weight:500}
+
+/* ---------- Mareas ---------- */
+.tide{height:190px;margin-bottom:13px}
+.tidelist{display:grid;gap:9px;grid-template-columns:repeat(auto-fit,minmax(128px,1fr))}
+.td{background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:13px;padding:11px}
+.td__k{font-size:0.8125rem;letter-spacing:.05em;text-transform:uppercase;font-weight:700}
+.td--hi .td__k{color:#4d9dff}.td--lo .td__k{color:#8b7bff}
+.td__t{font-size:1.3125rem;font-weight:600;margin-top:4px;letter-spacing:-.02em}
+.td__h{font-size:0.8125rem;color:var(--dim);margin-top:2px}
+
+/* ---------- Radar ---------- */
+.radar{height:min(60vh,470px);background:#0a1020;position:relative}
+.radar__ph{position:absolute;inset:0;display:grid;place-items:center;color:var(--faint);font-size:0.875rem}
+.radar__bar{display:flex;align-items:center;gap:11px;padding:10px 13px;border-top:1px solid var(--line)}
+.radar__bar input[type=range]{flex:1;accent-color:var(--acc);height:4px}
+.radar__bar b{font-size:0.875rem;min-width:82px;text-align:right;font-weight:600}
+.leaflet-container{background:#0a1020!important;font:inherit!important}
+.leaflet-control-attribution{background:rgba(10,16,32,.8)!important;color:var(--faint)!important;font-size:0.8125rem!important}
+.leaflet-control-attribution a{color:var(--dim)!important}
+.leaflet-bar a{background:#131c33!important;color:#e9eefb!important;border-color:var(--line)!important}
+.leaflet-bar a:hover{background:#1c2745!important}
+.rlay{position:absolute;z-index:500;top:10px;right:10px;display:flex;flex-direction:column;gap:5px}
+.rlay button{padding:7px 11px;border-radius:9px;border:1px solid var(--line);background:rgba(13,20,38,.9);
+  color:var(--dim);font:inherit;font-size:0.8125rem;font-weight:600;cursor:pointer;backdrop-filter:blur(8px)}
+.rlay button.is-on{background:rgba(77,157,255,.28);color:#fff;border-color:rgba(77,157,255,.55)}
+
+/* ---------- Avisos ---------- */
+.al{border-left:3px solid var(--vc,var(--faint));background:rgba(255,255,255,.045);
+  border-radius:0 13px 13px 0;padding:12px 14px;margin-bottom:10px}
+.al__h{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:5px}
+.al__lvl{font-size:0.8125rem;font-weight:800;letter-spacing:.05em;padding:3px 8px;border-radius:6px;
+  background:color-mix(in srgb,var(--vc) 22%,transparent);color:var(--vc)}
+.al__t{font-weight:650;font-size:0.9375rem}
+.al__w{font-size:0.8125rem;color:var(--faint);margin-top:5px}
+.al p{margin:4px 0 0;font-size:0.8438rem;line-height:1.5;color:var(--dim)}
+.links{display:grid;gap:9px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.lk{display:flex;gap:11px;align-items:center;padding:12px;border-radius:13px;
+  border:1px solid var(--line);background:rgba(255,255,255,.045);color:var(--ink);transition:.16s}
+.lk:hover{background:rgba(77,157,255,.13);border-color:rgba(77,157,255,.4);text-decoration:none}
+.lk__i{width:34px;height:34px;flex:none;border-radius:10px;display:grid;place-items:center;
+  background:rgba(77,157,255,.18);font-size:1.0625rem}
+.lk b{display:block;font-size:0.9062rem}
+.lk span{font-size:0.8125rem;color:var(--faint)}
+
+/* ---------- Pie / toast ---------- */
+.foot{display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:14px 2px 22px;
+  font-size:0.8125rem;color:var(--faint)}
+.inst{margin-left:auto;padding:8px 15px;border-radius:11px;border:1px solid rgba(77,157,255,.45);
+  background:rgba(77,157,255,.15);color:#cfe2ff;font:inherit;font-size:0.8125rem;font-weight:650;cursor:pointer}
+.toast{position:fixed;left:50%;bottom:calc(24px + var(--sab));transform:translate(-50%,20px);
+  background:#18223c;border:1px solid var(--line);color:var(--ink);
+  padding:11px 17px;border-radius:13px;font-size:0.875rem;z-index:99;opacity:0;pointer-events:none;
+  transition:.24s;box-shadow:0 18px 44px -18px rgba(0,0,0,.9);max-width:88vw;text-align:center}
+.toast.is-on{opacity:1;transform:translate(-50%,0)}
+
+@media(max-width:560px){
+  .card{padding:14px;border-radius:16px}
+  .brand b{display:none}
+  .verdict{flex-direction:column;align-items:stretch}
+  .verdict__r{flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .hr{grid-template-columns:52px 30px 1fr auto;gap:9px}
+  .dr{grid-template-columns:66px 30px 1fr 96px;gap:9px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.build{font-variant-numeric:tabular-nums;opacity:.75;cursor:help;
+  border-bottom:1px dotted var(--line)}
+
+/* ---------- Aprovechar las pantallas grandes ---------- */
+@media(min-width:1250px){
+  .wrap{max-width:1450px}
+  .kpis{grid-template-columns:repeat(6,1fr)}
+}
+@media(min-width:1650px){
+  .wrap{max-width:1640px}
+}
+/* La pestaña de mapas usa todo el ancho disponible */
+.view--wide{margin-left:calc(50% - 50vw + 7px);margin-right:calc(50% - 50vw + 7px)}
+@media(min-width:1250px){
+  .view--wide{margin-left:calc(50% - 49vw);margin-right:calc(50% - 49vw)}
+}
+
+/* ══════════ Portada ══════════ */
+.cover{position:relative;border-radius:var(--r);overflow:hidden;margin-bottom:13px;
+  /* La portada ocupaba casi media pantalla (42vh, hasta 470 px) y en el
+     Mac dejaba el resto muy abajo. Bajada el 24-08-2026 a petición de
+     Aitor: lo que decide está DEBAJO de la foto, no en ella. */
+  border:1px solid var(--line);min-height:clamp(190px,24vh,290px);
+  display:flex;flex-direction:column;justify-content:flex-end;
+  box-shadow:0 22px 60px -30px rgba(0,0,0,.95)}
+.cover__sky{position:absolute;inset:0;z-index:1;transition:background .8s ease}
+.cover__ph{position:absolute;inset:0;z-index:2;background-size:cover;background-position:center;
+  opacity:0;transform:scale(1.04);transition:opacity 1s ease,transform 9s ease-out}
+.cover.has-photo .cover__ph{opacity:1;transform:scale(1)}
+.cover__veil{position:absolute;inset:0;z-index:3;background:
+  linear-gradient(180deg,rgba(6,10,20,.55) 0%,rgba(6,10,20,.12) 34%,rgba(6,10,20,.72) 78%,rgba(6,10,20,.9) 100%)}
+/* Portada bajada el 24-08-2026: ocupaba 456 px de 900, el 51 % de la
+   pantalla, y lo que decide (el semáforo, las ráfagas) quedaba fuera
+   de vista. No era el alto mínimo: era el contenido —fuente de 104 px,
+   icono de 104 y huecos de 16—. Medido antes de tocar nada. */
+.cover__in{position:relative;z-index:4;padding:13px 18px 11px;display:flex;flex-direction:column;gap:11px;flex:1}
+.cover__top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.cover__place{font-size:clamp(22px,3.4vw,31px);line-height:1.05;letter-spacing:-.03em;
+  text-shadow:0 2px 18px rgba(0,0,0,.7)}
+.cover__sub{margin:3px 0 0;font-size:0.8438rem;color:rgba(255,255,255,.8);
+  text-shadow:0 1px 10px rgba(0,0,0,.8)}
+.cover__clock{text-align:right;flex:none;text-shadow:0 1px 10px rgba(0,0,0,.8)}
+.cover__clock b{display:block;font-size:1.375rem;font-weight:600;letter-spacing:-.02em}
+.cover__clock span{font-size:0.8125rem;color:rgba(255,255,255,.72)}
+
+.cover__main{display:flex;align-items:center;gap:18px;margin-top:auto}
+.cover__ic{width:clamp(48px,6vw,74px);height:clamp(48px,6vw,74px);flex:none;
+  filter:drop-shadow(0 6px 20px rgba(0,0,0,.55))}
+.cover__t{font-size:clamp(46px,7vw,74px);font-weight:200;letter-spacing:-.055em;line-height:.86;
+  text-shadow:0 4px 28px rgba(0,0,0,.55)}
+.cover__t i{font-size:.38em;font-style:normal;vertical-align:top;opacity:.72}
+.cover__desc{display:block;font-size:clamp(15px,1.9vw,19px);font-weight:600;margin-top:6px;
+  text-shadow:0 2px 14px rgba(0,0,0,.75)}
+.cover__meta{display:flex;gap:14px;flex-wrap:wrap;font-size:0.8438rem;color:rgba(255,255,255,.82);
+  margin-top:4px;text-shadow:0 1px 10px rgba(0,0,0,.8)}
+
+.cover__bands{display:grid;gap:9px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.cover__bands .part{padding:9px 11px;background:rgba(10,16,30,.5);border-color:rgba(255,255,255,.14);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.cover__bands .part__k{color:rgba(255,255,255,.62)}
+.cover__bands .part__s{color:rgba(255,255,255,.75)}
+
+.cover__cred{position:relative;z-index:4;padding:5px 18px 7px;font-size:0.8125rem;
+  color:rgba(255,255,255,.6);background:rgba(6,10,20,.5);
+  display:flex;gap:6px;flex-wrap:wrap;line-height:1.4}
+.cover__cred a{color:rgba(255,255,255,.85)}
+
+@media(max-width:560px){
+  .cover{min-height:250px}
+  .cover__in{padding:15px 15px 12px;gap:13px}
+  .cover__main{gap:12px}
+}
+
+/* Nombre de la app en la cabecera */
+.brand b{font-weight:750;letter-spacing:-.02em;display:flex;gap:.32em}
+.brand b span{font-weight:400;color:var(--acc);
+  background:linear-gradient(92deg,var(--acc),var(--acc2));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+@media(max-width:560px){.brand b span{display:none}}
+
+/* ---------- Leyenda del mapa ---------- */
+.lg{position:absolute;left:14px;bottom:16px;z-index:5;width:min(340px,60%);
+  background:rgba(8,13,26,.88);border:1px solid var(--line);border-radius:12px;
+  padding:9px 12px 7px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  pointer-events:none;box-shadow:0 10px 30px -14px rgba(0,0,0,.9)}
+.lg__bar{height:12px;border-radius:4px;border:1px solid rgba(255,255,255,.2)}
+.lg__ticks{position:relative;height:14px;margin-top:3px}
+.lg__ticks span{position:absolute;transform:translateX(-50%);font-size:0.8125rem;
+  color:var(--dim);white-space:nowrap}
+.lg__u{font-size:0.8125rem;color:var(--faint);margin-top:2px;font-weight:600}
+.lg__u b{color:var(--ink)}
+.lg__nota{font-weight:400;opacity:.75}
+.maptip{position:absolute;right:14px;top:14px;z-index:5;pointer-events:none;
+  background:rgba(8,13,26,.85);border:1px solid var(--line);border-radius:9px;
+  padding:6px 11px;font-size:0.8125rem;color:var(--dim);backdrop-filter:blur(10px)}
+.omPop .maplibregl-popup-content{background:#0e1626;color:var(--ink);
+  border:1px solid var(--line);border-radius:11px;padding:10px 13px;font-size:0.8125rem;
+  box-shadow:0 14px 40px -16px rgba(0,0,0,.95)}
+.omPop .maplibregl-popup-content b{font-size:1.0625rem}
+.omPop .maplibregl-popup-content small{color:var(--dim);line-height:1.45;display:block;margin-top:4px}
+.omPop .maplibregl-popup-tip{border-top-color:#0e1626;border-bottom-color:#0e1626}
+.omPop .maplibregl-popup-close-button{color:var(--dim);font-size:1.0625rem}
+@media(max-width:560px){
+  .lg{width:min(250px,68%);left:8px;bottom:10px;padding:7px 9px 5px}
+  .maptip{display:none}
+}
+
+/* Controles de la barra de tiempo del mapa */
+.ib--sq{width:34px;height:34px;padding:8px;border-radius:10px}
+.ib--now{width:auto;height:34px;padding:0 11px;border-radius:10px;font-size:0.8125rem;
+  font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
+.ib--now:hover{color:var(--ink)}
+.radar__bar{gap:7px}
+
+/* Aviso de "no hay datos" */
+.nodata{border:1px solid rgba(255,176,46,.4);background:rgba(255,176,46,.08);
+  border-radius:16px;padding:16px 18px;margin-bottom:14px;line-height:1.55}
+.nodata b{color:var(--warn);font-size:1.0rem}
+.nodata p{margin:8px 0 0;font-size:0.875rem;color:var(--dim)}
+.nodata p b{color:var(--ink);font-size:inherit}
+.nodata__x{font-size:0.8125rem!important;color:var(--faint)!important;
+  padding-top:8px;border-top:1px solid var(--line);margin-top:11px!important}
+
+/* ══════════ Tarjetas de horas ══════════ */
+.hlist{display:flex;flex-direction:row;gap:10px;overflow-x:auto;
+  padding:2px 2px 12px;scrollbar-width:thin}
+.hcard{flex:none;width:132px;border-radius:16px;padding:12px 11px 11px;text-align:center;
+  background:linear-gradient(165deg,rgba(38,52,86,.62),rgba(20,29,50,.72));
+  border:1px solid var(--line);position:relative;overflow:hidden}
+.hcard::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;
+  background:var(--c,transparent)}
+.hcard[data-s=go]  {--c:var(--go)}
+.hcard[data-s=warn]{--c:var(--warn)}
+.hcard[data-s=no]  {--c:var(--no)}
+.hcard__h{font-size:1.0625rem;font-weight:700;letter-spacing:-.02em}
+.hcard__d{font-size:0.8125rem;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);
+  font-weight:650;margin-top:1px}
+.hcard__i{width:46px;height:46px;margin:8px auto 4px}
+.hcard__t{font-size:1.75rem;font-weight:600;letter-spacing:-.03em;line-height:1}
+.hcard__r{display:flex;flex-direction:column;gap:3px;margin-top:8px;font-size:0.8125rem;color:var(--dim)}
+.hcard__g{margin-top:9px;font-size:0.8125rem;font-weight:650;color:var(--dim);
+  background:rgba(255,255,255,.07);border-radius:7px;padding:4px 6px}
+.hcard[data-s=no] .hcard__g{background:rgba(255,77,94,.18);color:#ffb9c0}
+.hcard[data-s=warn] .hcard__g{background:rgba(255,176,46,.16);color:#ffd79a}
+/* CAPE y tapa de esa hora. Pedido por él el 28-08-2026: «aquí falta
+   poner si habrá CAPE, inhibición, etc.». En ámbar solo cuando se
+   cumplen las dos condiciones calibradas a la vez; el ámbar NO cambia el
+   semáforo de la hora, es un dato más. */
+.hcard__c{margin-top:6px;font-size:0.8125rem;line-height:1.4;color:var(--faint);
+  font-variant-numeric:tabular-nums}
+.hcard__c--ojo{color:var(--warn);font-weight:650}
+
+/* ══════════ Tarjetas de días ══════════ */
+.dlist{display:grid;gap:11px;list-style:none;margin:0;padding:0;
+  grid-template-columns:repeat(auto-fit,minmax(138px,1fr))}
+.dcard{border-radius:16px;padding:0 12px 13px;text-align:center;position:relative;
+  background:linear-gradient(165deg,rgba(38,52,86,.6),rgba(18,26,46,.75));
+  border:1px solid var(--line);overflow:hidden}
+.dcard__top{height:4px;margin:0 -12px 11px;background:var(--c,linear-gradient(90deg,var(--acc),var(--acc2)))}
+.dcard[data-s=go]  {--c:linear-gradient(90deg,#2fd07a,#63d2ff)}
+.dcard[data-s=warn]{--c:linear-gradient(90deg,#ffb02e,#ff8a3d)}
+.dcard[data-s=no]  {--c:linear-gradient(90deg,#ff4d5e,#c02aa8)}
+.dcard__d{font-size:0.9375rem;font-weight:700;text-transform:capitalize}
+.dcard__f{font-size:0.8125rem;color:var(--faint);margin-top:1px}
+.dcard__i{width:52px;height:52px;margin:9px auto 6px}
+.dcard__t{font-size:1.25rem;font-weight:600;letter-spacing:-.02em}
+.dcard__t b{font-weight:700}
+.dcard__t span{color:var(--dim);font-weight:500;margin-left:5px;font-size:.85em}
+.dcard__r{font-size:0.8125rem;color:var(--dim);margin-top:7px}
+.dcard__g{margin-top:8px;font-size:0.8125rem;font-weight:650;color:var(--dim);
+  background:rgba(255,255,255,.07);border-radius:7px;padding:4px 6px;display:inline-block}
+.dcard[data-s=no] .dcard__g{background:rgba(255,77,94,.2);color:#ffb9c0}
+.dcard[data-s=warn] .dcard__g{background:rgba(255,176,46,.18);color:#ffd79a}
+.dcard__s{margin-top:7px;font-size:0.8125rem;font-weight:650;color:var(--warn)}
+/* «Los modelos van de X a Y». Suyo, 31-08-2026, viendo un 41° en Bermeo
+   que ECMWF daba solo: el acuerdo entre modelos es información suya
+   —«si están varios de acuerdo, eso da más fiabilidad para decidir»—,
+   así que cuando NO lo están, se dice. Va en ámbar y pequeño: avisa,
+   no grita, que el rojo está reservado para lo que le para el día. */
+.dcard__x{margin-top:7px;font-size:0.75rem;line-height:1.35;color:var(--warn);
+  opacity:.95}
+.dcard__x b{font-weight:700}
+@media(max-width:560px){
+  .hcard{width:118px}
+  .dlist{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+}
+
+/* Números del modelo sobre el mapa */
+.mvals{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+.mval{position:absolute;transform:translate(-50%,-140%);font-size:0.875rem;font-weight:800;
+  color:#0d1420;letter-spacing:-.02em;white-space:nowrap;
+  /* Halo justo: cuatro capas de sombra blanca (3+3+6 px) hacían un
+     borrón alrededor de cada número y molestaba a la vista. Se deja lo
+     imprescindible para que el número negro se lea también sobre el
+     fondo Oscuro. Ajustado el 24-08-2026 a petición de Aitor. */
+  text-shadow:0 0 2px #fff,0 0 4px rgba(255,255,255,.9)}
+
+/* ---------- Escala de color, barra ancha sobre el mapa ---------- */
+.lgtop{display:flex;align-items:center;gap:14px;padding:9px 14px 11px;
+  border-bottom:1px solid var(--line);background:rgba(255,255,255,.03)}
+.lgtop[hidden]{display:none}
+.lgtop__bar{position:relative;flex:1;height:13px;border-radius:4px;
+  border:1px solid rgba(255,255,255,.18)}
+.lgtop__ticks{position:absolute;left:0;right:0;top:15px;height:13px}
+.lgtop__ticks span{position:absolute;transform:translateX(-50%);font-size:0.8125rem;
+  color:var(--dim);white-space:nowrap;font-weight:600}
+.lgtop__u{flex:none;font-size:0.8125rem;color:var(--faint);font-weight:600;white-space:nowrap}
+.lgtop__u b{color:var(--ink)}
+.lgtop__nota{font-weight:400;opacity:.7}
+@media(max-width:640px){
+  .lgtop{padding:7px 10px 10px;gap:9px}
+  .lgtop__u{font-size:0.8125rem;white-space:normal;max-width:96px;line-height:1.25}
+  .lgtop__ticks span{font-size:0.8125rem}
+}
+
+/* Aviso: la capa viene de otro modelo distinto al elegido */
+.mavisos{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:6;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  max-width:min(560px,88%);pointer-events:none}
+.mavisos:empty{display:none}
+.msust{position:relative;
+  background:rgba(120,70,10,.94);border:1px solid rgba(255,176,46,.6);
+  color:#ffe6bd;border-radius:11px;padding:7px 13px;font-size:0.8125rem;line-height:1.4;
+  text-align:center;pointer-events:none;
+  box-shadow:0 12px 34px -14px rgba(0,0,0,.9)}
+/* El de fallos sí se puede cerrar y reintentar, así que acepta clics */
+.msust--fallo{pointer-events:auto}
+.msust__acc{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}
+.msust__acc button{font:inherit;font-weight:700;cursor:pointer;
+  background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);
+  color:#fff;border-radius:7px;padding:2px 9px;line-height:1.5}
+.msust__acc button:hover{background:rgba(255,255,255,.26)}
+.msust[hidden]{display:none}
+.msust b{color:#fff}
+/* Capa que este modelo no publica */
+.ovb.is-alt i{font-style:normal;color:var(--warn);font-weight:800;margin-left:3px}
+.ovb.is-alt{border-style:dashed}
+
+/* Aviso de preparación de la animación */
+.mprec{position:absolute;right:14px;bottom:14px;z-index:6;pointer-events:none;
+  background:rgba(9,14,28,.9);border:1px solid var(--line);border-radius:9px;
+  padding:5px 11px;font-size:0.8125rem;color:var(--dim);font-weight:600;
+  backdrop-filter:blur(10px)}
+.mprec[hidden]{display:none}
+
+/* Barbas de viento */
+.barb{position:absolute;width:44px;height:44px;transform:translate(-50%,-50%);
+  pointer-events:none;overflow:visible;
+  filter:drop-shadow(0 0 2px rgba(255,255,255,.95)) drop-shadow(0 0 4px rgba(255,255,255,.7))}
+
+/* Grupos de capas: que se lean de verdad */
+.lgrp__k{font-size:0.8125rem!important;letter-spacing:.1em;font-weight:800!important;
+  color:#7fb3ff!important;padding-right:7px}
+.lgrp{border-right-color:rgba(127,179,255,.28)}
+.msel__k{color:#7fb3ff!important;font-weight:800!important;letter-spacing:.1em}
+.ovb{font-size:0.8438rem}
+.ovb.is-on{box-shadow:0 0 0 1px rgba(77,157,255,.45)}
+
+/* ══════════ Color por familia de capas ══════════ */
+.lgrp[data-g=lluvia]     { --gc:#4da3ff; }   /* azul   */
+.lgrp[data-g=torre]      { --gc:#2fd07a; }   /* verde  */
+.lgrp[data-g=tormenta]   { --gc:#ff5d4d; }   /* rojo   */
+.lgrp[data-g=cielo]      { --gc:#b9a6ff; }   /* lila   */
+.lgrp[data-g=aire]       { --gc:#ffc14d; }   /* ámbar  */
+.lgrp[data-g=altura]     { --gc:#4ddbd0; }   /* turquesa */
+.lgrp[data-g=mar]        { --gc:#3fb8e0; }
+
+.lgrp__k{color:var(--gc,#7fb3ff)!important;font-size:0.8125rem!important;
+  letter-spacing:.11em;font-weight:800!important;padding-right:8px;
+  border-left:3px solid var(--gc,#7fb3ff);padding-left:7px;line-height:1.6}
+.lgrp{border-right-color:color-mix(in srgb,var(--gc,#7fb3ff) 30%,transparent)}
+.lgrp .ovb{border-color:color-mix(in srgb,var(--gc,#7fb3ff) 32%,var(--line))}
+.lgrp .ovb:hover{border-color:color-mix(in srgb,var(--gc,#7fb3ff) 60%,transparent);
+  background:color-mix(in srgb,var(--gc,#7fb3ff) 12%,transparent)}
+.lgrp .ovb.is-on{background:color-mix(in srgb,var(--gc,#7fb3ff) 26%,transparent);
+  border-color:var(--gc,#7fb3ff);color:#fff;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--gc,#7fb3ff) 55%,transparent)}
+.lgrp .ovb.is-alt i{color:var(--gc,var(--warn))}
+
+/* ══════════ Concordancia entre modelos ══════════ */
+.cmp__v{border-radius:13px;padding:12px 14px;margin-bottom:14px;
+  border:1px solid color-mix(in srgb,var(--c) 45%,transparent);
+  background:color-mix(in srgb,var(--c) 11%,transparent)}
+.cmp__v[data-s=go]  {--c:var(--go)}
+.cmp__v[data-s=warn]{--c:var(--warn)}
+.cmp__v[data-s=no]  {--c:var(--no)}
+.cmp__v b{color:var(--c);font-size:0.9688rem}
+.cmp__v p{margin:5px 0 0;font-size:0.8438rem;color:var(--dim);line-height:1.5}
+.cmp__h{font-size:0.8125rem;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);
+  font-weight:700;margin-bottom:9px}
+.cmp__f{display:grid;grid-template-columns:96px 1fr 82px;gap:11px;align-items:center;
+  padding:6px 0;font-size:0.8438rem}
+.cmp__n{font-weight:650;line-height:1.15}
+.cmp__n small{display:block;color:var(--faint);font-weight:500;font-size:0.8125rem}
+.cmp__b{height:14px;border-radius:5px;background:rgba(255,255,255,.07);
+  position:relative;overflow:hidden}
+.cmp__b i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--bc)}
+.cmp__f[data-s=go]   {--bc:linear-gradient(90deg,#2fd07a,#63d2ff)}
+.cmp__f[data-s=warn] {--bc:linear-gradient(90deg,#ffb02e,#ff8a3d)}
+.cmp__f[data-s=no]   {--bc:linear-gradient(90deg,#ff4d5e,#c02aa8)}
+.cmp__f[data-s=nd]   {--bc:rgba(255,255,255,.12)}
+.cmp__val{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.cmp__f[data-s=no] .cmp__val{color:var(--no)}
+.cmp__f[data-s=warn] .cmp__val{color:var(--warn)}
+.cmp__lim{position:relative;margin:9px 0 4px;padding-top:11px;
+  border-top:1px dashed var(--line);font-size:0.8125rem;color:var(--faint)}
+@media(max-width:560px){ .cmp__f{grid-template-columns:78px 1fr 70px;gap:8px;font-size:0.8125rem} }
+
+/* ══════════ Mis torres ══════════ */
+.tor{display:grid;gap:12px;align-items:center;padding:14px;margin-bottom:11px;
+  /* NUEVE cifras, no cuatro. Cuando eran cuatro cabían en columnas
+     fijas; ahora ya no, así que las cifras van en su propia rejilla que
+     se reparte sola y baja de fila cuando hace falta. Suyo, 28-08-2026:
+     «añadir más datos, más datos, más info mejor». */
+  grid-template-columns:104px minmax(140px,1.3fr) minmax(0,3fr);
+  border-radius:15px;border:1px solid color-mix(in srgb,var(--c) 42%,var(--line));
+  background:color-mix(in srgb,var(--c) 8%,rgba(255,255,255,.03))}
+/* Otro modelo ve tormenta donde el tuyo no. Va en el tablero porque es
+   ahí donde reparte gente: el 25-08-2026 salían nueve APTO con ECMWF
+   dando tormenta en tres de ellas. */
+/* El nudo de rejilla que lee el modelo, cuando queda lejos de la torre */
+.elev__lejos{color:var(--warn)}
+
+/* A TODO EL ANCHO. Sin esto caía en una columna de 70 px y el texto
+   salía en vertical, con dos palabras por línea, teniendo media tarjeta
+   vacía al lado. Lo vio él: «lo que está en amarillo en vertical… mucho
+   espacio desaprovechado». */
+.tor__disc{grid-column:1/-1;margin-top:7px;padding:7px 9px;border-radius:9px;font-size:0.8125rem;line-height:1.45;
+  border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);
+  background:color-mix(in srgb,var(--warn) 9%,rgba(0,0,0,.2));color:var(--warn)}
+.tor__disc b{font-weight:700}
+.tor__disc__q{opacity:.85}
+.tor[data-disc="1"]{border-color:color-mix(in srgb,var(--warn) 32%,var(--line))}
+
+/* LO QUE SE ENCUENTRA AL LLEGAR. Suyo, 30-08-2026: «me pasan a las 2 de
+   la mañana Arbaiza estación caída; yo antes de salir tengo que saber qué
+   me voy a encontrar allí». Va en frío (azul) y no en ámbar: no es un
+   aviso, es el dato que decide — el aviso ya lo lleva la tarjeta. */
+.tor__lleg{grid-column:1/-1;margin-top:7px;padding:7px 9px;border-radius:9px;
+  font-size:0.8125rem;line-height:1.5;
+  border:1px solid color-mix(in srgb,var(--acc) 34%,transparent);
+  background:color-mix(in srgb,var(--acc) 8%,rgba(0,0,0,.2))}
+.tor__lleg__k{display:block;font-weight:700;letter-spacing:.02em;
+  text-transform:uppercase;font-size:0.75rem;color:var(--acc)}
+.tor__lleg__q{display:block;opacity:.72;font-size:0.75rem}
+
+.tor[data-s=go]  {--c:var(--go)}
+.tor[data-s=warn]{--c:var(--warn)}
+.tor[data-s=no]  {--c:var(--no)}
+.tor[data-s=nd]  {--c:var(--faint)}
+.tor__badge{font-weight:800;font-size:0.8125rem;letter-spacing:.04em;text-align:center;
+  padding:9px 6px;border-radius:11px;color:var(--c);
+  background:color-mix(in srgb,var(--c) 20%,transparent);
+  border:1px solid color-mix(in srgb,var(--c) 45%,transparent)}
+.tor__n b{display:block;font-size:1.0312rem;letter-spacing:-.02em}
+.tor__n span{font-size:0.8125rem;color:var(--dim)}
+.tor__ds{display:grid;gap:10px 12px;
+  grid-template-columns:repeat(auto-fit,minmax(78px,1fr))}
+.tor__d{text-align:center}
+.tor__big{display:block;font-size:1.1875rem;font-weight:700;letter-spacing:-.02em}
+.tor__lbl{font-size:0.8125rem;color:var(--faint);text-transform:uppercase;letter-spacing:.04em}
+/* EL AGUA, A TODO EL ANCHO Y ANTES DE LA TIRA DE HORAS. Puesto el
+   28-08-2026: el 90 % de su trabajo es caseta, fusibles al lado de la
+   caseta y armarios de intemperie. Ahí no manda la racha, manda si
+   llueve y a qué hora para. Azul cuando está cayendo —que es cuando la
+   hora de escampar es la cifra que decide su mañana—, tenue cuando es
+   para luego, y apagado cuando está seco. */
+.tor__agua{grid-column:1/-1;font-size:0.8125rem;line-height:1.45;
+  padding:6px 10px;border-radius:9px;border:1px solid var(--line)}
+.tor__agua[data-a=seco] {color:var(--faint)}
+.tor__agua[data-a=luego]{color:var(--dim)}
+.tor__agua[data-a=ahora]{color:#9fd0ff;border-color:rgba(77,163,255,.42);
+  background:rgba(77,163,255,.10)}
+.tor__agua b{color:#cfe6ff}
+/* LA PISTA. Puesto el 28-08-2026: «ventiscas en los montes, con el 4x4
+   tienes que ir, te quedas atascado en el barro». Es lo llovido ANTES,
+   que es lo que deja la pista blanda, más la nieve. Va discreto porque
+   la mayoría de los días no dice nada nuevo, y se enciende cuando lleva
+   agua encima o hay nieve. */
+.tor__pista{grid-column:1/-1;font-size:0.8125rem;line-height:1.45;color:var(--faint)}
+.tor__pista__k{text-transform:uppercase;letter-spacing:.05em;font-size:0.8125rem;
+  margin-right:6px;opacity:.75}
+.tor__pista[data-a="1"]{color:var(--dim)}
+.tor__pista[data-a="1"] b{color:var(--warn)}
+.tor__tl{grid-column:1/-1;display:flex;gap:3px;align-items:center;flex-wrap:wrap}
+/* Las casillas llevan la hora escrita dentro (26-08-2026, a petición
+   suya). Crecen lo justo para que quepan dos cifras legibles en un
+   móvil, y el número va en oscuro sobre el color para que se lea sobre
+   el verde y sobre el ámbar por igual. */
+.tor__tl i{min-width:22px;height:15px;border-radius:3px;display:inline-flex;
+  align-items:center;justify-content:center;font-size:0.8125rem;font-weight:700;
+  font-style:normal;letter-spacing:-.02em;color:rgba(0,0,0,.62);
+  font-variant-numeric:tabular-nums}
+.tor__tl i[data-s=go]  {background:#2fd07a}
+.tor__tl i[data-s=warn]{background:#ffb02e}
+.tor__tl i[data-s=no]  {background:#ff4d5e}
+.tor__tl i[data-s=nd]  {background:rgba(255,255,255,.14);color:rgba(255,255,255,.45)}
+.tor__tlx{font-size:0.8125rem;color:var(--faint);margin-left:6px}
+.tor__why{grid-column:1/-1;font-size:0.8125rem;color:var(--dim);line-height:1.45;
+  padding-top:9px;border-top:1px solid var(--line)}
+.tor__why b{color:var(--c)}
+@media(max-width:820px){
+  .tor{grid-template-columns:88px 1fr;gap:10px}
+  .tor__ds{grid-column:1/-1;grid-template-columns:repeat(auto-fit,minmax(68px,1fr))}
+  .tor__d{text-align:left;grid-column:span 1}
+}
+/* La cota, también a todo el ancho: es una frase, no una cifra. */
+.tor__cota{grid-column:1/-1}
+
+/* Teselas que el servidor no ha servido: se avisa en rojo, nunca en silencio. */
+.msust--fallo{border-color:color-mix(in srgb,var(--no) 55%,transparent);
+  background:color-mix(in srgb,var(--no) 14%,rgba(0,0,0,.35))}
+.msust--fallo b{color:var(--no)}
+
+/* ══════════ Cámaras ══════════ */
+.cam{border:1px solid var(--line);border-radius:15px;padding:13px;margin-bottom:12px;
+  background:rgba(255,255,255,.02)}
+.cam__h{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.cam__h b{display:block;font-size:1.0rem;letter-spacing:-.02em}
+.cam__q{display:block;font-size:0.8125rem;color:var(--dim);margin-top:3px;max-width:52ch;line-height:1.45}
+.cam__b{flex:0 0 auto;padding:8px 14px;border-radius:10px;cursor:pointer;
+  font-size:0.8125rem;font-weight:650;color:var(--fg);
+  border:1px solid color-mix(in srgb,var(--acc) 50%,var(--line));
+  background:color-mix(in srgb,var(--acc) 16%,transparent)}
+.cam__b:hover{background:color-mix(in srgb,var(--acc) 26%,transparent)}
+.cam__v:not(:empty){margin-top:12px;border-radius:11px;overflow:hidden;background:#000;
+  aspect-ratio:16/9}
+.cam__v iframe,.cam__v img{width:100%;height:100%;border:0;display:block;object-fit:cover}
+/* Las fotos fijas van con SU proporción y sin estirar. La de Windy es de
+   640x480: metida en un 16:9 con object-fit:cover se cortaba arriba y
+   abajo y se veía pastosa. Aitor lo dijo el 25-08-2026: «qué mal se ven,
+   en Windy se ven muy bien». */
+/* El aviso de qué NO publica el modelo que estás mirando. Va pegado al
+   selector, que es donde se toma la decisión de cambiarlo. */
+.msel__falta{margin:6px 2px 0;color:var(--warn);opacity:.95}
+/* Qué modelo es «Automático» de verdad, y hasta cuándo */
+/* La separación en temperatura, dentro de la tarjeta de modelos */
+.cmp__t{margin:10px 0 0;padding:9px 11px;border-radius:10px;font-size:0.8125rem;line-height:1.5;
+  border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);
+  background:color-mix(in srgb,var(--warn) 8%,rgba(0,0,0,.2));color:var(--warn)}
+
+.msel__que{margin:6px 2px 0;line-height:1.45}
+.msel__que[hidden]{display:none}
+.msel__falta[hidden]{display:none}
+
+.cam__v--foto:not(:empty){aspect-ratio:auto;background:#05070c;
+  display:flex;justify-content:center}
+.cam__v--foto img{width:auto;height:auto;max-width:100%;
+  max-height:min(72vh,560px);object-fit:contain}
+/* Dos botones por cámara: la foto de ahora y las últimas 24 horas */
+.cam__bs{flex:0 0 auto;display:flex;gap:7px;align-items:flex-start}
+.cam__b--dia{background:color-mix(in srgb,var(--acc) 10%,transparent)}
+
+/* ══════════ Selector de móvil (modelo y capa) ══════════
+   En pantalla ancha no aparece: allí las tiras se ven enteras. */
+.mmob{display:none;gap:8px;margin-bottom:9px}
+.mmob__b{flex:1;display:flex;flex-direction:column;gap:2px;text-align:left;
+  padding:9px 12px;border-radius:12px;cursor:pointer;
+  border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--fg)}
+.mmob__b span{font-size:0.8125rem;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.mmob__b b{font-size:0.9062rem;letter-spacing:-.01em}
+
+.hoja{position:fixed;inset:0;z-index:60;background:rgba(4,7,13,.66);
+  backdrop-filter:blur(3px);display:flex;align-items:flex-end}
+
+.hoja__c{width:100%;max-height:86vh;display:flex;flex-direction:column;
+  border-radius:20px 20px 0 0;border:1px solid var(--line);border-bottom:0;
+  background:var(--bg2, #0d1320);box-shadow:0 -18px 50px rgba(0,0,0,.55)}
+.hoja__t{display:flex;align-items:center;justify-content:space-between;
+  padding:15px 16px 11px;font-size:1.0rem;font-weight:700;letter-spacing:-.02em;
+  border-bottom:1px solid var(--line)}
+.hoja__x{width:32px;height:32px;border-radius:9px;cursor:pointer;font-size:0.9375rem;
+  border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--fg)}
+.hoja__s{overflow-y:auto;padding:10px 12px 22px;-webkit-overflow-scrolling:touch}
+.hoja__g{margin-bottom:14px}
+.hoja__k{display:block;font-size:0.8125rem;font-weight:800;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--faint);padding:2px 4px 7px}
+.hoja__g[data-g=lluvia]   .hoja__k{color:#5db8f5}
+.hoja__g[data-g=torre]    .hoja__k{color:#2fd07a}
+.hoja__g[data-g=tormenta] .hoja__k{color:#ff5c6b}
+.hoja__g[data-g=cielo]    .hoja__k{color:#b39af0}
+.hoja__g[data-g=aire]     .hoja__k{color:#ffb02e}
+.hoja__g[data-g=altura]   .hoja__k{color:#67d8d0}
+.hoja__i{display:block;width:100%;text-align:left;cursor:pointer;
+  padding:11px 13px;margin-bottom:5px;border-radius:11px;color:var(--fg);
+  border:1px solid transparent;background:rgba(255,255,255,.035)}
+.hoja__i b{display:block;font-size:0.9375rem;font-weight:650;letter-spacing:-.01em}
+.hoja__i small{display:block;font-size:0.8125rem;color:var(--dim);line-height:1.4;margin-top:2px}
+.hoja__i.is-on{border-color:color-mix(in srgb,var(--acc) 60%,transparent);
+  background:color-mix(in srgb,var(--acc) 17%,transparent)}
+.hoja__i.is-alt b i{color:var(--warn);font-style:normal}
+.hoja__n{font-size:0.8125rem;color:var(--faint);line-height:1.5;padding:2px 4px 0}
+.hoja__n i{color:var(--warn);font-style:normal}
+
+@media(max-width:760px){
+  .mmob{display:flex}
+  .msel--map,.ovl{display:none}   /* las tiras se sustituyen por el panel */
+}
+
+/* ══════════ Copia guardada / sin cobertura ══════════ */
+.copia{position:sticky;top:0;z-index:40;padding:9px 16px;font-size:0.8125rem;line-height:1.45;
+  border-bottom:1px solid color-mix(in srgb,var(--c) 45%,var(--line));
+  background:color-mix(in srgb,var(--c) 17%,rgba(8,12,20,.94));backdrop-filter:blur(6px)}
+.copia[data-s=go]  {--c:var(--go)}
+.copia[data-s=warn]{--c:var(--warn)}
+.copia[data-s=no]  {--c:var(--no)}
+.copia b{color:var(--c)}
+
+.monte{display:flex;gap:13px;align-items:center;flex-wrap:wrap}
+.monte__e{font-size:0.8125rem;color:var(--dim);line-height:1.5;margin:0;flex:1;min-width:220px}
+.mst{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.mst[data-s=go]{background:#2fd07a}.mst[data-s=warn]{background:#ffb02e}.mst[data-s=no]{background:#ff4d5e}
+
+/* ══════════ Tus emplazamientos ══════════ */
+.sitl{display:grid;gap:7px;margin-bottom:12px}
+.sit{display:flex;gap:10px;align-items:center;justify-content:space-between;
+  padding:10px 12px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.sit b{display:block;font-size:0.9062rem;letter-spacing:-.01em}
+.sit span{display:block;font-size:0.8125rem;color:var(--dim)}
+.sit__c{font-variant-numeric:tabular-nums;color:var(--faint)!important}
+.sit__x{flex:0 0 auto;width:30px;height:30px;border-radius:8px;cursor:pointer;color:var(--dim);
+  border:1px solid var(--line);background:transparent}
+.sit__x:hover{color:var(--no);border-color:color-mix(in srgb,var(--no) 55%,transparent)}
+
+.imp{margin-top:6px;border-top:1px solid var(--line);padding-top:11px}
+.imp summary{cursor:pointer;font-size:0.8438rem;font-weight:650;padding:3px 0}
+.imp__e{font-size:0.8125rem;line-height:1.6;color:var(--faint);background:rgba(0,0,0,.28);
+  padding:9px 11px;border-radius:9px;overflow-x:auto;margin:8px 0}
+.imp textarea{width:100%;border-radius:11px;padding:11px;font-size:0.8438rem;line-height:1.5;
+  border:1px solid var(--line);background:rgba(0,0,0,.24);color:var(--fg);resize:vertical}
+.imp__b{display:flex;gap:9px;margin-top:9px;flex-wrap:wrap}
+.imp__r{font-size:0.8125rem;color:var(--dim);line-height:1.5;margin-top:9px}
+.imp__r b{color:var(--warn)}
+
+#ac li.is-mio i{color:var(--acc);font-style:normal;font-size:0.8125rem;vertical-align:1px}
+#ac li.is-est i{color:var(--dim);font-style:normal;font-size:0.8125rem;vertical-align:1px}
+.tor__old{color:var(--warn)}
+
+.camz{margin-bottom:16px}
+.camz__k{display:block;font-size:0.8125rem;font-weight:800;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--faint);padding:2px 2px 8px}
+.cam__d{display:block;font-size:0.8125rem;color:var(--faint);margin-top:3px}
+.cam__x{padding:14px;font-size:0.8125rem;color:var(--warn);line-height:1.5;text-align:center}
+
+/* ══════════════════════════════════════════════════════════
+   Portada fija
+   En escritorio la portada (localidad, temperatura y los tres
+   tramos con su racha máxima) se ve en todas las pestañas.
+   En móvil solo aparece en «Ahora», para no comerse la pantalla.
+   ══════════════════════════════════════════════════════════ */
+.cover-fijo{padding:0 13px;margin-bottom:14px}
+.cover-fijo .cover{margin:0}
+
+@media (max-width:900px){
+  .cover-fijo{display:none}
+  body[data-view="now"] .cover-fijo{display:block}
+}
+
+/* LA PORTADA YA NO SE QUEDA PEGADA. Suyo, 28-08-2026, en Mis torres:
+   *«cuando vaya moviendo el ratón para abajo y ver más datos, que tire
+   para arriba también la cabecera, la foto principal — así tendré más
+   espacio»*. Y otra vez esa mañana, en Torre: *«aquí igual, la foto de
+   Gaztelugatxe»*.
+
+   Y tiene razón: la foto es bonita pero **no es un dato**. Ocupaba
+   media pantalla fija mientras él baja a leer los catorce sitios, que
+   es justo lo que sí necesita ver.
+
+   OJO CON CÓMO SE ARREGLA. Esta regla sola NO valía, y estuvo puesta
+   medio día sin hacer nada: la portada colgaba dentro de
+   `<header class="top">`, que es `position:sticky`, y un hijo estático
+   de algo pegado sigue pegado. Lo que lo arregla es que la portada esté
+   FUERA del header, y así está desde el 28-08 en `index.html`. Esta
+   regla se queda como red por si alguien la vuelve a meter dentro.
+
+   (La barra de arriba —buscador, emplazamientos y pestañas— SÍ se queda:
+   esa es navegación y la usa a cada rato.) */
+.cover-fijo{ position:static }
+
+
+/* ══════════ Chuleta de capas ══════════ */
+.pasos{margin:0;padding-left:20px}
+.pasos li{font-size:0.9062rem;line-height:1.65;color:var(--dim);margin-bottom:7px}
+.pasos li b{color:var(--fg)}
+.ch--g[data-g=lluvia]  {color:#5db8f5}
+.ch--g[data-g=torre]   {color:#2fd07a}
+.ch--g[data-g=tormenta]{color:#ff5c6b}
+.ch--g[data-g=cielo]   {color:#b39af0}
+.q{padding:14px 0;border-bottom:1px solid var(--line)}
+.q:last-child{border-bottom:0;padding-bottom:0}
+.q__t{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.q__t b{font-size:1.0312rem;letter-spacing:-.02em}
+.q__t span{font-size:0.8125rem;color:var(--faint);text-transform:uppercase;letter-spacing:.05em}
+.q p{font-size:0.875rem;line-height:1.55;color:var(--dim);margin:6px 0 0}
+.q p b{color:var(--fg)}
+.q__w{margin-top:9px;font-size:0.8125rem;line-height:1.5;color:var(--warn);
+  padding:8px 11px;border-radius:9px;
+  background:color-mix(in srgb,var(--warn) 11%,transparent);
+  border-left:2px solid color-mix(in srgb,var(--warn) 60%,transparent)}
+.q__w b{color:var(--warn)}
+.esc{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.esc span{font-size:0.8125rem;font-weight:600;padding:5px 10px;border-radius:20px;
+  border:1px solid color-mix(in srgb,var(--c) 45%,transparent);
+  background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c)}
+.esc span[data-s=go]  {--c:#2fd07a}
+.esc span[data-s=warn]{--c:#ffb02e}
+.esc span[data-s=no]  {--c:#ff7a3d}
+.esc span[data-s=no2] {--c:#ff4d5e}
+@media(max-width:600px){
+  .q__t b{font-size:0.9688rem}
+  .esc span{font-size:0.8125rem;padding:5px 9px}
+}
+
+/* ══════════ Ficha de cada emplazamiento ══════════ */
+.tor__cota{grid-column:1/-1;font-size:0.8125rem;line-height:1.5;margin-top:8px;
+  padding:9px 12px;border-radius:9px;
+  border-left:3px solid var(--c);
+  background:color-mix(in srgb,var(--c) 12%,transparent)}
+.tor__cota[data-s=warn]{--c:var(--warn)}
+.tor__cota[data-s=no]  {--c:var(--no)}
+.tor__cota b{color:var(--c)}
+.tor__cfg{grid-column:1/-1;display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  margin-top:9px;font-size:0.8125rem;color:var(--faint)}
+.tor__cfg b{color:var(--fg)}
+.tor__aj{margin-left:auto;padding:5px 11px;border-radius:8px;cursor:pointer;
+  font-size:0.8125rem;font-weight:600;color:var(--fg);
+  border:1px solid var(--line);background:rgba(255,255,255,.05)}
+.tor__aj:hover{border-color:color-mix(in srgb,var(--acc) 55%,transparent)}
+.tor__form{grid-column:1/-1}
+.aj{display:flex;flex-wrap:wrap;gap:11px;align-items:flex-end;margin-top:11px;
+  padding:13px;border-radius:11px;border:1px solid var(--line);background:rgba(0,0,0,.22)}
+.aj label{display:flex;flex-direction:column;gap:4px;font-size:0.8125rem;color:var(--dim)}
+.aj select,.aj input{padding:8px 10px;border-radius:9px;font-size:0.875rem;color:var(--fg);
+  border:1px solid var(--line);background:rgba(255,255,255,.05);min-width:130px}
+.aj input{max-width:110px}
+.aj__n{flex:1 1 100%;margin:0;font-size:0.8125rem;color:var(--faint);line-height:1.5}
+
+/* Un aviso de «no apta» no puede heredar el verde de APTO. */
+.tor__why b{color:var(--warn)!important}
+/* Alcance del modelo, en la propia chapa: AROME da 1,3 km pero solo 2 días. */
+.mbtn__d{font-style:normal;font-size:0.8125rem;font-weight:700;margin-left:5px;opacity:.6;
+  padding:1px 5px;border-radius:20px;border:1px solid currentColor}
+
+
+/* ══════════════════════════════════════════════════════════
+   La línea del oeste: puntos escalonados por la costa cantábrica
+   ══════════════════════════════════════════════════════════ */
+.oestes{display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px;scrollbar-width:thin}
+.oeste{flex:0 0 auto;min-width:128px;text-align:left;padding:10px 13px;border-radius:12px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;
+  transition:border-color .15s, background .15s}
+.oeste:hover{border-color:var(--acc)}
+.oeste.is-on{border-color:var(--acc);background:rgba(77,157,255,.12)}
+.oeste b{display:block;font-size:0.875rem;font-weight:600}
+.oeste span{display:block;font-size:0.8125rem;color:var(--dim);margin-top:1px}
+.oeste i{display:block;font-style:normal;font-size:0.8125rem;color:var(--acc);margin-top:5px;
+  font-variant-numeric:tabular-nums}
+.oeste--aqui{border-style:dashed}
+.oeste--aqui i{color:var(--go)}
+.det__nota{grid-column:1/-1;margin:0;padding:11px 13px;font-size:0.8125rem;line-height:1.5;
+  color:var(--dim);background:rgba(255,255,255,.03);border-top:1px solid var(--line)}
+.det__nota b{color:var(--fg)}
+
+/* ══════════ Rayos ══════════ */
+/* ══════════ Rayos medidos por AEMET ══════════
+   Lo que ha caído, separado a la vista de lo que está cayendo: son dos
+   preguntas distintas y una de ellas llega con más de una hora de
+   retraso. El titular se colorea con el mismo semáforo que el resto de
+   la app para que no haya que aprenderse otro código. */
+.ray__t{margin:0 0 10px;padding:10px 12px;border-radius:10px;font-size:0.8438rem;
+  line-height:1.5;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.03)}
+.ray__t[data-s="go"]{border-color:color-mix(in srgb,var(--go) 40%,transparent)}
+.ray__t[data-s="warn"]{border-color:color-mix(in srgb,var(--warn) 45%,transparent);
+  background:color-mix(in srgb,var(--warn) 8%,rgba(0,0,0,.2))}
+.ray__t[data-s="no"]{border-color:color-mix(in srgb,var(--no) 55%,transparent);
+  background:color-mix(in srgb,var(--no) 10%,rgba(0,0,0,.25))}
+.ray__t[data-s="no"] b{color:var(--no)}
+.ray__tb{width:100%;border-collapse:collapse;font-size:0.8125rem;margin:0 0 10px}
+.ray__tb th{text-align:left;font-weight:600;color:var(--dim);font-size:0.8125rem;
+  letter-spacing:.05em;text-transform:uppercase;padding:0 8px 5px 0;
+  border-bottom:1px solid rgba(255,255,255,.12)}
+.ray__tb td{padding:5px 8px 5px 0;border-bottom:1px solid rgba(255,255,255,.06);
+  font-variant-numeric:tabular-nums}
+.ray__tb .num{text-align:right}
+.ray__tb tr[data-s="warn"] td{color:var(--warn)}
+.ray__tb tr[data-s="no"] td{color:var(--no);font-weight:600}
+.ray__tor{margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1)}
+.ray__l{margin:6px 0 0;padding-left:17px;font-size:0.8125rem;line-height:1.5}
+.ray__l li{margin-bottom:3px}
+.ray__l li[data-s="warn"]{color:var(--warn)}
+.ray__l li[data-s="no"]{color:var(--no);font-weight:600}
+
+.rayos{height:min(74vh,620px);background:#0a0f18}
+.rayos iframe{width:100%;height:100%;border:0;display:block}
+.disc--no{border-color:color-mix(in srgb,var(--no) 45%,transparent);
+  background:color-mix(in srgb,var(--no) 10%,rgba(0,0,0,.25))}
+.disc--no b{color:var(--no)}
+
+/* ══════════ Ambiente de la portada ══════════
+   La foto es siempre del mismo sitio. Lo que cambia es la luz y lo que
+   cae encima, igual que cambia en la calle: de noche se oscurece, con
+   lluvia le caen gotas, con tormenta se pone plomiza. */
+.cover.has-photo .cover__ph{transition:filter .8s ease}
+
+.cover.amb-noche  .cover__ph{filter:brightness(.42) saturate(.65) hue-rotate(-8deg)}
+.cover.amb-lluvia .cover__ph{filter:brightness(.72) saturate(.75) contrast(.95)}
+.cover.amb-tormenta .cover__ph{filter:brightness(.55) saturate(.6) contrast(1.1)}
+.cover.amb-niebla .cover__ph{filter:brightness(.9) saturate(.35) blur(1.5px)}
+.cover.amb-nieve  .cover__ph{filter:brightness(1.05) saturate(.6)}
+.cover.amb-sol    .cover__ph{filter:brightness(1.04) saturate(1.12)}
+.cover.amb-noche.amb-lluvia .cover__ph{filter:brightness(.34) saturate(.55)}
+
+/* Gotas: dos capas de rayas finas a distinta velocidad, para que no
+   parezca un patrón repetido. Solo cuando llueve de verdad. */
+.cover.amb-lluvia::after,
+.cover.amb-tormenta::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
+  background-image:
+    repeating-linear-gradient(76deg, rgba(255,255,255,.16) 0 1px, transparent 1px 9px),
+    repeating-linear-gradient(74deg, rgba(255,255,255,.10) 0 1px, transparent 1px 15px);
+  background-size:100% 180px, 100% 260px;
+  animation:cae .55s linear infinite, cae2 .85s linear infinite;
+  opacity:.55}
+.cover.amb-tormenta::after{opacity:.8}
+@keyframes cae { from{background-position-y:0,0} to{background-position-y:180px,0} }
+@keyframes cae2{ from{background-position-y:0,0} to{background-position-y:0,260px} }
+
+/* Niebla: un velo que se mueve despacio */
+.cover.amb-niebla::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:linear-gradient(180deg, rgba(255,255,255,.30), rgba(255,255,255,.06) 60%, transparent);
+  animation:velo 9s ease-in-out infinite alternate}
+@keyframes velo{ from{opacity:.5} to{opacity:.95} }
+
+@media (prefers-reduced-motion: reduce){
+  .cover::after{animation:none!important}
+}
+/* Qué modelo estás mirando, a la vista en la portada: cada aparato
+   guarda su propia elección y si no se dice, PC y móvil parecen
+   contradecirse sin motivo aparente. */
+.cover__mod{margin:6px 0 0;font-size:0.8125rem;letter-spacing:.04em;color:rgba(255,255,255,.72);
+  display:inline-block;padding:3px 9px;border-radius:20px;
+  background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.18);
+  backdrop-filter:blur(4px)}
+.cover__mod b{color:#fff;font-weight:650}
+
+/* ══════════ Observación medida ══════════ */
+.obs{display:grid;gap:10px;align-items:center;padding:12px 14px;margin-bottom:9px;
+  grid-template-columns:minmax(130px,1.5fr) repeat(3,minmax(66px,.7fr));
+  border-radius:13px;border:1px solid color-mix(in srgb,var(--c) 38%,var(--line));
+  background:color-mix(in srgb,var(--c) 7%,rgba(255,255,255,.03))}
+.obs[data-s=go]{--c:var(--go)} .obs[data-s=warn]{--c:var(--warn)}
+.obs[data-s=no]{--c:var(--no)} .obs[data-s=nd]{--c:var(--faint)}
+.obs__n b{display:block;font-size:0.9375rem;letter-spacing:-.02em}
+.obs__n span{font-size:0.8125rem;color:var(--dim)}
+.obs__d{text-align:center}
+.obs__big{display:block;font-size:1.125rem;font-weight:700;letter-spacing:-.02em}
+.obs__lbl{font-size:0.8125rem;color:var(--faint);text-transform:uppercase;letter-spacing:.04em}
+.obs__t{grid-column:1/-1;font-size:0.8125rem;color:var(--faint);
+  padding-top:7px;border-top:1px solid var(--line)}
+.obs__t.is-viejo{color:var(--warn)}
+@media(max-width:700px){.obs{grid-template-columns:1fr 1fr 1fr}.obs__n{grid-column:1/-1}}
+.note--avisa{color:var(--warn)!important;padding:10px 13px;border-radius:9px;
+  background:color-mix(in srgb,var(--warn) 12%,transparent);
+  border-left:3px solid color-mix(in srgb,var(--warn) 60%,transparent)}
+.note--avisa b{color:var(--warn)}
+
+/* ══════════ Portada compacta en las vistas de mapa ══════════
+   Con los modelos abiertos la foto se come media pantalla y el mapa
+   queda en una franja. Aquí se reduce a una tira: sitio, temperatura y
+   modelo, que es lo único que hay que tener a la vista mientras se
+   trabaja con un mapa. */
+.cover.is-oculto{display:none}
+.cover.is-mini{min-height:0}
+.cover.is-mini .cover__in{padding:10px 16px}
+.cover.is-mini .cover__bands,
+.cover.is-mini .cover__sub,
+.cover.is-mini .cover__meta,
+.cover.is-mini .cover__cred{display:none}
+.cover.is-mini .cover__top{align-items:center}
+.cover.is-mini .cover__place{font-size:1.25rem;line-height:1.1}
+.cover.is-mini .cover__mod{margin-top:3px;font-size:0.8125rem;padding:2px 7px}
+.cover.is-mini .cover__main{position:absolute;right:58px;top:50%;transform:translateY(-50%);
+  display:flex;align-items:center;gap:10px;margin:0}
+.cover.is-mini .cover__ic{width:34px;height:34px}
+.cover.is-mini .cover__ic svg{width:34px;height:34px}
+.cover.is-mini .cover__t{font-size:1.875rem;line-height:1}
+.cover.is-mini .cover__desc{font-size:0.8125rem;font-weight:500;opacity:.85}
+.cover.is-mini .cover__ph{filter:brightness(.55) saturate(.9)}
+.cover.is-mini::after{display:none}
+@media(max-width:700px){
+  .cover.is-mini .cover__main{right:14px}
+  .cover.is-mini .cover__t{font-size:1.5rem}
+  .cover.is-mini .cover__desc{display:none}
+}
+
+/* ══════════ Mapa a pantalla completa ══════════
+   Tres filas de flexbox: controles, mapa y mandos de hora. El mapa se
+   queda con lo que sobre, y los otros dos se ven SIEMPRE. Sin medir
+   alturas, que es lo que fallaba. */
+.mfull{position:absolute;top:9px;right:12px;z-index:6;display:inline-flex;align-items:center;gap:7px;
+  padding:7px 12px;border-radius:10px;cursor:pointer;font-size:0.8125rem;font-weight:600;color:var(--fg);
+  border:1px solid var(--line);background:rgba(12,18,30,.82);backdrop-filter:blur(6px)}
+.mfull:hover{border-color:color-mix(in srgb,var(--acc) 60%,transparent)}
+.mfull svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.mapcard{position:relative}
+body.sin-scroll{overflow:hidden}
+
+.view.is-pantalla{position:fixed;inset:0;z-index:70;margin:0;padding:0;
+  background:var(--bg,#070b14);display:flex;flex-direction:column;overflow:hidden}
+.view.is-pantalla > .mapcard{flex:1;display:flex;flex-direction:column;min-height:0;
+  margin:0;border-radius:0;border:0}
+.view.is-pantalla .msel--map,
+.view.is-pantalla .ovl,
+.view.is-pantalla .lgtop,
+.view.is-pantalla .mmob{flex:0 0 auto}
+.view.is-pantalla .mapwrap{flex:1;min-height:0;display:flex;flex-direction:column}
+.view.is-pantalla .mapc{flex:1;height:auto!important;min-height:0}
+.view.is-pantalla .radar__bar{flex:0 0 auto}
+.view.is-pantalla .mapfoot{flex:0 0 auto}
+/* Lo que no hace falta con el mapa a pantalla completa */
+.view.is-pantalla .disc,
+.view.is-pantalla .mapnota,
+.view.is-pantalla > :not(.mapcard){display:none}
+.view.is-pantalla .mfull{top:9px;right:12px}
+
+/* Aviso grave: el descodificador del mapa se ha quedado sin memoria y ha
+   dejado de dibujar. No se puede cerrar, porque seguir mirando el mapa
+   en ese estado es peor que no mirarlo. */
+.msust--muerto{background:rgba(120,14,24,.97);border-color:rgba(255,90,90,.75);
+  color:#ffdede;pointer-events:auto}
+.msust--muerto b{color:#fff}
+
+
+/* Aviso de que algo ha reventado dentro de la app.
+   Va arriba del todo y por encima de cualquier pestaña: un fallo callado
+   se confunde con "aquí no pasa nada", y con esta app se decide si alguien
+   sube a una torre de 40 metros. */
+.petado{position:sticky;top:0;z-index:120;
+  background:rgba(120,14,24,.98);border-bottom:1px solid rgba(255,90,90,.7);
+  color:#ffdede;padding:9px 14px;font-size:0.8125rem;line-height:1.45;
+  display:flex;gap:10px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+.petado[hidden]{display:none}
+.petado b{color:#fff}
+.petado code{font-size:0.8125rem;opacity:.85;word-break:break-word}
+.petado button{font:inherit;font-weight:700;cursor:pointer;flex:none;
+  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.32);
+  color:#fff;border-radius:7px;padding:2px 10px}
+.petado button:hover{background:rgba(255,255,255,.28)}
+
+/* Tabla sencilla de la Guía: qué ves / qué significa / qué haces.
+   Con scroll propio en móvil, para que la página nunca se vaya de ancho. */
+.tsimple{width:100%;border-collapse:collapse;font-size:0.8125rem;margin:10px 0 4px;
+  display:block;overflow-x:auto}
+.tsimple th,.tsimple td{text-align:left;vertical-align:top;padding:8px 10px;
+  border-bottom:1px solid var(--line)}
+.tsimple th{font-size:0.8125rem;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--dim);font-weight:700;white-space:nowrap}
+.tsimple td{min-width:150px;line-height:1.45}
+.tsimple tr:last-child td{border-bottom:0}
+.tsimple b{color:var(--fg)}
+
+/* En pantalla estrecha la tabla deja de ser tabla: cada aviso pasa a ser
+   un bloque. Con tres columnas, la de "Qué haces" —la única que dice qué
+   tienes que hacer— quedaba fuera de pantalla y había que arrastrar de
+   lado para verla. En el móvil eso es no verla. */
+@media (max-width: 700px) {
+  .tsimple{display:block;overflow-x:visible}
+  .tsimple thead{display:none}
+  .tsimple tbody,.tsimple tr,.tsimple td{display:block;width:auto}
+  .tsimple tr{border:1px solid var(--line);border-radius:11px;
+    padding:4px 2px 8px;margin:0 0 10px}
+  .tsimple td{border-bottom:0;padding:6px 12px;min-width:0}
+  .tsimple td::before{content:attr(data-k);display:block;
+    font-size:0.8125rem;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--dim);font-weight:700;margin-bottom:3px}
+  .tsimple td[data-k="Qué haces"]{background:rgba(255,255,255,.035);
+    border-radius:8px;margin:4px 8px 0}
+}
+
+/* ── Modelos en el móvil ──────────────────────────────────────────────
+   MEDIDO el 23-08-2026 en pantalla de 375 px: el botón de pantalla
+   completa se pintaba ENCIMA del selector de capa, y el deslizador de la
+   hora —lo que más se usa— empezaba en el píxel 968 de una pantalla de
+   1000, o sea cortado. El pie quedaba entero fuera. Para mover la hora
+   había que desplazar la página, y al desplazarla se movía el mapa.
+
+   Aquí no se mide nada: la sección ocupa el alto de la pantalla menos la
+   cabecera, y el mapa se queda con lo que sobre. Lo reparte flexbox.
+
+   TODO ESTO ES SOLO PARA PANTALLA ESTRECHA. En el ordenador no cambia
+   absolutamente nada.                                                  */
+@media (max-width: 700px) {
+  /* OJO — `.view[data-v="models"].is-on` (0,1,1) es MÁS ESPECÍFICO que el
+     `.view{display:none}` que oculta las pestañas que no tocan (0,1,0).
+     Sin el `.is-on` de abajo, esta regla mostraba el mapa ESTUVIERAS DONDE
+     ESTUVIERAS: aparecía debajo de «Torre» y, como la app nunca había
+     abierto esa pestaña, no llegaba a llamar a Maps.open() y el visor se
+     quedaba con el cartel «Abre esta pestaña para cargar el mapa» para
+     siempre. En el ordenador no se veía porque esto es solo móvil.
+     Todos los selectores de este bloque llevan `.is-on` por lo mismo. */
+  .view[data-v="models"].is-on{
+    display:flex; flex-direction:column; overflow:hidden;
+    height:calc(100vh - var(--alto-top, 150px));
+    height:calc(100dvh - var(--alto-top, 150px));   /* dvh: descuenta la barra del navegador */
+  }
+  .view[data-v="models"].is-on > .mapcard{
+    flex:1; display:flex; flex-direction:column; min-height:0;
+    margin:0; border-radius:0; border-left:0; border-right:0}
+  .view[data-v="models"].is-on .mmob,
+  .view[data-v="models"].is-on .lgtop,
+  .view[data-v="models"].is-on .radar__bar,
+  .view[data-v="models"].is-on .mapfoot{flex:0 0 auto}
+  .view[data-v="models"].is-on .mapwrap{flex:1; min-height:0; display:flex; flex-direction:column}
+  .view[data-v="models"].is-on .mapc{flex:1; height:auto!important; min-height:0}
+
+  /* Se montaba encima del selector de capa. Y ya no hace falta: la
+     sección entera ocupa la pantalla. */
+  .view[data-v="models"].is-on .mfull{display:none}
+
+  /* El pie ocupaba 104 px porque se partía en varias líneas. Se queda,
+     porque ahí va DE DÓNDE SALE el dato —modelo, resolución y hora de la
+     pasada— y eso no se esconde nunca. Pero en una línea cada cosa. */
+  .view[data-v="models"].is-on .mapfoot{
+    padding:5px 11px; font-size:0.8125rem; line-height:1.35;
+    display:flex; flex-direction:column; gap:1px}
+  .view[data-v="models"].is-on .mapfoot > span{
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%}
+
+  /* Lo que sobra debajo del mapa en un móvil */
+  .view[data-v="models"].is-on .disc,
+  .view[data-v="models"].is-on .mapnota,
+  .view[data-v="models"].is-on > :not(.mapcard){display:none}
+}
+
+/* El relleno del contenedor añadía 91 px que seguían haciendo desplazar
+   la página. En vez de pelearse midiendo, se fija la sección —el mismo
+   mecanismo que ya usa la pantalla completa, que está probado— entre la
+   cabecera y el fondo de la pantalla. Así no hay nada que adivinar. */
+@media (max-width: 700px) {
+  body.mapa-movil{overflow:hidden}
+  body.mapa-movil .view[data-v="models"]{
+    position:fixed; left:0; right:0; bottom:0;
+    top:var(--alto-top, 150px);
+    height:auto; margin:0; padding:0}
+}
+
+/* ── Tres arreglos más de Modelos en el móvil ─────────────────────────
+   MEDIDO en 375 px con la app publicada:
+
+   1. La barra de la hora va en una línea sin partir, y sus piezas
+      terminaban en el píxel 454: la FECHA Y LA HORA que estás mirando se
+      salían 94 px por la derecha. Movías el deslizador sin ver a qué
+      hora ibas. En una app con la que se decide subir a una torre, eso
+      no puede ser. Ahora la hora va en su propia línea, centrada y en
+      grande, encima de los mandos.
+
+   2. La leyenda se recortaba (36 px de contenido en 31 de hueco) y los
+      números de la escala quedaban cortados por la mitad.
+
+   3. El pie de página, con la sección fijada, se colaba por detrás de
+      los selectores de modelo y capa.                                  */
+@media (max-width: 700px) {
+  .view[data-v="models"] .radar__bar{
+    flex-wrap:wrap; row-gap:5px; padding:7px 10px 8px}
+  .view[data-v="models"] #mapStamp{
+    order:-1; flex:1 0 100%; text-align:center; margin:0;
+    font-size:0.8438rem; font-weight:800; letter-spacing:.01em}
+  .view[data-v="models"] #mapTime{flex:1 1 90px; min-width:0}
+
+  .view[data-v="models"] .lgtop{height:auto; min-height:0; overflow:visible;
+    padding-bottom:2px}
+
+  /* El pie de la app no pinta nada con el mapa ocupando la pantalla */
+  body.mapa-movil footer.foot{display:none}
+
+  /* La atribución del mapa se comía 44 px de mapa en dos líneas */
+  body.mapa-movil .maplibregl-ctrl-attrib{font-size:0.8125rem; line-height:1.25;
+    max-width:82vw; padding:1px 5px}
+  body.mapa-movil .maplibregl-ctrl-bottom-right{transform:scale(.9);
+    transform-origin:bottom right}
+}
+
+/* La nota de calor en la caseta se retiró el 25-08-2026: la temperatura
+   de dentro la fija el aire acondicionado, no el tiempo, así que no es
+   asunto de esta app. Ver el bloque de app.js. */
+
+/* En el tablero, el número que ha disparado el aviso se marca. Si el CAPE
+   y la tapa están en la combinación que rompe, se ven en ámbar: de un
+   vistazo sabes en qué emplazamiento mirar. */
+.tor__d[data-a="1"] .tor__big{color:var(--warn)}
+.tor__d[data-a="1"] .tor__lbl{color:var(--warn);opacity:.85}
+
+/* Leyenda del gráfico, ya fuera del SVG: aquí el texto no se deforma. */
+.leg{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;
+  font-size:0.8125rem;color:var(--dim);line-height:1.4}
+.leg__i{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.leg__i i{width:11px;height:11px;border-radius:3px;flex:none}
+
+/* Riesgo eléctrico dentro de la franja del día. Idea de Aitor: saber a
+   qué HORA del día puede romper, no solo si llueve. */
+.part__ray{display:inline-block;margin-top:3px;color:var(--warn);font-weight:600}
+.part__ray--ojo{color:var(--dim);font-weight:500}
+
+/* ¿Se llega? El acceso al emplazamiento. Va debajo del veredicto porque
+   es la otra mitad de la decisión: de nada sirve que se pueda trabajar
+   si la pista está con hielo o hay que subir un remolque por el barro. */
+.acc{margin:9px 0 0;padding:9px 11px;border-radius:10px;
+  border:1px solid var(--line);background:rgba(255,255,255,.03);max-width:62ch}
+.acc[hidden]{display:none}
+.acc[data-s="warn"]{border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+.acc[data-s="no"]{border-color:color-mix(in srgb,var(--no) 55%,transparent)}
+.acc__k{display:block;font-size:0.8125rem;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:5px}
+.acc__l{margin:0;padding-left:17px;font-size:0.8125rem;line-height:1.5}
+.acc__l li{margin-bottom:2px}
+.acc__l li[data-s="no"]{color:var(--no);font-weight:600}
+.acc__l li[data-s="warn"]{color:var(--warn)}
+.acc__ok,.acc__nc{margin:0;font-size:0.8125rem;color:var(--dim);line-height:1.45}
+.acc__nc{margin-top:6px;color:var(--warn);opacity:.9}
+
+/* «¿A qué hora salgo?» — su pregunta de verdad. Va pegado al veredicto
+   porque es la respuesta útil: no un color, una hora. */
+/* ── LOS <b> DE AQUÍ VAN EN LÍNEA ───────────────────────────────────
+   `.verdict__l b{display:block}` (arriba, para el título) hacía que cada
+   cifra de esta caja cayera en su propio renglón: «Racha: ahora / 24
+   km/h / · +1 h / 18 km/h». Suyo el 02-09-2026, con la foto. */
+.cuando b{display:inline}
+.cuando{margin:6px 0 0;font-size:0.8125rem;line-height:1.5;color:var(--ink);max-width:62ch}
+.cuando[hidden]{display:none}
+.cuando b[data-s="go"]{color:var(--go)}
+.cuando b[data-s="warn"]{color:var(--warn)}
+.cuando b[data-s="no"]{color:var(--no)}
+
+/* El número del riesgo eléctrico, detrás de la lectura y más discreto:
+   primero se lee si puede caer, y el CAPE y la tapa quedan de apoyo. */
+.part__ray--cif{display:inline-block;font-size:0.8125rem;color:var(--dim);opacity:.85}
+
+/* HORAS EN DISCREPANCIA · 25-08-2026.
+   La barra de 48 h pintaba VERDE horas que otros modelos daban como
+   tormenta (BI BERMEO, miércoles 26, las 15:00 y las 16:00). El aviso
+   de texto estaba, pero la barra es lo que se mira de un vistazo, y un
+   verde limpio se lee como «puedes mandar a quien quieras».
+
+   NO se cambia el color —no sabemos que ECMWF tenga razón sobre AROME—:
+   se le quita la CERTEZA. Rayado diagonal sobre el color que le toque,
+   el mismo lenguaje que ya usa la app para las alturas estimadas. */
+.tlh--duda .tlh__f{
+  background-image:repeating-linear-gradient(135deg,
+    rgba(255,255,255,.55) 0 2px, transparent 2px 5px);
+}
+.tlh--duda .tlh__t{opacity:.6}
+.tlh--duda .tlh__b{outline:1px dashed var(--faint);outline-offset:1px;border-radius:3px}
+
+/* EL PARTE DEL DÍA (Mis torres) — 26-08-2026.
+   Pensado para leerlo en el móvil de un vistazo: el nombre y la ventana
+   arriba, y debajo las DOS cifras con su hora. Nunca una sin la otra. */
+.pt{padding:11px 0;border-top:1px solid var(--line)}
+.pt:first-child{border-top:0;padding-top:2px}
+.pt__h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.pt__h b{font-size:0.9375rem}
+.pt__b{font-size:0.8125rem;font-weight:700;letter-spacing:.05em;white-space:nowrap;
+       padding:3px 8px;border-radius:999px}
+.pt[data-s="no"] .pt__b{background:rgba(255,77,94,.14);color:var(--no)}
+.pt[data-s="go"] .pt__b{background:rgba(60,200,140,.12);color:var(--go)}
+.pt[data-s="warn"] .pt__b{background:rgba(255,176,32,.14);color:var(--warn)}
+.pt__d{font-size:0.8125rem;color:var(--dim);margin-top:3px;line-height:1.45}
+.pt__m{opacity:.7}
+
+/* La línea de lluvia del parte. Va debajo de la del rayo porque el rayo
+   es el veto, pero se ve igual de clara: lluvia hay casi todos los días
+   y con sirimiri no se sube. */
+.pt__l{font-size:0.8438rem;color:var(--ink);opacity:.86;margin-top:4px;line-height:1.45;
+       padding-left:9px;border-left:2px solid var(--line)}
+.pt__l--siri{border-left-color:var(--warn)}
+/* «SIN LLUVIA» EN VERDE, no en gris apagado. Suyo, 28-08-2026: «y "sin
+   lluvia" en color naranja o así ponlo, o verde».
+   Verde, que es lo que significa. Para él la lluvia es un bloqueador
+   —fusibles al aire con tensión, armarios que hay que abrir a cielo
+   descubierto— así que un día seco es LA buena noticia. En gris al 55 %
+   se leía como un dato de relleno, y es de los que más mandan. */
+/* «Sin lluvia» ya NO en verde: el 02-09-2026 quedó justo encima de
+   «Nada te frena para llegar», que también es verde, y él lo cortó —«si
+   lluvia en verde se lía con lo de arriba»—. Dos verdes pegados se leen
+   como uno solo. Se queda con el peso del texto, que es lo que él mira
+   primero: la lluvia es su bloqueador número uno. */
+.pt__l--seco{opacity:1;color:var(--txt);border-left-color:var(--line)}
+/* Y cuando SÍ llueve, la barra en azul: no es una alarma —llueve casi
+   todos los días— pero tiene que verse de un vistazo cuál cae y cuál no. */
+.pt__l:not(.pt__l--seco):not(.pt__l--siri){border-left-color:#4da3ff}
+
+/* De qué hora son las cifras de la ficha de Torre. Discreto pero
+   siempre visible: sin esto, un número sin hora se lee como «ahora
+   mismo» y puede ser de hace cincuenta minutos. */
+.horaKpi{margin:0 0 8px;font-size:0.8125rem;color:var(--dim);line-height:1.45}
+
+/* A qué momento corresponden las cifras de «Ahora». El reloj de la
+   esquina es la hora que es; esto es la hora del DATO, que puede ir
+   hasta 15 min por detrás. */
+.cover__val{margin-top:6px;font-size:0.8125rem;color:rgba(255,255,255,.82);
+            text-shadow:0 1px 3px rgba(0,0,0,.6)}
+
+/* Pestañas de día del parte (26-08-2026). Van dentro de la tarjeta, no
+   en la barra de arriba: lo que cambia es el parte, no la pestaña. */
+.pdias{display:flex;gap:6px;margin:0 0 12px;flex-wrap:wrap}
+.pdia{display:flex;flex-direction:column;align-items:center;gap:1px;
+  padding:6px 12px;border-radius:10px;cursor:pointer;
+  border:1px solid var(--line);background:transparent;color:var(--dim);
+  font-family:inherit;line-height:1.15;transition:background .15s,color .15s}
+.pdia b{font-size:0.8125rem;font-weight:700;letter-spacing:.08em}
+.pdia i{font-style:normal;font-size:0.9375rem;font-weight:700;font-variant-numeric:tabular-nums}
+.pdia:hover{background:rgba(255,255,255,.05);color:var(--ink)}
+.pdia.is-on{background:var(--acc);border-color:var(--acc);color:#fff}
+.pdia:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+/* ── «HA CAMBIADO desde que lo miraste» ───────────────────────────────
+   Suyo, 26-08-2026: «por correo no me entero de nada; si va directo a
+   la app, genial». Va DENTRO de la ficha de la torre, no en un aviso
+   aparte, porque lo que cambió es de esa torre y de ningún sitio más.
+   Barra a la izquierda para que se distinga del renglón de la lluvia
+   sin tener que leerlo.                                              */
+.pt__cam{
+  grid-column:1/-1;
+  margin-top:6px; padding:6px 10px;
+  border-left:3px solid var(--warn,#e0a12b);
+  background:color-mix(in srgb, var(--warn,#e0a12b) 12%, transparent);
+  border-radius:4px;
+  font-size:.86rem; line-height:1.35;
+}
+.pt__cam b{ letter-spacing:.03em; }
+/* A peor se pinta en rojo: es lo que le puede cambiar una decisión ya
+   tomada — si ya mandó a alguien con el parte de antes. */
+.pt__cam--peor{
+  border-left-color:var(--no,#d2453c);
+  background:color-mix(in srgb, var(--no,#d2453c) 13%, transparent);
+}
+
+/* ── Avisos al móvil ─────────────────────────────────────────────────
+   Botón grande de verdad: esto se toca con el móvil en la mano, muchas
+   veces en la furgoneta o con guantes. 44 px es el mínimo que Apple da
+   por tocable, y aquí se va por encima.                              */
+.avisoBtns{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 4px; }
+.avisoBtns .btn{
+  min-height:46px; padding:0 16px;
+  border-radius:8px; border:1px solid var(--bd,#2c3440);
+  background:var(--acc,#3b82f6); color:#fff;
+  font-size:.95rem; font-weight:600; cursor:pointer;
+}
+.avisoBtns .btn:disabled{ opacity:.55; cursor:default; }
+.avisoBtns .btn--sec{ background:transparent; color:var(--fg,#e7edf5); }
+#avisoEstado{ margin:2px 0 0; font-weight:600; }
+
+/* ── «AHORA» CON COLOR QUE SIGNIFICA ALGO ────────────────────────────
+   Suyo, 26-08-2026: «luego en ahora pones bonito con colores que se
+   vean bien».
+
+   Se colorea SOLO lo que tiene un listón detrás: viento, ráfaga, lluvia
+   (los suyos, de Ajustes), visibilidad (niebla, según AEMET) y UV
+   (escala de la OMS). Lo demás se queda gris a propósito. Si todo lleva
+   color, el color deja de avisar — y el naranja de la ráfaga es lo que
+   tiene que parar a un operario.
+
+   El aviso va por DOS vías a la vez, no solo por el color: barra a la
+   izquierda y cifra teñida. Con guantes, al sol y de un vistazo, el
+   color solo no basta; y hay gente que no distingue el rojo del verde. */
+.dt{ position:relative; }
+.dt[data-st]{ padding-left:14px; }
+.dt[data-st]::before{
+  content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background:var(--c);
+}
+.dt[data-st] .dt__v{ color:var(--c); }
+.dt[data-st] .dt__s{ color:var(--c); opacity:.85; font-weight:600; }
+.dt[data-st="warn"]{ --c:var(--warn,#ffb02e); background:color-mix(in srgb, var(--warn,#ffb02e) 8%, #0e1526); }
+.dt[data-st="no"]  { --c:var(--no,#ff4d5e);   background:color-mix(in srgb, var(--no,#ff4d5e) 10%, #0e1526); }
+
+/* Cuántos móviles hay apuntados. Va en todos los estados de la tarjeta:
+   con cero, él no está cubierto y hasta ahora la única forma de saberlo
+   era esperar a una tormenta. Un silencio no puede parecer «todo bien». */
+.apar{ display:inline-block; padding:3px 9px; border-radius:999px;
+       font-size:0.8125rem; font-weight:700; letter-spacing:.02em; }
+.apar--no  { background:color-mix(in srgb, var(--no,#ff4d5e) 20%, transparent); color:var(--no,#ff4d5e); }
+.apar--si  { background:color-mix(in srgb, var(--go,#2fd07a) 18%, transparent); color:var(--go,#2fd07a); }
+.apar--duda{ background:rgba(140,150,170,.18); color:var(--dim,#9aa4b5); }
+
+/* Los avisos que le han llegado, para releerlos. Suyo, 26-08-2026:
+   «pero se va seguido, ¿dónde queda o dónde puedo releerlo?». */
+.rec{ padding:10px 0; border-top:1px solid var(--line); }
+.rec:first-child{ border-top:0; padding-top:2px; }
+.rec__h{ display:flex; flex-wrap:wrap; gap:6px; align-items:baseline; justify-content:space-between; }
+.rec__c{ font-size:0.8125rem; color:var(--faint); white-space:nowrap; }
+.rec__t{ color:var(--warn,#ffb02e); }
+.rec__b{ margin-top:3px; font-size:0.8438rem; line-height:1.45; color:var(--dim); }
+/* Las tormentas se distinguen de un vistazo del resto. */
+.rec[data-tag="tormenta"] b{ color:var(--no,#ff4d5e); }
+.rec[data-tag="cambio"]   b{ color:var(--warn,#ffb02e); }
+
+/* «Sirimiri» al lado de la cifra en la comparativa de lluvia: los
+   milímetros solos no dicen que no se pueda subir, y la palabra sí. */
+.cmp__sir{ display:block; font-style:normal; font-size:0.8125rem; font-weight:700;
+  letter-spacing:.03em; color:var(--warn,#ffb02e); }
+.cmp__tap{ display:block; font-style:normal; font-size:0.8125rem; font-weight:700;
+  letter-spacing:.02em; color:var(--dim); }
+.cmp__f[data-s="no"] .cmp__tap{ color:var(--no,#ff4d5e); }
+/* El que no publica la tapa se ve distinto: no es un cero, es un «no lo sé». */
+.cmp__tap--no{ color:var(--faint); font-weight:600; font-style:italic; }
+
+/* Lluvia hora a hora y modelo a modelo. Suyo, 26-08-2026: «esto sirve».
+   Contesta a «¿va a seguir?», que es la pregunta de verdad. */
+.rej__w{ overflow-x:auto; margin:10px 0 2px; }
+.rej{ border-collapse:collapse; width:100%; font-size:0.8125rem; }
+.rej th, .rej td{ padding:5px 8px; text-align:center; white-space:nowrap; }
+.rej thead th{ color:var(--faint); font-weight:650; font-size:0.8125rem; letter-spacing:.03em; }
+.rej tbody th{ text-align:left; color:var(--dim); font-weight:650; }
+.rej tbody tr + tr th, .rej tbody tr + tr td{ border-top:1px solid var(--line); }
+.rej__si{ color:var(--warn,#ffb02e); font-weight:700; }
+.rej__no{ color:var(--faint); }
+.rej__nd{ color:var(--faint); opacity:.5; }
+
+/* Mandarnos un dato del sitio. Suyo, 27-08-2026. Campo grande y botón
+   grande: esto se usa en una caseta, con una mano y a veces con guantes. */
+#campoTexto{
+  width:100%; box-sizing:border-box; margin-top:8px;
+  padding:10px 12px; border-radius:9px;
+  border:1px solid var(--bd,#2c3440); background:#0e1526; color:var(--fg,#e7edf5);
+  font:inherit; font-size:1.0rem;   /* 16 px o iOS hace zoom al tocar */
+  line-height:1.4; resize:vertical;
+}
+#campoTexto:focus{ outline:2px solid var(--acc,#3b82f6); outline-offset:1px; }
+#campoEstado:empty{ display:none; }
+#campoEstado{ margin-top:6px; font-weight:600; }
+
+/* LA FOTO EN ESPERA, ANTES DE MANDARLA. Suyo, 29-08-2026: «se envía sola
+   sin darle yo… no sé si está pinchada la ubicación o no».
+
+   El aviso de la ubicación va con FONDO, no solo con letra de color: esto
+   se mira al sol, en el monte y con una mano. Un color de texto suave no
+   se ve ahí. */
+#campoPrevia{
+  margin-top:10px; padding:10px; border-radius:10px;
+  border:1px solid var(--bd,#2c3440); background:rgba(255,255,255,.03);
+}
+#campoPreviaImg{
+  display:block; width:100%; max-height:230px;
+  object-fit:contain; border-radius:8px; background:#0b1020;
+}
+#campoPreviaUbi{
+  margin:9px 0 0; padding:9px 11px; border-radius:9px;
+  font-size:0.8125rem; line-height:1.45; font-weight:600;
+}
+#campoPreviaUbi.ok{
+  border:1px solid color-mix(in srgb,var(--go) 45%,transparent);
+  background:color-mix(in srgb,var(--go) 10%,rgba(0,0,0,.2)); color:var(--go);
+}
+#campoPreviaUbi.warn{
+  border:1px solid color-mix(in srgb,var(--warn) 50%,transparent);
+  background:color-mix(in srgb,var(--warn) 12%,rgba(0,0,0,.2)); color:var(--warn);
+}
+#campoPrevia .avisoBtns{ margin-top:9px; }
+/* El recordatorio de que el comentario va con la foto. En su propia línea y
+   en el color normal del texto: dentro de la caja verde o ámbar se leería
+   como parte del aviso de ubicación, y es otra cosa. */
+.previa__com{
+  display:block; margin-top:7px; padding-top:7px;
+  border-top:1px solid currentColor; opacity:.85;
+  font-weight:550; color:var(--ink);
+}
+
+/* Borrar avisos. Suyo, 27-08-2026. El aspa es pequeña pero con área de
+   toque grande: se usa con el móvil en la mano, no con un ratón. */
+.rec__todo{ margin-bottom:8px; }
+.rec__todo .btn{ min-height:36px; padding:0 12px; font-size:.85rem;
+  border-radius:8px; border:1px solid var(--bd,#2c3440);
+  background:transparent; color:var(--dim); cursor:pointer; }
+.rec__x{
+  margin-left:auto; flex:0 0 auto;
+  width:30px; height:30px; line-height:1;
+  border:0; border-radius:8px; background:transparent;
+  color:var(--faint); font-size:1.1875rem; cursor:pointer;
+}
+.rec__x:hover, .rec__x:active{ background:rgba(255,77,94,.16); color:var(--no,#ff4d5e); }
+
+/* Lo que él mandó y lo que le contestamos, uno debajo del otro. */
+.hilo{ margin-top:12px; border-top:1px solid var(--line); padding-top:10px; }
+/* Cuando el servidor no contesta, el hilo se queda y esto va encima. */
+.hilo__caido{ margin:8px 0; padding:6px 10px; border-left:3px solid var(--warn); color:var(--warn); font-size:.86rem; }
+.hilo__h{ font-size:0.8125rem; letter-spacing:.05em; text-transform:uppercase;
+  color:var(--faint); font-weight:650; margin-bottom:6px; }
+.hn{ padding:8px 0; border-top:1px solid var(--line); }
+.hn:first-of-type{ border-top:0; }
+.hn__c{ font-size:0.8125rem; color:var(--faint); }
+.hn__t{ font-size:0.8438rem; line-height:1.45; margin-top:2px; }
+.hn__f{ font-size:0.8125rem; color:var(--dim); margin-top:2px; }
+/* La respuesta, con barra a la izquierda para que se distinga de lo suyo. */
+.hn__r{ margin-top:6px; padding:7px 10px; border-left:3px solid var(--acc,#3b82f6);
+  background:color-mix(in srgb, var(--acc,#3b82f6) 10%, transparent);
+  border-radius:4px; font-size:0.8438rem; line-height:1.45; }
+.hn__r b{ color:var(--acc,#3b82f6); }
+/* La foto que mandó, dentro de su propia nota. Pequeña para que el hilo
+   se siga leyendo de un vistazo; se toca y se abre entera. Puesta el
+   27-08-2026: antes solo ponía «📷 con foto» y no había forma de verla. */
+.hn__foto{ display:block; margin-top:6px; }
+.hn__foto img{ display:block; width:100%; max-width:260px; max-height:200px;
+  object-fit:cover; border-radius:6px; border:1px solid var(--line); }
+/* LO SIN CONTESTAR NO SE ATENÚA. Estaba en `opacity:.75`, y eso dejaba la
+   línea de la fecha y el sitio en 2,60:1 de contraste — por debajo incluso
+   del listón de texto grande. Suyo, 29-08-2026: «la letra apenas se ve».
+
+   Y el sentido estaba del revés: se apagaba justo lo que sigue pendiente,
+   que es lo único de este hilo que pide algo. Ahora se MARCA en vez de
+   apagarse: barra ámbar a la izquierda, como la respuesta lleva la suya
+   azul. Medido con `revisiones/contraste-letra.py`. */
+.hn--sin{
+  border-left:3px solid var(--warn,#ffb02e);
+  padding-left:9px; margin-left:-12px;
+  background:color-mix(in srgb, var(--warn,#ffb02e) 6%, transparent);
+  border-radius:0 4px 4px 0;
+}
+.hilo__h{ display:flex; align-items:center; gap:8px; }
+.hn__todo{ margin-left:auto; border:0; background:transparent; cursor:pointer;
+  color:var(--faint); font-size:0.8125rem; letter-spacing:.04em; text-transform:uppercase;
+  font-weight:650; padding:4px 6px; border-radius:6px; }
+.hn__todo:hover, .hn__todo:active{ background:rgba(255,77,94,.16); color:var(--no,#ff4d5e); }
+.hn__c{ display:flex; align-items:center; gap:6px; }
+
+/* «Nadie está vigilando». Suyo, 27-08-2026, después de once horas sin
+   vigilante mientras trabajaba. Va arriba del parte, en rojo y grande:
+   es de las poquísimas cosas que tienen que interrumpirle la lectura. */
+.pulso{
+  margin:0 0 12px; padding:10px 12px;
+  border-radius:8px;
+  border-left:4px solid var(--no,#ff4d5e);
+  background:color-mix(in srgb, var(--no,#ff4d5e) 14%, transparent);
+  font-size:0.8438rem; line-height:1.45;
+}
+/* ── EL ROJO, SOLO PARA EL ESTADO MALO ────────────────────────────────
+   Suyo, 30-08-2026, con el móvil delante: «Vigilante en pie» salía
+   ESCRITO EN ROJO mientras el resto de la tarjeta iba en verde. El
+   texto decía que todo va bien y el color decía alarma.
+
+   No era el JS: era esta regla ganando por especificidad.
+
+       .pulso b:first-child   → (0,2,1)   rojo
+       .pulso--ok b           → (0,1,1)   verde
+
+   Como la primera pesa más, el PRIMER <b> —que es justo el titular,
+   «Vigilante en pie.»— salía rojo en los TRES estados, y los demás
+   <b> (el número de sitios y la hora) sí cogían el verde. De ahí el
+   rótulo a dos colores.
+
+   Se ata al estado malo, que es para el que se puso. `clasePulso()`
+   siempre añade uno de los tres modificadores —mal, nolose, ok— así
+   que `.pulso` nunca va sola y no se pierde el rojo donde hace falta. */
+.pulso--mal b:first-child{ color:var(--no,#ff4d5e); letter-spacing:.02em; }
+/* «Ninguno ve agua» — no es alarma, es quitarle al silencio el aire de
+   respuesta. Gris y pequeño: informa, no interrumpe. */
+.pt__seco{ grid-column:1/-1; margin-top:5px; opacity:.8; line-height:1.4; }
+
+
+/* DE CUÁNDO ES EL PARTE. Puesto el 27-08-2026 porque él preguntó
+   «¿cuándo está actualizado? no veo la hora, ¿es de hoy? ¿de ayer?» y
+   la respuesta era que no estaba escrita en ninguna parte.
+   No va con `dim`: lo tenue es justo lo que no encontró. */
+.psello{
+  font-size:.84rem; line-height:1.35; color:#9fb0c8;
+  margin:.15rem 0 .6rem;
+}
+.psello--viejo{ color:#ffb020; font-weight:600 }
+.psello--ayer{
+  color:#ffd4d4; font-weight:700; background:#7a1f1f;
+  padding:.34rem .6rem; border-radius:.5rem; display:inline-block;
+}
+
+
+/* LA CELDA DE AL LADO. Puesto el 27-08-2026: la app enseñaba CAPE 20
+   para ECMWF en Bermeo cuando ECMWF daba 1.110 en Bermeo — leía un nudo
+   a 18,3 km, monte adentro. No se cambia el número; se cuenta. */
+.elev__cerca{
+  margin:.6rem 0 .1rem; padding:.6rem .7rem; border-radius:.55rem;
+  background:#4a2f06; border:1px solid #8a5a10; color:#ffe6bd;
+  font-size:.86rem; line-height:1.45;
+}
+.elev__cerca b{ color:#ffd08a }
+.elev__cerca__n{ display:block; margin-top:.35rem; opacity:.82; font-size:0.8125rem }
+
+
+/* EL PULSO DEL VIGILANTE, en sus tres estados. Antes solo se pintaba el
+   malo y el silencio valía por «bien» y por «no lo sé» a la vez. */
+.pulso--ok{
+  background:#0f2a1b; border:1px solid #1f6b41; color:#bff0d2;
+  font-size:.84rem; padding:.5rem .7rem; border-radius:.55rem; margin:0 0 .6rem;
+}
+.pulso--ok b{ color:#7ee2a8 }
+.pulso--nolose{
+  background:#2a2a12; border:1px solid #6b6b1f; color:#f0eec0;
+  font-size:.84rem; padding:.5rem .7rem; border-radius:.55rem; margin:0 0 .6rem;
+}
+.pulso--nolose b{ color:#ffe98a }
+
+
+/* «Pero al revés no vale». Para los números que solo sirven en una
+   dirección: el tope convectivo confirma, no tranquiliza. */
+.q__ojo{
+  margin:.5rem 0 0; padding:.5rem .65rem; border-radius:.5rem;
+  background:#3a2a0c; border-left:3px solid #ffb020; color:#ffe6bd;
+  font-size:.86rem; line-height:1.45;
+}
+.q__ojo b{ color:#ffd08a }
+
+
+/* MODELO CONTRA APARATO, en el mismo punto y la misma hora. Pedido por
+   él el 28-08-2026: «tú me pones los valores y yo valoraré qué hacer». */
+.obs__m{ grid-column:1/-1 }
+.obs__mm{ margin-top:.45rem; padding:.5rem .6rem; border-radius:.5rem;
+  font-size:.82rem; line-height:1.5; background:rgba(255,255,255,.04);
+  border-left:3px solid #4a5568 }
+.obs__mm--ok{ border-left-color:#36c759 }
+.obs__mm--reg{ border-left-color:#ffb020 }
+.obs__mm--mal{ border-left-color:#ff6b6b }
+.obs__mv{ display:inline-block; margin:.15rem .55rem .15rem 0; opacity:.9 }
+.obs__mv b{ opacity:1 }
+/* Dos líneas, y cada una dice contra qué compara. Antes iban las dos
+   pegadas con un «·» y se leían como una contradicción (28-08-2026). El
+   rótulo va en tono apagado para que el ojo caiga en la cifra. */
+.obs__mj{ display:block; margin-top:.3rem; opacity:.85 }
+.obs__mj i{ font-style:normal; color:var(--faint); margin-right:.35rem }
+.obs__mj + .obs__mj{ margin-top:.15rem }
+
+
+/* El aviso del sirimiri, UNA vez al pie del parte y no en cada fila.
+   Repetido diez veces dejaba de leerse — «es muy cansino», dijo él. */
+.pt__pie{ margin:.7rem 0 .2rem; padding:.6rem .7rem; border-radius:.55rem;
+  background:#2a2418; border-left:3px solid #ffb020; color:#ffe6bd;
+  font-size:.86rem; line-height:1.5 }
+.pt__pie b{ color:#ffd08a }
+
+.acc__nc--suave{ opacity:.72; font-weight:400 }
+
+
+/* La racha del día en el parte. Puesto el 28-08-2026: «igual más datos
+   aparte del CAPE». Y el «sin lluvia hoy» se veía demasiado flojo. */
+.pt__r{ font-size:.88rem; margin:.15rem 0 .2rem; opacity:.95 }
+.pt__r[data-s="warn"]{ color:#ffd08a }
+.pt__r[data-s="no"]{ color:#ff9b9b; font-weight:600 }
+
+
+/* ══════════ El marcador de modelos ══════════
+   Puesto el 28-08-2026. Un bloque por estación, y dentro una línea por
+   modelo. El color va por el SESGO, no por el error: rojo el que se
+   queda corto —que es el que le manda a un monte con más viento del que
+   creía—, ámbar el que se pasa, verde el que cuadra. */
+.marc{border:1px solid var(--line);border-radius:13px;padding:12px 14px;margin-bottom:11px}
+.marc__k{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;
+  padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid var(--line)}
+.marc__k b{font-size:0.9375rem;letter-spacing:-.02em}
+.marc__k span{font-size:0.8125rem;color:var(--faint)}
+.marc__m{display:grid;gap:2px 12px;padding:7px 0 7px 11px;position:relative;
+  grid-template-columns:minmax(84px,auto) 1fr}
+.marc__m::before{content:'';position:absolute;left:0;top:9px;bottom:9px;
+  width:3px;border-radius:2px;background:var(--cm)}
+.marc__m[data-s=go]  {--cm:var(--go)}
+.marc__m[data-s=warn]{--cm:var(--warn)}
+.marc__m[data-s=no]  {--cm:var(--no)}
+.marc__mn{font-weight:700;font-size:0.8438rem}
+.marc__md{font-size:0.8438rem;color:var(--dim)}
+.marc__md b{color:var(--cm)}
+.marc__me{grid-column:1/-1;font-size:0.8125rem;color:var(--faint);line-height:1.5}
+.marc__me b{color:var(--cm)}
+@media(max-width:560px){
+  .marc__m{grid-template-columns:1fr}
+  .marc__md{grid-column:1/-1}
+}
+
+
+/* De qué red es cada anemómetro. Puesto el 28-08-2026 al entrar
+   Euskalmet junto a AEMET: no sustituye, se suman. Se marca porque las
+   dos NO miden igual — Euskalmet la racha a 20 m y cada 10 minutos,
+   AEMET a 10 m y cada hora—, y esa diferencia explica sola buena parte
+   de lo que se vea distinto entre dos estaciones cercanas. */
+.obs__red{font-style:normal;font-weight:700;letter-spacing:.02em}
+.obs__red[data-r=Euskalmet]{color:#7ad6a8}
+.obs__red[data-r=AEMET]{color:#8fb8e8}
+
+
+/* ══════════ El aparato contra los modelos, medida a medida ══════════
+   Puesto el 28-08-2026. Suyo: «estos datos tienen que estar también en
+   la app, hay sitio de sobra: los que marcan nuestros modelos y al lado
+   lo que marcan los de Euskalmet», «más datos, mejor trabajamos, más
+   seguros».
+
+   Tabla de verdad y no líneas sueltas, porque lo que él quiere es leer
+   en vertical: aparato, abanico, quién clava. En el móvil se desliza a
+   lo ancho en vez de encogerse hasta no leerse. */
+.obs__tab{width:100%;margin-top:10px;border-collapse:collapse;font-size:0.8125rem;
+  display:block;overflow-x:auto;white-space:nowrap}
+.obs__tab thead th{font-size:0.8125rem;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--faint);font-weight:600;text-align:left;padding:0 12px 5px 0}
+.obs__tab tbody th{text-align:left;font-weight:600;color:var(--dim);
+  padding:5px 12px 5px 0}
+.obs__tab td{padding:5px 12px 5px 0;color:var(--dim);
+  font-variant-numeric:tabular-nums}
+.obs__tab td b{color:var(--txt)}
+/* La unidad, apagada y sin cursiva: acompaña a la cifra, no compite con
+   ella. Va una sola vez por celda — antes salía «de 25 km/h a 42 km/h»
+   y ensuciaba justo la columna que se lee en diagonal. */
+.obs__tab td i{font-style:normal;color:var(--faint);font-size:0.8125rem}
+.obs__tab tbody tr + tr th,
+.obs__tab tbody tr + tr td{border-top:1px solid var(--line)}
+/* EL COLOR, Y SOLO DONDE SIGNIFICA ALGO. Suyo: «colores, etc.», «para
+   que quede más profesional». Y su regla del 26-08: el color significa
+   algo o no se pone.
+   · La cifra del aparato, cuando hay un listón suyo: verde por debajo de
+     45, ámbar de 45 a 60, rojo por encima. El azul es agua cayendo.
+   · La columna de quién acierta: verde si la mitad o más, ámbar si son
+     pocos, rojo si ninguno — que es la señal de que el pronóstico de ese
+     sitio no está describiendo lo que hay.
+   Temperatura y humedad van sin color a propósito: no hay ningún número
+   a partir del cual él haga algo distinto. */
+.obs__tab td[data-t=go]   b{color:var(--go)}
+.obs__tab td[data-t=warn] b{color:var(--warn)}
+.obs__tab td[data-t=no]   b{color:var(--no)}
+.obs__tab td[data-t=agua] b{color:#7cc4ff}
+.obs__tab td[data-t=go]   {color:var(--go)}
+.obs__tab td[data-t=warn] {color:var(--warn)}
+.obs__tab td[data-t=no]   {color:var(--no)}
+.obs__tab td[data-t] b:first-child{font-weight:700}
+
+/* Que ninguno se acerque también es un dato, y de los que más dicen. */
+.obs__nadie{color:var(--no);font-weight:700}
+
+
+/* ══════════ La comparativa del parte: modelos contra estación ══════════
+   Rehecha el 28-08-2026 con su queja: «los de la derecha no me gustan,
+   pequeño; con todo el sitio que hay, en un recuadro pequeño cuesta
+   leerlos».
+
+   Antes era una barra lateral estrecha, y ahí **lo único medido de toda
+   la tarjeta era lo más pequeño de la pantalla** mientras el centro
+   estaba medio vacío. Y cada lado con un formato distinto: los modelos
+   en párrafo y la estación en lista, así que no se podían comparar de un
+   vistazo.
+
+   Ahora: tabla a todo el ancho, una fila por magnitud, **el mismo cuerpo
+   de letra en las dos columnas**. Se lee en horizontal y se ve solo
+   dónde cuadran y dónde no.
+
+   La cabecera de la estación NO va en letra de nota al pie: los
+   kilómetros, la altitud y la altura a la que mide son parte del dato.
+   Sin eso, 26 km/h medidos a 18 m se confunden con 26 a ras de suelo,
+   que es la mitad de viento. */
+.pt{display:block}
+.pt__comp{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+/* `table-layout:fixed` para que las cifras caigan SIEMPRE en la misma
+   vertical. Sin esto el navegador reparte según el contenido y una
+   tarjeta con «Matxitxako» sale de un ancho y otra con «Almike (Bermeo)»
+   de otro — de un emplazamiento al siguiente los números se mueven, y
+   esta tabla existe justo para leer el modelo al lado de lo medido. */
+.pt__tab{width:100%;border-collapse:collapse;table-layout:fixed;font-size:0.8125rem;
+  font-variant-numeric:tabular-nums}
+/* ── QUE SE LEA: BLANCO Y COLOR POR COLUMNA ──────────────────────────
+   Suyo, 28-08-2026, con la tabla delante: *«pon también en blanco, que
+   se vea bien»* y *«o en colores diferentes»*.
+
+   Estaba todo en el gris más apagado de la paleta, el que se usa para lo
+   accesorio. Y «Racha», «Viento», «Lluvia» no son accesorios: sin
+   leerlos, las cifras de al lado no se sabe de qué son.
+
+   Ahora, y las dos cosas que pidió:
+     · **los nombres de las filas, en blanco** y en negrita;
+     · **cada columna con su color**, que es lo que de un vistazo dice de
+       dónde sale cada número — **ámbar los modelos** (calculado) y
+       **azul la estación** (medido). El mismo azul que ya usa la app
+       para «esto es un dato, no una opinión». */
+.pt__tab thead th{text-align:left;vertical-align:top;font-size:0.8125rem;letter-spacing:.06em;font-weight:800;
+  color:var(--dim);padding:0 14px 7px 0;vertical-align:bottom;line-height:1.35}
+.pt__tab thead th span{display:block;font-size:0.8125rem;letter-spacing:0;
+  font-weight:500;text-transform:none;color:var(--faint);margin-top:3px}
+/* Columna de modelos: ámbar. Columna de estación: azul. */
+.pt__tab thead th:nth-child(2){color:#ffc766}
+.pt__tab thead th:nth-child(3){color:#8fc8ff}
+.pt__tab tbody th{text-align:left;font-weight:600;color:var(--ink);
+  padding:6px 14px 6px 0;width:110px;font-size:0.8125rem}
+.pt__tab td{padding:6px 14px 6px 0;color:var(--dim);width:35%}
+.pt__tab tbody th{width:30%}
+/* El número y su unidad no se separan nunca: «tapa 104» partido en dos
+   renglones se lee fatal de un vistazo, y aquí se decide con la vista.
+   Y el «· tapa 104» entero tampoco, que es lo que se partía de verdad —
+   proteger solo el <b> del CAPE no servía de nada. */
+.pt__tab td b{white-space:nowrap}
+.pt__tab__par{white-space:nowrap}
+.pt__tab td b{font-weight:700;font-size:0.875rem}
+/* La cifra del modelo, en ámbar suave; la de la estación, en azul. */
+.pt__tab td:nth-child(2) b{color:#ffd79a}
+.pt__tab td:nth-child(3) b{color:#bcdcff}
+.pt__tab tbody tr + tr th,
+.pt__tab tbody tr + tr td{border-top:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
+/* La racha lleva SUS colores, que es la única fila con listones suyos. */
+.pt__tab tr[data-t=go]   td:last-child b{color:var(--go)}
+.pt__tab tr[data-t=warn] td:last-child b{color:var(--warn)}
+.pt__tab tr[data-t=no]   td:last-child b{color:var(--no)}
+.pt__tab__no{font-size:0.8125rem;color:var(--faint)}
+
+/* El veredicto, en una línea. Suyo desde ayer: saber si la app acierta.
+   Rojo si el modelo se quedó CORTO, que es lo que manda a alguien a un
+   monte con más viento del que creía. */
+.pt__veredicto{margin-top:8px;font-size:0.8125rem;color:var(--dim)}
+.pt__veredicto[data-d=corto] b{color:var(--no)}
+.pt__veredicto[data-d=pasa]  b{color:var(--warn)}
+.pt__veredicto[data-d=clava] b{color:var(--go)}
+/* Y cuando NO se pueden comparar, ni verde ni rojo: se dice que no se
+   puede saber. Suyo, 28-08-2026: «no es que se haya pasado, están en
+   otra altitud, otro terreno». Un veredicto falso es peor que ninguno. */
+.pt__veredicto[data-d=ni]{color:var(--faint);line-height:1.5}
+.pt__veredicto[data-d=ni] b{color:var(--dim)}
+.pt__veredicto__ojo{color:var(--faint)}
+
+/* ── LA TABLA EN EL MÓVIL ─────────────────────────────────────────────
+   Suyo, 29-08-2026 a las 10:29, con dos fotos de su teléfono: *«en la web
+   está bien lo de estación meteorológica, en el móvil no»* · **«está muy
+   pegado, eso se puede liar»**.
+
+   Y no es cuestión de gusto: en esa tabla van **el modelo y lo medido uno
+   al lado del otro**, y la fila peor es la del viento —«8 km/h del
+   sur-suroeste» encima de «17 km/h del sur-suroeste»—. Dos cifras casi
+   pegadas, con el mismo rumbo detrás. Ahí se lee una por la otra.
+
+   Lo que había hacía justo lo contrario de lo que toca: en la pantalla
+   estrecha, **donde el texto ya se parte en dos y tres líneas**, bajaba
+   la separación de 14 px a 8. Ahora sube a 18, se separan las dos
+   columnas con un filete, y la letra sube: 13 px es su suelo, no el
+   objetivo. Encontrado por la revisión automática leyendo el CSS
+   publicado y confirmado con sus capturas. */
+@media(max-width:620px){
+  .pt__tab{font-size:0.875rem}
+  .pt__tab tbody th{font-size:0.875rem;padding-right:18px}
+  .pt__tab td{padding-right:18px}
+  .pt__tab thead th{font-size:0.875rem}
+  .pt__tab thead th span{font-size:0.8125rem}
+  /* Un filete entre lo que dice el modelo y lo que mide el aparato: la
+     vista no salta de una columna a la otra sin darse cuenta. */
+  .pt__tab td:nth-child(3),
+  .pt__tab thead th:nth-child(3){
+    border-left:1px solid color-mix(in srgb,var(--line) 70%,transparent);
+    padding-left:12px}
+
+  /* ── LA TABLA DEL APARATO, QUE SE LEA SIN DESLIZAR ────────────────
+     Aitor, 29-08-2026 a las 10:56, con el pantallazo de su Ulefone
+     delante: la tabla de «Los modelos, en este mismo punto» salía con
+     la tercera columna fuera de la pantalla. Se veía «EL APARATO» y
+     media «LOS I», y **«EL QUE CLAVA» no se veía en absoluto**.
+
+     No estaba sin resolver: arriba se decidió `overflow-x:auto` para
+     que se deslice en vez de encogerse. Deslizarse funciona, pero en
+     el monte NO SE DESCUBRE UNA COLUMNA QUE NO SE VE: si no aparece,
+     para él no existe. Y la que no aparecía es justo la que dice cuál
+     de los siete acertó, que es por lo que existe el bloque.
+
+     Así que en pantalla estrecha se vuelve a tabla de verdad, con las
+     cuatro columnas repartidas a partes iguales y el texto envolviendo.
+     El contenido es corto —«de 10 a 35 km/h», «4 de 7», «GFS 21,9»— y
+     cabe en dos renglones. Se pierde una línea de alto y se gana la
+     columna entera. La letra NO baja de 13 px, que es su suelo. */
+  .obs__tab{display:table;table-layout:fixed;
+    overflow-x:visible;white-space:normal}
+  /* LA ETIQUETA TAMBIÉN TIENE QUE PODER PARTIRSE, y esto lo rompí yo.
+     Primera versión: 26 % para la etiqueta y `overflow-wrap` solo en las
+     celdas de datos. «Temperatura» y «Humedad» son UNA palabra sin sitio
+     por donde cortar, así que se salían de su columna y **pisaban el
+     número**: en su pantalla salió «Temperatu2ra1,8 °C» y «Humedac57 %».
+     Visto en su Ulefone el 29-08-2026 a las 11:23. Se ensancha la columna
+     y se le deja partir igual que a las demás. */
+  .obs__tab tbody th{width:30%;padding-right:6px;overflow-wrap:anywhere}
+  .obs__tab td{width:23.3%;padding-right:6px;overflow-wrap:anywhere}
+  .obs__tab thead th{padding-right:6px;overflow-wrap:anywhere}
+  /* Y el mismo filete que en la otra tabla, entre lo medido y lo que
+     dicen los modelos, para que la vista no salte de columna. */
+  .obs__tab thead th:nth-child(3),
+  .obs__tab tbody td:nth-child(3){
+    border-left:1px solid color-mix(in srgb,var(--line) 70%,transparent);
+    padding-left:8px}
+}
+
+/* ══════════ La racha de cada modelo, en el parte ══════════
+   Suyo, 28-08-2026: «ahí, que hay mucho espacio, los modelos todos con
+   sus valores». No cuesta una consulta más: ya estaban pedidas para el
+   aviso de tormenta y no se enseñaban.
+
+   El más alto va marcado porque es el que se queda el semáforo. Así ve
+   si el número que manda lo sostienen los demás o va uno solo por
+   delante — que es lo que pasó con ICON el 27-08. */
+/* EL AIRE ENTRE BLOQUES TIENE QUE SER MAYOR QUE EL DE DENTRO, y no lo era.
+   Suyo, 29-08-2026 con el pantallazo delante: *«un poco difícil de leer,
+   ¿no? todo junto»*. Y tenía razón, y se ve en los números: entre un
+   bloque y el siguiente había **6 px**, y dentro del bloque —del título a
+   los chips— **4 px**. Dos px de diferencia no separan nada: los tres
+   bloques se leían como una sola parrafada de seis renglones.
+
+   La leyenda era lo peor: **1 px** por debajo de los chips, o sea pegada
+   al dato. La explicación tocando al número al que explica.
+
+   Ahora: dentro del bloque 5 px, la leyenda a 7 px de los chips, y entre
+   bloques 16 px. El ojo agrupa solo, sin tener que leer los títulos. */
+.pt__uno{margin-top:16px;padding-left:10px;
+  border-left:2px solid color-mix(in srgb,var(--line) 90%,transparent)}
+.pt__uno:first-child{margin-top:6px}
+.pt__uno span{font-size:0.8125rem;letter-spacing:.08em;font-weight:800;color:var(--faint);
+  display:block;margin-bottom:5px}
+.pt__uno i{display:inline-flex;align-items:baseline;gap:5px;font-style:normal;
+  font-size:0.875rem;color:var(--faint);margin:0 7px 4px 0;padding:2px 8px;
+  border:1px solid var(--line);border-radius:999px;
+  font-variant-numeric:tabular-nums}
+.pt__uno i b{color:var(--txt);font-size:0.9375rem;font-weight:700}
+.pt__uno i[data-max="1"]{border-color:color-mix(in srgb,var(--warn) 45%,var(--line));
+  background:rgba(255,176,46,.09)}
+.pt__uno i[data-max="1"] b{color:var(--warn)}
+/* La fila de la lluvia va en azul, no en ámbar: es agua, no viento. Suyo,
+   28-08-2026: «para mí no solo es importante el viento». En sus sitios el
+   90 % del trabajo es caseta, fusibles al aire y armarios de intemperie,
+   y ahí decide el agua. */
+.pt__uno[data-q=agua]{margin-top:16px}
+.pt__uno[data-q=agua] i[data-max="1"]{border-color:rgba(77,163,255,.5);
+  background:rgba(77,163,255,.10)}
+.pt__uno[data-q=agua] i[data-max="1"] b{color:#8fc8ff}
+
+/* El rayo, en rojo: es su único veto. Suyo: «debo acudir siempre y cuando
+   no caigan rayos, porque la torre está pegada a la caseta y es un
+   pararrayos». Y va DELANTE del viento, en su orden: lluvia, rayo,
+   viento. */
+.pt__uno[data-q=rayo]{margin-top:16px}
+.pt__uno[data-q=rayo] i[data-max="1"]{border-color:rgba(255,77,94,.55);
+  background:rgba(255,77,94,.10)}
+.pt__uno[data-q=rayo] i[data-max="1"] b{color:var(--no)}
+/* «Sin tapa» = ese modelo no la publica. No es que diga que no hay rayo:
+   es que no puede opinar. ECMWF y AROME HD son el caso, medido: 0 horas
+   de 24. Se pinta apagado para que no se lea como un «no». */
+.pt__uno i[data-mudo="1"]{opacity:.55;border-style:dashed}
+/* La leyenda, despegada del dato. Iba a 1 px de los chips: la explicación
+   tocando al número que explica, y las dos cosas compitiendo por la vista.
+   Con 7 px se lee como lo que es —una nota al pie—, no como otra fila. */
+.pt__uno u{display:block;text-decoration:none;font-size:0.8125rem;color:var(--faint);
+  margin-top:7px;line-height:1.35;opacity:.85}
+
+
+/* ══════════ El mando de tamaño de letra ══════════
+   Puesto el 28-08-2026: «esto más grande, casi no veo». Los botones son
+   grandes a propósito —los usa con guantes— y cada uno se enseña a SU
+   tamaño, para que se vea lo que va a pasar antes de pulsarlo. */
+.letra__b{display:flex;flex-wrap:wrap;gap:9px;margin-top:11px}
+.letra__x{flex:1 1 120px;min-height:52px;padding:11px 14px;cursor:pointer;
+  border-radius:13px;border:1px solid var(--line);background:rgba(255,255,255,.04);
+  color:var(--dim);font-weight:650;font-family:inherit}
+.letra__x[data-z="1"]   {font-size:1rem}
+.letra__x[data-z="1.15"]{font-size:1.15rem}
+.letra__x[data-z="1.3"] {font-size:1.3rem}
+.letra__x[data-z="1.5"] {font-size:1.5rem}
+.letra__x:hover{border-color:color-mix(in srgb,var(--acc) 45%,var(--line))}
+.letra__x.is-on{color:var(--ink);border-color:var(--acc);
+  background:color-mix(in srgb,var(--acc) 16%,transparent)}
+
+
+/* «Miradas también: …». Puesto el 28-08-2026: de cuatro estaciones
+   consultadas salían dos y las otras dos desaparecían, y eso se lee como
+   si no existieran. Va discreto —no es una alarma— pero legible: es la
+   diferencia entre «no hay viento» y «no lo he podido preguntar». */
+.note--miradas{margin-top:10px;line-height:1.55}
+
+
+/* ══════════ Las dos altitudes, en una línea ══════════
+   Suyo, 28-08-2026: «igual ponerlo de otra forma», «los datos claros y
+   las explicaciones». Gastaba cinco renglones para decir que todo iba
+   bien, y él mira esto subido a una furgoneta.
+
+   Las dos cifras juntas —son las que se comparan— y la explicación
+   debajo, legible, solo cuando aporta. La regla: un aviso que solo
+   aparece cuando pasa algo se lee; uno que está siempre se ignora. */
+.elev__par{display:flex;gap:26px;flex-wrap:wrap;align-items:baseline;margin-bottom:8px}
+.elev__par span{display:flex;flex-direction:column;gap:2px}
+.elev__par i{font-style:normal;font-size:0.8125rem;letter-spacing:.05em;
+  font-weight:700;color:var(--faint);text-transform:uppercase}
+.elev__par b{font-size:1.375rem;font-weight:700;letter-spacing:-.02em}
+.elev__par input{width:110px;font:inherit;font-size:1.375rem;font-weight:700;
+  padding:2px 8px;border-radius:9px;border:1px solid var(--line);
+  background:rgba(255,255,255,.05);color:var(--ink)}
+.elev__bien{color:var(--go)}
+.elev__bien b{color:var(--go)}
+.elev__mal{color:var(--warn);line-height:1.55}
+.elev__mal b{color:var(--warn)}
+
+
+/* ══════════ «Qué me frena y hasta qué hora» ══════════
+   La pregunta que lleva haciendo cinco veces: «espero a que amaine»,
+   «les digo esperar 2 horas», «iré media hora más tarde». No decide «voy
+   o no voy»: decide A QUÉ HORA VOY.
+
+   Va bien visible porque es lo que mira primero, pero SIN semáforo
+   propio: dice qué hay y a qué hora cambia, y decide él. Rojo solo
+   cuando el freno es el rayo, que es el único que él trata como veto
+   —y del emplazamiento entero, porque la torre está pegada a la
+   caseta—. */
+.pt__ventana{margin-top:7px;padding:7px 11px;border-radius:10px;font-size:0.8438rem;
+  line-height:1.5;border:1px solid var(--line)}
+.pt__ventana b{font-weight:700}
+.pt__ventana[data-v=abierta]{border-color:color-mix(in srgb,var(--go) 38%,var(--line));
+  background:rgba(47,208,122,.07);color:var(--dim)}
+.pt__ventana[data-v=abierta] b{color:var(--go)}
+.pt__ventana[data-v=cerrada]{border-color:color-mix(in srgb,var(--warn) 42%,var(--line));
+  background:rgba(255,176,46,.08);color:var(--dim)}
+.pt__ventana[data-v=cerrada] b{color:var(--warn)}
+.pt__ventana[data-v=rayo]{border-color:color-mix(in srgb,var(--no) 48%,var(--line));
+  background:rgba(255,77,94,.09);color:var(--dim)}
+.pt__ventana[data-v=rayo] b{color:var(--no)}
+
+
+/* El atajo al satélite dentro del aviso de nubosidad. Va subrayado y en
+   el color de enlace: tiene que verse que se puede pulsar, porque es la
+   respuesta a su pregunta —«¿de cuál me fío?»— y la respuesta es «de
+   ninguno: mira la foto». */
+.dt__s a[data-ir=satelite]{color:var(--acc);text-decoration:underline;font-weight:650}
+
+/* Las capas de nube debajo de cada modelo, en la comparativa de Torre.
+   Van en su propio renglón y en pequeño: el número gordo sigue siendo el
+   total, y esto es el desglose que lo explica. Puesto el 28-08-2026 con
+   `tablaNubes()`. */
+.cmp__capas {
+  margin: -0.15rem 0 0.45rem 0;
+  padding-left: 0.2rem;
+  font-size: 0.8125rem;
+  color: var(--txt-2, #8a94a6);
+  letter-spacing: 0.01em;
+}
+.cmp__capas b { color: var(--txt-1, #e6ebf2); font-weight: 600; }
+
+/* La fila de nubes en Mis torres, con su propio color: ni agua ni rayo. */
+.pt__uno[data-q="nubes"] i[data-max="1"] { border-color: #7c9bd1; }
+.pt__uno[data-q="nubes"] em {
+  /* En rem, no en em: el .85em de antes daba 11,9 px y se colaba por
+     debajo del suelo de 13. Cazado en la segunda pasada del 29-08 —
+     el mismo fallo del que se avisó al script del secundario. */
+  font-style: normal; opacity: .8; font-size: 0.8125rem; margin-left: .25em;
+}
+
+/* EL TÍTULO Y SU EXPLICACIÓN, EN DOS RENGLONES.
+   Cazado el 28-08-2026 mirando su pantalla: salía «Ninguno ve aguaLos
+   cuatro coinciden en seco», todo pegado, porque `<b>` y `<span>` iban
+   los dos en línea. Llevaba así desde que se escribió `tablaLluvia()`. */
+.cmp__v > span { display: block; margin-top: 0.2rem; opacity: .92; }
+
+/* Las capas que no publica el modelo, en gris y con su motivo al lado.
+   Puesto el 28-08-2026: ECMWF solo publica el total, y sus capas las
+   calcula Open-Meteo con la humedad. No se esconde ni se disfraza. */
+.cmp__capas[data-calc="1"] { opacity: .72; }
+.cmp__capas em { font-style: normal; font-size: 0.8125rem; opacity: .8; }
+
+/* ══════════ LA FILA DE FICHAS, CON SU COLOR CADA UNA ══════════
+   Suyo, 28-08-2026 a las 23:55, al pedir los cuatro por modelo: *«que
+   quede bonito con colores, que se lea bien claro»*. Cada magnitud
+   lleva su color en el RÓTULO y en el filo izquierdo, no solo en la
+   ficha ganadora: así se distingue la fila del agua de la del rayo sin
+   leer ni una palabra. Los colores son los que ya usa toda la app:
+   agua azul · rayo/gasolina ámbar (rojo solo cuando salta) · nubes
+   azul-gris · viento en el ámbar de siempre. Y los valores en el color
+   pleno del texto, un punto más grandes: «casi no veo» va a misa. */
+.pt__uno[data-q=agua]{border-left-color:rgba(77,163,255,.55)}
+.pt__uno[data-q=agua] span{color:#8fc8ff}
+.pt__uno[data-q=rayo]{border-left-color:rgba(255,176,46,.55)}
+.pt__uno[data-q=rayo] span{color:var(--warn)}
+
+/* El bochorno, en naranja cálido: no es el ámbar del rayo ni el azul del
+   agua, y tiene que distinguirse de los dos de un vistazo. Es calor, y
+   no frena el trabajo — avisa de cómo se va a pasar la jornada dentro de
+   una caseta o en una azotea. Puesto el 29-08-2026. */
+.pt__uno[data-q=calor]{border-left-color:rgba(255,150,90,.55)}
+.pt__uno[data-q=calor] span{color:#ffa87a}
+.pt__uno[data-q=calor] i[data-max="1"]{border-color:rgba(255,150,90,.5);
+  background:rgba(255,150,90,.10)}
+.pt__uno[data-q=calor] i[data-max="1"] b{color:#ffa87a}
+/* La palabra al lado de la cifra, apagada: acompaña al número, no compite
+   con él. En rem y no en em, que el .85em daba 11,9 px y su suelo son 13. */
+.pt__uno[data-q=calor] em{font-style:normal;opacity:.8;
+  font-size:0.8125rem;margin-left:.3em}
+.pt__uno[data-q=nubes]{border-left-color:rgba(124,155,209,.6)}
+.pt__uno[data-q=nubes] span{color:#a9c0e8}
+.pt__uno i small{font-size:0.8125rem;color:var(--faint);font-weight:600}
+
+/* La gasolina sin rayo: ámbar, nunca rojo. El rojo de [data-q=rayo] es
+   para cuando algún modelo SALTA; esta fila sale justo cuando ninguno
+   salta, y el más cargado en rojo se leería como peligro sin haberlo. */
+.pt__uno[data-q=cape]{margin-top:9px;border-left-color:rgba(255,176,46,.55)}
+.pt__uno[data-q=cape] span{color:var(--warn)}
+
+/* El botón de contestar sobre lo que se le ha respondido. Suyo, 29-08:
+   «¿un botón para responderte sobre ese tema sin darle a otro nuevo?».
+   Va dentro de la respuesta y discreto: el botón de mandar algo nuevo
+   sigue siendo el grande, que es lo que más usa. */
+.hn__resp{
+  display:inline-block; margin-top:.5rem; padding:.3rem .7rem;
+  font-size:0.8125rem; font-weight:600; cursor:pointer;
+  color:var(--ink); background:transparent;
+  border:1px solid color-mix(in srgb,var(--line) 90%,transparent);
+  border-radius:999px;
+}
+.hn__resp:hover{border-color:var(--dim); color:var(--txt)}
+
+/* La línea del dron, en el perfil de viento. Va aparte y en su tono: es
+   información suya de tiempo libre, no una decisión de trabajo, y no
+   puede confundirse con los listones de la torre. */
+.prof__dron{
+  margin-top:.6rem; padding:.55rem .7rem; border-radius:.5rem;
+  font-size:0.875rem; line-height:1.5; color:var(--dim);
+  border:1px solid color-mix(in srgb,var(--line) 90%,transparent);
+  border-left:3px solid rgba(124,155,209,.7);
+}
+.prof__dron b{color:var(--txt)}
+.prof__dron[data-ojo="1"]{border-left-color:var(--warn)}
+.prof__dron[data-ojo="1"] b{color:var(--warn)}
+.prof__dron__n{display:block; margin-top:.25rem; font-size:0.8125rem; color:var(--faint)}
+.prof__dron__n b{color:var(--dim)}
+
+/* El oleaje de 48 h. El texto va FUERA del SVG: ese lienzo se estira con
+   `preserveAspectRatio="none"` y aplastaba las letras — en el móvil el
+   «máx 1,8 m» era ilegible. Suyo, 29-08-2026: «se ve mal desde el móvil». */
+.ola__cab{
+  font-size:0.9375rem; color:var(--dim); margin-bottom:.4rem; line-height:1.4;
+}
+.ola__cab b{color:var(--txt); font-weight:700}
+.ola__svg{width:100%; height:150px; display:block}
+.ola__horas{
+  display:flex; justify-content:space-between;
+  font-size:0.8125rem; color:var(--faint); margin-top:.25rem;
+  font-variant-numeric:tabular-nums;
+}
+
+/* Las casillas con explicación larga ocupan dos columnas: el texto se lee
+   a lo ancho en vez de en ocho renglones de dos palabras. Suyo, 29-08-2026:
+   «aquí, en vez de vertical, ¿se podría poner de derecha a izquierda para
+   su mejor lectura?». Y al lado había un hueco vacío. */
+.dt--ancha{grid-column:span 2}
+@media(max-width:620px){
+  /* En el móvil la rejilla ya es de una o dos columnas: si ocupa dos,
+     que ocupe la fila entera y no deje media casilla huérfana. */
+  .dt--ancha{grid-column:1 / -1}
+}
+
+/* ── QUE NO QUEDE NEGRO EN NINGUNA FILA ───────────────────────────────
+   Suyo, 30-08-2026, con «Ahora» delante: *«sigue vacío mucho hueco»*.
+
+   Se intentó dos veces con el grid —`dense`, y estirar el último cuadro
+   hasta el borde— y seguía quedando negro. No era un descuido: un grid
+   de columnas IGUALES no puede llenar una fila incompleta. Si en la fila
+   caben cinco y solo hay tres, sobran dos casillas y no hay regla que
+   las quite, porque las columnas ya están repartidas antes de colocar
+   nada.
+
+   MEDIDO ese día sobre lo publicado, no a ojo:
+     a 1560 px  · la fila de «Sensación», ella sola   538 px de negro
+                · «Mar de viento» y «Corriente»       405 px de negro
+     a  375 px  · «UV máx hoy» y «Corriente»          160 px cada una
+
+   Con flex el reparto lo hace el navegador al colocar: las casillas de
+   la última fila CRECEN hasta ocupar el ancho, sea cual sea el número.
+   Medido después: cero huecos a 1560 y a 375.
+
+   Lo que se conserva del grid: `gap:1px` sobre el fondo de la línea, que
+   es lo que dibuja los separadores, y las casillas anchas, que aquí se
+   piden con el doble de base en vez de con `span 2`. */
+.det{display:flex;flex-wrap:wrap;align-items:stretch}
+.det > *{flex:1 1 132px;min-width:132px}
+.det > .dt--ancha{flex:2 1 265px}
+.det > .det__nota{flex:1 1 100%;min-width:100%}
+
+@media(max-width:620px){
+  /* Igual que antes: en el móvil la casilla ancha se queda la fila
+     entera y no deja media casilla huérfana. */
+  .det > .dt--ancha{flex:1 1 100%;min-width:100%}
+}
+
+/* La magnitud de cada fila del marcador. Desde el 29-08-2026 hay dos —racha
+   y lluvia— y sin decirlo se leerían los mm/h como si fueran km/h. */
+.marc__mag{font-style:normal;font-weight:700;letter-spacing:.02em;
+  padding:.05em .4em;border-radius:.5em;font-size:.85em}
+.marc__mag[data-m=racha]{color:#cbd5e1;background:#ffffff14}
+.marc__mag[data-m=lluvia]{color:#8fc7e8;background:#8fc7e81f}
+
+/* El aviso al lado del rótulo grande cuando los modelos no ven el mismo
+   cielo. Puesto el 30-08-2026: «pero en el símbolo pone sol», con Bermeo
+   cubierto. No cambia el símbolo —es el de su modelo—: pone al lado lo
+   que ven los demás. */
+.nd__ojo{display:inline-block;font-size:.62em;font-weight:600;letter-spacing:.01em;
+  color:#f0c674;background:#f0c6741f;padding:.15em .5em;border-radius:.6em;
+  vertical-align:middle;margin-left:.5em;white-space:nowrap}
+
+/* ── LOS DOS DIBUJOS DEL DÍA: MAÑANA Y TARDE ──────────────────────────
+   Cazado el 30-08-2026 en un pantallazo suyo de «10 días»: en la tarjeta
+   del lunes las palabras «mañana» y «tarde» salían MONTADAS encima de la
+   temperatura y de la racha.
+
+   El motivo es el de siempre en este proyecto: el marcado se escribió el
+   28-08 —cuando él pidió partir el día en dos, «sol a la mañana y nuboso
+   por la tarde: la lógica»— y **el estilo no se escribió nunca**. Sin
+   `.dcard__ii` los dos iconos y sus rótulos caían como texto suelto.
+
+   No lo cazó nada: `node --check` pasa, ESLint pasa y el arranque en
+   jsdom pasa. Solo se ve mirando la pantalla, que es por lo que él
+   manda pantallazos. */
+.dcard__ii{display:flex;justify-content:center;align-items:flex-start;
+  gap:6px;margin:9px auto 6px}
+.dcard__ii i{display:flex;flex-direction:column;align-items:center;
+  gap:2px;font-style:normal}
+.dcard__ii i > svg,
+.dcard__ii i > img{width:34px;height:34px}
+/* 13 PX, QUE ES SU SUELO. Estaba en .625rem = 10 px, y su regla de
+   siempre —repetida desde el 24-08— es que **no lee por debajo de 13**:
+   *«esto más grande, casi no veo»*. Son «mañana» y «tarde» debajo de los
+   dos iconos del día, o sea justo lo que hay que distinguir de un
+   vistazo. La tarjeta tiene sitio: los iconos van a 34 px y el rótulo
+   crece hacia abajo, no hacia los lados. */
+.dcard__ii u{text-decoration:none;font-size:.8125rem;line-height:1.15;
+  color:var(--dim);letter-spacing:.02em}
+
+/* Aviso dentro de una nota de la ficha: cuando un modelo se ha caído hoy
+   y otro le ha sacado las castañas del fuego, o cuando ha habido que
+   quitar un número imposible. Puesto el 30-08-2026 — y se me olvidó el
+   estilo al escribirlo, que es justo lo que caza `sin-clases-huerfanas`. */
+.det__nota--avisa{border-left:3px solid #e8b04b;padding-left:.7em;color:#f0d9a8}
+
+/* El botón que destaca sobre los demás: guardar, importar, la chuleta.
+   Llevaba desde siempre la clase puesta y NINGUNA regla, así que se veía
+   igual que un botón normal. Cazado el 30-08-2026 por el mismo guardia. */
+.btn--acc{background:#2a3a63;border-color:#3d5590;color:#e8eefc}
+
+/* El código de la suscripción, para copiarlo y pasarlo por el chat
+   cuando el servidor no puede guardarlo (01-09-2026). */
+.av__json{width:100%;margin-top:.5rem;font:11px/1.35 ui-monospace,monospace;
+  color:var(--fg);background:rgba(0,0,0,.25);border:1px solid var(--bd);
+  border-radius:8px;padding:.5rem;resize:vertical}
+
+/* Huracanes y tormentas tropicales (01-09-2026, hobby suyo). Compacto a
+   propósito: es un extra y no puede comerle pantalla al trabajo. */
+.trop{display:flex;flex-wrap:wrap;gap:.35rem 1rem;align-items:baseline;
+  padding:.5rem 0;border-bottom:1px solid var(--bd)}
+.trop:last-of-type{border-bottom:0}
+.trop__n{min-width:11rem}
+.trop__c{margin-left:.4rem;font-size:.82em;padding:.05rem .4rem;border-radius:6px;
+  background:rgba(255,255,255,.08);color:var(--fg)}
+.trop__c[data-h="si"]{background:rgba(225,20,0,.22);color:#ffb4a6}
+.trop__d{flex:1}
+.trop__p{font:11px/1.3 ui-monospace,monospace}
+
+/* El veredicto de trabajo se apaga en sitios que no son suyos: ahí sus
+   listones no pintan nada y solo hacen ruido (01-09-2026). */
+#verdict[data-ajeno="si"]{display:none}
+#vAjeno{margin:.4rem 0 .8rem;opacity:.85}
+
+/* El aviso de «no he podido cargar tu catálogo de emplazamientos». No es
+   una opción que se pueda elegir, así que ni cursor de mano ni resalte al
+   pasar por encima: es un recado, no un resultado (01-09-2026). */
+#ac li.ac__fallo{cursor:default;display:block;color:var(--warn,#ffb14d);
+  border:1px solid rgba(255,177,77,.35);background:rgba(255,177,77,.08)}
+#ac li.ac__fallo:hover{background:rgba(255,177,77,.08)}
+#ac li.ac__fallo small{display:block;color:var(--dim);margin-top:3px}
+
+/* Las pegas del pulso del vigilante: «pasa pero está mudo», «no mira tu
+   lista». Van en ámbar y pegadas al «en pie», que es lo que él lee de un
+   vistazo (01-09-2026). */
+.pulso__pega{display:block;margin-top:5px;color:var(--warn,#ffb14d);font-size:.9375em}
+
+/* ── LAS EXPLICACIONES, UNA VEZ Y NO VEINTE ────────────────────────────
+   Suyo, 02-09-2026, con la pantalla de «Mis estaciones» delante:
+   «al final todos estos comentarios creo que me lían».
+
+   Y al mirarlo era eso: cada emplazamiento repite los mismos cuatro pies
+   —«CAPE·tapa rompe desde 700…», «el más alto es el que usa el
+   semáforo», «entre paréntesis, la capa más cargada…», «manda el rocío,
+   no la humedad…»—. Con sus VEINTE sitios guardados, eso son ochenta
+   líneas de explicación en una sola pantalla, y todas dicen lo mismo.
+
+   Se quedan en la PRIMERA tarjeta, que es donde se leen la primera vez,
+   y desaparecen de las demás. No se borra nada: el texto sigue ahí para
+   quien llegue nuevo, y los datos no se tocan. */
+.pt ~ .pt .pt__uno u { display: none }
+
+/* El desglose por modelos, plegado (02-09-2026: «tanto rollo que no sé ni
+   dónde mirar» · «los modelos lo que marca cada uno y listo»). Los datos
+   siguen ahí, a un toque, y la pantalla deja ver lo que decide. */
+.pt__mas{ margin-top:.5rem }
+.pt__mas>summary{ cursor:pointer; list-style:none; display:inline-flex; gap:.4rem;
+  align-items:center; font-size:0.8125rem; color:var(--dim);
+  padding:.3rem .6rem; border:1px solid var(--line); border-radius:.5rem }
+.pt__mas>summary::-webkit-details-marker{ display:none }
+.pt__mas>summary::before{ content:'▸'; font-size:.75em }
+.pt__mas[open]>summary::before{ content:'▾' }
+.pt__mas>summary:hover{ color:var(--fg); border-color:var(--acc) }
+
+.elev__par b.elev__rojo{color:#ff6b6b}
+
+/* El parte, dentro de la tarjeta de su estación (02-09-2026). */
+.tor__parte{grid-column:1/-1;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.07)}
+.tor__parte .pt__d{margin:2px 0}
+.tor__n .pt__b{margin-left:8px;font-size:.75rem}
+
+/* ── LA TABLA DE LA ESTACIÓN, A TODO EL ANCHO DE LA TARJETA ─────────
+   La tarjeta es un grid de tres columnas, y la comparativa entró como
+   hija suya el 02-09-2026: caía en una columna de 140 px y el texto se
+   solapaba encima de sí mismo. Suyo, con la foto: «esto está feo en
+   vertical». */
+.tor > .pt__comp{grid-column:1/-1;margin-top:8px}
+.tor .pt__tab{width:100%}
+
+/* ── LO QUE DECIDE SE VE; EL CONTEXTO SE APAGA ──────────────────────
+   Suyo, 02-09-2026: «ahí todo blanco desvía la atención, pon colores
+   distintos, no todo en blanco» · «para siempre». Ver `num()` en app.js:
+   racha, CAPE, tapa y lluvia son los que decide; el resto es contexto.
+   El ámbar de `data-a` manda sobre los dos. */
+.tor__d[data-f="ctx"] .tor__big{color:var(--faint)}
+.tor__d[data-f="ctx"] .tor__lbl{opacity:.66}
+.tor__d[data-f="decide"] .tor__big{color:var(--txt)}
+.tor__d[data-f="decide"] .tor__lbl{color:var(--dim);opacity:1}
+
+/* La racha de ahora y a horas vista, en «Ahora». UNA línea: la primera
+   versión gastaba tres renglones por tramo y él la cortó en cuanto la
+   vio — «se lía» (02-09-2026). Ver `#vCuando`. */
+.vc__c{display:block;margin-top:5px;color:var(--faint)}
+.vc__c b{color:var(--txt);font-weight:700}
+
+/* De qué hora son las cifras de la tarjeta (02-09-2026, suyo). */
+/* La hora va DENTRO del bloque del nombre. Con `grid-column:1/-1` en
+   un renglón propio empujaba las diez cifras a la fila siguiente y caían
+   en la columna de 104 px, todas en vertical (02-09-2026). */
+.tor__hora{display:block;font-size:.75rem;color:var(--faint);letter-spacing:.03em;margin-top:3px}
+
+/* Base de las cifras; el color lo pone la magnitud (data-c) y, si
+   cruza el listón, el nivel (data-n), que va después y manda. */
+.cf{color:var(--faint)}
+
+/* Un color por magnitud, para distinguirlas de un vistazo. Suyo,
+   02-09-2026: «a color para distinguir». El listón (data-n) manda por
+   encima: si la racha se pasa sale ámbar o roja, sea de la familia que
+   sea. En calma, cada una en su tono apagado. */
+.cf[data-c="agua"]{color:#5aa9f5}
+.cf[data-c="rayo"]{color:#b98ce8}
+.cf[data-c="viento"]{color:#5fd0b0}
+.cf[data-c="temp"]{color:#d9a05b}
+.cf[data-n="ok"]{color:#4da3ff;font-weight:700}
+.cf[data-n="warn"]{color:var(--warn);font-weight:700}
+.cf[data-n="no"]{color:var(--no);font-weight:700}
+
+/* Cada trozo del «cuándo» en su renglón: unidos con « · » dejaban un
+   punto colgando al final de la línea (03-09-2026, en su pantallazo). */
+.cuando__l{display:block}
+
+/* ══════════ DÓNDE ESTÁS, EN EL MÓVIL ══════════
+   Suyo, 03-09-2026: *«en el móvil, en Ahora pongo por ejemplo Calpe, me
+   da la temperatura, pero arriba no sé si estoy en algún lado, no pone
+   Calpe ni nada»*. Y mandó la captura de otra app: el nombre del sitio
+   arriba, grande y siempre a la vista.
+
+   El fallo era de esta hoja: la portada —único sitio donde vivía el
+   nombre— se esconde en móvil en todas las pestañas menos «Ahora» (el
+   bloque de max-width:900px de más arriba). Resultado: siete pestañas con
+   números de un sitio sin decir cuál.
+
+   Se resuelve SIN robar altura: en móvil el nombre ocupa el hueco del
+   rótulo «AitorMeteo», que no informa de nada. En escritorio no cambia
+   nada, porque allí la portada se ve siempre y ya lo dice. */
+.brand__sitio{display:none}
+
+@media (max-width:900px){
+  .brand b:not(.brand__sitio){display:none}
+  .brand__sitio{
+    display:block;
+    font-weight:750;
+    letter-spacing:-.02em;
+    color:var(--fg);
+    max-width:38vw;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  /* En «Ahora» la portada ya canta el sitio justo debajo, con su
+     provincia y su país. Repetirlo dos veces en la misma pantalla es el
+     ruido que este proyecto lleva evitando desde lo de Girona. */
+  body[data-view="now"] .brand__sitio{display:none}
+  body[data-view="now"] .brand b:not(.brand__sitio){display:flex}
+}

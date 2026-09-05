@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Aitor Meteo · trabajo en altura</title>
+<meta name="description" content="Viento a altura de torre, riesgo de tormenta y ventana segura de trabajo. Datos Open-Meteo, AEMET y Euskalmet.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#070b14">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aitor Meteo">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=20260827">
+<link rel="icon" href="icons/favicon-64.png?v=20260827" sizes="64x64">
+<link rel="icon" href="icons/icon-192.png?v=20260827" sizes="192x192">
+<link rel="preconnect" href="https://api.open-meteo.com" crossorigin>
+<link rel="preconnect" href="https://marine-api.open-meteo.com" crossorigin>
+
+<style>
+/* CSS crítico en línea → primer pintado sin esperar descargas */
+:root{
+  /* LOS GRISES, ACLARADOS EL 29-08-2026. Suyo: «la letra apenas se ve,
+     está oscura», con el hilo de notas delante.
+
+     MEDIDO sobre el fondo real de tarjeta (#0f1626), no sobre el de
+     página — la tarjeta es translúcida y queda más clara, así que medir
+     contra el fondo pelado da un contraste mejor del que hay:
+
+       --faint  #63708d  3,65:1  ← no llega al 4,5:1 de texto normal
+       --dim    #93a1bd  6,96:1
+
+     Y dentro de una nota sin contestar, que se pintaba al 75 %, ese
+     --faint se quedaba en **2,60:1**: la línea de la fecha y el sitio.
+     Ni el listón de texto grande. Eso es lo que él no podía leer.
+
+     Ahora --faint 6,34:1 y --dim 9,89:1, los dos por encima del mínimo.
+     Se mide con `revisiones/contraste-letra.py`, no a ojo. */
+  --bg:#070b14;--ink:#e9eefb;--dim:#b3c0da;--faint:#8b99b8;
+  --line:rgba(150,175,225,.15);--card:rgba(19,27,47,.66);
+  --go:#2fd07a;--warn:#ffb02e;--no:#ff4d5e;--acc:#4d9dff;--acc2:#8b7bff;
+  --r:18px;--sat:env(safe-area-inset-top);--sab:env(safe-area-inset-bottom);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+/* EL TAMAÑO DE LETRA, QUE LO ELIGE ÉL. Puesto el 28-08-2026 después de
+   que lo dijera dos veces en cinco minutos: «esto más grande, casi no
+   veo» y «pequeño, con todo el sitio que hay, cuesta leerlos». Y no
+   tenía forma de arreglarlo: la app no traía ningún ajuste.
+
+   No es un extra de accesibilidad: él la mira **en el móvil, en el
+   monte, a veces de noche y con guantes**. Esa es su situación normal.
+
+   Va aquí, en el CSS de arranque, para que el tamaño elegido esté puesto
+   en el PRIMER pintado. Si fuera en `styles.css` se vería un salto de
+   tamaño en cada arranque. */
+html{font-size:calc(16px * var(--zoom,1))}
+body{background:var(--bg);color:var(--ink);min-height:100dvh;overflow-x:hidden;
+ font:400 1rem/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Inter,Roboto,system-ui,sans-serif;
+ font-variant-numeric:tabular-nums;padding-bottom:calc(var(--sab) + 10px)}
+#bg{position:fixed;inset:0;z-index:-1;background:
+ radial-gradient(120% 75% at 10% -10%,#16305c 0,transparent 56%),
+ radial-gradient(95% 65% at 92% 0%,#33265f 0,transparent 52%),
+ linear-gradient(180deg,#0a1122,#070b14 60%,#05070f)}
+.wrap{max-width:1150px;margin:0 auto;padding:0 13px}
+.sk{background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.12),rgba(255,255,255,.05));
+ background-size:200% 100%;animation:sk 1.1s linear infinite;border-radius:7px;color:transparent!important}
+@keyframes sk{to{background-position:-200% 0}}
+
+/* ── EL CANDADO ──────────────────────────────────────────────────────
+   Va en el CSS crítico, en línea, para que tape ANTES del primer
+   pintado. Si esperara a styles.css se vería su app un instante y luego
+   se taparía, que es peor que no taparla.
+
+   Letra grande a propósito: esto lo teclea en el monte, de noche y con
+   guantes. Ver «TAMAÑO DE LETRA» en Ajustes, misma razón. */
+html[data-bloqueado] body > *:not(#candado){display:none!important}
+html[data-bloqueado]{overflow:hidden}
+#candado{position:fixed;inset:0;z-index:99999;background:#070b14;
+  display:grid;place-items:center;padding:24px}
+.cand__caja{width:min(340px,90vw);text-align:center}
+.cand__t{font-size:22px;letter-spacing:.02em;color:#8ea3c8;margin-bottom:28px}
+.cand__t b{color:#e8eefc}
+.cand__p{font-size:17px;color:#c6d3ea;margin:0 0 18px}
+.cand__puntos{font-size:30px;letter-spacing:.34em;color:#5b7fd6;
+  margin-bottom:20px;min-height:38px;font-variant-numeric:tabular-nums}
+#candEntrada{width:100%;box-sizing:border-box;font-size:30px;text-align:center;
+  letter-spacing:.36em;padding:16px 12px;border-radius:14px;
+  border:1px solid #2a3450;background:#0f1626;color:#e8eefc;
+  outline:none;-webkit-text-security:disc}
+#candEntrada:focus{border-color:#5b7fd6}
+.cand__err{color:#ff8a8a;font-size:15px;margin:14px 0 0}
+.cand__n{color:#7d8ba6;font-size:13px;margin:22px 0 0;line-height:1.5}
+
+</style>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!-- ═══════════════════════════════════════════════════════════════════
+     EL CANDADO — código de 6 cifras, cada 24 horas
+     ───────────────────────────────────────────────────────────────────
+     Suyo, 04-09-2026: *«me pones en la app meteo un código de 6 cifras
+     que caduca cada 24 h para poder entrar»*, *«por seguridad»*.
+
+     ── DÓNDE SE COMPRUEBA, Y POR QUÉ AHÍ ──
+     Él eligió que se compruebe **en el móvil**, no en el servidor. Y es
+     la buena para lo que él hace: si se comprobara en el servidor, el
+     día que esté en un cordal sin cobertura **no entraría en su propia
+     app** — justo donde la necesita para decidir si alguien sube a una
+     torre de 60 m.
+
+     ── LO QUE ESTO ES, Y LO QUE NO ──
+     Es un **pestillo, no una cerradura**. Seis cifras comprobadas en el
+     propio aparato no paran a nadie que sepa mirar el código de la
+     página. Para lo que sí sirve, que es lo que él pidió: que quien coja
+     su móvil desbloqueado no se meta en la app y toque sus umbrales o
+     sus emplazamientos.
+
+     Va el **hash**, no el número: así no se lee de un vistazo abriendo
+     el fuente.
+
+     ── LA REGLA QUE MANDA SOBRE TODAS ──
+     **Si el candado falla, la app SE ABRE.** Sin excepción. Un fallo
+     tonto aquí —el navegador con el almacenamiento bloqueado, un modo
+     privado, lo que sea— no puede dejarle mirando una pantalla negra en
+     el monte. Por eso todo va en try/catch y el estado por defecto es
+     ABIERTO. El riesgo de que alguien le cotillee la app es menor que
+     el de quedarse sin ella.
+     ══════════════════════════════════════════════════════════════════ -->
+<script>
+/* El candado va INLINE y antes que nada: si esperara a app.js, la app
+   se pintaría un instante antes de taparse y se vería lo de debajo. */
+(function () {
+  'use strict';
+  /* El hash de sus seis cifras. Va el hash y no el número para que no se
+     lea abriendo el fuente. La sal fija el hash a esta app. */
+  var HASH = 'd65347e656486b4830fdf47563164c8d3bfcc7d41bae311270e7086bc40253f7';
+  var SAL = 'aitor-meteo:';
+  var LLAVE = 'candado.hasta';
+  var DIA = 24 * 3600 * 1000;
+
+  function abrir() {
+    try {
+      document.documentElement.removeAttribute('data-bloqueado');
+      var c = document.getElementById('candado');
+      if (c) c.hidden = true;
+    } catch (e) { /* si ni esto va, la app ya está visible */ }
+  }
+
+  try {
+    /* ¿Sigue viva la sesión de hoy? */
+    var hasta = 0;
+    try { hasta = Number(localStorage.getItem(LLAVE)) || 0; } catch (e) { hasta = 0; }
+    if (hasta > Date.now()) return;             // dentro de las 24 h: no se pide
+
+    /* Sin `crypto.subtle` no se puede comprobar el hash (pasa en http
+       sin TLS y en navegadores viejos). Antes que dejarle fuera, se
+       abre: es la regla de arriba. */
+    if (!(window.crypto && window.crypto.subtle && window.isSecureContext)) return;
+
+    document.documentElement.setAttribute('data-bloqueado', '1');
+    document.addEventListener('DOMContentLoaded', function () {
+      var caja = document.getElementById('candado');
+      var ent  = document.getElementById('candEntrada');
+      var err  = document.getElementById('candErr');
+      var pts  = document.getElementById('candPuntos');
+      if (!caja || !ent) { abrir(); return; }   // falta el HTML: se abre
+      caja.hidden = false;
+      setTimeout(function () { try { ent.focus(); } catch (e) {} }, 120);
+
+      function pintar() {
+        if (!pts) return;
+        var n = ent.value.length, t = '';
+        for (var i = 0; i < 6; i++) t += (i < n ? '●' : '○');
+        pts.textContent = t;
+      }
+      pintar();
+
+      ent.addEventListener('input', function () {
+        ent.value = ent.value.replace(/\D/g, '').slice(0, 6);
+        if (err) err.hidden = true;
+        pintar();
+        if (ent.value.length !== 6) return;
+        var dado = ent.value;
+        crypto.subtle.digest('SHA-256', new TextEncoder().encode(SAL + dado))
+          .then(function (b) {
+            var h = Array.from(new Uint8Array(b))
+              .map(function (x) { return x.toString(16).padStart(2, '0'); }).join('');
+            if (h === HASH) {
+              try { localStorage.setItem(LLAVE, String(Date.now() + DIA)); } catch (e) {}
+              abrir();
+            } else {
+              if (err) err.hidden = false;
+              ent.value = ''; pintar();
+            }
+          })
+          .catch(function () { abrir(); });     // si el hash falla, se abre
+      });
+    });
+  } catch (e) { abrir(); }                      // cualquier cosa rara: se abre
+})();
+</script>
+<div id="candado" hidden>
+  <div class="cand__caja">
+    <div class="cand__t">Aitor <b>Meteo</b></div>
+    <p class="cand__p">Tu código de 6 cifras</p>
+    <div class="cand__puntos" id="candPuntos" aria-hidden="true"></div>
+    <input id="candEntrada" type="password" inputmode="numeric" pattern="[0-9]*"
+           maxlength="6" autocomplete="off" aria-label="Código de 6 cifras">
+    <p class="cand__err" id="candErr" hidden>No es ese. Vuelve a probar.</p>
+    <p class="cand__n">Se vuelve a pedir cada 24 h. Funciona sin cobertura.</p>
+  </div>
+</div>
+
+<div id="bg"></div>
+
+<div class="petado" id="petado" hidden></div>
+
+<header class="top">
+  <div class="wrap top__in">
+    <!-- EN EL MÓVIL, DÓNDE ESTÁS. Suyo, 03-09-2026: *«en el móvil, en
+         Ahora pongo por ejemplo Calpe, me da la temperatura, pero arriba
+         no sé si estoy en algún lado, no pone Calpe ni nada»*.
+
+         Y tenía razón: el nombre del sitio vivía SOLO en la portada, y en
+         móvil la portada se esconde en todas las pestañas menos «Ahora»
+         (`styles.css`, el bloque de max-width:900px). O sea que en Horas,
+         10 días, Mar, Radar, Rayos, Cámaras y Modelos había números de un
+         sitio sin decir de cuál. Es la regla de esta app —un dato sin su
+         etiqueta— aplicada al sitio en vez de al modelo.
+
+         No se añade una fila nueva: en móvil el nombre OCUPA EL SITIO del
+         rótulo «AitorMeteo», que no informa de nada. Cero píxeles de más,
+         que es justo lo que él pidió el 28-08 al quitar la fila de
+         emplazamientos. -->
+    <div class="brand"><span class="brand__m"></span><b>Aitor<span>Meteo</span></b><b class="brand__sitio" id="topPlace" hidden></b></div>
+
+    <div class="search">
+      <svg class="search__i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-3.9-3.9"/></svg>
+      <input id="q" type="search" placeholder="Estación, pueblo o coordenadas (43.42, -2.72)" autocomplete="off" spellcheck="false" enterkeyhint="search">
+      <button class="ib ib--in" id="btnGeo" title="Mi ubicación" aria-label="Mi ubicación">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1.5v2.7M12 19.8v2.7M22.5 12h-2.7M4.2 12H1.5"/></svg>
+      </button>
+      <ul class="ac" id="ac" hidden></ul>
+    </div>
+
+    <div class="top__a">
+      <button class="ib" id="btnFav" title="Guardar emplazamiento" aria-label="Guardar">
+        <svg viewBox="0 0 24 24" id="favSvg"><path d="M12 20.8 4.9 13.5a4.6 4.6 0 0 1 6.5-6.5l.6.6.6-.6a4.6 4.6 0 0 1 6.5 6.5Z"/></svg>
+      </button>
+      <button class="ib" id="btnReload" title="Actualizar" aria-label="Actualizar">
+        <svg viewBox="0 0 24 24" id="reloadSvg"><path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1M20 4.2v4.6h-4.6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- LA FILA DE NOMBRES SE QUITÓ el 28-08-2026. Suyo: «esto fuera, no
+       hace falta que salgan aquí». Le comía dos centímetros de pantalla
+       en TODAS las pestañas para repetir una lista que ya está entera, y
+       con sus cifras, en «Mis torres».
+
+       El contenedor se queda —vacío y oculto— porque `renderPills()` y
+       `syncFav()` escriben en él en cada pintada; quitarlo del todo era
+       reventar el corazón de guardar emplazamientos. Se saca de la vista,
+       no del código.
+
+       Para cambiar de emplazamiento: se pincha su tarjeta en «Mis
+       torres». -->
+  <div class="wrap" hidden><div class="pills" id="pills"></div></div>
+
+  <nav class="tabs"><div class="wrap tabs__in" id="tabs">
+    
+    <button class="tab" data-v="torres">Mis estaciones</button>
+    <!-- El mapa iba el 10º de 12: en el móvil caben cuatro pestañas y
+         quedaba fuera de pantalla, sin ninguna pista de que la fila se
+         desliza. Como es de lo que más se usa, va delante y se llama
+         «Mapa», que es como se le llama de verdad. -->
+    <button class="tab" data-v="models">Mapa</button>
+    <button class="tab is-on" data-v="now">Ahora</button>
+    <button class="tab" data-v="hours">Horas</button>
+    <button class="tab" data-v="days">10 días</button>
+    <button class="tab" data-v="sea">Mar</button>
+    <button class="tab" data-v="radar">Radar</button>
+    <button class="tab" data-v="rayos">Rayos</button>
+    <button class="tab" data-v="cams">Cámaras</button>
+    <button class="tab" data-v="alerts">Avisos</button>
+    <button class="tab" data-v="guia">Guía</button>
+  </div></nav>
+
+  <div class="copia" id="copia" hidden></div>
+</header>
+
+<!-- ══ Portada ══
+     FUERA DE LA CABECERA desde el 28-08-2026. Suyo, dos veces:
+     *«cuando vaya moviendo el ratón para abajo y ver más datos, que
+     tire para arriba también la cabecera, la foto principal — así
+     tendré más espacio»*, y luego *«aquí igual, la foto de
+     Gaztelugatxe»*.
+
+     La primera vez le puse `.cover-fijo{position:static}` y no cambió
+     nada: la portada colgaba DENTRO de `<header class="top">`, que es
+     `position:sticky`, así que se quedaba pegada con la barra por muy
+     estática que fuera ella. Sacarla del header es lo que lo arregla.
+
+     Arriba se queda solo lo que es navegación —buscador, emplazamientos
+     y pestañas—, que eso sí lo usa a cada rato. -->
+<!-- ══ Portada fija: en escritorio se ve en todas las pestañas ══ -->
+<div class="wrap cover-fijo">
+  <!-- ── Portada ── -->
+<div class="cover" id="cover">
+  <div class="cover__ph" id="coverPh"></div>
+  <div class="cover__sky" id="coverSky"></div>
+  <div class="cover__veil"></div>
+
+  <div class="cover__in">
+    <div class="cover__top">
+      <div>
+        <h2 class="cover__place" id="coverName">—</h2>
+        <p class="cover__sub" id="coverSub">—</p>
+        <p class="cover__mod" id="coverMod" hidden></p>
+      </div>
+      <div class="cover__clock"><b id="clock">--:--</b><span id="tz">—</span></div>
+    </div>
+
+    <div class="cover__main">
+      <div class="cover__ic" id="nowIco"></div>
+      <div>
+        <div class="cover__t"><span id="nowT">--</span><i>°</i></div>
+        <b class="cover__desc" id="nowDesc">—</b>
+        <div class="cover__meta">
+          <span id="nowFeel">—</span>
+          <span id="nowRange">—</span>
+        </div>
+        <!-- LA HORA A LA QUE CORRESPONDEN ESTOS NÚMEROS, que no es la
+             del reloj de la esquina. MEDIDO el 26-08-2026: a las 07:52
+             la fuente daba valores válidos para las **07:45**, y se
+             refrescan cada 15 min. Arriba corre un reloj en marcha que
+             parece la hora del dato y no lo es, y abajo el sello dice
+             cuándo se PIDIERON. Ninguno de los dos decía la verdad. -->
+        <div class="cover__val" id="nowVal"></div>
+      </div>
+    </div>
+
+    <div class="cover__bands" id="parts"></div>
+  </div>
+
+  <div class="cover__cred" id="coverCred"></div>
+</div>
+</div>
+
+
+<main class="wrap" id="main">
+
+<!-- ══════════ TORRE ══════════ -->
+
+
+<!-- ══════════ GUÍA DE CAPAS ══════════ -->
+<section class="view" data-v="guia">
+  <div class="place">
+    <h1>Chuleta de capas</h1>
+    <p class="dim">Qué mirar y cuándo preocuparse. Funciona sin cobertura.</p>
+  </div>
+
+  <div class="card">
+    <h2 class="ch">Si la app te avisa de algo raro</h2>
+    <p class="note">La app puede fallar, como cualquier programa. Lo que no puede
+    hacer es fallar <b>en silencio</b> y que tú te fíes de lo que hay en pantalla.
+    Por eso, cuando algo va mal, <b>lo dice</b>. Esto es lo que te puedes encontrar:</p>
+
+    <table class="tsimple">
+      <thead><tr><th>Qué ves</th><th>Qué significa</th><th>Qué haces</th></tr></thead>
+      <tbody>
+        <tr>
+          <td data-k="Qué ves"><b>Barra roja arriba del todo</b><br><span class="dim">«Algo ha fallado dentro de la app»</span></td>
+          <td data-k="Qué significa">Se ha roto algo por dentro. Lo que hay en pantalla puede estar
+              incompleto o ser de antes.</td>
+          <td data-k="Qué haces">Pulsa <b>Recargar</b>. Si vuelve a salir, dime el texto pequeño
+              que aparece: con eso sé qué ha pasado.</td>
+        </tr>
+        <tr>
+          <td data-k="Qué ves"><b>«El mapa se ha quedado sin memoria»</b></td>
+          <td data-k="Qué significa">Al mapa se le acabó la memoria dibujando. <b>Se recarga solo</b> y
+              vuelve a tu misma capa y tu misma hora.</td>
+          <td data-k="Qué haces">Nada, espera un segundo. Si te lo dice por tercera vez, cambia a
+              <b>ICON-EU</b> o <b>AROME HD</b>: gastan mucha menos.</td>
+        </tr>
+        <tr>
+          <td data-k="Qué ves"><b>«N trozos del mapa sin cargar»</b></td>
+          <td data-k="Qué significa">Faltan cuadros por descargar. <b>Donde no hay color puede ser que
+              no haya llegado el dato</b>, no que no pase nada.</td>
+          <td data-k="Qué haces">Pulsa <b>Reintentar</b>, o acerca el zoom a tu zona. No des por
+              despejado lo que está en blanco.</td>
+        </tr>
+        <tr>
+          <td data-k="Qué ves"><b>«⚠ Datos caducados»</b> abajo</td>
+          <td data-k="Qué significa">La previsión que ves tiene más de 45 minutos.</td>
+          <td data-k="Qué haces">Pulsa el botón de actualizar, arriba a la derecha.</td>
+        </tr>
+        <tr>
+          <td data-k="Qué ves"><b>«Esta parte no se ha podido dibujar»</b></td>
+          <td data-k="Qué significa">Ha fallado <b>solo esa sección</b>. El resto de la app sigue bien.</td>
+          <td data-k="Qué haces">No te fíes de lo que hubiera ahí antes. Lo demás sí vale.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="note"><b>Ojo, y esto es lo importante:</b> todos estos avisos cazan
+    fallos <b>de la app</b>. Ninguno caza un <b>número equivocado</b> del modelo.
+    Si la previsión dice 30 km/h y en el emplazamiento hay 60, la app no se entera
+    y no te avisa. Para eso están las <b>estaciones medidas de AEMET</b> en la
+    pestaña Ahora, el <b>Radar</b> y las <b>Cámaras</b>: contrastar lo previsto con
+    lo que de verdad está pasando. <b>Esa comprobación no la hace la app: la haces
+    tú.</b></p>
+  </div>
+
+  <div class="card">
+    <h2 class="ch">El orden</h2>
+    <ol class="pasos">
+      <li><b>Ráfagas</b> a tu altura. Si pasa tu umbral, se acabó. No mires nada más.</li>
+      <li><b>Índice de elevación</b> y <b>CAPE</b>. ¿Hay tormenta encima?</li>
+      <li><b>Radar AEMET</b>. ¿Está cayendo AHORA?</li>
+      <li><b>Punto de rocío</b> e <b>Isocero</b>. ¿Resbala? ¿Hay hielo?</li>
+    </ol>
+    <p class="note">Lo demás es contexto. No decide tu día.</p>
+  </div>
+
+  <div class="card">
+    <h2 class="ch ch--g" data-g="torre">Torre · lo que decide</h2>
+
+    <div class="q">
+      <div class="q__t"><b>Ráfagas</b><span>km/h</span></div>
+      <p>El golpe máximo, no la media. La media no te tira, la racha sí.</p>
+      <div class="q__w">El mapa da la racha a 10 m del suelo. A 40 m de torre
+        cuenta un <b>20-40 % más</b>. En <b>Ahora</b> y en <b>Mis estaciones</b> ya va corregida.</div>
+    </div>
+
+    <div class="q">
+      <div class="q__t"><b>Viento 10 / 20 / 50 / 100 m</b><span>km/h</span></div>
+      <p>Cuánto crece al subir. Mira 10 y 100 en el mismo punto.</p>
+      <div class="q__w">En cumbres el modelo se queda CORTO: alisa las cimas
+        y no ve la aceleración del cordal.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="ch ch--g" data-g="tormenta">Tormenta</h2>
+
+    <div class="q">
+      <div class="q__t"><b>Índice de elevación</b><span>°C</span></div>
+      <p>El aviso rápido. Va al revés que todo: <b>negativo es malo</b>.</p>
+      <div class="esc">
+        <span data-s="go">+3 o más · nada</span>
+        <span data-s="warn">0 a −2 · ojo</span>
+        <span data-s="no">−2 a −5 · probable</span>
+        <span data-s="no2">bajo −5 · fuerte</span>
+      </div>
+    </div>
+
+    <div class="q">
+      <div class="q__t"><b>CAPE</b><span>J/kg</span></div>
+      <p>La gasolina de la tormenta. Cuanto más, peor.</p>
+      <div class="esc">
+        <span data-s="go">&lt;300 · nada</span>
+        <span data-s="warn">300-1000 · posible</span>
+        <span data-s="no">1000-2000 · seria</span>
+        <span data-s="no2">&gt;2000 · fuerte</span>
+      </div>
+      <div class="q__w">CAPE alto no es un rayo. Es la gasolina, no la chispa.</div>
+      <div class="q__w">El de aquí es el de <b>superficie</b>. AguaceroWx pinta el
+        <b>«más inestable» (MUCAPE)</b>, que coge la burbuja más caliente de toda la
+        columna y por eso sale más alto. Medido en Bilbao con GFS el 26-08:
+        <b>510 aquí, 915 allí</b>. No es un fallo, es otra burbuja. El suyo es
+        mayor o igual <b>siempre</b>, por definición.</div>
+      <div class="q__w">Con la <b>tapa</b>, en cambio, <b>no hay regla</b>: la burbuja
+        más inestable puede estar elevada y llevar encima más aire que atravesar, así
+        que su MUCIN unas veces sale más bajo y otras más alto. Medido con GFS en
+        Bilbao: el 26-08 <b>119 aquí y 58 allí</b>, y el 27-08 <b>20 aquí y 91 allí</b>.
+        No descuentes la tapa que veas allí.</div>
+    </div>
+
+    <div class="q">
+      <div class="q__t"><b>Inhibición</b><span>J/kg</span></div>
+      <p>La tapa que retiene la tormenta.</p>
+      <div class="q__w">Aquí sale en <b>positivo</b> (150 = tapa fuerte). En AguaceroWx
+        lo verás en <b>negativo</b> (−150): misma cosa, signo cambiado.</div>
+      <div class="q__w">CAPE alto + la tapa que se rompe a media tarde =
+        la peor combinación del día.</div>
+    </div>
+
+    <div class="q">
+      <div class="q__t"><b>Base convectiva</b><span>m · lo BAJO es lo malo</span></div>
+      <p>Dónde <b>empieza</b> la nube. Compárala con la cota de tu torre.</p>
+      <div class="q__w">Si baja de tu cota, la torre está DENTRO de la nube.
+        Y una torre metálica dentro de una nube convectiva es un pararrayos.</div>
+    </div>
+
+    <div class="q">
+      <div class="q__t"><b>Tope convectivo</b><span>m · lo ALTO es lo malo</span></div>
+      <p>Hasta dónde llega por arriba.</p>
+      <div class="esc"><span data-s="no2">&gt;9.000 m · cumulonimbo con granizo</span></div>
+      <!-- PUESTO EL 27-08-2026, y con un caso medido detrás. Ese día
+           escribí en la app que con el tope bajo «se electrifica poco».
+           Duró tres horas: cayó una descarga junto a Zarautz y en ese
+           punto ICON daba tope de 5.900 m. Un número que solo sirve para
+           un lado tiene que decirlo, o se lee como un semáforo. -->
+      <p class="q__ojo"><b>Pero al revés no vale.</b> Un tope bajo <b>no
+        descarta el rayo</b>: el 27-08-2026 cayó una descarga junto a
+        Zarautz con el tope en <b>5.900 m</b>. Y encima este campo solo se
+        publica <b>un tercio de las horas</b> —GFS no lo da nunca—, así que
+        un hueco aquí tampoco significa nada. Sirve para confirmar que la
+        cosa va en serio, nunca para quedarse tranquilo.</p>
+    </div>
+
+    <div class="q">
+      <div class="q__t"><b>Isocero</b><span>m</span></div>
+      <p>Dónde la temperatura pasa por cero.</p>
+      <div class="q__w">Por debajo de tu cota = hielo en la estructura.
+        Agarre nulo y desprendimientos sobre quien esté abajo.</div>
+    </div>
+
+    <!-- ── LA CHAPA DEL CAPE, AQUÍ Y NO EN «AHORA» ──────────────────
+         Estos cuatro párrafos vivían encima de las cifras de la caja de
+         riesgo eléctrico. Suyo, 02-09-2026, leyéndolos:  «TODA ESTA
+         CHAPA VALE PARA ALGO?».
+
+         Valen —están medidos y son ciertos— pero no ahí: en esa caja él
+         mira números, y un manual encima de los números tapa los
+         números. Aquí es donde se lee cuando se quiere leer. -->
+    <div class="q" id="g-cape">
+      <div class="q__t"><b>Cómo se leen el CAPE y la tapa</b><span>juntos</span></div>
+      <p><b>Míralos juntos, no por separado.</b> El CAPE es la gasolina y la inhibición
+      es la tapa: con CAPE alto y tapa cerca de <b>0</b> la tormenta rompe; con la misma
+      gasolina y tapa por encima de <b>100</b> lo normal es oírla lejos y que a ti no te
+      caiga. Ninguno de los dos dice que vaya a haber tormenta aquí: dicen si
+      <b>puede</b>. Para rayos de verdad, el radar y la regla 30/30.</p>
+
+      <p><b>Y el granizo va aquí dentro, no aparte.</b> Se lo pregunté a él el
+      28-08-2026 —qué le avisa de que va a granizar— y contestó: <i>«es difícil de
+      acertar cuándo cae; generalmente cuando hay tormenta y está negro»</i>. Así que
+      <b>no hay un aviso de granizo en esta app, y es a propósito</b>: el único
+      parámetro que se publica es el código de tiempo, y ese mismo código ya falló —el
+      27-08 cayó un rayo junto a Zarautz con los cinco modelos dando código sin
+      tormenta—. Un aviso montado sobre eso serían falsas alarmas y silencios a partes
+      iguales. Donde diga que puede romper, cuenta con que puede llevar granizo, que es
+      como lo lee él. Mientras tanto se guarda la altura de la isocero en cada descarga
+      medida: si está baja, el granizo llega al suelo sin derretirse, y con los datos de
+      este otoño se podrá decir algo con números.</p>
+
+      <p><b>Y este CAPE es el de SUPERFICIE.</b> Mide el aire que tienes a ras de
+      suelo. Si la inestabilidad está por encima —aire frío arriba sobre una capa
+      pegada al suelo que no sube— este número se queda corto y la tormenta se forma
+      igual. Pasa sobre todo en <b>valles de interior por la tarde</b>. MEDIDO el
+      25-08-2026 para el día siguiente a las 17:00, en Arrasate: los cuatro modelos de
+      aquí daban entre <b>10 y 210</b>, y el CAPE «most unstable» de AguaceroWx daba
+      <b>1.252</b>. En Bilbao, en cambio, coincidían clavados (1.930 aquí, 1.932 allí).
+      Open-Meteo, que es de donde salen estos números, no publica el «most unstable»:
+      si el sitio es de valle y el día pinta de tormenta, míralo en AguaceroWx antes de
+      fiarte de un CAPE bajo.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="ch ch--g" data-g="lluvia">Lluvia</h2>
+
+    <div class="q">
+      <div class="q__t"><b>Radar AEMET</b><span>lo real</span></div>
+      <p>Lo que cae <b>de verdad ahora</b>, medido. Cada 10 minutos.</p>
+      <div class="q__w">La más fiable de todas. Si no llega la imagen, la app
+        lo dice: un mapa en blanco NO significa que no llueva.</div>
+    </div>
+
+    <div class="q">
+      <div class="q__t"><b>Precipitación</b><span>mm/h</span></div>
+      <p>Lo que el modelo prevé que caiga.</p>
+      <div class="esc">
+        <span data-s="go">&lt;0,5 · sirimiri</span>
+        <span data-s="warn">1-4 · lluvia</span>
+        <span data-s="no">&gt;4 · chaparrón</span>
+      </div>
+    </div>
+
+    <div class="q">
+      <div class="q__t"><b>Reflectividad</b><span>dBZ · ESTIMADA</span></div>
+      <p>La lluvia del modelo puesta en escala de radar. <b>No es un eco real.</b></p>
+      <div class="esc">
+        <span data-s="go">&lt;30 verde</span>
+        <span data-s="warn">35-40 amarillo</span>
+        <span data-s="no">45 naranja</span>
+        <span data-s="no2">&gt;50 rojo</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="ch ch--g" data-g="cielo">Cielo y aire</h2>
+
+    <div class="q">
+      <div class="q__t"><b>Visibilidad</b><span>km</span></div>
+      <p>A cuánto se ve. Si no se ve la torre desde abajo, tampoco se ve lo que hay arriba.</p>
+      <div class="esc">
+        <span data-s="no2">&lt;1 km</span>
+        <span data-s="no">1-2 km</span>
+        <span data-s="warn">2-4 km</span>
+        <span data-s="go">&gt;15 km · ni se pinta</span>
+      </div>
+    </div>
+
+    <div class="q">
+      <div class="q__t"><b>Punto de rocío</b><span>°C</span></div>
+      <p>Si se acerca a la temperatura, condensa sobre el metal.</p>
+      <div class="q__w">Diferencia menor de 2 °C: estructura mojada aunque no
+        llueva. Es el resbalón traicionero, con el cielo despejado.</div>
+    </div>
+
+    <!-- CORREGIDO EL 29-08-2026. Esta ficha decía «usa Nubes bajas, no
+         Nubes total» y «se calcula, no se mide» para todos por igual.
+         Las dos cosas están mal desde que se comprobó modelo a modelo:
+         ICON, GFS y ARPEGE **publican** sus capas, y ECMWF publica el
+         **total** y no las capas. Decirle que se fíe de las capas con
+         ECMWF puesto era mandarle a la cuenta antes que al dato.
+         Encontrado en sus propios pantallazos: la Guía contradecía a la
+         ficha, que ya lo distingue desde la 2026.08.29-0009. -->
+    <div class="q">
+      <div class="q__t"><b>Nubes bajas · medias · altas</b><span>%</span></div>
+      <p>Las <b>bajas</b> son las del sirimiri y las que te tapan la torre. Las
+        <b>medias</b>, grises y espesas, no dan lluvia. Las <b>altas</b> dejan pasar el sol.
+        <b>El total no es la suma</b> —se solapan—, pero nunca puede ser menor que la mayor.</p>
+      <div class="q__w">No todos publican lo mismo, y la app lo dice en cada cifra:
+        <b>ICON, GFS y ARPEGE</b> publican sus capas; <b>ECMWF</b> publica el total y
+        sus capas se las calcula Open-Meteo con la humedad; <b>AROME HD</b> no da el total.
+        Cuando los dos números de un modelo no cuadran, sale un <b>⚠</b>: no se sabe cuál
+        de los dos falla, así que mira el satélite o asómate.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="ch">Llevártela encima</h2>
+    <p class="dim">La misma chuleta en una hoja aparte, en blanco y negro para
+      imprimir o pasar a PDF y mandársela a la cuadrilla.</p>
+    <a class="btn btn--acc" href="chuleta.html" target="_blank" rel="noopener"
+       download="chuleta-capas.html">Abrir o descargar la hoja</a>
+  </div>
+
+  <div class="disc">
+    <b>Ninguna de estas capas mide rayos</b>: son campos de modelo, dicen si
+    <i>puede</i> haber tormenta. Las descargas que han caído de verdad están en
+    la pestaña <b>Rayos</b>, leídas de la red de AEMET.
+  </div>
+</section>
+
+<!-- ══════════ RAYOS ══════════ -->
+<section class="view" data-v="rayos">
+  <div class="place">
+    <h1>Rayos detectados</h1>
+    <p class="dim">Descargas medidas, no previsión. Centrado en el emplazamiento
+      que tengas abierto.</p>
+  </div>
+
+  <!-- LO QUE HA CAÍDO: red oficial de AEMET, leída por la app -->
+  <div class="card">
+    <h2 class="ch">Lo que ha caído · red de AEMET</h2>
+    <p class="note">Descargas localizadas por la red de detección de AEMET
+      —detectores en España más los de Portugal, Francia e Italia—, nube-tierra
+      e intranube. La app las lee y mide a qué distancia cayeron de aquí.</p>
+    <div id="rayosAemet"></div>
+  </div>
+
+  <!-- LO QUE ESTÁ CAYENDO: en vivo, pero no oficial -->
+  <div class="card card--flush">
+    <h2 class="ch" style="padding:14px 16px 0">Lo que está cayendo ahora · Blitzortung</h2>
+    <p class="note" style="padding:0 16px">Va al minuto, que es justo lo que le falta
+      al mapa de AEMET. A cambio es una <b>red de voluntarios</b>, no un servicio
+      oficial: su cobertura y su retardo dependen de cuántos detectores haya
+      funcionando en la zona en ese momento. <b>Para autorizar o suspender un
+      trabajo, la referencia siguen siendo AEMET y Euskalmet.</b></p>
+    <div class="rayos" id="rayos"></div>
+  </div>
+
+  <div class="card">
+    <h2 class="ch">La regla del 30/30</h2>
+    <p class="dim">Si entre el relámpago y el trueno pasan <b>menos de 30 segundos</b>,
+      la tormenta está a menos de 10 km: <b>todo el mundo abajo</b>. Y no se vuelve a
+      subir hasta <b>30 minutos después</b> del último trueno.</p>
+    <p class="note">Una torre metálica es el punto más alto del monte. El rayo no avisa
+      dos veces.</p>
+  </div>
+</section>
+
+<!-- ══════════ CÁMARAS ══════════ -->
+<section class="view" data-v="cams">
+  <div class="place">
+    <h1>Cámaras en directo</h1>
+    <p class="dim">Para comprobar con los ojos lo que dice el modelo: si está
+      cayendo, si ha caído, cómo está la mar y cómo entra la nube.</p>
+  </div>
+  <div class="card">
+    <h2 class="ch">La línea del oeste</h2>
+    <p class="note">Los frentes entran por el Cantábrico de oeste a este. Mira primero lo que hay
+      lejos: eso es lo que tendrás encima dentro de unas horas. El margen sale de la velocidad
+      típica de un frente atlántico, unos 40 km/h — es una orientación, no un pronóstico.</p>
+    <div class="oestes" id="camsOeste"></div>
+  </div>
+
+  <div class="card">
+    <h2 class="ch">Cámaras</h2>
+    <p class="note" id="camsAviso"></p>
+    <div id="cams"></div>
+    <p class="note">Cada cámara se abre solo cuando la pides: son vídeo en
+      directo y gastan datos. Ciérrala al terminar y deja de consumir.
+      <b>De noche se ven en negro</b>: no llevan infrarrojos, no es que estén caídas.</p>
+  </div>
+  <div class="disc">
+    <b>Una cámara enseña un punto, no la torre.</b> Sirve para confirmar que
+    llueve o que ha llovido en la costa, no para dar por buena la situación
+    en el emplazamiento, que suele estar más alto y a kilómetros de aquí.
+  </div>
+</section>
+
+<!-- ══════════ MIS TORRES ══════════ -->
+<section class="view" data-v="torres">
+  <div class="place">
+    <h1>Mis estaciones base</h1>
+    <p class="dim">Semáforo de todos tus emplazamientos guardados, a la vez.
+      El tiempo <b>a pie de caseta</b>, que es donde trabajas. Guarda uno con
+      el ♥ de arriba y aparecerá aquí.</p>
+  </div>
+  <!-- EL PARTE DEL DÍA. Puesto arriba del todo el 26-08-2026 a petición
+       suya: «hay que hacer algo mejor que el enlace… y que me salga el
+       parte». Es lo primero que ve al abrir la pestaña en el móvil. -->
+  <div class="card" id="parteCard" hidden>
+    <h2 class="ch"><span id="parteCab">El parte de hoy</span>
+      <small class="dim" id="parteHint"></small></h2>
+    <!-- Pestañas de día. Pedidas por él el 26-08-2026: «pon unas pestañas
+         al lado de Mis torres, jueves-viernes y sábado, con todo lo que dé
+         el pronóstico para esas estaciones». Van AQUÍ y no en la barra de
+         arriba para no llenarla, y porque lo que cambia es el parte. -->
+    <div class="pdias" id="parteDias"></div>
+    <!-- DE CUÁNDO ES ESTE PARTE. Suyo, 27-08-2026: «no veo, actualizado
+         a las xxxx». Va aquí, entre las pestañas de día y la lista, que
+         es justo donde estaba mirando. -->
+    <div class="psello" id="parteSello"></div>
+    <!-- LA LISTA DEL PARTE SE VACÍA EL 02-09-2026. Suyo, viendo sus
+         veinte emplazamientos dos veces en la misma pestaña: «estos dos
+         al final, ¿para qué es uno y el otro?» · «en un vistazo de X
+         estación que me diga todo». El parte de cada sitio se pinta
+         ahora DENTRO de su tarjeta (ver `S.parteFilas`). Aquí se quedan
+         las pestañas de día y el sello de cuándo se pidió, que son de
+         todos los sitios a la vez y no caben en una tarjeta. -->
+    <div id="parte" hidden></div>
+  </div>
+
+  <div class="card">
+    <h2 class="ch">Cada estación, de un vistazo
+      <small class="dim" id="torresHint"></small></h2>
+    <div id="torres"><p class="note">Cargando emplazamientos…</p></div>
+  </div>
+  <div class="card">
+    <h2 class="ch">Lo que se está midiendo ahora
+      <small class="dim" id="obsHint"></small></h2>
+    <p class="dim">Anemómetros de AEMET cerca de tu emplazamiento. Esto <b>no es
+      previsión: es lo que marcan los aparatos</b>. Es la forma de saber si el
+      modelo se está quedando corto hoy.</p>
+    <div id="obs"></div>
+  </div>
+
+  <!-- EL MARCADOR. Puesto el 28-08-2026, orden suya: «la prio es mejorar
+       la fiabilidad de la app, con datos de los modelos y de lo que
+       estamos aprendiendo».
+
+       Lo de arriba compara UNA vez, con la medida de ahora, y se lo lleva
+       el viento al refrescar. Esto lleva la cuenta de todas las veces, y
+       por estación — nunca en promedio, que el error cambia de signo en
+       ocho kilómetros. -->
+  <div class="card">
+    <h2 class="ch">Quién acierta en tus estaciones
+      <small class="dim" id="marcHint"></small></h2>
+    <p class="dim">Cada vez que abres la app, lo de arriba se apunta. Esto es
+      el <b>recuento de todas esas veces</b>, estación por estación. Un
+      <b>sesgo negativo</b> quiere decir que ese modelo <b>se queda corto</b>, que
+      es lo que importa. <b>No cambia nada en la app</b>: ni umbrales ni el modelo
+      que sale por defecto. Es el cuaderno, no el criterio.</p>
+    <div id="marcador"><p class="note">Cargando el marcador…</p></div>
+  </div>
+
+  <div class="card">
+    <h2 class="ch">Salir sin cobertura</h2>
+    <p class="dim">Descarga ahora la previsión de todos tus emplazamientos y
+      podrás consultarla en el monte aunque no haya señal. Siempre te dirá
+      de qué hora es lo que estás viendo.</p>
+    <div class="monte">
+      <button class="btn btn--acc" id="btnMonte">Guardar para el monte</button>
+      <p class="monte__e" id="monteEstado"></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="ch">Tus emplazamientos</h2>
+    <p class="dim">Los que metas aquí salen en el buscador nada más escribir,
+      y funcionan sin conexión.</p>
+    <div id="sitios"></div>
+    <details class="imp">
+      <summary>Importar pegando una lista</summary>
+      <p class="dim">Una por línea. Admite coma, punto y coma, tabulador o
+        espacios, y coordenadas en decimal o en grados. Ejemplos:</p>
+      <pre class="imp__e">BI1234 BERMEO PUEBLO Vantage 43,4201 -2,7224 45 m
+SOLLUBE 43.3760 -2.7480
+GORBEA  43°02'13"N  2°46'59"W</pre>
+      <textarea id="impTxt" rows="6" placeholder="Pega aquí la lista…"></textarea>
+      <div class="imp__b">
+        <button class="btn btn--acc" id="btnImp">Importar</button>
+        <button class="btn" id="btnExp">Copiar mi lista</button>
+      </div>
+      <p class="imp__r" id="impRes"></p>
+    </details>
+  </div>
+
+  <div class="disc">
+    <b>Mismo criterio que en Ahora.</b> Se usan tus umbrales y la altura de
+    trabajo que tengas puesta. Sigue siendo apoyo a la decisión: contrasta con AEMET,
+    Euskalmet y con medición en el emplazamiento.
+  </div>
+</section>
+
+<!-- ══════════ AHORA ══════════ -->
+<section class="view is-on" data-v="now">
+<!-- ══ LO QUE ERA «TORRE», MUDADO AQUÍ ══════════════════════════════
+     Suyo, 31-08-2026: «al final tengo que mirar en tres sitios, una va
+     fuera» · «se ponen los datos que faltan en una y se deja completa».
+     Torre era la ficha de un sitio y Ahora también: ahora es UNA vista
+     con todo — veredicto, ventana de 48 h, perfil de viento, umbrales,
+     letra y la caja de la cota. Nada se ha borrado: se ha mudado. ══ -->
+
+
+  <div class="place">
+    <h1 id="pName" class="sk">Cargando</h1>
+    <p id="pMeta" class="dim sk">—</p>
+  </div>
+
+  <!-- ¿ESTÁS MIRANDO TU SITIO O EL PUEBLO? Suyo, 30-08-2026 a las 22:16:
+       le salía «tu suelo 36 m» y su caseta está a 133. No era un dato
+       malo: tenía seleccionado el PUEBLO de Bermeo, que sale del buscador
+       de pueblos, y su estación está 0,9 km monte arriba y 97 m más alta.
+       A las 2 de la mañana eso no se puede notar de un vistazo. -->
+  <div id="noEsTuSitio"></div>
+
+  <!-- Veredicto -->
+  <!-- Cuando el sitio NO es suyo, el veredicto de trabajo se apaga y sale
+       esta línea en su lugar (01-09-2026, suyo: «si voy a cenar a Santander
+       pongo Santander y me dice todo eso?»). -->
+  <p class="note" id="vAjeno" hidden></p>
+  <div class="verdict card" id="verdict">
+    <div class="verdict__l">
+      <span class="verdict__badge sk" id="vBadge">—</span>
+      <div>
+        <b id="vTitle" class="sk">Evaluando condiciones</b>
+        <p id="vWhy" class="dim sk">—</p>
+        <p id="vCuando" class="cuando" hidden></p>
+        <div id="vAcceso" class="acc" hidden></div>
+        <div id="vRayos" class="acc" hidden></div>
+        <div id="vModelos" class="acc" hidden></div>
+      </div>
+    </div>
+    <!-- EL SELECTOR DE «QUÉ VAS A HACER» SE QUITÓ EL 28-08-2026.
+         Suyo, señalándolo: «esto sobra, lo decido yo; vosotros datos y
+         más datos, rellena con datos, la decisión la tomo yo».
+         Y tenía razón: ese selector existía para que la app adaptara un
+         VEREDICTO a la actividad. Sin veredicto, sobra. La altura de
+         trabajo se queda, porque eso no es una decisión: es el dato con
+         el que se estima el viento arriba. -->
+    <div class="verdict__r">
+      <span class="dim" id="hlbl">Altura de trabajo <small>10 m = a pie de caseta · lo de arriba, solo si subes</small></span>
+      <div class="hsel" id="hsel"></div>
+    </div>
+  </div>
+
+  <div class="msel" id="msel"></div>
+  <p class="note msel__falta" id="mselFalta" hidden></p>
+  <p class="note msel__que" id="mselQue" hidden></p>
+  <div id="elev"></div>
+
+  <!-- DE QUÉ HORA SON ESTOS NÚMEROS. Preguntado por él el 26-08-2026 a
+       las 07:47: «esto de ahora, ¿es en ese momento que abro la app?».
+       Lo era —la ficha coge la hora en curso— pero **no lo decía en
+       ningún sitio**. Abajo ponía «Datos de las 07:44», que es cuándo se
+       pidieron, no de qué hora son. No es lo mismo, y con una ráfaga
+       decidiendo si alguien sube, la diferencia importa. -->
+  <p class="horaKpi" id="horaKpi"></p>
+
+  <!-- Cifras clave -->
+  <div class="kpis" id="kpis"></div>
+
+  <!-- Riesgo eléctrico. SUBIDO AQUÍ el 25-08-2026, a peticion suya:
+       «el recuadro de riesgo electrico lo tienes abajo a la derecha y creo
+       que es el mas importante, igual hay que dejarlo mas arriba». Y tiene
+       razon: el rayo es su VETO, y estaba enterrado debajo del perfil de
+       viento. Que estuviera al final era herencia de cuando la app se hizo
+       para el que sube a la torre; el sube una vez al año. -->
+  <div class="card">
+    <h2 class="ch">Riesgo eléctrico <small class="dim" id="horaStorm">índices de inestabilidad</small></h2>
+    <div class="storm" id="storm"></div>
+  </div>
+
+  <!-- Concordancia entre modelos -->
+  <div class="card">
+    <h2 class="ch">¿Coinciden los modelos? <small class="dim">ráfaga ahora, sin promediar</small></h2>
+    <div class="cmp" id="comparativa"><p class="note">Comparando modelos…</p></div>
+  </div>
+
+  <!-- Línea de tiempo GO/NO-GO -->
+  <div class="card">
+    <h2 class="ch">Ventana de trabajo · 48 h
+      <small class="dim" id="windowHint"></small></h2>
+    <div class="tl" id="tl"></div>
+    <div class="tl__leg">
+      <!-- LA LEYENDA, CON LAS MISMAS PALABRAS QUE EL RESTO DE LA APP.
+           Decía Apto / Precaución / No apto — los tres rótulos que él
+           mandó quitar el 28-08-2026 («esto sobra, lo decido yo»). Se
+           quitaron de las pantallas y **se quedaron aquí**, que es donde
+           se explica qué significa cada color: o sea que la app seguía
+           enseñando el criterio viejo justo en el sitio donde se enseña
+           a leerla.
+           Ahora dicen lo mismo que los semáforos: SIN NADA / OJO /
+           FUERTE / SIN DATO. Describen, no autorizan. -->
+      <span><i class="d d--go"></i>Sin nada por encima de tus umbrales</span>
+      <span><i class="d d--warn"></i>Algo los roza</span>
+      <span><i class="d d--no"></i>Algo por encima</span>
+      <span><i class="d d--nd"></i>Sin dato</span>
+    </div>
+    <div class="tl__detail" id="tlDetail"></div>
+  </div>
+
+  <!-- Perfil vertical de viento -->
+  <div class="card">
+    <h2 class="ch">Perfil de viento <small class="dim">niveles del modelo</small></h2>
+    <div class="prof" id="prof"></div>
+  </div>
+
+  <!-- TAMAÑO DE LETRA. Puesto el 28-08-2026: «esto más grande, casi no
+       veo», «pequeño, con todo el sitio que hay, cuesta leerlos». Va
+       ARRIBA de los umbrales y sin desplegable: si lo que no ve es la
+       letra, el mando para agrandarla no puede estar escondido detrás de
+       un clic más. -->
+  <div class="card letra">
+    <h2 class="ch">Tamaño de letra</h2>
+    <p class="dim">Para el monte, de noche o con guantes. Se aplica a toda la
+      app y viaja a tus dos aparatos: la que elijas aquí es la que verás
+      también en el otro.</p>
+    <div class="letra__b" id="letraB">
+      <button data-z="1" class="letra__x">Normal</button>
+      <button data-z="1.15" class="letra__x">Grande</button>
+      <button data-z="1.3" class="letra__x">Más grande</button>
+      <button data-z="1.5" class="letra__x">Máximo</button>
+    </div>
+  </div>
+
+  <!-- Umbrales -->
+  <details class="card thr">
+    <summary><b>Umbrales de decisión</b> <span class="dim">— ajústalos a tu procedimiento</span></summary>
+    <div class="thr__grid" id="thrGrid"></div>
+    <!-- Qué listones mandan de verdad en el perfil que tenga puesto. Lo
+         rellena renderThr(): en «caseta y poste» sus dos de ráfaga NO
+         deciden, y hasta el 01-09-2026 nadie se lo decía. -->
+    <p id="thrPerfil" class="note"></p>
+    <p class="note">Los valores por defecto son de práctica común en trabajo en altura, <b>no</b> son una norma legal. Configúralos según el procedimiento de tu empresa, el fabricante de la torre y la evaluación de riesgos del emplazamiento.</p>
+  </details>
+
+  <div class="disc">
+    <b>Apoyo a la decisión, no autorización.</b>
+    Previsión de modelo numérico: puede desviarse de la realidad, especialmente en ráfagas, tormentas y orografía compleja.
+    Los avisos con valor legal los emiten <b>AEMET</b> y <b>Euskalmet</b>. Lo medido está en el radar de rayos y con <b>medición real de anemómetro en el emplazamiento</b>.
+    Los rayos que han caído de verdad, en la pestaña Rayos.
+  </div>
+
+<!-- ══ FIN DE LA MUDANZA ══ -->
+
+
+
+  <div class="cols">
+    <div class="card"><h2 class="ch">Detalles</h2><div class="det" id="det"></div></div>
+    <div class="card"><h2 class="ch">Sol y aire</h2><div class="sun" id="sun"></div><div class="det" id="aq"></div>
+      <!-- LA MAR, AQUÍ ABAJO. Suyo, 29-08-2026: «abajo de Sol y aire hay
+           que poner oleaje etc» · «hay sitio» · «cómo está la mar, oleaje,
+           altura de ola». Y tenía razón: medio panel estaba vacío, y él
+           hace surf y kayak. Si el sitio no es de costa, no se pinta. -->
+      <div class="det" id="marAhora"></div></div>
+  </div>
+</section>
+
+<!-- ══════════ HORAS ══════════ -->
+<section class="view" data-v="hours">
+  <div class="card"><h2 class="ch">Temperatura, viento y lluvia · 48 h</h2>
+      <!-- Hasta dónde llega el modelo cargado. AROME HD es el mejor en
+           racha pero solo alcanza ~48 h, y un hueco no puede leerse como
+           «no pasa nada». Ver `avisoAlcanceModelo()`. -->
+      <div id="avisoAlcance"></div>
+      <div class="graph" id="graph"></div></div>
+  <div class="card"><div class="hlist" id="hlist"></div></div>
+</section>
+
+<!-- ══════════ DÍAS ══════════ -->
+<section class="view" data-v="days">
+  <div class="card"><h2 class="ch">Próximos 10 días</h2>
+    <!-- Y AQUÍ EL AVISO DE ALCANCE, que es donde más se nota: con AROME
+         cargado —que llega a ~48 h— los otros ocho días saldrían vacíos.
+         Se me había quedado solo en Horas; lo cazó la segunda pasada del
+         29-08-2026. Un hueco de ocho días no puede quedarse sin explicar. -->
+    <div id="avisoAlcanceDias"></div>
+    <ul class="dlist" id="dlist"></ul></div>
+</section>
+
+<!-- ══════════ MAR ══════════ -->
+<section class="view" data-v="sea">
+  <!-- `seaCard` faltaba y `renderSea()` escribía en él. Resultado: la
+       pestaña Mar reventaba en TODOS los emplazamientos y le sacaba a
+       Aitor la banda roja de «algo ha fallado» arriba del todo, aunque el
+       resto de la app estuviera bien. Cazado el 27-08-2026 abriendo la app
+       de verdad con `abrir.cjs`; ni la sintaxis ni el linter lo veían. -->
+  <div class="card" id="seaCard">
+    <h2 class="ch">Mareas <small class="dim">nivel del mar · cualquier costa del mundo</small></h2>
+    <!-- EL AVISO DE «AQUÍ NO HAY MAR» TIENE SU PROPIO HUECO, y no es un
+         capricho: antes esa rama hacía `seaCard.innerHTML = …` y **se
+         llevaba por delante a #tide, #tidelist y #tideNote**, que son sus
+         hijos. Al volver a un sitio de costa, escribir en #tide reventaba
+         con «Cannot set properties of null». Cinco veces en su diario de
+         fallos, en cuatro publicaciones del 28-08-2026. Encontrado por la
+         sesión de revisión nocturna. -->
+    <p class="note" id="seaNote" hidden></p>
+    <div class="tide" id="tide"></div>
+    <div class="tidelist" id="tidelist"></div>
+    <div id="tideNote"></div>
+  </div>
+  <div class="cols">
+    <div class="card"><h2 class="ch">Estado de la mar</h2><div class="det" id="seaDet"></div></div>
+    <div class="card"><h2 class="ch">Oleaje · 48 h</h2>
+      <!-- Sin `graph--sm`: ese ponía 150 px fijos y ahora dentro van la
+           cabecera, el dibujo y las horas. Ver `renderSea()`. -->
+      <div class="ola" id="waveGraph"></div></div>
+  </div>
+</section>
+
+<!-- ══════════ RADAR ══════════ -->
+<section class="view" data-v="radar">
+  <div class="card card--flush">
+    <div class="radar" id="radar"><div class="radar__ph">Abre esta pestaña para cargar el radar</div></div>
+    <div class="radar__bar">
+      <button class="ib" id="rPlay" aria-label="Reproducir"><svg viewBox="0 0 24 24" id="rPlayIco"><path d="M7 4.5v15l13-7.5Z"/></svg></button>
+      <input type="range" id="rTime" min="0" max="0" value="0" aria-label="Tiempo del radar">
+      <b id="rStamp">--:--</b>
+    </div>
+  </div>
+  <p class="note">Radar de precipitación observada (RainViewer, mosaico global). El radar muestra <b>lo que ya está cayendo</b>, no una previsión. Para rayos en Euskadi, la pestaña <b>Rayos</b>.</p>
+
+  <div class="disc disc--no">
+    <b>El radar NO ve el sirimiri.</b> Comprobado el 25-08-2026 cruzando el compuesto
+    de AEMET con los pluviómetros de trece estaciones de Bizkaia y Gipuzkoa: de las
+    <b>13 horas en las que una estación midió lluvia, en 5 el radar no tenía nada de nada</b>
+    encima —incluidas 0,4 mm en el aeropuerto de Bilbao y 1,2 mm en Balmaseda—. Y al revés:
+    hubo eco verde y amarillo en 16 horas en las que <b>no cayó ni una gota</b> al suelo.
+    Aquí el haz del radar pasa por encima de la nube baja y de la costa.
+    <b>Un radar limpio no significa que no esté cayendo.</b> Para eso, la casilla de
+    Lluvia de Ahora, las estaciones y las cámaras.
+  </div>
+</section>
+
+<!-- ══════════ MAPAS ══════════ -->
+<section class="view view--wide" data-v="models">
+  <div class="card card--flush mapcard">
+    <!-- Selector de móvil: en pantalla estrecha las tiras de 10 modelos y
+         29 capas obligan a barrer con el dedo. Aquí se abre una lista. -->
+    <div class="mmob" id="mapMob">
+      <button class="mmob__b" data-abrir="modelo"><span>Modelo</span><b id="mmobModelo">—</b></button>
+      <button class="mmob__b" data-abrir="capa"><span>Capa</span><b id="mmobCapa">—</b></button>
+    </div>
+    <div class="hoja" id="mapHoja" hidden></div>
+    <button class="mfull" id="mapFull" title="Pantalla completa (Esc para salir)">
+      <svg viewBox="0 0 24 24" id="mapFullIco"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      <span id="mapFullTxt">Pantalla completa</span>
+    </button>
+    <div class="msel msel--map" id="mapModels"></div>
+    <div class="ovl" id="mapLayers"></div>
+
+    <div class="lgtop" id="mapLegend" hidden></div>
+
+    <div class="mapwrap">
+      <div class="mapc" id="mapc"><div class="radar__ph">Abre esta pestaña para cargar el mapa</div></div>
+      <div class="mvals" id="mapVals"></div>
+      <div class="mvals" id="mapBarbs"></div>
+      <div class="mavisos">
+        <div class="msust" id="mapSust" hidden></div>
+        <div class="msust msust--fallo" id="mapFallos" hidden></div>
+      </div>
+      <div class="msust msust--fallo" id="mapAlcance" hidden></div>
+      <div class="mprec" id="mapPrec" hidden></div>
+      <div class="maptip">Pulsa cualquier punto del mapa para ver el valor exacto del modelo</div>
+    </div>
+
+    <div class="radar__bar">
+      <button class="ib ib--sq" id="mapPrev" title="Hora anterior" aria-label="Hora anterior">
+        <svg viewBox="0 0 24 24"><path d="M15 5.5 8 12l7 6.5"/></svg></button>
+      <button class="ib" id="mapPlay" aria-label="Reproducir">
+        <svg viewBox="0 0 24 24" id="mapPlayIco"><path d="M7 4.5v15l13-7.5Z"/></svg></button>
+      <button class="ib ib--sq" id="mapNext" title="Hora siguiente" aria-label="Hora siguiente">
+        <svg viewBox="0 0 24 24"><path d="M9 5.5 16 12l-7 6.5"/></svg></button>
+      <button class="ib ib--now" id="mapNow" title="Volver a la hora actual">ahora</button>
+      <input type="range" id="mapTime" min="0" max="0" value="0" aria-label="Hora del mapa">
+      <b id="mapStamp">—</b>
+      <span class="opa">
+        <label for="mapOpa">Capa</label>
+        <input type="range" id="mapOpa" min="20" max="100" value="85" aria-label="Opacidad de la capa">
+      </span>
+    </div>
+
+    <div class="mapfoot"><span id="mapDesc"></span><span id="mapStatus" class="faint"></span></div>
+  </div>
+
+  <p class="note"><b>Resolución nativa.</b> El mapa se dibuja a la resolución real del modelo
+  (ECMWF 0,25°, AROME 1,3 km…) con el servicio oficial de Open-Meteo, no con una
+  rejilla remuestreada. El mapa se descarga a cuadros, y si alguno no llega se avisa
+  arriba: donde no hay color puede ser que falte el dato, no que no pase nada. Abajo a la derecha tienes siempre el modelo, su resolución y la
+  <b>hora de la pasada</b> con la que está calculado. Cada modelo publica solo algunas variables:
+  al cambiar de modelo, las capas que no existen desaparecen y se avisa — nunca se sustituye una
+  capa por otra parecida sin decirlo.</p>
+</section>
+
+<!-- ══════════ AVISOS ══════════ -->
+<section class="view" data-v="alerts">
+  <!-- Pedido por él el 26-08-2026: «¿esta app no podría enviarme
+       notificaciones al teléfono?» y «por correo no me entero de nada».
+       Va lo PRIMERO de esta pestaña porque es lo único que hay que tocar
+       una vez; lo demás es de mirar. -->
+  <div class="card" id="avisosCard">
+    <h2 class="ch">Avisos en tus aparatos</h2>
+    <p class="dim" id="avisoEstado">Comprobando…</p>
+    <div class="avisoBtns">
+      <!-- El texto lo pone `estoEs()` al arrancar: «este Mac», «este iPhone»…
+           Suyo: «en el iMac ponía dar de alta a este móvil, y no es un móvil». -->
+      <button class="btn" id="btnAvisos">Activar avisos aquí</button>
+      <button class="btn btn--sec" id="btnAvisoPrueba" hidden>Enviarme uno de prueba</button>
+    </div>
+    <p class="note" id="avisoNota"></p>
+    <!-- Cuando el servidor no puede guardar la suscripción (almacén
+         suspendido, 01-09-2026), aquí sale el código para pasarlo por el
+         chat y apuntarlo a mano. Sin esto, el teléfono se queda fuera y
+         no hay manera de meterlo. -->
+    <div class="ojo" id="avApunte" hidden></div>
+  </div>
+  <!-- Suyo, 26-08-2026: «pero se va seguido, ¿dónde queda o dónde puedo
+       releerlo?». Un aviso que desaparece al apartarlo no sirve para
+       volver a mirarlo antes de mandar a alguien. -->
+  <!-- Suyo, 27-08-2026: «para que os envíe datos de los sites, actívame
+       algo para que desde el móvil pueda enviarte». Lo que él mide en el
+       sitio es lo único que dice si esta app acierta. Va lo primero de
+       esta pestaña y con el campo ya abierto: en una caseta, con una
+       mano, lo que no está a la vista no se usa. -->
+  <div class="card" id="campoCard">
+    <h2 class="ch">Mandarnos un dato del sitio</h2>
+    <p class="note">Escribe como hables, sin formato.</p>
+    <textarea id="campoTexto" rows="3" placeholder="Qué estás viendo o midiendo…"></textarea>
+    <!-- Esta fila se ESCONDE entera mientras hay una foto esperando. Suyo,
+         29-08-2026: «arriba enviar y abajo enviar foto… como 2 pantallas».
+         Con la previa abierta, estos cuatro botones quedaban a media
+         pantalla de la foto y de su botón, y eso se lee como dos sitios
+         distintos donde mandar. Ver `pintarBotonEnviar` en app.js. -->
+    <div class="avisoBtns" id="campoBotones">
+      <button class="btn" id="btnCampo">Enviar</button>
+      <!-- LAS FOTOS, IDA Y VUELTA.
+           Se quitaron el 01-09-2026 porque él lo pidió: «quita lo de las
+           fotos que ya no lo vamos a usar». Pero el motivo de fondo no era
+           que sobraran: era que el almacén de Vercel llevaba dos días
+           suspendido y no había dónde guardarlas, así que las mandaba por
+           el chat.
+
+           El 04-09-2026 se mudó el almacén a Redis y volvieron a funcionar.
+           Él, esa mañana: «activado, pero no hay botón de fotos… ni de
+           adjuntar de galería, solo sms». Así que vuelven.
+
+           Nada de dentro llegó a tocarse —los dos <input>, la previa, el
+           envío, `api/foto.mjs`—: solo faltaban estos dos botones. -->
+      <button class="btn btn--sec" id="btnCampoCamara">Hacer foto</button>
+      <button class="btn btn--sec" id="btnCampoFoto">De la galería</button>
+      <button class="btn btn--sec" id="btnCampoSitio">Añadir dónde estoy</button>
+    </div>
+    <!-- DOS ENTRADAS, UN BOTÓN PARA CADA UNA. Y hubo que llegar aquí por
+         las malas, en el mismo día:
+
+         · Al principio el único <input> llevaba `capture=environment`, para
+           abrir la cámara de un toque. Pero `capture` NO añade la cámara:
+           SUSTITUYE al selector, y el móvil deja de ofrecer la galería.
+           Suyo, 27-08-2026: «solo deja hacer foto de la propia aplicación».
+         · Se quitó `capture`… y entonces desapareció la cámara. Suyo, ese
+           mismo día: «ahora me deja juntar las fotos desde la carpeta del
+           móvil pero ya no tengo la opción de sacar foto online».
+
+         O sea que con UN input siempre se pierde una de las dos, y cuál se
+         pierde depende del móvil — él usa iPhone y Android. Con dos inputs
+         no hay que adivinar: cada botón abre lo suyo en los dos.
+
+         Las dos hacen falta de verdad: la foto que calibra la app es unas
+         veces el cielo de ahora mismo, y otras la que hizo al llegar o la
+         pista antes de meterse. -->
+    <input type="file" id="campoCamara"  accept="image/*" capture="environment" hidden>
+    <input type="file" id="campoFichero" accept="image/*" hidden>
+    <!-- LA FOTO NO SALE SOLA. Suyo, 29-08-2026: «en el momento que hago la
+         foto la envía sola, no le doy ni a enviar… entonces no sé si está
+         pinchada la ubicación o no. Ese es el fallo».
+
+         Y era exactamente eso: `inp.onchange` llamaba a mandarFoto() en
+         cuanto elegías la imagen. No había ni un instante para mirar si
+         llevaba tu GPS — y sin GPS la nota sale con las coordenadas del
+         emplazamiento que tengas abierto, y los cinco modelos se congelan
+         para ESE punto. Así se comparó una foto de Busturia contra el
+         tiempo de Bermeo, a 4,5 km.
+
+         Ahora se ve la foto, se dice a gritos con qué ubicación va a salir,
+         y hasta que no le da a Enviar no sale nada. -->
+    <div id="campoPrevia" hidden>
+      <img id="campoPreviaImg" alt="La foto que vas a mandar">
+      <p id="campoPreviaUbi"></p>
+      <!-- Aquí DENTRO se mete el cuadro de texto mientras hay una foto
+           esperando. No hay dos cuadros: se MUEVE el de arriba y se
+           devuelve a su sitio al mandar o al quitar. Suyo, 29-08-2026:
+           «hago la foto y no sé dónde poner… que se pueda poner debajo de
+           la foto y ya está, así se ocupan menos pantallas». -->
+      <div class="avisoBtns" id="campoPreviaBtns">
+        <button class="btn" id="btnCampoEnviarFoto">Enviar la foto</button>
+        <button class="btn btn--sec" id="btnCampoUbiPrevia">Añadir dónde estoy</button>
+        <button class="btn btn--sec" id="btnCampoQuitar">Quitar</button>
+      </div>
+    </div>
+    <p class="note" id="campoEstado"></p>
+    <!-- Lo que él ha mandado y lo que le hemos contestado, juntos. Suyo,
+         27-08-2026: «¿y si os escribo algo podéis contestarme?». -->
+    <div id="campoHilo"></div>
+  </div>
+  <div class="card" id="recibidosCard">
+    <h2 class="ch">Avisos que te han llegado</h2>
+    <div id="recibidos"></div>
+  </div>
+  <div class="card">
+    <h2 class="ch">Avisos oficiales en vigor</h2>
+    <div id="alerts"><p class="dim">Cargando avisos…</p></div>
+  </div>
+  <!-- HURACANES Y TORMENTAS TROPICALES DEL MUNDO. Suyo, 01-09-2026,
+       enseñando el seguidor de Windy: «me gustaría seguirlo y ver cómo
+       damos el pronóstico; esto ya por hobby». Va al final y solo sale
+       cuando hay alguna: si no las hay, ni ocupa. -->
+  <div class="card" id="tropicalCard" hidden>
+    <h2 class="ch">Huracanes y tormentas tropicales</h2>
+    <div id="tropical"></div>
+  </div>
+  <div class="card">
+    <h2 class="ch">Fuentes oficiales · consulta directa</h2>
+    <div class="links" id="links"></div>
+  </div>
+</section>
+
+<footer class="foot">
+  <span id="updated">—</span><span>·</span>
+  <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a><span>·</span>
+  <a href="https://www.aemet.es" target="_blank" rel="noopener">AEMET</a><span>·</span>
+  <a href="https://www.euskalmet.euskadi.eus" target="_blank" rel="noopener">Euskalmet</a>
+  <button class="inst" id="btnInstall" hidden>Instalar app</button>
+</footer>
+</main>
+
+<div class="toast" id="toast"></div>
+<script src="app.js" defer></script>
+<script src="maps.js" defer></script>
+</body>
+</html>
