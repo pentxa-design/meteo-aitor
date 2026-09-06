@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.05-1548';
+const BUILD = '2026.09.06-1402';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -570,11 +570,24 @@ const isStormCode = c => c === 95 || c === 96 || c === 99;
    modelo deja al sol. Para torre da igual: los cirros no traen racha ni
    rayo.                                                                */
 const VELADO = 4;
+/* ── Y LAS CAPAS DEL EUROPEO NO SUMAN ────────────────────────────────
+   Cazado el 06-09-2026 a las 14:00, otra vez en Calpe con cirros
+   encima: el europeo daba TOTAL 92 % con bajas 0, medias 0 y ALTAS 46.
+   Las capas no cuadran con el total —ya está apuntado en la caja de
+   nubosidad— y la primera versión de esta regla pedía altas >= 50 para
+   llamarlo velo, así que con 46 se quedaba en «Cubierto» mirando un
+   cielo de sol velado. La regla buena es más simple: si el modelo dice
+   CUBIERTO y ni bajas ni medias llegan al 40 %, nada tapa de verdad y lo
+   que hay es velo, marque lo que marque la capa alta. Para el «parcial»
+   (2) sí se pide que el velo domine, porque un 30 % de nube baja es
+   «parcialmente nuboso» y no un velo.                                  */
 function veladoSiToca(code, h) {
   if (code !== 2 && code !== 3) return code;
   const b = h?.nubesBajas, m = h?.nubesMedias, a = h?.nubesAltas;
   if (!has(b) || !has(m) || !has(a)) return code;
-  return (b + m < 40 && a >= 50) ? VELADO : code;
+  if (b + m >= 40) return code;              // algo bajo o medio tapa: manda el modelo
+  if (code === 3) return VELADO;             // «cubierto» sin nada bajo ni medio = velo
+  return a >= 50 ? VELADO : code;            // «parcial»: solo si el velo domina
 }
 /* Cuánto tapa cada código, para los empates: el velado va entre el
    «mayormente despejado» y el «parcialmente nuboso», no por encima de
