@@ -2718,3 +2718,13 @@ body.sin-scroll{overflow:hidden}
   body[data-view="now"] .brand__sitio{display:none}
   body[data-view="now"] .brand b:not(.brand__sitio){display:flex}
 }
+
+/* ── Antes de salir (06-09-2026) ─────────────────────────────────────── */
+.salir__st{float:right;font-weight:700;letter-spacing:.06em}
+.salir__st[data-s="no"]{color:var(--no)} .salir__st[data-s="warn"]{color:var(--warn)}
+.salir__st[data-s="go"]{color:var(--go)} .salir__st[data-s="nd"]{color:var(--faint)}
+.salir__l li[data-s="nd"]{color:var(--faint)} .salir__l li[data-s="go"]{color:var(--dim)}
+.salir__k{font-weight:600;opacity:.9}
+.salir__ir{font:inherit;font-size:0.8125rem;padding:1px 8px;border-radius:999px;cursor:pointer;
+  border:1px solid color-mix(in srgb,var(--warn) 55%,transparent);background:transparent;color:var(--warn)}
+.salir__ir:hover{background:color-mix(in srgb,var(--warn) 18%,transparent)}
