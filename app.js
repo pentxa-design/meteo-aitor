@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.06-1402';
+const BUILD = '2026.09.06-1741';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -589,6 +589,63 @@ function veladoSiToca(code, h) {
   if (code === 3) return VELADO;             // «cubierto» sin nada bajo ni medio = velo
   return a >= 50 ? VELADO : code;            // «parcial»: solo si el velo domina
 }
+/* ═══ EL CIELO LO VOTA LA MAYORÍA ════════════════════════════════════
+   Suyo, 06-09-2026 desde Calpe, después de una semana de parches al
+   icono: *«a diario andamos con el tema este de los iconos, hemos
+   corregido muchas veces y sigue fallando»*. Y es verdad: 28-08 el 100 %
+   con cielo azul, 30-08 el sol de Bermeo, 31-08 la franja partida, 04-09
+   el sábado de sol, 05-09 los cirros, 06-09 el escalón de la nube media.
+   Todos los parches arreglaban UN caso, porque la raíz era otra: **el
+   dibujo salía de un solo modelo**, y la nubosidad es el campo que peor
+   predice cualquiera de ellos —lo dice la Guía—. Cuando ese modelo se
+   equivoca una hora, el dibujo se equivoca con él.
+
+   Desde hoy, para las horas en que la comparativa está cargada (48 h del
+   sitio abierto), el cielo seco lo decide LA MEDIANA de nube baja+media
+   entre los modelos de verdad —ECMWF, AROME, ICON, GFS; el Automático no
+   vota porque es una mezcla de los otros—. Un modelo descolgado deja de
+   mandar. Con menos de tres votos, o fuera de las 48 h, o en otro sitio
+   que no sea el abierto, se sigue con el dueño del cielo y la regla del
+   velo, como antes.
+
+   Los escalones, con sus palabras:
+     baja+media ≥ 70 %  → Cubierto
+     baja+media ≥ 40 %  → Parcialmente nuboso  (el «bastante tapado pero
+                          pasa el sol» de esta tarde en Calpe)
+     alta ≥ 50 %        → Sol velado
+     baja+media ≥ 15 %  → Mayormente despejado
+     resto              → Despejado
+   El agua y la tormenta NO se votan: eso sigue mandándolo el dueño de la
+   lluvia, que se elige por acierto medido. Ni la niebla.                */
+function cieloVotado(t, place = null) {
+  const C = deEsteSitio(S.comparativa, place)?.hourly;
+  if (!C?.time || !t) return null;
+  C.__porHora ??= new Map(C.time.map((x, i) => [String(x).slice(0, 13), i]));
+  const i = C.__porHora.get(String(t).slice(0, 13));
+  if (i === undefined) return null;
+  const bm = [], alta = [];
+  for (const m of COMPARAR) {
+    if (m.om === 'best_match') continue;               // mezcla: no vota
+    const b = C[`cloud_cover_low_${m.om}`]?.[i], md = C[`cloud_cover_mid_${m.om}`]?.[i];
+    if (!has(b) || !has(md)) continue;
+    bm.push(Math.min(100, b + md));
+    const a = C[`cloud_cover_high_${m.om}`]?.[i];
+    if (has(a)) alta.push(a);
+  }
+  if (bm.length < 3) return null;
+  const med = xs => { const o = [...xs].sort((p, q) => p - q), k = o.length;
+    return k % 2 ? o[(k - 1) / 2] : (o[k / 2 - 1] + o[k / 2]) / 2; };
+  const o = [...bm].sort((p, q) => p - q);
+  return { bm: med(bm), alta: alta.length ? med(alta) : null, n: bm.length, abanico: o[o.length - 1] - o[0] };
+}
+function codigoVotado(v) {
+  if (v.bm >= 70) return 3;
+  if (v.bm >= 40) return 2;
+  if (has(v.alta) && v.alta >= 50) return VELADO;
+  if (v.bm >= 15) return 1;
+  return 0;
+}
+
 /* Cuánto tapa cada código, para los empates: el velado va entre el
    «mayormente despejado» y el «parcialmente nuboso», no por encima de
    «cubierto» como haría el número 4 a secas. */
@@ -848,6 +905,12 @@ function codigoQueSeVe(h, codigoDelCielo, thr = S.thr) {
     if (mm >= (thr?.rainWarn ?? 0.2)) return 61;  // llueve poco
     return 51;                                    // sirimiri: moja igual
   }
+  /* La niebla tampoco se vota: es un dato de visibilidad, no de nubes. */
+  if (codigoDelCielo === 45 || codigoDelCielo === 48) return codigoDelCielo;
+  /* Cielo seco: primero la mayoría, y si no hay quórum, el dueño con la
+     regla del velo. Ver `cieloVotado()`. */
+  const voto = h?.t ? cieloVotado(h.t, h.sitio) : null;
+  if (voto) return codigoVotado(voto);
   return veladoSiToca(codigoDelCielo, h);
 }
 
@@ -3387,6 +3450,9 @@ function buildHours(fc, height, place = null) {
 
     out.push({
       t: H.time[i], date: new Date(H.time[i]), h: height,
+      /* El sitio de la fila, para que el voto del cielo solo use la
+         comparativa de ESTE sitio y no la del abierto (06-09-2026). */
+      sitio: place,
       levels: lv, wind: w.v, windExact: w.exact, alpha: w.alpha, windNote: w.note, techo: w.techo,
       w10: lv[10], gust10: H.wind_gusts_10m?.[i], gust: g.v, gustEst: !g.exact,
       gustLim: !!g.limitada,
@@ -10521,9 +10587,14 @@ function cieloDelDia(sel) {
   /* Con capas, el día se mide por lo que TAPA: bajas y medias. Las altas
      solo velan el sol (05-09-2026, ver `veladoSiToca`). Sin capas, la
      total, como antes. */
-  const bm = sel.map(h => has(h.nubesBajas) && has(h.nubesMedias)
+  /* Con comparativa cargada, cada hora aporta su MEDIANA votada; si no,
+     las capas del dueño. Así el dibujo del día y el de las horas salen
+     de la misma cuenta (06-09-2026). */
+  const votos = sel.map(h => (h.t ? cieloVotado(h.t, h.sitio) : null));
+  const bm = sel.map((h, k) => votos[k] ? votos[k].bm
+                          : has(h.nubesBajas) && has(h.nubesMedias)
                           ? Math.min(100, h.nubesBajas + h.nubesMedias) : null).filter(has);
-  const altas = sel.map(h => h.nubesAltas).filter(has);
+  const altas = sel.map((h, k) => votos[k] && has(votos[k].alta) ? votos[k].alta : h.nubesAltas).filter(has);
   const conCapas = bm.length && bm.length * 2 >= sel.length;
   const nubes = conCapas ? bm : sel.map(h => h.nubes).filter(has);
   if (!nubes.length) return null;
@@ -11808,6 +11879,7 @@ function renderDays() {
       for (let i = 0; i < H.time.length; i++) {
         if (!String(H.time[i]).startsWith(dia)) continue;
         hs.push({
+          t: H.time[i],
           date: new Date(H.time[i]),
           code: H.weather_code?.[i],
           codeLluvia: H.weather_code_lluvia?.[i],
