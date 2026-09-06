@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.06-1923';
+const BUILD = '2026.09.06-2340';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -3927,6 +3927,7 @@ function renderTower() {
      altura volvería a dibujar la ficha y se lo llevaría por delante. */
   pintarRayosTorre();
   pintarDiscrepancia();
+  seguro('antes de salir', pintarAntesDeSalir);
 }
 
 /* La altitud a la que el modelo "cree" que está el punto es determinante
@@ -6025,6 +6026,10 @@ async function cargarObservacion() {
     const caidas = rEus?.caidas || [];
     const es = [...eus, ...(d.estaciones || []).map(x => ({ ...x, red: 'AEMET' }))]
       .sort((a, b) => (a.km ?? 999) - (b.km ?? 999));
+    /* Se guarda, sellado con el sitio, para que «Antes de salir» pueda
+       leer la medida sin volver a preguntar (06-09-2026). */
+    S.obs = { clave: key(p), t: Date.now(), es, caidas, fallo: rEus?._fallo || null, error: null };
+    seguro('antes de salir', pintarAntesDeSalir);
 
     /* ── ¿HAY ALGÚN APARATO A SU ALTURA? ──────────────────────────────
        Encontrado el 28-08-2026 mirando Sollube: las seis estaciones de
@@ -6177,6 +6182,8 @@ async function cargarObservacion() {
       ${esc(e.message)}.
       <b>Que no haya medida no significa que no haya viento.</b></p>`;
     if (hint) hint.textContent = '';
+    S.obs = { clave: key(p), t: Date.now(), es: [], caidas: [], error: String(e?.message || e) };
+    seguro('antes de salir', pintarAntesDeSalir);
   }
 }
 
@@ -9787,6 +9794,7 @@ async function cargarRayosAemet({ forzar = false } = {}) {
   pintarRayosAemet();
   // La ficha de Torre lleva el aviso corto: que se entere del cambio.
   if (S.data) seguro('rayos en torre', pintarRayosTorre);
+  if (S.data) seguro('antes de salir', pintarAntesDeSalir);
 
   /* Y de paso, el cuaderno. Va al final y sin `await`: si falla, él ni
      se entera, porque esto no le sirve HOY para nada. */
@@ -9989,6 +9997,200 @@ function deEsteSitio(est, place = null) {
      no se puede comprobar, y darlo por válido es volver al fallo. */
   if (suyo == null) return null;
   return String(suyo) === aqui ? est : null;
+}
+
+/* ═══ ANTES DE SALIR ══════════════════════════════════════════════════
+   Suyo, 06-09-2026 desde Calpe, después de contar cómo trabaja de verdad:
+   el 90 % de las salidas son a la caseta, con el 4x4 por pista y a veces
+   un grupo a remolque; los contadores y las CGP con fusibles están fuera,
+   en postes a dos metros; hace guardias y decide a quién manda. Y esto,
+   textual: *«podemos matar a un técnico si enviamos con CAPE, viento o
+   lluvia a trabajar»* · *«si va y le pilla con un fusible en el poste un
+   rayo o una racha o lluvia se electrocuta, eso no puede ser»*.
+
+   Lo que le faltaba no eran datos —la app ya lee las descargas de AEMET,
+   la estación más cercana y siete modelos— sino tenerlos JUNTOS en el
+   momento de mandar a alguien, y una regla que no se pueda esquivar:
+   **con uno en rojo, sale en rojo**, aunque los otros digan verde.
+
+   Cuatro renglones, en el orden que él dio (1 lluvia, 2 rayos, 3 rachas):
+     · Rayos MEDIDOS por AEMET: la única medida que ya pisa al modelo.
+     · Lo MEDIDO en la estación más cercana: racha y lluvia de la última
+       hora, con su hora. Una medida de hace más de dos horas no vale
+       como «ahora»: se dice que es vieja.
+     · Las 3 horas siguientes pasadas por `assess()`, la misma regla del
+       semáforo, con la ráfaga peor de cualquier modelo (`peorRacha`) y
+       la lluvia peor de la comparativa.
+     · El radar: aquí no se lee el eco, así que se dice y se manda a la
+       pestaña. Un hueco callado sería el fallo de siempre.
+
+   Lo que NO hace: no decide. Describe, con cifras y su hora, y él manda.
+   Y 'nd' no se esconde nunca detrás de un verde: sin dato es sin dato.
+   Solo en SUS emplazamientos, como el veredicto: sus listones son de
+   sus sitios.                                                          */
+const SALIR_HORAS = 3;
+const SALIR_MEDIDA_VIEJA = 2 * 3600e3;
+
+/* Rojo si hay rojo; si no, sin dato; si no, ámbar; si no, verde. Distinto
+   de `worst()`, donde el «sin dato» pisa al rojo: aquí un rojo medido no
+   puede quedar tapado por un hueco de otra fila. */
+function estadoSalir(xs) {
+  if (xs.includes('no')) return 'no';
+  if (xs.includes('nd')) return 'nd';
+  if (xs.includes('warn')) return 'warn';
+  return 'go';
+}
+
+function antesDeSalir() {
+  const p = S.place;
+  if (!p || !S.data?.hours?.length) return null;
+  const thr = S.thr || DEFAULT_THR;
+  const filas = [];
+  const hh = h => `${String(h.date.getHours()).padStart(2, '0')}:00`;
+
+  /* 1 · Rayos medidos */
+  {
+    const R = deEsteSitio(S.rayos);
+    let s = 'nd', txt;
+    if (!R) txt = 'descargas de AEMET todavía no leídas';
+    else if (R.error) txt = `no se han podido leer las descargas de AEMET (${esc(String(R.error).slice(0, 50))}). No saberlo no es que no caiga nada`;
+    else {
+      const d = R.d, u = d?.ultima;
+      const hasta = d?.hasta ? ` — medido hasta las ${horaHM(d.hasta)}, ${haceCuanto(d.hasta)}` : '';
+      if (!u) { s = 'go'; txt = `sin descargas a menos de ${d?.radio ?? RAYO_RADIO} km en las últimas ${d?.horasCatalogo ?? 6} h${hasta}`; }
+      else {
+        const edad = Date.now() - new Date(u.hasta).getTime();
+        const cuando = `entre ${rangoHoras(u.desde, u.hasta)} (${haceCuanto(u.hasta)})`;
+        const masCerca = u.masCerca ? `, la más cercana a ${kmTxt(u.masCerca.km)} km` : '';
+        if (u.encima > 0 && edad <= RAYO_VIGENTE) {
+          s = 'no'; txt = `<b>${u.encima} descarga${u.encima === 1 ? '' : 's'} a menos de ${RAYO_ENCIMA} km</b> ${cuando}${masCerca}`;
+        } else if (u.cerca > 0 && edad <= RAYO_RECIENTE) {
+          s = 'warn'; txt = `${u.cerca} descarga${u.cerca === 1 ? '' : 's'} a menos de ${RAYO_CERCA} km ${cuando}${masCerca} — tormenta por la zona`;
+        } else if (edad <= RAYO_RECIENTE) {
+          s = 'go'; txt = `descargas solo lejos${masCerca} ${cuando}`;
+        } else {
+          s = 'go'; txt = `la última descarga en ${d.radio} km fue ${haceCuanto(u.hasta)}; nada desde entonces${hasta}`;
+        }
+      }
+    }
+    filas.push({ k: 'Rayos medidos', s, txt });
+  }
+
+  /* 2 · Lo medido en la estación más cercana */
+  {
+    const O = S.obs && S.obs.clave === key(p) ? S.obs : null;
+    let s = 'nd', txt;
+    const edadDe = x => { const t = x.medidoEn ? Date.parse(x.medidoEn) : NaN; return Number.isFinite(t) ? Date.now() - t : null; };
+    const cuando = x => { const t = x.medidoEn ? Date.parse(x.medidoEn) : NaN; return Number.isFinite(t) ? `a las ${horaHM(x.medidoEn)}` : 'sin hora'; };
+    const fresca = x => { const e = edadDe(x); return e !== null && e <= SALIR_MEDIDA_VIEJA; };
+    const donde = x => `${esc(x.nombre)} (a ${kmTxt(x.km)} km${x.alturaAnemometro ? `, racha a ${x.alturaAnemometro} m` : ''}, ${cuando(x)})`;
+    if (!O) txt = 'estaciones cercanas todavía no consultadas';
+    else if (O.error) txt = `no he podido preguntar a las estaciones (${esc(O.error.slice(0, 50))}). Que no haya medida no es que no haya viento`;
+    else {
+      const es = O.es || [];
+      const conRacha = es.filter(x => has(x.racha)), conLluvia = es.filter(x => has(x.lluvia));
+      if (!conRacha.length && !conLluvia.length) txt = 'ninguna estación cercana mide racha ni lluvia';
+      else {
+        const estados = [], partes = [];
+        const frescasR = conRacha.slice(0, 3).filter(fresca);
+        if (frescasR.length) {
+          const peor = frescasR.reduce((a, b) => (b.racha > a.racha ? b : a));
+          const st = peor.racha >= thr.gustNo ? 'no' : peor.racha >= thr.gustWarn ? 'warn' : 'go';
+          estados.push(st);
+          partes.push(`${st === 'go' ? '' : '<b>'}racha ${wtxt(peor.racha, true)}${st === 'go' ? '' : '</b>'} en ${donde(peor)}`);
+        } else if (conRacha.length) {
+          estados.push('nd');
+          partes.push(`la racha más reciente es ${cuando(conRacha[0])} en ${esc(conRacha[0].nombre)}: vieja, no vale como «ahora»`);
+        } else { estados.push('nd'); partes.push('sin medida de racha cerca'); }
+        const frescasL = conLluvia.slice(0, 3).filter(fresca);
+        if (frescasL.length) {
+          const peor = frescasL.reduce((a, b) => (b.lluvia > a.lluvia ? b : a));
+          const st = peor.lluvia >= thr.rainNo ? 'no' : peor.lluvia >= thr.rainWarn ? 'warn' : 'go';
+          estados.push(st);
+          partes.push(`${st === 'go' ? '' : '<b>'}${mmTxt(peor.lluvia)} mm de lluvia${st === 'go' ? '' : '</b>'} en ${donde(peor)}`);
+        } else if (conLluvia.length) {
+          estados.push('nd');
+          partes.push(`la lluvia más reciente es ${cuando(conLluvia[0])}: vieja`);
+        } else { estados.push('nd'); partes.push('sin pluviómetro cerca'); }
+        s = estadoSalir(estados);
+        txt = partes.join(' · ');
+      }
+    }
+    filas.push({ k: 'Medido en la estación más cercana', s, txt });
+  }
+
+  /* 3 · Las horas siguientes, con la regla del semáforo y lo peor de cualquier modelo */
+  {
+    const hs = S.data.hours.slice(0, SALIR_HORAS);
+    const estados = [], motivos = [];
+    for (const h of hs) {
+      const a = assess(h, thr, S.perfil, p);
+      estados.push(a.st);
+      for (const r of a.reasons) if (r.s !== 'go') motivos.push({ s: r.s, txt: `${hh(h)} · ${r.txt}` });
+    }
+    /* La lluvia que ve otro modelo y el tuyo no (la ráfaga ya la mira `assess` vía `peorRacha`). */
+    const C = deEsteSitio(S.comparativa, p)?.hourly;
+    if (C?.time) {
+      C.__porHora ??= new Map(C.time.map((x, i) => [String(x).slice(0, 13), i]));
+      let peor = null;
+      for (const h of hs) {
+        const i = C.__porHora.get(String(h.t).slice(0, 13));
+        if (i === undefined) continue;
+        for (const m of COMPARAR) {
+          if (m.om === 'best_match') continue;
+          const mm = C[`precipitation_${m.om}`]?.[i];
+          if (has(mm) && (!peor || mm > peor.mm)) peor = { mm, quien: m.name, h };
+        }
+      }
+      const propio = Math.max(0, ...hs.map(h => (has(h.prec) ? h.prec : 0)));
+      if (peor && peor.mm >= thr.rainWarn && peor.mm > propio + 0.05) {
+        const st = peor.mm >= thr.rainNo ? 'no' : 'warn';
+        estados.push(st);
+        motivos.push({ s: st, txt: `${hh(peor.h)} · ${peor.quien} ve ${mmTxt(peor.mm)} mm/h donde tu modelo da ${mmTxt(propio)}` });
+      }
+    }
+    const orden = { no: 0, nd: 1, warn: 2, go: 3 };
+    motivos.sort((a, b) => orden[a.s] - orden[b.s]);
+    const s = estadoSalir(estados);
+    const txt = motivos.length
+      ? motivos.slice(0, 4).map(m => (m.s === 'no' ? `<b>${m.txt}</b>` : m.txt)).join(' · ')
+      : `nada llega a tus listones de ${hh(hs[0])} a ${hh(hs[hs.length - 1])}, ni en tu modelo ni en los otros`;
+    filas.push({ k: `Las ${SALIR_HORAS} horas siguientes`, s, txt });
+  }
+
+  return { estado: estadoSalir(filas.map(f => f.s)), filas, cuando: Date.now() };
+}
+
+function pintarAntesDeSalir() {
+  const el = $('#vSalir');
+  if (!el) return;
+  const suyo = !!(S.place && (S.saved || []).some(p => key(p) === key(S.place)));
+  if (!suyo || !S.data?.hours?.length) { el.hidden = true; el.innerHTML = ''; return; }
+
+  /* Lo que falte se pide, una vez y sin bloquear: cada carga repinta esto al llegar. */
+  const P = pintarAntesDeSalir;
+  if (!deEsteSitio(S.rayos) && !P._rayos) {
+    P._rayos = true;
+    Promise.resolve().then(() => cargarRayosAemet()).catch(() => {}).finally(() => { P._rayos = false; });
+  }
+  if (!(S.obs && S.obs.clave === key(S.place)) && !P._obs) {
+    P._obs = true;
+    Promise.resolve().then(() => cargarObservacion()).catch(() => {}).finally(() => { P._obs = false; });
+  }
+
+  const A = antesDeSalir();
+  if (!A) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  el.dataset.s = A.estado;
+  el.innerHTML = `<b class="acc__k">Antes de salir · ahora y ${SALIR_HORAS} h
+      <span class="salir__st" data-s="${A.estado}">${VT[A.estado]}</span></b>
+    <ul class="acc__l salir__l">
+      ${A.filas.map(f => `<li data-s="${f.s}"><span class="salir__k">${esc(f.k)}:</span> ${f.txt}</li>`).join('')}
+      <li data-s="nd"><span class="salir__k">Radar:</span> el eco de ahora no se lee aquí —
+        <button type="button" class="salir__ir" data-ir="radar">míralo en Radar</button> antes de salir</li>
+    </ul>
+    <p class="acc__nc acc__nc--suave">Con uno en rojo, sale en rojo. Cifras y medidas con su hora; la decisión es tuya.</p>`;
+  el.querySelector('[data-ir]')?.addEventListener('click', () => { try { setView('radar'); } catch {} });
 }
 
 function pintarRayosTorre() {
