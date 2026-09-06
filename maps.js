@@ -976,7 +976,17 @@ const Maps = {
      una recarga, no un mapa en blanco callado.
 
      Si le molesta, se vuelve a `dwd_icon_eu` en esta misma línea. */
-  map:null, model:'ecmwf_ifs', layer:'precipitation', base:'claro',
+  /* ── Y LE MOLESTÓ ──────────────────────────────────────────────────
+     Suyo, 06-09-2026 a las 19:20 desde Calpe, con el cartel rojo de «el
+     mapa se había quedado sin memoria y se ha recargado solo» encima de
+     la lluvia del jueves: *«va fatal mapas»*. Cuatro días con HRES de
+     fábrica y la red de seguridad saltando a diario. Se vuelve a lo
+     medido: arranca en ICON-EU (7 km, 5 días, aguanta nueve capas), y el
+     europeo de 9 km sigue a un toque en la barra para cuando quiera
+     mirar «como Windy» una capa concreta. La elección a mano se guarda
+     como siempre; solo se limpia UNA vez la que dejó el arranque de HRES
+     (ver `open()`).                                                    */
+  map:null, model:'dwd_icon_eu', layer:'precipitation', base:'claro',
   meta:null, t:0, playing:false, verValores:true, verBarbas:true,
   _frames:[], _encima:[], timer:null, radarFrames:null, radarHost:null,
   /* 0,95 y no 0,85: suyo, 31-08-2026, comparando con Meteored — «el
@@ -1013,7 +1023,13 @@ const Maps = {
        los tres cuelgues seguidos.) */
     /* El de fábrica es el europeo de 9 km desde el 02-09-2026 (ver la
        nota de `model:` arriba). Lo que él haya elegido a mano manda. */
-    this.model = LS.get('tmodel', 'ecmwf_ifs');
+    /* Una sola vez: quien tuviera guardado HRES por el arranque del 02-09
+       vuelve a ICON-EU. Si lo vuelve a elegir a mano, se respeta. */
+    if (!LS.get('tmodelLimpio0609', false)) {
+      if (LS.get('tmodel', null) === 'ecmwf_ifs') LS.set('tmodel', 'dwd_icon_eu');
+      LS.set('tmodelLimpio0609', true);
+    }
+    this.model = LS.get('tmodel', 'dwd_icon_eu');
     this.layer = LS.get('tlayer', 'precipitation');
     this.base  = LS.get('tbase',  'claro');
     this.terrain = LS.get('tterrain', true);
