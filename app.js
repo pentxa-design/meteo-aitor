@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.06-1741';
+const BUILD = '2026.09.06-1923';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -14724,7 +14724,12 @@ const Petardazo = {
          toca. Lo que sobraba era el segundo aviso encima, y dos carteles
          para el mismo fallo gastan el rojo. */
       const m = String(r?.message || r || '');
-      if (/OmHttpBackend|Aborted\(OOM\)|abortada|AbortError/i.test(m)) return;
+      /* «signal is aborted without reason» (06-09-2026, Calpe, cambiando
+         de capa en el mapa): es un AbortError de verdad, pero el NOMBRE va
+         en `r.name` y el mensaje no lo lleva, así que se colaba a la barra
+         roja. Una descarga cancelada por cambiar de capa no es un fallo. */
+      if (r?.name === 'AbortError') return;
+      if (/OmHttpBackend|Aborted\(OOM\)|abortada|AbortError|signal is aborted|aborted a request/i.test(m)) return;
       if (/Received \d+ bytes, expected \d+/i.test(m)) return;
       this.registrar('promesa', r);
     });
