@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.06-2340';
+const BUILD = '2026.09.07-0023';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -3976,7 +3976,16 @@ function nubesPorCapas(C) {
     { n: 'altas',  v: C?.cloud_cover_high, que: 'finas, dejan pasar el sol' },
   ].filter(x => has(x.v));
   if (!capas.length) return null;
-  const manda = capas.reduce((x, y) => (y.v > x.v ? y : x));
+  /* ── MANDA LA QUE TAPA, NO LA MÁS ALTA EN NÚMERO ─────────────────
+     Calpe, 07-09-2026 a las 00:18: «bajas 0 % · medias 70 % · altas
+     100 %» y debajo «Manda la de altas: finas, dejan pasar el sol», con
+     el rótulo grande diciendo «Cubierto». Las dos cosas a la vez no. Con
+     un 70 % de nube media el cielo está tapado por la media, aunque la
+     alta marque más: la misma regla del sol velado (bajas+medias desde
+     el 40 % tapan; las altas solo velan). Sin nada bajo ni medio al 40,
+     sigue mandando la mayor, como antes. */
+  const tapa = capas.find(x => x.n !== 'altas' && x.v >= 40);
+  const manda = tapa || capas.reduce((x, y) => (y.v > x.v ? y : x));
   return {
     capas,
     manda,
@@ -8504,8 +8513,11 @@ function lineaAguaTorre(k) {
 
   const cuando = L.sueltas
     ? `${L.nHoras} horas sueltas entre las ${hh(L.ini)} y las ${hh(L.fin)}`
-    : cayendo ? `<b>escampa a las ${hh(L.fin + 3600e3)}</b>`
-              : `de ${hh(L.ini)} a ${hh(L.fin + 3600e3)}`;
+    /* `+L.fin`: si `fin` llega como Date, `Date + 3600e3` pega texto y
+       la hora de después se pierde — salía «de 10:00 a 10:00» y «escampa»
+       una hora antes de lo previsto (Calpe, 07-09-2026 00:19). */
+    : cayendo ? `<b>escampa a las ${hh(+L.fin + 3600e3)}</b>`
+              : `de ${hh(L.ini)} a ${hh(+L.fin + 3600e3)}`;
 
   const pico = has(L.pico) && L.pico >= (S.thr?.rainWarn ?? 0.2) && L.hPico
     ? ` · lo más fuerte a las ${hh(L.hPico)}` : '';
@@ -10083,7 +10095,7 @@ function antesDeSalir() {
     const edadDe = x => { const t = x.medidoEn ? Date.parse(x.medidoEn) : NaN; return Number.isFinite(t) ? Date.now() - t : null; };
     const cuando = x => { const t = x.medidoEn ? Date.parse(x.medidoEn) : NaN; return Number.isFinite(t) ? `a las ${horaHM(x.medidoEn)}` : 'sin hora'; };
     const fresca = x => { const e = edadDe(x); return e !== null && e <= SALIR_MEDIDA_VIEJA; };
-    const donde = x => `${esc(x.nombre)} (a ${kmTxt(x.km)} km${x.alturaAnemometro ? `, racha a ${x.alturaAnemometro} m` : ''}, ${cuando(x)})`;
+    const donde = x => `${esc(x.nombre)} (a ${kmTxt(Number(x.km))} km${x.alturaAnemometro ? `, racha a ${x.alturaAnemometro} m` : ''}, ${cuando(x)})`;
     if (!O) txt = 'estaciones cercanas todavía no consultadas';
     else if (O.error) txt = `no he podido preguntar a las estaciones (${esc(O.error.slice(0, 50))}). Que no haya medida no es que no haya viento`;
     else {
