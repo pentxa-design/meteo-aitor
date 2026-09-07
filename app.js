@@ -22,6 +22,22 @@ const BUILD = '2026.09.07-1602';
    se cachea en el CDN y una misma consulta no se pide dos veces.
    Si el sitio se abre sin servidor (fichero local), se cae a las URL
    directas para poder seguir probando. */
+/* ── EN GITHUB PAGES, EL SERVIDOR ES VERCEL ────────────────────────────
+   pentxa-design.github.io solo sirve ficheros. Todo lo que en el Mac
+   reenviaba `.tools/servir.js` a Vercel (/om, /api/*, /rayos, /estaciones,
+   /mareas, /radar, /satelite, /webcams, /omtiles) va aquí directo a
+   Vercel. En cualquier otro sitio, BACKEND es el propio origen y no cambia
+   nada. Ojo: /api/* aún no manda cabeceras CORS, así que desde Pages esas
+   llamadas fallan hasta que el servidor las añada. */
+const BACKEND = /\.github\.io$/.test(location.hostname)
+  ? 'https://weather-app-ochre-one-76.vercel.app' : location.origin;
+const RUTAS_BACKEND = /^\/(om|api|rayos|estaciones|mareas|radar|radar-aemet|satelite|webcams|omtiles)([\/?]|$)/;
+if (BACKEND !== location.origin) {
+  const fetchOriginal = window.fetch.bind(window);
+  window.fetch = (u, o) => fetchOriginal(
+    (typeof u === 'string' && RUTAS_BACKEND.test(u)) ? BACKEND + u : u, o);
+}
+
 const PROXY = (location.protocol === 'http:' || location.protocol === 'https:')
   && !/^(localhost|127\.|192\.168\.)/.test(location.hostname) ? '/om' : null;
 
@@ -38,7 +54,7 @@ const directo = {
      fichero en local, como las demás. */
   rain : 'https://api.rainviewer.com/public/weather-maps.json',
 };
-const via = k => PROXY ? `${location.origin}${PROXY}?api=${k}` : directo[k];
+const via = k => PROXY ? `${BACKEND}${PROXY}?api=${k}` : directo[k];
 
 const API = {
   get fc()  { return via('fc'); },
@@ -51,7 +67,7 @@ const API = {
   // Catálogo de pasadas de satélite de EUMETSAT (lo lee el servidor).
   // Absoluta, como las demás: jget hace new URL() y una ruta relativa
   // revienta con "Invalid URL".
-  get sat() { return `${location.origin}/satelite`; },
+  get sat() { return `${BACKEND}/satelite`; },
 };
 
 /* Niveles de viento que el modelo publica realmente. Todo lo demás se estima. */
@@ -16480,8 +16496,8 @@ async function pintarHilo() {
           <button class="rec__x" data-quitar="${esc(n.cuando)}" aria-label="Borrar esta nota">×</button></div>
         <div class="hn__t">${esc(n.texto || '')}</div>
         ${n.foto
-          ? `<a class="hn__foto" href="/api/foto?f=${encodeURIComponent(n.foto)}" target="_blank" rel="noopener">
-               <img src="/api/foto?f=${encodeURIComponent(n.foto)}" alt="La foto que mandaste" loading="lazy">
+          ? `<a class="hn__foto" href="${BACKEND}/api/foto?f=${encodeURIComponent(n.foto)}" target="_blank" rel="noopener">
+               <img src="${BACKEND}/api/foto?f=${encodeURIComponent(n.foto)}" alt="La foto que mandaste" loading="lazy">
              </a>`
           : ''}
         ${n.respuesta
