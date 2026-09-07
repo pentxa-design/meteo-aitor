@@ -1,0 +1,147 @@
+{
+ "copia": "2026-09-07",
+ "de": "weather-app-ochre-one-76.vercel.app",
+ "torres": [
+  {
+   "name": "BI BERMEO",
+   "lat": 43.412976,
+   "lon": -2.718316,
+   "admin1": "Bizkaia",
+   "country": "España"
+  },
+  {
+   "name": "BI SOLLUBEMENDI",
+   "lat": 43.371057,
+   "lon": -2.764068,
+   "elev": 669,
+   "admin1": "Bizkaia",
+   "country": "España",
+   "hgt": 40,
+   "tipo": "torre"
+  },
+  {
+   "name": "BI LEKEITIO MOV",
+   "lat": 43.365538,
+   "lon": -2.508107,
+   "admin1": "Bizkaia",
+   "country": "España"
+  },
+  {
+   "name": "BI MUNGIA",
+   "lat": 43.321116,
+   "lon": -2.853362,
+   "admin1": "Bizkaia",
+   "country": "España"
+  },
+  {
+   "name": "BI GERNIKA2",
+   "lat": 43.31961,
+   "lon": -2.687801,
+   "admin1": "Bizkaia",
+   "country": "España"
+  },
+  {
+   "name": "BI SANTAMAÑA",
+   "lat": 43.260131,
+   "lon": -2.865452,
+   "admin1": "Bizkaia",
+   "country": "España"
+  },
+  {
+   "name": "BI MARKINA2",
+   "lat": 43.246233,
+   "lon": -2.508439,
+   "admin1": "Bizkaia",
+   "country": "España"
+  },
+  {
+   "name": "BI CARRANZA",
+   "lat": 43.24213,
+   "lon": -3.410335,
+   "admin1": "Bizkaia",
+   "country": "España"
+  },
+  {
+   "name": "BI OIZ",
+   "lat": 43.22805,
+   "lon": -2.5936,
+   "admin1": "Bizkaia",
+   "country": "España"
+  },
+  {
+   "name": "BI ZORNOTZA",
+   "lat": 43.21559,
+   "lon": -2.722825,
+   "admin1": "Bizkaia",
+   "country": "España"
+  },
+  {
+   "name": "BI BALMASEDA",
+   "lat": 43.215102,
+   "lon": -3.194619,
+   "admin1": "Bizkaia",
+   "country": "España"
+  },
+  {
+   "name": "BI MATIENA",
+   "lat": 43.159627,
+   "lon": -2.626779,
+   "admin1": "Bizkaia",
+   "country": "España"
+  },
+  {
+   "name": "VI ARBAIZA",
+   "lat": 43.047556,
+   "lon": -2.931611,
+   "admin1": "Araba/Álava",
+   "country": "España"
+  },
+  {
+   "name": "BI VIRGEN ORDUÑA",
+   "lat": 42.982051,
+   "lon": -3.037941,
+   "admin1": "Bizkaia",
+   "country": "España"
+  },
+  {
+   "name": "VI AMURRIO · ES-TIMS-45831",
+   "lat": 43.088797,
+   "lon": -2.999017,
+   "admin1": "Vantage · Ayala"
+  },
+  {
+   "name": "BI ZEBERIO · ES-TIMS-49242",
+   "lat": 43.138458,
+   "lon": -2.906011,
+   "admin1": "Vantage · Orozko"
+  },
+  {
+   "name": "BI LEMONA · ES-TIMS-49040",
+   "lat": 43.216936,
+   "lon": -2.773019,
+   "admin1": "Vantage · Lemoa"
+  },
+  {
+   "name": "BI PUNTAGALEA · ES-TIMS-48060",
+   "lat": 43.372494,
+   "lon": -3.021358,
+   "admin1": "Vantage · Getxo"
+  },
+  {
+   "name": "BI GALDAMES · ES-TIMS-48255",
+   "lat": 43.239979,
+   "lon": -3.123619,
+   "elev": 619,
+   "admin1": "Bizkaia",
+   "country": "España",
+   "hgt": 40,
+   "tipo": "torre"
+  },
+  {
+   "name": "BI DURAÑONA · ES-TIMS-50560",
+   "lat": 43.289743,
+   "lon": -3.03441,
+   "admin1": "Vantage · Valle De Trapaga-Trapagaran"
+  }
+ ]
+}
