@@ -60,7 +60,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 const TILES_DIRECTO = 'https://openmeteo.s3.amazonaws.com/data_spatial';
 const TILES_PROXY   = (typeof location !== 'undefined')
-  ? location.origin + '/omtiles' : TILES_DIRECTO;
+  ? (typeof BACKEND !== 'undefined' ? BACKEND : location.origin) + '/omtiles' : TILES_DIRECTO;
 
 let TILES = TILES_DIRECTO;
 const RECUERDA_MS = 6 * 3600e3;
@@ -449,7 +449,7 @@ const AEMET_RADAR = {
   via(fichero) {
     const enWeb = (location.protocol === 'https:' || location.protocol === 'http:')
       && !/^(localhost|127\.|192\.168\.)/.test(location.hostname);
-    return enWeb ? `${location.origin}/radar-aemet?f=${fichero}`
+    return enWeb ? `${typeof BACKEND !== 'undefined' ? BACKEND : location.origin}/radar-aemet?f=${fichero}`
                  : this.base + fichero;
   },
 
