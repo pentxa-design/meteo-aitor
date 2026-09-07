@@ -13857,7 +13857,26 @@ function adoptarConfig(torres) {
   return cambios;
 }
 
+/* ── LA COPIA DE LAS TORRES, PARA CUANDO EL SERVIDOR NO CONTESTA ──────
+   Desde GitHub Pages (pentxa-design.github.io) el servidor de Vercel no
+   deja hablar a /api/* con otro dominio (sin cabeceras CORS), así que un
+   aparato recién instalado allí se quedaría sin sus torres. Para eso está
+   `data/torres-copia.json`: las 20 del servidor a 07-09-2026, con sus
+   cotas. Solo entra cuando AQUÍ no hay ninguna: nunca pisa una lista que
+   ya exista en el aparato, y en cuanto el servidor vuelva a contestar,
+   manda él. */
+async function torresDeLaCopia() {
+  if (S.saved.length) return null;
+  try {
+    const r = await fetch('data/torres-copia.json', { cache: 'no-store' });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return Array.isArray(j?.torres) && j.torres.length ? j : null;
+  } catch { return null; }
+}
+
 async function sincronizarTorres({ mandar = false } = {}) {
+  let j = null;
   try {
     const r = await fetch('/api/torres', {
       method: 'POST',
@@ -13866,9 +13885,13 @@ async function sincronizarTorres({ mandar = false } = {}) {
                              modo: mandar ? 'mandar' : 'juntar' }),
       cache: 'no-store',
     });
-    if (!r.ok) return false;
-    const j = await r.json();
-    if (!Array.isArray(j.torres)) return false;
+    if (r.ok) j = await r.json();
+  } catch {}
+  if (!Array.isArray(j?.torres)) {
+    j = await torresDeLaCopia();
+    if (!j) return false;
+  }
+  try {
 
     /* La configuración que venga se adopta SIEMPRE, aunque la lista de
        sitios no haya cambiado: es el caso de este aparato recién
