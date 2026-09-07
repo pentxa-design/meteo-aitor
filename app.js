@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.07-0023';
+const BUILD = '2026.09.07-1602';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -5088,6 +5088,38 @@ function rachaDelDiaQueNoVesTu(fecha) {
 
   cruzan.sort((a, b) => b.v - a.v);
   return { peor: cruzan[0], pinta, listón: cruzan[0].v >= S.thr.gustNo ? S.thr.gustNo : S.thr.gustWarn };
+}
+
+/* ── ¿ESA AGUA LA VE ALGUIEN MÁS? ───────────────────────────────────
+   Suyo, 07-09-2026 desde Calpe, con el jueves y el sábado dibujados con
+   lluvia: *«¿jueves nuboso y agua? ¿y el sábado lo mismo?»*. Medido: el
+   europeo —dueño de la lluvia por acierto— ponía llovizna de 0,1 mm por
+   hora; ICON y GFS, secos del todo.
+
+   El dueño no se cambia —*«cada uno en lo suyo»*, dijo él ese mismo
+   día— pero a cinco días vista un agua que solo ve un modelo es un
+   «puede», no un «va a», y eso hay que decirlo debajo del dibujo, igual
+   que ya se dice con la racha («ICON da 64, tu listón es 60»).
+
+   Se cuenta cuántos modelos con dato diario pasan de 0,5 mm en el día
+   (medio milímetro: por debajo, los modelos bailan solos). Si hay tres
+   o más opiniones y como mucho una moja, se avisa nombrándola.        */
+function aguaDelDiaQueNoVenTodos(fecha) {
+  const D = deEsteSitio(S.diariaMulti);
+  if (!D?.time?.length) return null;
+  const i = D.time.indexOf(fecha);
+  if (i < 0) return null;
+  const con = [], mojan = [];
+  for (const m of MODELOS_TORMENTA) {
+    if (m.om === 'best_match') continue;                 // mezcla de los otros
+    const v = D[`precipitation_sum_${m.om}`]?.[i];
+    if (!has(v)) continue;
+    con.push({ nom: m.nom, v });
+    if (v >= 0.5) mojan.push({ nom: m.nom, v });
+  }
+  if (con.length < 3 || mojan.length > 1) return null;
+  const secos = con.filter(x => x.v < 0.5).map(x => x.nom);
+  return { n: con.length, mojan, secos };
 }
 
 function desacuerdoDelDia(fecha) {
@@ -12259,6 +12291,20 @@ function renderDays() {
         return `<div class="dcard__x" title="${esc(D.alto.nom)} ${D.alto.v.toFixed(0)}° · `
              + `${esc(D.bajo.nom)} ${D.bajo.v.toFixed(0)}°">⚠ los ${D.n} modelos van de `
              + `<b>${D.bajo.v.toFixed(0)}°</b> a <b>${D.alto.v.toFixed(0)}°</b></div>`;
+      })()}
+      ${(() => {
+        /* Solo si la tarjeta enseña agua: sin agua no hay nada que matizar. */
+        /* Por los milímetros de la tarjeta, no por el código diario: ese
+           es la peor hora y marcaba «agua» en días de 0,0 mm. */
+        if (!(has(mm) && mm >= 0.1)) return '';
+        const A = aguaDelDiaQueNoVenTodos(t);
+        if (!A) return '';
+        const quien = A.mojan.length
+          ? `solo <b>${esc(A.mojan[0].nom)}</b> ve agua (${mmTxt(A.mojan[0].v)} mm)`
+          : `ninguno pasa de 0,5 mm en el día`;
+        const lista = xs => xs.length <= 1 ? xs.join('') : xs.slice(0, -1).join(', ') + ' y ' + xs[xs.length - 1];
+        return `<div class="dcard__x" title="${esc(A.secos.join(', '))}: secos">⚠ ${quien} · `
+             + `${esc(lista(A.secos))}, ${A.secos.length === 1 ? 'seco' : 'secos'}</div>`;
       })()}
       ${tormenta ? `<div class="dcard__s">⚡ Riesgo de tormenta${horaDeTormenta(t) ? ' · ' + horaDeTormenta(t) : ''}</div>` : ''}
     </li>`;
