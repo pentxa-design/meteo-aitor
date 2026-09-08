@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.07-2359';
+const BUILD = '2026.09.08-1439';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -72,6 +72,8 @@ const API = {
 
 /* Niveles de viento que el modelo publica realmente. Todo lo demás se estima. */
 const MODEL_LEVELS = [10, 80, 120, 180];
+/* Lo alto de una torre suya: «las torres miden 50 metros» (Calpe, 08-09-2026). */
+const TORRE_ALTO_M = 50;
 const HEIGHTS = [10, 20, 30, 40, 50, 60, 80, 100, 120, 150, 180];
 
 /* ---------- Qué trabajo vas a hacer ─────────────────────────────────
@@ -11765,18 +11767,28 @@ function renderNow() {
          .filter(Boolean).join(' · '),
        tormenta ? 'no' : has(c?.cape) && c.cape >= (S.thr?.capeWarn ?? 300) ? 'warn' : 'go'),
 
-    /* ── PARA EL MONTE ────────────────────────────────────────────────
-       El viento a 10 m es el del pueblo. Arriba, en la campa, pega otra
-       cosa — y él sube al Oiz y al Sollube. El de 120 m es el que más se
-       le parece de lo que hay publicado. */
+    /* ── EN LO ALTO DE LA TORRE ─────────────────────────────────
+       El viento a 10 m es el de la caseta. Esta tarjeta decía el de
+       120 m «para la campa», y él lo cortó de raíz desde Calpe,
+       08-09-2026: *«no está bien, las torres miden 50 metros. No 120»*.
+       Y de paso lo de siempre: *«lo que me interesa en Mis estaciones es
+       lo que me voy a encontrar en la caseta base»* — eso no se toca,
+       sigue a 10 m. Aquí va lo alto de la torre: 50 m, estimado con
+       windAt() entre los niveles que publica el modelo (10 y 80 m), y
+       dicho que es estimado. Sirve para el día que decida subir; la
+       decisión es suya. */
     (() => {
-      const v120 = c?.levels?.[120];
-      const de = (fc?.prestadosDe || []).find(x => x.k === 'wind_speed_120m');
+      const r = c?.levels ? windAt(TORRE_ALTO_M, c.levels) : { v: null };
+      const soloSuelo = r.note === 'solo-10' || r.note === 'bajo-suelo';
+      const v = soloSuelo ? null : r.v;
+      const de = (fc?.prestadosDe || []).find(x => x.k === 'wind_speed_80m');
       return dt('Viento arriba',
-        has(v120) ? `${wtxt(v120)}<small> ${wu().lbl}</small>` : nd,
-        `A 120 m de altura, más parecido a lo que pega en la campa${
-          de ? ` · de ${esc(nombreDeModelo(de.de))}` : ''}`,
-        porUmbral(v120, S.thr.windWarn ?? 45, S.thr.windNo ?? 60));
+        has(v) ? `${wtxt(v)}<small> ${wu().lbl}</small>` : nd,
+        has(v)
+          ? `A ${TORRE_ALTO_M} m, lo alto de la torre${r.exact ? '' : ' · estimado entre los 10 y los 80 m del modelo'}${
+              de ? ` · de ${esc(nombreDeModelo(de.de))}` : ''}`
+          : 'El modelo solo publica el viento a 10 m: arriba no se puede estimar',
+        porUmbral(v, S.thr.windWarn ?? 45, S.thr.windNo ?? 60));
     })(),
 
     /* El isocero: por dónde anda la cota de nieve y el frío de verdad.
