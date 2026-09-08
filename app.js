@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.08-1439';
+const BUILD = '2026.09.08-1446';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -10962,6 +10962,52 @@ function cieloPartido(sel) {
   return { m1: mejor.m1, m2: mejor.m2, corte: mejor.corte };
 }
 
+/* Los tramos de cielo de una franja: [{txt, hora}], por bandos (sol 0-1,
+   velo 4, nube 2-3), sin agua por medio. null si no hay al menos 4 horas. */
+function tramosDeCielo(sel) {
+  const hs = (sel || []).map(h => ({ c: codigoQueSeVe(h, h.code), h })).filter(x => has(x.c));
+  if (hs.length < 4 || hs.some(x => x.c >= HAY_AGUA)) return null;
+  const bando = c => (c === VELADO ? 1 : c <= 1 ? 0 : 2);
+  const horaDe = h => {
+    if (h?.t) return String(h.t).slice(11, 16);
+    const d = h?.date instanceof Date ? h.date : (h?.date ? new Date(h.date) : null);
+    return d && !isNaN(d) ? `${String(d.getHours()).padStart(2, '0')}:00` : '';
+  };
+  // Tramos seguidos del mismo bando
+  let tr = [];
+  for (const x of hs) {
+    const b = bando(x.c);
+    if (tr.length && tr[tr.length - 1].b === b) tr[tr.length - 1].cs.push(x.c);
+    else tr.push({ b, cs: [x.c], hora: horaDe(x.h) });
+  }
+  const fundir = () => { for (let k = tr.length - 1; k > 0; k--) if (tr[k].b === tr[k - 1].b) {
+    tr[k - 1].cs = tr[k - 1].cs.concat(tr[k].cs); tr.splice(k, 1); } };
+  // Pegar el tramo i al vecino j: se queda el bando de j y la hora del que empiece antes
+  const pegar = (i, j) => { const a = Math.min(i, j), b = Math.max(i, j);
+    tr[j] = { b: tr[j].b, cs: tr[a].cs.concat(tr[b].cs), hora: tr[a].hora }; tr.splice(i, 1); fundir(); };
+  // 1) Una hora suelta entre dos tramos del mismo bando es un parpadeo del modelo: fuera
+  for (let k = tr.length - 2; k >= 1; k--)
+    if (tr[k].cs.length < 2 && tr[k - 1].b === tr[k + 1].b) pegar(k, k - 1);
+  // 2) Una hora suelta en un extremo se pega al de al lado
+  if (tr.length > 1 && tr[0].cs.length < 2) pegar(0, 1);
+  if (tr.length > 1 && tr[tr.length - 1].cs.length < 2) pegar(tr.length - 1, tr.length - 2);
+  // 3) Como mucho tres tramos: el más corto se pega al vecino más largo
+  while (tr.length > 3) {
+    // El más corto; a igual largo, antes el velo (es el matiz más fino)
+    let i = 0;
+    for (let k = 1; k < tr.length; k++)
+      if (tr[k].cs.length < tr[i].cs.length
+          || (tr[k].cs.length === tr[i].cs.length && tr[k].b === 1 && tr[i].b !== 1)) i = k;
+    const j = i === 0 ? 1 : i === tr.length - 1 ? i - 1
+            : (tr[i - 1].cs.length >= tr[i + 1].cs.length ? i - 1 : i + 1);
+    pegar(i, j);
+  }
+  const gana = xs => { const c = new Map();
+    for (const x of xs) c.set(x, (c.get(x) ?? 0) + 1);
+    return [...c.entries()].sort((a, b) => b[1] - a[1] || tapado(b[0]) - tapado(a[0]))[0][0]; };
+  return tr.map(t => ({ txt: wmoText(gana(t.cs)) ?? '—', hora: t.hora, b: t.b }));
+}
+
 function tituloFranja(sel, code, desde = '') {
   const base = wmoText(code) ?? '—';
   if (!has(code) || !sel?.length) return base;
@@ -10979,10 +11025,23 @@ function tituloFranja(sel, code, desde = '') {
      agua por medio no se entra aquí: eso ya lo cuenta el bloque de la
      llovizna de abajo. */
   if (code < HAY_AGUA) {
-    const p = cieloPartido(sel);
-    if (p) {
-      const t1 = wmoText(p.m1), t2 = wmoText(p.m2);
-      if (t1 && t2) return `${t1} al principio, ${t2.toLowerCase()} después`;
+    /* ── CON LA HORA, NO CON «AL PRINCIPIO» ──────────────────────────
+       Calpe, 08-09-2026 a las 14:40, cielo azul de punta a punta y la
+       tarde decía «Sol velado al principio, parcialmente nuboso
+       después». Los modelos tenían razón —el velo entraba a las 16 y la
+       nube media a las 19— pero «al principio» metía en el mismo saco
+       las 14 y las 15 limpias con las 16-18 veladas, porque el corte de
+       cieloPartido() solo distingue bando sol y bando nube, y el velado
+       es del bando del sol. Suyo: *«eso nada, cielo azul todo el rato»*.
+
+       Ahora la franja se cuenta por tramos y con su hora: «Despejado ·
+       sol velado desde las 16:00 · nubes desde las 19:00». Tramos de al
+       menos dos horas (una hora suelta se pega al de al lado, que un
+       modelo parpadea), tres como mucho. El dibujo partido y los dos
+       iconos siguen saliendo de cieloPartido(), que no cambia. */
+    const tramos = tramosDeCielo(sel);
+    if (tramos && tramos.length >= 2) {
+      return tramos.map((t, i) => i === 0 ? t.txt : `${t.txt.toLowerCase()} desde las ${t.hora}`).join(' · ');
     }
     return base;
   }
