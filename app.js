@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.08-1446';
+const BUILD = '2026.09.08-1451';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -909,12 +909,38 @@ const esLlovizna = c => has(c) && c >= 51 && c <= 57;
    modelo cargado, y con SUS listones. Y solo hacia arriba — si el
    código prestado ya habla de agua, se respeta tal cual, que de lluvia
    sabe más el que la publica. */
-function codigoQueSeVe(h, codigoDelCielo, thr = S.thr) {
-  const cl = h?.codeLluvia;
-  if (has(cl) && cl >= HAY_AGUA) return cl;
+/* ── GOTAS PRESTADAS CON 0,0 MM DEBAJO ─────────────────────────────
+   Calpe, 08-09-2026, mirando el miércoles en Horas: gotas de 19 a 23 y
+   «0,0 mm» debajo de cada una. AROME HD (el suyo) decía seco; el dibujo,
+   prestado al europeo, decía llovizna. La regla de arriba respetaba el
+   código prestado «porque de lluvia sabe más el que la publica», y salía
+   una hora con gotas y cero. Suyo: *«necesito precisión»*.
 
-  /* ¿El que se va a pintar habla ya de agua? Entonces no se toca. */
-  if (has(codigoDelCielo) && codigoDelCielo >= HAY_AGUA) return codigoDelCielo;
+   Desde hoy, cuando el código es de OTRO modelo y los milímetros son del
+   cargado, manda el número que él lee: 0,0 mm es nube sin gotas, y lo que
+   ve el otro modelo se dice en una etiqueta («⚠ ECMWF ve llovizna»),
+   como ya se hace con «GFS sí (0,2 mm)» en las franjas. Si el código y
+   los milímetros son del mismo modelo (ECMWF cargado, llovizna con 0,0 por
+   redondeo) no se toca: eso es sirimiri y moja igual. Devuelve el código
+   de agua prestado, o null si no es el caso. */
+function aguaPrestada(h) {
+  if (!h?.codigoAjeno) return null;
+  const mm = h.prec;
+  if (!has(mm) || mm > 0) return null;
+  const c = has(h.codeLluvia) ? h.codeLluvia : h.code;
+  return has(c) && c >= HAY_AGUA ? c : null;
+}
+
+function codigoQueSeVe(h, codigoDelCielo, thr = S.thr) {
+  if (aguaPrestada(h) !== null) {
+    codigoDelCielo = 3;            // seco según su número: nube, sin gotas
+  } else {
+    const cl = h?.codeLluvia;
+    if (has(cl) && cl >= HAY_AGUA) return cl;
+
+    /* ¿El que se va a pintar habla ya de agua? Entonces no se toca. */
+    if (has(codigoDelCielo) && codigoDelCielo >= HAY_AGUA) return codigoDelCielo;
+  }
 
   /* ¿Y el modelo cargado dice que moja? Si es que sí, manda el número. */
   const mm = h?.prec;
@@ -3457,6 +3483,11 @@ async function completar(f, p) {
    Cazado el 01-09-2026. */
 function buildHours(fc, height, place = null) {
   const H = fc.hourly, out = [];
+  /* ¿El dibujo es de otro modelo y los milímetros son del cargado? Es
+     el caso de AROME HD (da lluvia, no da código). Ver aguaPrestada(). */
+  const presta = k => (fc.prestadosDe || []).find(x => x.k === k);
+  const codigoAjeno = !!presta('weather_code') && !presta('precipitation');
+  const cieloDe = presta('weather_code') ? nombreDeModelo(presta('weather_code').de) : null;
   const now = Date.now();
   const idx0 = Math.max(0, H.time.findIndex(t => new Date(t).getTime() + 3600e3 > now));
 
@@ -3494,6 +3525,7 @@ function buildHours(fc, height, place = null) {
          «llovizna» — y la llovizna era la verdad. A partir de otoño esto
          puede ser la pauta de DOS o TRES días seguidos (suyo). */
       codeLluvia: H.weather_code_lluvia?.[i],
+      codigoAjeno, cieloDe,
       cape: H.cape?.[i], li: H.lifted_index?.[i], cin: H.convective_inhibition?.[i],
       /* ── LA ALTURA DE LA NUBE, QUE LLEVABA MUERTA DESDE SIEMPRE ─────
          Cazado el 01-09-2026 en el barrido. Los dos campos se PEDÍAN a
@@ -12077,7 +12109,8 @@ function renderHours() {
       <div class="hcard__i">${icon(codigoQueSeVe(h, h.code), h.day)}</div>
       <div class="hcard__t">${has(h.temp) ? `${h.temp.toFixed(0)}°` : '—'}</div>
       <div class="hcard__r">
-        <span>💧 ${has(h.pop) ? h.pop + '%' : '—'} · ${has(h.prec) ? mmTxt(h.prec) + ' mm' : 'sin dato'}</span>
+        <span>💧 ${has(h.pop) ? h.pop + '%' : '—'} · ${has(h.prec) ? mmTxt(h.prec) + ' mm' : 'sin dato'}${
+          (c => c !== null ? ` <span class="nd__ojo">⚠ ${esc(h.cieloDe || 'otro modelo')} ve ${esLlovizna(c) ? 'llovizna' : 'lluvia'}</span>` : '')(aguaPrestada(h))}</span>
         <span>💨 ${has(h.wind) ? wtxt(h.wind, true) : '—'} · ${has(h.dir) ? 'del ' + rumboLargo(h.dir) : '—'}</span>
         <span class="faint">Rocío ${has(h.dew) ? h.dew.toFixed(0)+'°' : '—'} · HR ${has(h.hum) ? h.hum+'%' : '—'}</span>
       </div>
