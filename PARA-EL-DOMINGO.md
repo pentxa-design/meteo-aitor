@@ -1090,3 +1090,15 @@ Aitor, madrugada del 09-09-2026, tras cuatro semanas de «en Ahora una cosa, en 
 
 **Cómo comprobar en casa que ha quedado bien:** en la consola, `comprobarCielo()` debe devolver `[]` en Ahora, Horas y 10 días, de día y de noche; `JSON.parse(localStorage.getItem('torre.fallos')||'[]')` sin entradas «cielo»; y el icono grande de Ahora tiene que ser el mismo que la primera tarjeta de Horas (`document.querySelector('#nowIco svg').dataset.code === document.querySelector('#hlist .hcard svg').dataset.code`).
 
+## 11. El vigilante grita igual por todo: qué arreglar en los avisos (servidor)
+
+Aitor, 09-09-2026 00:32, con 40 avisos en un día de lluvia: *«me llegan muchos»*. Vistos en su lista de «Avisos que te han llegado» (captura). Todo esto es del servidor (`api/vigilante`, `api/avisar`, la pasada que manda las notificaciones), que vive en el proyecto de casa: **no está en la rama del portátil**.
+
+1. **Avisa de horas ya pasadas.** «GALDAMES (hoy): racha de 71 km/h de 18h a 18h» mandado a las 20:30. Regla: un aviso solo por lo que queda por venir (hora del dato > hora de envío); lo pasado, como mucho, va al parte, no a la notificación.
+2. **«De 18h a 18h», «de 05h a 05h».** Una sola hora se escribe «a las 18h».
+3. **«Racha de 70 km/h. Por encima de 70 km/h».** Cuando el valor es igual al listón, decir «llega a tu listón de 70»; «por encima» solo si lo supera.
+4. **Un aviso por torre y por pasada.** El mismo «el agua se adelanta: 20h pasa a 18h» llegó a las 16:00 para GERNIKA2, SANTAMAÑA y ZORNOTZA y a las 22:30 para MARKINA2 y OIZ. Regla: una notificación por pasada con todas las torres afectadas en el título («AGUA HOY · 3 torres») y en el cuerpo; y solo cuando el cambio cruza un listón (lluvia/racha/CAPE) o mueve la hora ≥ 2 h. Un adelanto de 20h a 18h sin cruzar nada es información de parte, no de aviso.
+5. **Horas de silencio.** De 23:00 a 06:00 solo lo que sea rojo (racha ≥ listón NO, tormenta con CAPE ≥ 700 y tapa < 75). El resto se acumula y sale con el parte de las 06:30.
+
+Cómo comprobarlo en casa: con lluvia general en Bizkaia, un día no debería pasar de 4-6 notificaciones (una por pasada con cambios reales), y ninguna sobre horas ya pasadas.
+
