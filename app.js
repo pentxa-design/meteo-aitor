@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.08-2355';
+const BUILD = '2026.09.08-2358';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -12299,7 +12299,21 @@ function renderDays() {
     /* SIN HORAS NO SE INVENTA UN DÍA. El código diario decía «cubierto»
        con nueve horas de sol y «llovizna» con cero milímetros: usarlo de
        reserva es lo que le costó el sábado. Mejor un hueco que se ve. */
-    if (!manana.length && !tarde.length) return SIN_DIBUJO;
+    /* ── LO QUE QUEDA DE HOY, DE NOCHE ────────────────────────────────
+       Calpe, 08-09-2026 a las 23:53: la tarjeta de «Hoy» con un
+       interrogante. Sin horas de 6 a 20 no se inventa el día (regla del
+       04-09, se mantiene), pero si quedan horas de noche con código, ESO
+       es lo que queda de hoy y se dibuja con la luna. Mismo criterio que
+       las mitades: el agua manda, y si no moja, el cielo se mide. */
+    if (!manana.length && !tarde.length) {
+      const noche = conDato.filter(h => h.date.getHours() >= 21 || h.date.getHours() <= 5);
+      if (noche.length) {
+        const cs = noche.map(h => codigoQueSeVe(h, h.code)).filter(has);
+        const c = cs.some(x => x >= HAY_AGUA) ? codigoFranja(noche) : (cieloDelDia(noche) ?? codigoFranja(noche));
+        if (has(c)) return icon(c, 0);
+      }
+      return SIN_DIBUJO;
+    }
 
     /* ── EL CORTE VA DONDE CAMBIA EL CIELO, NO A LAS 13:00 ────────────
        Suyo, 01-09-2026, y es de las quejas que llevaba repitiendo:
