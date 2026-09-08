@@ -1,6 +1,6 @@
 # PARA EL DOMINGO · traer al Mac de casa lo hecho en el portátil
 
-Última actualización: 08-09-2026 09:00 (portátil, Calpe). Procedimientos 6A y 6B ensayados el 08-09 sobre copias de e5ab019: los dos aplican limpios. Este documento se actualiza con cada commit de la rama; en caso de duda, la verdad es `git log e5ab019..portatil-2026-09-07`.
+Última actualización: 09-09-2026 00:30 (portátil, Calpe). Procedimientos 6A y 6B ensayados el 08-09 sobre copias de e5ab019: los dos aplican limpios. Este documento se actualiza con cada commit de la rama; en caso de duda, la verdad es `git log e5ab019..portatil-2026-09-07`.
 
 ## 1. Qué es esto y qué tienes que hacer
 
@@ -1067,4 +1067,26 @@ Procedimiento:
 ```
 
 Regla que va con ello: **cada cambio se prueba también de noche** (poner la hora del sistema o mirar la app pasadas las 21:00) antes de darlo por bueno.
+
+## 10. El cambio de fondo del 9 de septiembre: un solo camino para el cielo
+
+Aitor, madrugada del 09-09-2026, tras cuatro semanas de «en Ahora una cosa, en 10 días otra; lo reparaba y a las 24 h vuelta a empezar»: *«esto no puede seguir así»*. Lo que se encontró y lo que se hizo (commits «Un solo camino para el cielo…» y los tres siguientes). **Es lo primero que hay que traer a casa, porque es lo que corta el problema de raíz.**
+
+**Causas medidas en el código:**
+1. El cielo se calculaba en cinco sitios con reglas distintas (Ahora, franjas, Horas, 10 días, fila Cielo de Mis estaciones).
+2. `renderDays` montaba sus horas A MANO desde `fc.hourly` (sin `codigoAjeno`, sin `day`, sin `sitio`) y medía el cielo con `cieloDelDia` (nubosidad media) mientras las franjas votaban códigos.
+3. **Al llegar la comparativa (`cargarComparativa`, la votación `cieloVotado` del 06-09) solo se repintaban `renderTower` y `renderNow`.** «Horas» y «10 días» se quedaban con el cielo de antes de votar hasta el siguiente pintado completo. Esta es, casi seguro, la causa principal de «cada apartado marcaba una cosa».
+
+**Lo que hay ahora (todo en app.js):**
+- `extrasDe(fc)`, `horaDe(fc, i, height, place, extra)`, `conAhora(h, fc.current)`, `buildHours` (usa horaDe) y `horasDelDia(fc, dia)`: **todas** las horas de la app salen del mismo constructor; la hora en curso lleva el código y las capas de `current`, así el icono grande de Ahora y la primera tarjeta de Horas son la misma cuenta.
+- `cieloVisto(h)` → `{code, dia, txt}`: lo único que decide qué cielo se pinta y se escribe para una hora (código visto, día/noche, texto con «Velo de nubes altas» de noche).
+- `tramosDeCielo(sel)` (reescrita: devuelve `{code, dia, txt, hora, desde, hasta}` por tramo; el agua es intocable en las dos direcciones y no cuenta para el tope de tres tramos) y `resumenCielo(sel)` → `{code, dia, txt, partes, iconos}`: franjas de Ahora y tarjetas de 10 días pintan **solo** con esto. Dos iconos = el primer tramo y el peor de los siguientes (dos iguales se quedan en uno).
+- `iconosDelDia(dia)` es global (usa horasDelDia + resumenCielo); sin horas 6-20 usa las de noche con luna; sin horas con dato, `SIN_DIBUJO`.
+- `tituloFranja`: si hay tramos, la frase es la misma línea de tiempo que los iconos («Cubierto · llovizna débil desde las 15:00 · mayormente despejado desde las 17:00»).
+- `icon()` sella cada svg con `data-code` y `data-dia`; las franjas llevan `data-ini`/`data-fin` y las tarjetas de día `data-dia`.
+- `cargarComparativa` repinta también `renderHours` y `renderDays` y llama a `vigilarCielo`.
+- `comprobarCielo()` + `vigilarCielo(origen)` al final de `paint()` y tras la comparativa: comparan lo que hay en el DOM con lo que dicen las horas ahora mismo (icono grande vs hora en curso, primera tarjeta de Horas vs icono grande, cada franja vs sus horas, cada día vs las suyas). Si no cuadra: repinta, apunta en `torre.fallos` (donde = «cielo …») y avisa con toast; si tras repintar sigue sin cuadrar, barra roja (`Petardazo.registrar`).
+- `cieloPartido()` y `cieloDelDia()` quedan sin uso (se dejaron para no romper nada; se pueden borrar en casa).
+
+**Cómo comprobar en casa que ha quedado bien:** en la consola, `comprobarCielo()` debe devolver `[]` en Ahora, Horas y 10 días, de día y de noche; `JSON.parse(localStorage.getItem('torre.fallos')||'[]')` sin entradas «cielo»; y el icono grande de Ahora tiene que ser el mismo que la primera tarjeta de Horas (`document.querySelector('#nowIco svg').dataset.code === document.querySelector('#hlist .hcard svg').dataset.code`).
 
