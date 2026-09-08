@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.09-0021';
+const BUILD = '2026.09.09-0022';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11162,6 +11162,16 @@ function tituloFranja(sel, code, desde = '') {
      dos y en su orden: «Despejado al principio, cubierto después». Con
      agua por medio no se entra aquí: eso ya lo cuenta el bloque de la
      llovizna de abajo. */
+  /* ── LA MISMA LÍNEA DE TIEMPO QUE LOS ICONOS (09-09-2026) ────────────
+     Con agua o sin ella: si la franja tiene tramos, la frase los cuenta
+     en orden y con su hora, y son los MISMOS tramos de los que salen los
+     dos iconos. Así no puede pasar lo de Bermeo a las 00:20: icono de
+     cubierto y llovizna con la frase «Mayormente despejado». La línea de
+     los milímetros de debajo sigue diciendo de qué hora a qué hora moja. */
+  const linea = tramosDeCielo(sel);
+  if (linea && linea.length >= 2)
+    return linea.map((t, i) => i === 0 ? t.txt : `${t.txt.toLowerCase()} desde las ${t.hora}`).join(' · ');
+
   if (code < HAY_AGUA) {
     /* ── CON LA HORA, NO CON «AL PRINCIPIO» ──────────────────────────
        Calpe, 08-09-2026 a las 14:40, cielo azul de punta a punta y la
