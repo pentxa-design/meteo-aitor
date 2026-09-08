@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.08-2352';
+const BUILD = '2026.09.08-2355';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11199,15 +11199,28 @@ function renderNow() {
     const mismoDia = d => d.getFullYear() === h0.getFullYear()
                        && d.getMonth() === h0.getMonth()
                        && d.getDate() === h0.getDate();
-    const hoy = (S.data?.hours || []).filter(h => h?.date && mismoDia(h.date));
-    const cuando = (obj, cual) => {
-      const conT = hoy.filter(h => has(h.temp));
-      if (!conT.length) return '';
-      const h = conT.reduce((a, b) => (cual === 'max' ? (b.temp > a.temp ? b : a)
-                                                      : (b.temp < a.temp ? b : a)));
-      return ` <small>a las ${String(h.date.getHours()).padStart(2, '0')}:00</small>`;
+    /* ── EN TODO EL DÍA, NO SOLO EN LO QUE QUEDA DE ÉL ────────────────
+       Calpe, 08-09-2026 a las 23:49: «Máx 32° a las 23:00 · Mín 23° a las
+       23:00». Los números eran del día entero (daily), pero la hora se
+       buscaba en S.data.hours, que empieza en la hora en curso: a las
+       23:49 solo quedaba las 23:00 y las dos horas salían iguales, y
+       falsas. Ahora se busca en fc.hourly, que trae el día desde las
+       00:00, la hora cuya temperatura más se acerca al dato del día; si
+       ninguna se acerca a menos de un grado, no se pone hora. */
+    const Hh = fc.hourly;
+    const idxHoy = (Hh?.time || []).map((t, i) => i)
+      .filter(i => has(Hh.temperature_2m?.[i]) && mismoDia(new Date(Hh.time[i])));
+    const cuando = valor => {
+      let mejor = null;
+      for (const i of idxHoy) {
+        const d = Math.abs(Hh.temperature_2m[i] - valor);
+        if (!mejor || d < mejor.d) mejor = { i, d };
+      }
+      if (!mejor || mejor.d > 1) return '';
+      const hh = new Date(Hh.time[mejor.i]).getHours();
+      return ` <small>a las ${String(hh).padStart(2, '0')}:00</small>`;
     };
-    el.innerHTML = `Máx ${mx.toFixed(0)}°${cuando(mx, 'max')} · Mín ${mn.toFixed(0)}°${cuando(mn, 'min')}`;
+    el.innerHTML = `Máx ${mx.toFixed(0)}°${cuando(mx)} · Mín ${mn.toFixed(0)}°${cuando(mn)}`;
   })();
 
   $('#tz').textContent = fc.timezone_abbreviation ?? '';
