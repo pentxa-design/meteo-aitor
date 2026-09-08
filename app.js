@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.09-0022';
+const BUILD = '2026.09.09-0024';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11138,6 +11138,10 @@ function resumenCielo(sel) {
   if (partes && partes.length >= 2) {
     const peor = partes.slice(1).reduce((a, b) => (peso(b.code) > peso(a.code) ? b : a));
     iconos = [partes[0], peor];
+    /* Dos iconos iguales no cuentan nada (dos ratos de llovizna con una
+       hora seca en medio): se deja uno, que abarca los dos. */
+    if (iconos[0].code === iconos[1].code)
+      iconos = [{ code: iconos[0].code, dia, desde: iconos[0].desde, hasta: peor.hasta }];
   } else {
     const hn = h => (h.date instanceof Date) ? h.date.getHours() : Number(String(h.t).slice(11, 13));
     iconos = [{ code, dia, desde: hn(hs[0]), hasta: hn(hs[hs.length - 1]) }];
