@@ -1,6 +1,6 @@
 # PARA EL DOMINGO · traer al Mac de casa lo hecho en el portátil
 
-Última actualización: 08-09-2026 00:45 (portátil, Calpe). Este documento se actualiza con cada commit de la rama; en caso de duda, la verdad es `git log e5ab019..portatil-2026-09-07`.
+Última actualización: 08-09-2026 09:00 (portátil, Calpe). Procedimientos 6A y 6B ensayados el 08-09 sobre copias de e5ab019: los dos aplican limpios. Este documento se actualiza con cada commit de la rama; en caso de duda, la verdad es `git log e5ab019..portatil-2026-09-07`.
 
 ## 1. Qué es esto y qué tienes que hacer
 
@@ -78,12 +78,12 @@ cat deploy.sh 2>/dev/null; sed -n '1,40p' pruebas.js 2>/dev/null
 ```bash
 tar -C "$(dirname "$P")" --exclude=node_modules -czf "$HOME/casa-antes-portatil-$(date +%Y%m%d-%H%M).tgz" "$(basename "$P")" && ls -la "$HOME"/casa-antes-portatil-*.tgz
 # Si YA es repo git:
-git -C "$P" switch -c traer-portatil-2026-09-13 && git -C "$P" add -A && git -C "$P" commit -q -m "Estado de casa antes de traer el portátil (13-09-2026)"; git -C "$P" log --oneline -1
+git -C "$P" checkout -b traer-portatil-2026-09-13 && git -C "$P" add -A && git -C "$P" commit -q -m "Estado de casa antes de traer el portátil (13-09-2026)"; git -C "$P" log --oneline -1
 # Si NO es repo git:
 cd "$P" && git init -q && printf 'node_modules/\n.vercel/\n' >> .gitignore && git add -A && git commit -q -m "Estado de casa 13-09-2026" && git log --oneline -1
 ```
 
-### 4. Traer la rama del portátil desde GitHub a una carpeta APARTE (nunca dentro de $P, nunca mezclada con el repo de casa). El primer commit debe ser e5ab019; la punta hoy es 0b9299f, pero si el portátil sube más commits antes del domingo cambiará: vale el nombre de la rama, no el hash.
+### 4. Traer la rama del portátil desde GitHub a una carpeta APARTE (nunca dentro de $P, nunca mezclada con el repo de casa). El primer commit debe ser e5ab019; la punta cambia con cada commit del portátil: vale el nombre de la rama, no el hash.
 
 ```bash
 B="$HOME/portatil-2026-09-07"
@@ -1010,7 +1010,7 @@ DETALLES: /api/foto en el hilo se carga como `<img src>` y `<a href>`, no necesi
 - El bloque BACKEND / RUTAS_BACKEND / envoltorio de fetch (app.js:24-40), `${BACKEND}` en `via`, `API.sat`, `pintarHilo`, `TILES_PROXY` y `AEMET_RADAR.via` son solo para GitHub Pages: fuera de *.github.io `BACKEND === location.origin` y el envoltorio ni se instala, así que se puede llevar tal cual (viene en el diff, y así el portátil y casa tienen el mismo app.js) o dejarlo fuera. .nojekyll, .gitignore (`.tools/`) y .claude/launch.json NO van en el parche y no hacen falta en casa (launch.json apunta a /Users/aitor/AitorMeteo, ruta del portátil).
 - BACKEND lleva el dominio de Vercel escrito a mano ('https://weather-app-ochre-one-76.vercel.app', app.js:33). Si casa cambia de dominio, GitHub Pages se queda sin datos; la web de Vercel no se entera.
 - Si `pruebas.js` de casa falla tras el parche, no se publica y no se salta la prueba: los cambios del portátil tocan justo lo que vigila (`codigoQueSeVe`, `codigoFranja`, `cieloPartido`, `renderNow`, `renderDays`). Léela y arregla; app.js:14081 explica por qué existe.
-- Si el portátil sube más commits a portatil-2026-09-07 antes del domingo, el hash de la punta cambia (hoy 0b9299f): usa siempre el nombre de la rama y mira `git -C "$B" log --oneline e5ab019..portatil-2026-09-07` para saber qué se lleva. Los parches salen SIEMPRE de e5ab019: no inventes otra base.
+- Si el portátil sube más commits a portatil-2026-09-07 antes del domingo, el hash de la punta cambia (cambia con cada commit): usa siempre el nombre de la rama y mira `git -C "$B" log --oneline e5ab019..portatil-2026-09-07` para saber qué se lleva. Los parches salen SIEMPRE de e5ab019: no inventes otra base.
 - Con `Access-Control-Allow-Origin` un solo valor: varios orígenes separados por comas los rechaza el navegador (si hacen falta varios, se devuelve el que coincida y `Vary: Origin`). Y el OPTIONS tiene que contestar 204 ANTES de cualquier comprobación de método o de clave: hoy /api/torres y /api/campo contestan 405 y /api/euskalmet 200 sin cabeceras, y las tres cosas hacen fallar el preflight.
 - Al probar en el móvil no borres la app ni sus datos para «forzar»: la lista de torres, los ajustes y los avisos recibidos viven en el aparato y en el servidor; con el sello bien, basta con abrirla y esperar la recarga única.
 - /api/vigilante sin `?pulso=1` devuelve 401: no es un fallo, es cómo está hecho; la app siempre lo pide con `?pulso=1` (app.js:16625).
