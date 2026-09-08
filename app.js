@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.08-2358';
+const BUILD = '2026.09.09-0018';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -761,7 +761,7 @@ function icon(code, day = 1) {
   else if (isStormCode(code))                      g = cloud(0, -2.4, '#8d9cb8') + bolt + (code === 96 || code === 99 ? granizo : '');
   else                                             g = cloud(0, 0, '#9fb0cf');
 
-  return `<svg viewBox="0 0 24 26" aria-hidden="true">${g}</svg>`;
+  return `<svg viewBox="0 0 24 26" aria-hidden="true" data-code="${has(code) ? code : ''}" data-dia="${day ? 1 : 0}">${g}</svg>`;
 }
 
 /* ---------- 4. Perfil vertical de viento ─────────────────────────────
@@ -3481,23 +3481,30 @@ async function completar(f, p) {
 /* `place` entra desde fuera: sin él, las veinte filas del parte se
    evaluaban con `S.place` —el sitio ABIERTO— y con su comparativa.
    Cazado el 01-09-2026. */
-function buildHours(fc, height, place = null) {
-  const H = fc.hourly, out = [];
+/* ═══ UN SOLO CAMINO PARA LAS HORAS (09-09-2026) ═══════════════════
+   Aitor, tras cuatro semanas de «en Ahora una cosa, en 10 días otra»:
+   *«esto no puede seguir así»*. Una de las causas: «10 días» montaba sus
+   horas A MANO (sin codigoAjeno, sin day, sin sitio) y las pintaba con
+   otra regla. Ahora TODAS las horas de la app —Horas, Mis estaciones,
+   franjas, 10 días— salen de horaDe(), y el cielo de cada una de
+   cieloVisto(). Lo que no comparte camino, discrepa tarde o temprano. */
+function extrasDe(fc) {
   /* ¿El dibujo es de otro modelo y los milímetros son del cargado? Es
      el caso de AROME HD (da lluvia, no da código). Ver aguaPrestada(). */
-  const presta = k => (fc.prestadosDe || []).find(x => x.k === k);
+  const presta = k => (fc?.prestadosDe || []).find(x => x.k === k);
   const codigoAjeno = !!presta('weather_code') && !presta('precipitation');
   const cieloDe = presta('weather_code') ? nombreDeModelo(presta('weather_code').de) : null;
-  const now = Date.now();
-  const idx0 = Math.max(0, H.time.findIndex(t => new Date(t).getTime() + 3600e3 > now));
+  return { codigoAjeno, cieloDe };
+}
 
-  for (let i = idx0; i < Math.min(idx0 + 48, H.time.length); i++) {
-    const lv = { 10: H.wind_speed_10m?.[i], 80: H.wind_speed_80m?.[i],
-                 120: H.wind_speed_120m?.[i], 180: H.wind_speed_180m?.[i] };
-    const w  = windAt(height, lv);
-    const g  = gustAt(height, H.wind_gusts_10m?.[i], lv[10], w.v);
-
-    out.push({
+function horaDe(fc, i, height, place, extra) {
+  const H = fc.hourly;
+  const { codigoAjeno, cieloDe } = extra || extrasDe(fc);
+  const lv = { 10: H.wind_speed_10m?.[i], 80: H.wind_speed_80m?.[i],
+               120: H.wind_speed_120m?.[i], 180: H.wind_speed_180m?.[i] };
+  const w  = windAt(height, lv);
+  const g  = gustAt(height, H.wind_gusts_10m?.[i], lv[10], w.v);
+  return {
       t: H.time[i], date: new Date(H.time[i]), h: height,
       /* El sitio de la fila, para que el voto del cielo solo use la
          comparativa de ESTE sitio y no la del abierto (06-09-2026). */
@@ -3549,9 +3556,46 @@ function buildHours(fc, height, place = null) {
       day: has(H.is_day?.[i]) ? H.is_day[i]
            : (new Date(H.time[i]).getHours() >= 8 && new Date(H.time[i]).getHours() <= 19 ? 1 : 0),
       uv: H.uv_index?.[i],
-    });
+    };
+}
+
+/* La hora EN CURSO lleva lo más fresco que publica el modelo: el código
+   y las capas de `current`. Así «Ahora» y la primera tarjeta de «Horas»
+   son la MISMA hora con los MISMOS datos, y no pueden discrepar. */
+function conAhora(h, C) {
+  if (!h || !C) return h;
+  if (has(C.weather_code))     h.code        = C.weather_code;
+  if (has(C.cloud_cover))      h.cloud       = C.cloud_cover;
+  if (has(C.cloud_cover_low))  h.nubesBajas  = C.cloud_cover_low;
+  if (has(C.cloud_cover_mid))  h.nubesMedias = C.cloud_cover_mid;
+  if (has(C.cloud_cover_high)) h.nubesAltas  = C.cloud_cover_high;
+  return h;
+}
+
+function buildHours(fc, height, place = null) {
+  const H = fc.hourly, out = [];
+  const extra = extrasDe(fc);
+  const now = Date.now();
+  const idx0 = Math.max(0, H.time.findIndex(t => new Date(t).getTime() + 3600e3 > now));
+
+  for (let i = idx0; i < Math.min(idx0 + 48, H.time.length); i++) {
+    const h = horaDe(fc, i, height, place, extra);
+    if (i === idx0) conAhora(h, fc.current);
+    out.push(h);
   }
   out.forEach(h => Object.assign(h, assess(h, S.thr, S.perfil, place ?? S.place)));
+  return out;
+}
+
+/* Todas las horas de un día (AAAA-MM-DD) del sitio abierto, por el mismo
+   camino. Para «10 días», que necesita más allá de las 48 h de S.data.hours. */
+function horasDelDia(fc, dia) {
+  const H = fc?.hourly;
+  if (!H?.time) return [];
+  const extra = extrasDe(fc);
+  const out = [];
+  for (let i = 0; i < H.time.length; i++)
+    if (String(H.time[i]).startsWith(dia)) out.push(horaDe(fc, i, S.hgt, null, extra));
   return out;
 }
 
@@ -5281,6 +5325,15 @@ async function cargarComparativa(place) {
   if (S.data) {
     seguro('torre', renderTower);
     seguro('ahora', renderNow);
+    /* ── Y TAMBIÉN «HORAS» Y «10 DÍAS» (09-09-2026) ──────────────────
+       Aquí estaba una de las causas de «cada apartado marcaba una cosa»:
+       la votación del cielo (cieloVotado, 06-09) cambia el código de
+       cada hora, pero al llegar solo se repintaban «Ahora» y la ficha de
+       la torre. «Horas» y «10 días» se quedaban con el cielo de ANTES de
+       votar, y así un día entero. */
+    seguro('horas', renderHours);
+    seguro('días',  renderDays);
+    vigilarCielo('comparativa');
   }
 }
 
@@ -7626,7 +7679,7 @@ function renderParte() {
          como fallo de la estación. */
       + fila('Cielo',
              (has(H?.code) || has(H?.cloud))
-               ? `<b>${esc(textoVisto(codigoQueSeVe(H, H.code), H?.day) ?? '—')}</b>${has(H?.cloud) ? ` · ${Math.round(H.cloud)} %` : ''}`
+               ? `<b>${esc(cieloVisto(H).txt ?? '—')}</b>${has(H?.cloud) ? ` · ${Math.round(H.cloud)} %` : ''}`
                : '',
              M ? '<span class="pt__tab__no">ningún aparato lo mide</span>' : '')
       /* El CAPE y la tapa solo tienen columna de modelo, y se dice por
@@ -10994,42 +11047,55 @@ function cieloPartido(sel) {
   return { m1: mejor.m1, m2: mejor.m2, corte: mejor.corte };
 }
 
-/* Los tramos de cielo de una franja: [{txt, hora}], por bandos (sol 0-1,
-   velo 4, nube 2-3), sin agua por medio. null si no hay al menos 4 horas. */
+/* ═══ EL CIELO DE UNA HORA, UNA SOLA VEZ ═════════════════════════════
+   cieloVisto(h) es lo ÚNICO que decide qué cielo se pinta y se escribe
+   para una hora: código visto (codigoQueSeVe), día o noche, y texto.
+   Ahora, Horas, Mis estaciones, franjas y 10 días lo llaman a él. */
+function cieloVisto(h) {
+  if (!h) return { code: undefined, dia: 1, txt: null };
+  const code = codigoQueSeVe(h, h.code);
+  const hh = h.date instanceof Date ? h.date.getHours()
+           : (h.t ? Number(String(h.t).slice(11, 13)) : NaN);
+  const dia = has(h.day) ? h.day : (hh >= 8 && hh <= 19 ? 1 : 0);
+  return { code, dia, txt: textoVisto(code, dia) };
+}
+
+/* Los tramos de cielo de un conjunto de horas: [{code, dia, txt, hora,
+   desde, hasta, n}], por bandos (sol 0-1, velo 4, nube 2-3, agua ≥51).
+   null si no hay al menos 4 horas con dato. El agua nunca se absorbe como
+   «parpadeo»: una hora de sirimiri decide (regla del 31-08). */
 function tramosDeCielo(sel) {
   const hs = (sel || []).map(h => ({ c: codigoQueSeVe(h, h.code), h })).filter(x => has(x.c));
-  if (hs.length < 4 || hs.some(x => x.c >= HAY_AGUA)) return null;
-  const bando = c => (c === VELADO ? 1 : c <= 1 ? 0 : 2);
-  const horaDe = h => {
-    if (h?.t) return String(h.t).slice(11, 16);
-    const d = h?.date instanceof Date ? h.date : (h?.date ? new Date(h.date) : null);
-    return d && !isNaN(d) ? `${String(d.getHours()).padStart(2, '0')}:00` : '';
-  };
-  // Tramos seguidos del mismo bando
+  if (hs.length < 4) return null;
+  const bando = c => (c >= HAY_AGUA ? 3 : c === VELADO ? 1 : c <= 1 ? 0 : 2);
+  const horaNum = h => (h?.date instanceof Date) ? h.date.getHours()
+                     : (h?.t ? Number(String(h.t).slice(11, 13)) : NaN);
   let tr = [];
   for (const x of hs) {
     const b = bando(x.c);
-    if (tr.length && tr[tr.length - 1].b === b) tr[tr.length - 1].cs.push(x.c);
-    else tr.push({ b, cs: [x.c], hora: horaDe(x.h) });
+    if (tr.length && tr[tr.length - 1].b === b) { tr[tr.length - 1].cs.push(x.c); tr[tr.length - 1].hs.push(x.h); }
+    else tr.push({ b, cs: [x.c], hs: [x.h] });
   }
   const fundir = () => { for (let k = tr.length - 1; k > 0; k--) if (tr[k].b === tr[k - 1].b) {
-    tr[k - 1].cs = tr[k - 1].cs.concat(tr[k].cs); tr.splice(k, 1); } };
-  // Pegar el tramo i al vecino j: se queda el bando de j y la hora del que empiece antes
+    tr[k - 1].cs = tr[k - 1].cs.concat(tr[k].cs); tr[k - 1].hs = tr[k - 1].hs.concat(tr[k].hs); tr.splice(k, 1); } };
+  // Pegar el tramo i al vecino j: se queda el bando de j
   const pegar = (i, j) => { const a = Math.min(i, j), b = Math.max(i, j);
-    tr[j] = { b: tr[j].b, cs: tr[a].cs.concat(tr[b].cs), hora: tr[a].hora }; tr.splice(i, 1); fundir(); };
-  // 1) Una hora suelta entre dos tramos del mismo bando es un parpadeo del modelo: fuera
+    tr[j] = { b: tr[j].b, cs: tr[a].cs.concat(tr[b].cs), hs: tr[a].hs.concat(tr[b].hs) }; tr.splice(i, 1); fundir(); };
+  // 1) Una hora suelta entre dos tramos del mismo bando es un parpadeo del modelo: fuera (el agua, nunca)
   for (let k = tr.length - 2; k >= 1; k--)
-    if (tr[k].cs.length < 2 && tr[k - 1].b === tr[k + 1].b) pegar(k, k - 1);
-  // 2) Una hora suelta en un extremo se pega al de al lado
-  if (tr.length > 1 && tr[0].cs.length < 2) pegar(0, 1);
-  if (tr.length > 1 && tr[tr.length - 1].cs.length < 2) pegar(tr.length - 1, tr.length - 2);
-  // 3) Como mucho tres tramos: el más corto se pega al vecino más largo
+    if (tr[k].cs.length < 2 && tr[k].b !== 3 && tr[k - 1].b === tr[k + 1].b) pegar(k, k - 1);
+  // 2) Una hora suelta en un extremo se pega al de al lado (el agua, nunca)
+  if (tr.length > 1 && tr[0].cs.length < 2 && tr[0].b !== 3) pegar(0, 1);
+  if (tr.length > 1 && tr[tr.length - 1].cs.length < 2 && tr[tr.length - 1].b !== 3) pegar(tr.length - 1, tr.length - 2);
+  // 3) Como mucho tres tramos: el más corto que no sea agua (a igual largo, antes el velo) al vecino más largo
   while (tr.length > 3) {
-    // El más corto; a igual largo, antes el velo (es el matiz más fino)
-    let i = 0;
-    for (let k = 1; k < tr.length; k++)
-      if (tr[k].cs.length < tr[i].cs.length
+    let i = -1;
+    for (let k = 0; k < tr.length; k++) {
+      if (tr[k].b === 3) continue;
+      if (i < 0 || tr[k].cs.length < tr[i].cs.length
           || (tr[k].cs.length === tr[i].cs.length && tr[k].b === 1 && tr[i].b !== 1)) i = k;
+    }
+    if (i < 0) break;
     const j = i === 0 ? 1 : i === tr.length - 1 ? i - 1
             : (tr[i - 1].cs.length >= tr[i + 1].cs.length ? i - 1 : i + 1);
     pegar(i, j);
@@ -11038,12 +11104,42 @@ function tramosDeCielo(sel) {
     for (const x of xs) c.set(x, (c.get(x) ?? 0) + 1);
     return [...c.entries()].sort((a, b) => b[1] - a[1] || tapado(b[0]) - tapado(a[0]))[0][0]; };
   return tr.map(t => {
-    const h0 = Number(String(t.hora).slice(0, 2));
-    const medio = Number.isFinite(h0) ? (h0 + Math.floor(t.cs.length / 2)) % 24 : 12;
-    const dia = medio >= 8 && medio <= 19 ? 1 : 0;
-    return { txt: textoVisto(gana(t.cs), dia) ?? '—', hora: t.hora, b: t.b };
+    const mojan = t.cs.filter(c => c >= HAY_AGUA);
+    const code = mojan.length ? mojan.sort((a, b) => b - a)[0] : gana(t.cs);
+    const desde = horaNum(t.hs[0]), hasta = horaNum(t.hs[t.hs.length - 1]);
+    const medio = t.hs[Math.floor(t.hs.length / 2)];
+    const hm = horaNum(medio);
+    const dia = has(medio?.day) ? medio.day : (hm >= 8 && hm <= 19 ? 1 : 0);
+    return { code, dia, txt: textoVisto(code, dia) ?? '—',
+             hora: `${String(desde).padStart(2, '0')}:00`, desde, hasta, b: t.b, n: t.hs.length };
   });
 }
+
+/* ═══ EL RESUMEN DE UN CONJUNTO DE HORAS, UNA SOLA VEZ ═════════════════
+   Franjas de «Ahora» y tarjetas de «10 días» pintan con ESTO y con nada
+   más. code: el de la franja (el agua manda por lo peor; si no, el más
+   repetido, empate a lo más tapado — codigoFranja). partes: los tramos
+   con su hora. iconos: uno, o dos si el cielo cambia (el primer tramo y
+   el peor de los siguientes: lo que va a encontrarse y lo que más le
+   frena). */
+function resumenCielo(sel) {
+  const hs = (sel || []).filter(h => h && has(codigoQueSeVe(h, h.code)));
+  if (!hs.length) return null;
+  const code = codigoFranja(hs);
+  const dia = esDeDia(hs);
+  const partes = tramosDeCielo(hs);
+  const peso = c => (c >= HAY_AGUA ? 100 + c : tapado(c));
+  let iconos;
+  if (partes && partes.length >= 2) {
+    const peor = partes.slice(1).reduce((a, b) => (peso(b.code) > peso(a.code) ? b : a));
+    iconos = [partes[0], peor];
+  } else {
+    const hn = h => (h.date instanceof Date) ? h.date.getHours() : Number(String(h.t).slice(11, 13));
+    iconos = [{ code, dia, desde: hn(hs[0]), hasta: hn(hs[hs.length - 1]) }];
+  }
+  return { code, dia, txt: textoVisto(code, dia), partes, iconos };
+}
+
 
 function tituloFranja(sel, code, desde = '') {
   const base = textoVisto(code, esDeDia(sel)) ?? '—';
@@ -11110,12 +11206,12 @@ function renderNow() {
      mientras la tarjeta de al lado dice que llueve. */
   /* Las capas de AHORA, si el modelo las trae en `current`; si no, las
      de la hora en curso. Con ellas el velo de cirros no sale «Cubierto». */
-  const cAhora = { ...c,
-    nubesBajas:  C.cloud_cover_low  ?? c?.nubesBajas,
-    nubesMedias: C.cloud_cover_mid  ?? c?.nubesMedias,
-    nubesAltas:  C.cloud_cover_high ?? c?.nubesAltas };
-  const codVisto = codigoQueSeVe(cAhora, C.weather_code);
-  $('#nowIco').innerHTML = icon(codVisto, C.is_day);
+  /* UN SOLO CAMINO (09-09-2026): la hora en curso ya lleva el código y
+     las capas de `current` (ver conAhora en buildHours), así que el
+     dibujo grande y la primera tarjeta de «Horas» son la misma cuenta. */
+  const V = cieloVisto(c);
+  const codVisto = V.code;
+  $('#nowIco').innerHTML = icon(codVisto, V.dia);
   $('#nowT').className = ''; $('#nowT').textContent = num(C.temperature_2m, 0) ?? '--';
   /* ── EL SÍMBOLO GRANDE NO PUEDE IR SOLO ───────────────────────────
      Suyo, 30-08-2026, con Bermeo cubierto y chispeando: *«pero en el
@@ -11135,7 +11231,7 @@ function renderNow() {
      Aquí se le engancha: no se cambia el símbolo, que es el de su
      modelo, se le pone al lado lo que ven los demás. */
   $('#nowDesc').className = has(wmoText(codVisto)) ? '' : 'dim';
-  $('#nowDesc').innerHTML = esc(textoCielo(codVisto, c?.day ?? (has(C.is_day) ? C.is_day : 1))) + avisoCielo(C.cloud_cover);
+  $('#nowDesc').innerHTML = esc(textoCielo(codVisto, V.dia)) + avisoCielo(C.cloud_cover);
   /* ── EL NÚMERO GRANDE ES EL AIRE, Y LA SENSACIÓN SOLO SI APORTA ────
      Suyo, 01-09-2026 con la cabecera delante: *«¿por qué pone sensación?
      yo quiero la temperatura real»*. Y llevaba razón en lo que se lee:
@@ -11338,7 +11434,10 @@ function renderNow() {
   $('#parts').innerHTML = trozos.map(({ name, a, b, sel }) => {
 
     const ts = sel.map(h => h.temp).filter(has);
-    const code = codigoFranja(sel);
+    /* UN SOLO CAMINO: código, tramos e iconos salen de resumenCielo(),
+       lo mismo que en «10 días» (09-09-2026). */
+    const R = resumenCielo(sel);
+    const code = R ? R.code : codigoFranja(sel);
     const gm = Math.max(...sel.map(h => h.gust ?? 0));
     /* El viento medio, además de la racha. Suyo, 08-09-2026: «está bien
        saber las rachas pero también me gustaría saber el viento que hay a
@@ -11408,13 +11507,16 @@ function renderNow() {
     const nombreDia = dia.toLocaleDateString('es', { weekday: 'long' });
     const cuando = ` · <b>${esc(esHoy ? 'hoy ' + nombreDia : nombreDia)}</b>`;
 
-    return `<div class="part"><div class="part__k">${name} · ${rotulo}${cuando}</div>
+    return `<div class="part" data-ini="${esc(sel[0].t ?? '')}" data-fin="${esc(sel[sel.length - 1].t ?? '')}"><div class="part__k">${name} · ${rotulo}${cuando}</div>
       <div class="part__b"><div class="part__i">${(() => {
         /* El dibujo acompaña al texto: si la franja tiene dos cielos,
            dos iconos en su orden. Misma función que decide la frase. */
-        const p = has(code) && code < HAY_AGUA ? cieloPartido(sel) : null;
-        return p ? `<span class="part__i2">${icon(p.m1, deDia(sel))}${icon(p.m2, deDia(sel))}</span>`
-                 : icon(code, deDia(sel));
+        /* Dos iconos si el cielo cambia dentro de la franja: el primer tramo
+           y el peor de los que vienen. Mismos tramos que la frase de abajo. */
+        const d = deDia(sel);
+        if (R && R.iconos.length >= 2)
+          return `<span class="part__i2">${icon(R.iconos[0].code, d)}${icon(R.iconos[1].code, d)}</span>`;
+        return icon(code, d);
       })()}</div>
       <div class="part__t">${ts.length ? `${Math.min(...ts).toFixed(0)}–${Math.max(...ts).toFixed(0)}°` : nd}</div></div>
       <div class="part__s">${esc(tituloFranja(sel, code, desde))}${
@@ -12131,7 +12233,7 @@ function renderHours() {
     <div class="hcard" data-s="${h.st}">
       <div class="hcard__h">${String(h.date.getHours()).padStart(2,'0')}:00</div>
       <div class="hcard__d">${h.date.toLocaleDateString('es',{weekday:'short'})}</div>
-      <div class="hcard__i">${icon(codigoQueSeVe(h, h.code), h.day)}</div>
+      <div class="hcard__i">${(v => icon(v.code, v.dia))(cieloVisto(h))}</div>
       <div class="hcard__t">${has(h.temp) ? `${h.temp.toFixed(0)}°` : '—'}</div>
       <div class="hcard__r">
         <span>💧 ${has(h.pop) ? h.pop + '%' : '—'} · ${has(h.prec) ? mmTxt(h.prec) + ' mm' : 'sin dato'}${
@@ -12183,6 +12285,33 @@ function lineaCapeHora(h) {
   return `<div class="hcard__c${rompe ? ' hcard__c--ojo' : ''}">${cape} · ${tapa}${
     rompe ? ` — los dos a la vez: CAPE de ${CAPE_COMBINACION} para arriba`
           + ' y tapa por debajo de 75' : ''}</div>`;
+}
+
+/* ── EL DIBUJO DE UN DÍA, POR EL MISMO CAMINO QUE TODO (09-09-2026) ───
+   Las horas del día salen de horaDe() —las mismas que «Horas» y «Mis
+   estaciones»— y el dibujo de resumenCielo(), la misma que pinta las
+   franjas de «Ahora». Antes esta tarjeta montaba sus horas a mano (sin
+   codigoAjeno, sin day) y medía el cielo con otra regla: por eso «10
+   días» podía decir una cosa y «Horas» otra. El código diario del modelo
+   sigue sin usarse como dibujo (regla del 04-09): sin horas con dato,
+   hueco honesto. Sin horas de 6 a 20 pero con horas de noche, la luna. */
+function iconosDelDia(dia) {
+  const hs = horasDelDia(S.data?.fc, dia);
+  const conDato = hs.filter(h => has(codigoQueSeVe(h, h.code)));
+  let deNoche = false;
+  let delDia = conDato.filter(h => h.date.getHours() >= 6 && h.date.getHours() <= 20);
+  if (!delDia.length) {
+    delDia = conDato.filter(h => h.date.getHours() >= 21 || h.date.getHours() <= 5);
+    deNoche = true;
+  }
+  if (!delDia.length) return SIN_DIBUJO;
+  const R = resumenCielo(delDia);
+  if (!R || !has(R.code)) return SIN_DIBUJO;
+  const d = deNoche ? 0 : 1;
+  if (R.iconos.length < 2) return icon(R.code, d);
+  const rot = t => (has(t.desde) && has(t.hasta)) ? `${t.desde}-${t.hasta} h` : '';
+  return `<span class="dcard__ii"><i>${icon(R.iconos[0].code, d)}<u>${rot(R.iconos[0])}</u></i>`
+       + `<i>${icon(R.iconos[1].code, d)}<u>${rot(R.iconos[1])}</u></i></span>`;
 }
 
 function renderDays() {
@@ -12263,126 +12392,7 @@ function renderDays() {
      pintar un nubarrón inventado: un hueco honesto no le manda a casa
      un sábado de sol.
      ═══════════════════════════════════════════════════════════════ */
-  const iconosDelDia = (dia, codigoDiario) => {
-    const H = S.data?.fc?.hourly;
-    const hs = [];
-    if (H?.time) {
-      for (let i = 0; i < H.time.length; i++) {
-        if (!String(H.time[i]).startsWith(dia)) continue;
-        hs.push({
-          t: H.time[i],
-          date: new Date(H.time[i]),
-          code: H.weather_code?.[i],
-          codeLluvia: H.weather_code_lluvia?.[i],
-          prec: H.precipitation?.[i],
-          /* La nubosidad viaja con la hora: el cielo de un día se MIDE
-             con ella, no se vota entre códigos. Ver `cieloDelDia`. */
-          nubes: H.cloud_cover?.[i],
-          nubesBajas: H.cloud_cover_low?.[i], nubesMedias: H.cloud_cover_mid?.[i],
-          nubesAltas: H.cloud_cover_high?.[i],
-        });
-      }
-    }
-    /* Solo cuentan las horas que TRAEN código. Antes bastaba con que la
-       hora existiera: con el modelo cargado sin `weather_code` —AROME no
-       lo publica ni una hora de 240, medido— la lista venía llena de
-       horas vacías, `codigoFranja` no podía decidir y el dibujo acababa
-       saliendo del código diario. */
-    const conDato = hs.filter(h => has(codigoQueSeVe(h, h.code)));
-    /* EL MISMO CORTE QUE LAS FRANJAS (6-13), y esto tiene historia: el
-       31-08 el martes salía «Cubierto» en la franja y con sol en el
-       dibujo del día. Ninguno mentía: la franja contaba desde las 6 y
-       esto desde las 7, y esa hora rompía el empate. Un corte, una
-       verdad. */
-    let manana = conDato.filter(h => h.date.getHours() >= 6 && h.date.getHours() <= 13);
-    let tarde  = conDato.filter(h => h.date.getHours() >= 14 && h.date.getHours() <= 20);
-    /* SIN HORAS NO SE INVENTA UN DÍA. El código diario decía «cubierto»
-       con nueve horas de sol y «llovizna» con cero milímetros: usarlo de
-       reserva es lo que le costó el sábado. Mejor un hueco que se ve. */
-    /* ── LO QUE QUEDA DE HOY, DE NOCHE ────────────────────────────────
-       Calpe, 08-09-2026 a las 23:53: la tarjeta de «Hoy» con un
-       interrogante. Sin horas de 6 a 20 no se inventa el día (regla del
-       04-09, se mantiene), pero si quedan horas de noche con código, ESO
-       es lo que queda de hoy y se dibuja con la luna. Mismo criterio que
-       las mitades: el agua manda, y si no moja, el cielo se mide. */
-    if (!manana.length && !tarde.length) {
-      const noche = conDato.filter(h => h.date.getHours() >= 21 || h.date.getHours() <= 5);
-      if (noche.length) {
-        const cs = noche.map(h => codigoQueSeVe(h, h.code)).filter(has);
-        const c = cs.some(x => x >= HAY_AGUA) ? codigoFranja(noche) : (cieloDelDia(noche) ?? codigoFranja(noche));
-        if (has(c)) return icon(c, 0);
-      }
-      return SIN_DIBUJO;
-    }
-
-    /* ── EL CORTE VA DONDE CAMBIA EL CIELO, NO A LAS 13:00 ────────────
-       Suyo, 01-09-2026, y es de las quejas que llevaba repitiendo:
-
-         *«me mosqueo cuando dice esta mañana sol, ya al mediodía nube, y
-           me dibuja una nube para todo el día»*
-
-       Y tenía razón por una cuenta tonta: la «mañana» iba de 6 a 13, así
-       que **si nublaba a las 11 ya había más horas de nube que de sol**
-       —4 contra 3— y el dominante salía nube. Su sol de las 8 a las 10
-       desaparecía, y como la tarde también era nube, las dos mitades
-       coincidían y el día entero se dibujaba con UNA nube.
-
-       Ahora el corte lo pone `cieloPartido()`, la MISMA función con la
-       que se parten las franjas y se escribe «X al principio, y después
-       Y». Busca dónde cambia de verdad el cielo en vez de partir por el
-       reloj. Una sola regla para el texto y para los dos dibujos. */
-    const delDia = conDato.filter(h => h.date.getHours() >= 6 && h.date.getHours() <= 20);
-    const parte = delDia.length >= 4 ? cieloPartido(delDia) : null;
-    if (parte) {
-      manana = delDia.slice(0, parte.corte ?? Math.ceil(delDia.length / 2));
-      tarde  = delDia.slice(parte.corte ?? Math.ceil(delDia.length / 2));
-    }
-
-    /* ── EL AGUA MANDA; EL CIELO SE MIDE ──────────────────────────────
-       Si en esa mitad moja, eso es lo que se dibuja: una hora de
-       sirimiri decide y esconderla sería esconder la decisión.
-
-       Si NO moja, el cielo sale de la nubosidad MEDIA de esas horas y
-       no del código que más se repita. Suyo, 04-09-2026: el sábado
-       salía «cubierto» por siete votos de quince y desaparecían las
-       cinco horas centrales con el cielo al 37-53 %, que él estaba
-       viendo dibujadas con sol en «Horas». */
-    const cieloDe = (mitad, votado) => {
-      if (!mitad?.length) return null;
-      const cs = mitad.map(h => codigoQueSeVe(h, h.code)).filter(has);
-      if (cs.some(c => c >= HAY_AGUA)) return votado;   // moja: manda el agua
-      return cieloDelDia(mitad) ?? votado;
-    };
-    const cM = cieloDe(manana, parte ? parte.m1 : (manana.length ? codigoFranja(manana) : null));
-    const cT = cieloDe(tarde,  parte ? parte.m2 : (tarde.length  ? codigoFranja(tarde)  : null));
-    /* Si las dos mitades dicen lo mismo, un solo dibujo: dos iguales
-       ocupan sitio y no cuentan nada. */
-    /* has(), no === null: codigoFranja devuelve UNDEFINED cuando ninguna
-       hora trae código, y `undefined === null` es falso — se colaba al
-       doble icono y pintaba la nube gris por defecto rotulada «tarde».
-       Cazado el 31-08-2026 en la revisión de símbolos. */
-    if (cM === cT || !has(cT)) return icon(has(cM) ? cM : codigoDiario, 1);
-    if (!has(cM)) return icon(cT, 1);
-    /* ── EL RÓTULO LO PONEN LAS HORAS, NO EL RELOJ ──────────────────
-       Es el hermano del fallo del sábado, cazado la misma noche por la
-       revisión: el corte entre los dos dibujos lo pone `cieloPartido`
-       DONDE CAMBIA EL CIELO —puede caer entre las 8:00 y las 19:00—, pero
-       debajo seguía escrito «mañana» y «tarde» fijos. Medido con ECMWF
-       para el jueves 10-09: cubierto de 6 a 15 y despejando a las 16;
-       el corte caía a las 16 y el dibujo rotulado «tarde» resumía SOLO de
-       17 a 20 h. Él leía «tarde despejada» con su tarde de trabajo
-       (14-16 h) al 100 % de nubes. Y en la tarjeta de HOY por la tarde,
-       las 16 y las 17 salían rotuladas «mañana».
-
-       Ahora cada dibujo dice las horas que resume, sacadas del mismo
-       array del que sale el dibujo. No pueden discrepar: son el mismo
-       dato. Misma regla que en las franjas de «Ahora», que ya llevan
-       «6-13 h» escrito. */
-    const rot = arr => arr?.length
-      ? `${arr[0].date.getHours()}-${arr[arr.length - 1].date.getHours()} h` : '';
-    return `<span class="dcard__ii"><i>${icon(cM, 1)}<u>${rot(manana)}</u></i>`
-         + `<i>${icon(cT, 1)}<u>${rot(tarde)}</u></i></span>`;
-  };
+  /* iconosDelDia() es ahora global: la usa también vigilarCielo(). */
 
   /* ── EL ⚡ DICE CUÁNDO ─────────────────────────────────────────────
      El ⚡ de la tarjeta sale del weather_code DIARIO —el peor rato de las
@@ -12414,11 +12424,11 @@ function renderDays() {
     // Color del borde por la racha, que es lo que decide el ascenso
     const nivel = !has(racha) ? 'nd'
       : racha >= S.thr.gustNo ? 'no' : racha >= S.thr.gustWarn ? 'warn' : 'go';
-    return `<li class="dcard" data-s="${nivel}">
+    return `<li class="dcard" data-s="${nivel}" data-dia="${esc(t)}">
       <div class="dcard__top"></div>
       <div class="dcard__d">${i === 0 ? 'Hoy' : d.toLocaleDateString('es',{weekday:'short'})}</div>
       <div class="dcard__f">${d.toLocaleDateString('es',{day:'numeric',month:'short'})}</div>
-      <div class="dcard__i">${iconosDelDia(t, D.weather_code[i])}</div>
+      <div class="dcard__i">${iconosDelDia(t)}</div>
       <div class="dcard__t"><b>${has(mx)?mx.toFixed(0)+'°':'—'}</b>
         <span>${has(mn)?mn.toFixed(0)+'°':'—'}</span></div>
       <div class="dcard__r">💧 ${has(pop)?pop+'%':'—'} · ${has(mm)?mmTxt(mm)+' mm':'sin dato'}</div>
@@ -14339,6 +14349,69 @@ function paint() {
     (stale ? ' <b>(caducados, pulsa actualizar)</b>' : '') +
     ` · <span class="build" title="Versión de la app que tienes cargada">v${BUILD}</span>`;
   clock();
+  vigilarCielo('pintar');
+}
+
+/* ═══ LA APP SE VIGILA EL CIELO A SÍ MISMA (09-09-2026) ═════════════════
+   Aitor, tras cuatro semanas: *«cada día algo mal: en Ahora una cosa, en
+   10 días otra… lo reparaba, pasaban 24 h y vuelta a empezar»*.
+
+   Después de cada pintado se comprueba que lo que HAY EN PANTALLA es lo
+   que dicen las horas ahora mismo: el icono grande contra la hora en
+   curso, la primera tarjeta de «Horas» contra el icono grande, cada
+   franja contra sus horas, cada día de «10 días» contra las suyas. Si
+   algo no cuadra, se repinta, se apunta en torre.fallos y se avisa; si
+   tras repintar sigue sin cuadrar, sale la barra roja, porque entonces
+   es un fallo de verdad y él tiene que saberlo antes de decidir. */
+function comprobarCielo() {
+  const faltas = [];
+  if (!S.data?.hours?.length) return faltas;
+  const codigos = el => [...(el?.querySelectorAll?.('svg[data-code]') || [])]
+    .map(x => x.dataset.code).filter(x => x !== '').map(Number);
+  const h0 = cieloVisto(S.data.hours[0]);
+  const grande = codigos($('#nowIco'))[0];
+  if (has(grande) && has(h0.code) && grande !== h0.code)
+    faltas.push(`Ahora pinta ${grande} y la hora en curso dice ${h0.code}`);
+  const primera = document.querySelector('#hlist .hcard');
+  if (primera) {
+    const c1 = codigos(primera)[0];
+    if (has(c1) && has(grande) && c1 !== grande) faltas.push(`Horas pinta ${c1} en la hora en curso y Ahora ${grande}`);
+  }
+  document.querySelectorAll('#parts .part[data-ini]').forEach(p => {
+    const sel = S.data.hours.filter(h => h.t >= p.dataset.ini && h.t <= p.dataset.fin);
+    const R = resumenCielo(sel);
+    if (!R) return;
+    const esperado = R.iconos.length >= 2 ? [R.iconos[0].code, R.iconos[1].code] : [R.code];
+    const enDom = codigos(p.querySelector('.part__i'));
+    if (enDom.join() !== esperado.join())
+      faltas.push(`franja «${p.querySelector('.part__k')?.textContent.trim()}» pinta ${enDom.join('/')} y sus horas dicen ${esperado.join('/')}`);
+  });
+  document.querySelectorAll('#dlist .dcard[data-dia]').forEach(li => {
+    const esperado = [...iconosDelDia(li.dataset.dia).matchAll(/data-code="(\d+)"/g)].map(m => Number(m[1]));
+    const enDom = codigos(li.querySelector('.dcard__i'));
+    if (enDom.join() !== esperado.join())
+      faltas.push(`día ${li.dataset.dia} pinta ${enDom.join('/')} y sus horas dicen ${esperado.join('/')}`);
+  });
+  return faltas;
+}
+
+function vigilarCielo(origen = '') {
+  let faltas;
+  try { faltas = comprobarCielo(); } catch (e) { console.warn('[cielo] no se pudo comprobar', e); return; }
+  if (!faltas.length) return;
+  console.warn('[cielo]', origen, faltas);
+  try {
+    const log = JSON.parse(localStorage.getItem('torre.fallos') || '[]');
+    log.unshift({ t: new Date().toISOString(), donde: 'cielo ' + origen, msg: faltas.join(' · ').slice(0, 300), v: BUILD });
+    localStorage.setItem('torre.fallos', JSON.stringify(log.slice(0, 5)));
+  } catch {}
+  seguro('ahora', renderNow);
+  seguro('horas', renderHours);
+  seguro('días',  renderDays);
+  let otraVez = [];
+  try { otraVez = comprobarCielo(); } catch {}
+  if (otraVez.length) Petardazo.registrar('cielo', otraVez.join(' · '));
+  else toast('El cielo no cuadraba entre pantallas y se ha repintado: ' + faltas[0], 7000);
 }
 
 function clock() {
