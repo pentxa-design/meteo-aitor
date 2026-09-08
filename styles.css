@@ -2521,8 +2521,8 @@ body.sin-scroll{overflow:hidden}
    cielo. Puesto el 30-08-2026: «pero en el símbolo pone sol», con Bermeo
    cubierto. No cambia el símbolo —es el de su modelo—: pone al lado lo
    que ven los demás. */
-.nd__ojo{display:inline-block;font-size:max(.85em,.8125rem);font-weight:600;letter-spacing:.01em;
-  color:#f0c674;background:#f0c6741f;padding:.15em .5em;border-radius:.6em;
+.nd__ojo{display:inline-block;font-size:max(.95em,.9375rem);font-weight:700;letter-spacing:.01em;
+  color:#ffd166;background:#f0c67433;padding:.2em .6em;border-radius:.6em;
   vertical-align:middle;margin-left:.5em;white-space:nowrap}
 
 /* ── LOS DOS DIBUJOS DEL DÍA: MAÑANA Y TARDE ──────────────────────────
