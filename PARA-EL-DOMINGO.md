@@ -1036,3 +1036,35 @@ Esta semana el iPhone ha tenido dos iconos:
 - **La copia de Calpe**: https://pentxa-design.github.io/meteo-aitor/ (GitHub Pages, esta rama). Sirve para el tiempo y para probar lo nuevo, pero en «Mis estaciones» le faltan el vigilante, la estación medida y la sincronización, porque /api/* no manda CORS. Lo dice en pantalla («No he podido preguntar por el vigilante», «ESTACIÓN no se ha podido leer»).
 
 Cuando hayas publicado en Vercel con los cambios del portátil, la app de trabajo tendrá también todo lo nuevo y la copia de Calpe sobra: Aitor puede borrar ese icono. Si quiere conservarla, hay que hacer el paso 13 (CORS).
+
+## 9. El repaso diario, que también hay que llevarse a casa
+
+Aitor, 08-09-2026: *«esto me pasaba en el Mac de casa cada día: lo reparaba, pasaban 24 h y vuelta a empezar»*. Muchos fallos dependen de la HORA (noche, fin de día, primera hora): una corrección probada a las 15:00 se rompe a las 23:00. En el portátil hay una tarea programada de la app de Claude, `repaso-diario-meteo`, a las 07:15 y 23:15, que solo mira y cuenta (no toca código). **Hay que crear la misma en el Mac de casa**, apuntando a la app de trabajo (la de Vercel, `https://weather-app-ochre-one-76.vercel.app/`) en vez de a la de Pages, y quitando la salvedad de CORS (en Vercel `/api/*` funciona, así que «no se ha podido leer» sí es fallo). El texto de la tarea, para copiarlo tal cual cambiando la URL:
+
+```
+Eres el repaso diario de la app del tiempo de Aitor, "Aitor Meteo", publicada en https://pentxa-design.github.io/meteo-aitor/ desde la rama portatil-2026-09-07 del repo pentxa-design/meteo-aitor (carpeta local /Users/aitor/AitorMeteo, rama master). Contexto en /Users/aitor/.claude/projects/-Users-aitor-claude-app/memory/meteo-aitor-repos-divergentes.md (léelo primero). Aitor usa la app para decidir si manda gente a torres de telecomunicaciones: un dato mal puesto puede costar vidas. Este repaso existe porque muchos fallos dependen de la HORA (de noche, al acabar el día, a primera hora) y una corrección que parece bien a las 15:00 se rompe a las 23:00. Por eso corres a las 07:15 y a las 23:15.
+
+NO cambies código ni hagas commits: tu trabajo es MIRAR y CONTAR. Si algo está mal, dilo con precisión (vista, texto exacto, hora, y por qué está mal) para que Aitor o la sesión "Prueba iPhone y Mac" lo arreglen.
+
+Herramientas: la vista previa del navegador (navigate, javascript_tool, computer screenshot) y curl. Si el navegador no estuviera disponible, haz al menos las comprobaciones con curl y dilo.
+
+Procedimiento:
+1. Comprueba con curl que https://pentxa-design.github.io/meteo-aitor/version.json responde y anota el build. Compara con `grep -n "const BUILD" /Users/aitor/AitorMeteo/app.js`, `grep -n "const V " /Users/aitor/AitorMeteo/sw.js` y `cat /Users/aitor/AitorMeteo/version.json`: los tres deben coincidir entre sí (si no, es un fallo grave: la app recarga en bucle).
+2. Abre https://pentxa-design.github.io/meteo-aitor/ en el navegador. Con javascript_tool pon: localStorage.setItem('candado.hasta', String(Date.now()+3600e3)); localStorage.setItem('torre.place', JSON.stringify({name:'Calpe',admin1:'Comunidad Valenciana',country:'España',lat:38.6708,lon:0.0565,elev:58})); y recarga. Espera 15 s. (Las funciones de la app son globales: S, BUILD, codigoQueSeVe, textoVisto, aguaPrestada, windAt...)
+3. Comprobaciones con javascript_tool (haz cada una y apunta el resultado):
+   a) typeof BUILD y que BUILD === build de version.json. Marca window.__m = Date.now(), espera 20 s y comprueba que window.__m sigue definido (si no, la app se recarga en bucle).
+   b) Errores de consola de tipo ReferenceError o TypeError (read_console_messages onlyErrors). Los errores CORS de /api/* son conocidos en Pages y NO cuentan.
+   c) En las vistas Ahora, Horas, 10 días y Mis estaciones (cambia con [...document.querySelectorAll('button.tab')].find(b => b.dataset.v === 'now'|'hours'|'days'|'torres').click() y espera 5 s), coge document.body.innerText y busca: "NaN", "undefined", "null", "Invalid Date", "a las NaN", "—°". Cualquier aparición es fallo.
+   d) Regla de noche: si S.data.hours[0].day === 0, ni #nowDesc ni la franja NOCHE pueden decir "Sol velado" (de noche debe decir "Velo de nubes altas"). Busca "Sol velado" en innerText y comprueba en qué franja/hora aparece y si es de día.
+   e) Iconos vacíos: document.querySelectorAll('svg[aria-label="sin dato"]').length en 10 días y en las franjas debe ser 0.
+   f) Línea de máxima y mínima (#nowRange): si lleva "a las HH:00", esa hora debe existir hoy en S.data.fc.hourly con temperatura a menos de 1° del dato. Si dice la misma hora para las dos, sospecha.
+   g) Franjas (.part): cada .part__s con texto; si hay "desde las HH:00", la hora debe caer dentro del tramo de la franja (6-13, 14-20 o 21-23). "Viento" y "Racha máx" presentes cuando hay dato.
+   h) Horas: para cada tarjeta .hcard, si el icono es de agua (el código visto codigoQueSeVe(h,h.code) >= 51 para esa hora de S.data.hours) los mm deben ser > 0, salvo que la tarjeta lleve una etiqueta .nd__ojo. Cuenta las incoherencias.
+   i) Mis estaciones: número de emplazamientos pintados (deben ser 20) y cuántos dicen "no se ha podido leer" (en Pages el vigilante y Euskalmet fallan: es conocido, solo anótalo).
+   j) Repite c) y d) con Bermeo: localStorage torre.place = {name:'Bermeo',admin1:'Bizkaia',country:'España',lat:43.4209,lon:-2.7215,elev:36}, recarga, espera 15 s.
+4. Captura (computer screenshot, scale 0.5, save_to_disk si existe) de Ahora, Horas y 10 días con Calpe, y mándaselas a Aitor con SendUserFile si la herramienta existe.
+5. Termina con un parte corto en castellano, para leer en el móvil: build comprobado, lista de lo que está MAL (con texto exacto y dónde), lo que está bien en una línea, y lo conocido de Pages (CORS) aparte. Si no hay nada mal, dilo claro: "Repaso de las HH:MM: todo en orden, build X".
+```
+
+Regla que va con ello: **cada cambio se prueba también de noche** (poner la hora del sistema o mirar la app pasadas las 21:00) antes de darlo por bueno.
+
