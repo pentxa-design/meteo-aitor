@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.08-2351';
+const BUILD = '2026.09.08-2352';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -7626,7 +7626,7 @@ function renderParte() {
          como fallo de la estación. */
       + fila('Cielo',
              (has(H?.code) || has(H?.cloud))
-               ? `<b>${esc(wmoText(codigoQueSeVe(H, H.code)) ?? '—')}</b>${has(H?.cloud) ? ` · ${Math.round(H.cloud)} %` : ''}`
+               ? `<b>${esc(textoVisto(codigoQueSeVe(H, H.code), H?.day) ?? '—')}</b>${has(H?.cloud) ? ` · ${Math.round(H.cloud)} %` : ''}`
                : '',
              M ? '<span class="pt__tab__no">ningún aparato lo mide</span>' : '')
       /* El CAPE y la tapa solo tienen columna de modelo, y se dice por
@@ -11037,11 +11037,16 @@ function tramosDeCielo(sel) {
   const gana = xs => { const c = new Map();
     for (const x of xs) c.set(x, (c.get(x) ?? 0) + 1);
     return [...c.entries()].sort((a, b) => b[1] - a[1] || tapado(b[0]) - tapado(a[0]))[0][0]; };
-  return tr.map(t => ({ txt: wmoText(gana(t.cs)) ?? '—', hora: t.hora, b: t.b }));
+  return tr.map(t => {
+    const h0 = Number(String(t.hora).slice(0, 2));
+    const medio = Number.isFinite(h0) ? (h0 + Math.floor(t.cs.length / 2)) % 24 : 12;
+    const dia = medio >= 8 && medio <= 19 ? 1 : 0;
+    return { txt: textoVisto(gana(t.cs), dia) ?? '—', hora: t.hora, b: t.b };
+  });
 }
 
 function tituloFranja(sel, code, desde = '') {
-  const base = wmoText(code) ?? '—';
+  const base = textoVisto(code, esDeDia(sel)) ?? '—';
   if (!has(code) || !sel?.length) return base;
 
   /* ── EL CIELO MIXTO SE DICE EN ORDEN, NO CON UNA PALABRA ────────────
@@ -11091,7 +11096,7 @@ function tituloFranja(sel, code, desde = '') {
   const cuenta = new Map();
   for (const c of secas) cuenta.set(c, (cuenta.get(c) ?? 0) + 1);
   const cielo = [...cuenta.entries()].sort((a, b) => b[1] - a[1] || tapado(b[0]) - tapado(a[0]))[0][0];
-  const txtCielo = wmoText(cielo);
+  const txtCielo = textoVisto(cielo, esDeDia(sel));
   if (!txtCielo) return base;
 
   return `${txtCielo}, con ${base.toLowerCase()}${desde}`;
@@ -11130,7 +11135,7 @@ function renderNow() {
      Aquí se le engancha: no se cambia el símbolo, que es el de su
      modelo, se le pone al lado lo que ven los demás. */
   $('#nowDesc').className = has(wmoText(codVisto)) ? '' : 'dim';
-  $('#nowDesc').innerHTML = esc(textoCielo(codVisto)) + avisoCielo(C.cloud_cover);
+  $('#nowDesc').innerHTML = esc(textoCielo(codVisto, c?.day ?? (has(C.is_day) ? C.is_day : 1))) + avisoCielo(C.cloud_cover);
   /* ── EL NÚMERO GRANDE ES EL AIRE, Y LA SENSACIÓN SOLO SI APORTA ────
      Suyo, 01-09-2026 con la cabecera delante: *«¿por qué pone sensación?
      yo quiero la temperatura real»*. Y llevaba razón en lo que se lee:
@@ -11322,6 +11327,13 @@ function renderNow() {
     const ts = sel.map(h => h.temp).filter(has);
     const code = codigoFranja(sel);
     const gm = Math.max(...sel.map(h => h.gust ?? 0));
+    /* El viento medio, además de la racha. Suyo, 08-09-2026: «está bien
+       saber las rachas pero también me gustaría saber el viento que hay a
+       10 m». Va la horquilla de la franja, a la misma altura que la racha. */
+    const vs = sel.map(h => h.wind).filter(has);
+    const vTxt = vs.length ? (Math.min(...vs) === Math.max(...vs)
+                   ? wtxt(vs[0], true)
+                   : `${wtxt(Math.min(...vs))}–${wtxt(Math.max(...vs), true)}`) : null;
     // Los milímetros ESCRITOS. Con solo el icono no se distingue una
     // llovizna de un chaparrón, y el número no admite interpretación.
     const mm = sel.map(h => h.prec).filter(has).reduce((a, b) => a + b, 0);
@@ -11469,7 +11481,7 @@ function renderNow() {
          Es el mismo motivo por el que la tabla de «Mis torres» lleva
          escrito «a 10 m» en la cabecera desde que él preguntó *«¿es a
          10 m o qué significa?»*. Aquí faltaba. */
-      }${gm > 0 ? `<br>Racha máx ${wtxt(gm, true)}<small> a ${S.hgt} m</small>` : ''}${
+      }${vTxt ? `<br>Viento ${vTxt}<small> a ${S.hgt} m</small>` : ''}${gm > 0 ? `<br>Racha máx ${wtxt(gm, true)}<small> a ${S.hgt} m</small>` : ''}${
         avisoTormentaFranja(sel)}</div></div>`;
   }).join('');
 
@@ -14228,8 +14240,25 @@ function avisoCielo(nubes, { corto = false } = {}) {
     : ` <span class="nd__ojo">⚠ los otros ven ${r.mediana} % de nubes</span>`;
 }
 
-function textoCielo(code) {
-  const t = wmoText(code);
+/* ── DE NOCHE NO HAY SOL QUE VELAR ─────────────────────────────────
+   Calpe, 08-09-2026 a las 23:49: luna con velo y debajo «Sol velado».
+   El código 4 es el mismo, el texto no: de noche es «Velo de nubes
+   altas». `dia` es el is_day de la hora (o el 8-19 de esDeDia). */
+function textoVisto(code, dia = 1) {
+  if (code === VELADO && dia === 0) return 'Velo de nubes altas';
+  return wmoText(code);
+}
+/* De día si la mayoría de las horas lo son; sin is_day, la hora del medio
+   entre las 8 y las 19. Misma regla que deDia() en las franjas. */
+function esDeDia(sel) {
+  const con = (sel || []).filter(h => has(h.day));
+  if (con.length) return con.filter(h => h.day === 1).length * 2 >= con.length ? 1 : 0;
+  const media = sel?.[Math.floor(sel.length / 2)]?.date?.getHours();
+  return has(media) && media >= 8 && media <= 19 ? 1 : 0;
+}
+
+function textoCielo(code, dia = 1) {
+  const t = textoVisto(code, dia);
   if (t) return t;
   return `Estado del cielo: ${esc(modeloDato().name)} no lo publica`;
 }
