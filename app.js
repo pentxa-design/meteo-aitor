@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.09-0018';
+const BUILD = '2026.09.09-0021';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11081,23 +11081,28 @@ function tramosDeCielo(sel) {
   // Pegar el tramo i al vecino j: se queda el bando de j
   const pegar = (i, j) => { const a = Math.min(i, j), b = Math.max(i, j);
     tr[j] = { b: tr[j].b, cs: tr[a].cs.concat(tr[b].cs), hs: tr[a].hs.concat(tr[b].hs) }; tr.splice(i, 1); fundir(); };
-  // 1) Una hora suelta entre dos tramos del mismo bando es un parpadeo del modelo: fuera (el agua, nunca)
+  /* El agua es intocable en las dos direcciones: ni se absorbe como
+     parpadeo, ni absorbe horas secas (una hora seca pegada a una de
+     llovizna no es llovizna). Cazado en Bermeo, 09-09-2026 00:20. */
+  const seco = k => k >= 0 && k < tr.length && tr[k].b !== 3;
+  // 1) Una hora suelta entre dos tramos secos del mismo bando es un parpadeo del modelo: fuera
   for (let k = tr.length - 2; k >= 1; k--)
-    if (tr[k].cs.length < 2 && tr[k].b !== 3 && tr[k - 1].b === tr[k + 1].b) pegar(k, k - 1);
-  // 2) Una hora suelta en un extremo se pega al de al lado (el agua, nunca)
-  if (tr.length > 1 && tr[0].cs.length < 2 && tr[0].b !== 3) pegar(0, 1);
-  if (tr.length > 1 && tr[tr.length - 1].cs.length < 2 && tr[tr.length - 1].b !== 3) pegar(tr.length - 1, tr.length - 2);
-  // 3) Como mucho tres tramos: el más corto que no sea agua (a igual largo, antes el velo) al vecino más largo
-  while (tr.length > 3) {
+    if (tr[k].cs.length < 2 && seco(k) && seco(k - 1) && tr[k - 1].b === tr[k + 1].b) pegar(k, k - 1);
+  // 2) Una hora suelta en un extremo se pega al de al lado, si los dos son secos
+  if (tr.length > 1 && tr[0].cs.length < 2 && seco(0) && seco(1)) pegar(0, 1);
+  if (tr.length > 1 && tr[tr.length - 1].cs.length < 2 && seco(tr.length - 1) && seco(tr.length - 2)) pegar(tr.length - 1, tr.length - 2);
+  // 3) Como mucho tres tramos SECOS (el agua no cuenta para el tope): el más corto seco con vecino seco
+  //    (a igual largo, antes el velo) al vecino seco más largo
+  while (tr.filter(t => t.b !== 3).length > 3) {
     let i = -1;
     for (let k = 0; k < tr.length; k++) {
-      if (tr[k].b === 3) continue;
+      if (!seco(k) || !(seco(k - 1) || seco(k + 1))) continue;
       if (i < 0 || tr[k].cs.length < tr[i].cs.length
           || (tr[k].cs.length === tr[i].cs.length && tr[k].b === 1 && tr[i].b !== 1)) i = k;
     }
     if (i < 0) break;
-    const j = i === 0 ? 1 : i === tr.length - 1 ? i - 1
-            : (tr[i - 1].cs.length >= tr[i + 1].cs.length ? i - 1 : i + 1);
+    const izq = seco(i - 1), der = seco(i + 1);
+    const j = izq && der ? (tr[i - 1].cs.length >= tr[i + 1].cs.length ? i - 1 : i + 1) : izq ? i - 1 : i + 1;
     pegar(i, j);
   }
   const gana = xs => { const c = new Map();
