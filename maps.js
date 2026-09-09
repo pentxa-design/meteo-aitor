@@ -1098,6 +1098,8 @@ const Maps = {
         .setPopup(new maplibregl.Popup({ offset:16 }).setText(p.name))
         .addTo(this.map);
       this._centro = `${p.lat},${p.lon}`;
+      // Los rayos, también en la primera apertura, aunque apply() tarde.
+      setTimeout(() => this.rayos(), 1500);
 
       this.relieve(); this.mar();
       // Al mover o ampliar el mapa se sigue precargando, y si estaba
@@ -1602,7 +1604,7 @@ const Maps = {
        salen por aquí antes de llegar al final de apply() (09-09-2026). */
     if (L_.id === 'radar') { this.applyRadar(); setTimeout(() => this.rayos(), 600); return; }
     if (L_.id === 'aemet') { this.applyAemet(); setTimeout(() => this.rayos(), 600); return; }
-    if (L_.sat) { this.applySatelite(L_); return; }
+    if (L_.sat) { this.applySatelite(L_); setTimeout(() => this.rayos(), 600); return; }
 
     // ¿Este modelo publica la capa, o hay que ir a buscarla a otro?
     const R = await this.resolverModelo(L_);
@@ -3209,6 +3211,10 @@ const Maps = {
   },
   async rayos() {
     if (!this.map || !this.verRayos || typeof Rayos === 'undefined') return;
+    // Con el estilo a medio cargar addSource revienta: se espera al mapa.
+    if (typeof this.map.isStyleLoaded === 'function' && !this.map.isStyleLoaded()) {
+      this.map.once('idle', () => this.rayos()); return;
+    }
     clearTimeout(this._rayosTimer);
     this._rayosTimer = setTimeout(() => this.rayos(), 5 * 60e3);
     const pedido = ++this._rayosN;
