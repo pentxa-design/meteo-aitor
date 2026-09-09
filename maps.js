@@ -165,6 +165,14 @@ const TLAYERS = [
     desc:'Lluvia del modelo convertida a dBZ (Marshall-Palmer) — ESTIMADA, no es eco de radar' },
   { id:'radar', g:'Lluvia', name:'Radar observado', v:null, unit:'',
     desc:'Lo que YA está cayendo (RainViewer) — observación, no previsión' },
+  /* ── RADAR + PREVISIÓN EN UNA TIRA (09-09-2026) ──────────────────────
+     Suyo, en Calpe con la tormenta subiendo por la costa: «como Windy lo
+     ve quiero». Una sola tira: hasta ahora el radar observado (RainViewer,
+     con su media hora de extrapolación), y a partir de ahí la lluvia del
+     modelo convertida a dBZ, hora a hora, 24 h. El sello dice en cada
+     paso si es radar, extrapolación o previsión, y de qué modelo. */
+  { id:'radarprev', g:'Lluvia', name:'Radar + previsión', v:null, unit:'dBZ', dbz:true, escala:'dbz', mixta:true,
+    desc:'Hasta ahora, lo que ha caído (radar); después, lo que viene según el modelo (reflectividad estimada), en la misma tira' },
 
   { id:'sat_ir', g:'Satélite', name:'Nubes (infrarrojo)', v:null, unit:'', sat:'ir',
     desc:'Meteosat en infrarrojo — la nube que HAY, de día y de noche. Cuanto más blanco, más alto el tope: más potente la nube' },
@@ -1226,6 +1234,7 @@ const Maps = {
      setT() → apply() la carga.                                        */
   tiraObservada() {
     if (this.layer === 'radar') return (this.radarFrames ?? []).map(f => f.time * 1000);
+    if (this.layer === 'radarprev') return (this._mixta ?? []).map(x => x.time);
     if (this.layer === 'aemet') return (this._aemet ?? []).map(x => x.t);
     if (this.capaSat())        return (this._sat?.horas ?? []).map(h => new Date(h).getTime());
     return null;
@@ -1290,7 +1299,7 @@ const Maps = {
    *
    *    …/{modelo}/AAAA/MM/DD/HH00Z/AAAA-MM-DDTHHMM.om?variable=…
    */
-  omUrl(variable, t, modelo = this.model, meta = this.meta) {
+  omUrl(variable, t, modelo = this.model, meta = this.meta, capa = null) {
     const ref = meta?.reference_time;
     const vt  = meta?.valid_times?.[t];
     if (!ref || !vt) return null;
@@ -1311,7 +1320,7 @@ const Maps = {
     // Ojo: hay dos capas con la variable `precipitation` (Precipitación y
     // Reflectividad). Buscar por variable devolvía siempre la primera, así
     // que Reflectividad nunca llegaba a usar el protocolo de dBZ.
-    const L_ = TLAYERS.find(l => l.id === this.layer && l.v === variable)
+    const L_ = capa || TLAYERS.find(l => l.id === this.layer && l.v === variable)
             || TLAYERS.find(l => l.v === variable);
     if (L_?.arrows)   q.set('arrows', 'true');     // barbas de viento
     if (L_?.contours) q.set('contours', 'true');   // isobaras / isohipsas
@@ -1603,6 +1612,7 @@ const Maps = {
     /* Los rayos van encima de cualquier capa, también de las dos que
        salen por aquí antes de llegar al final de apply() (09-09-2026). */
     if (L_.id === 'radar') { this.applyRadar(); setTimeout(() => this.rayos(), 600); return; }
+    if (L_.id === 'radarprev') { this.applyMixta(); setTimeout(() => this.rayos(), 600); return; }
     if (L_.id === 'aemet') { this.applyAemet(); setTimeout(() => this.rayos(), 600); return; }
     if (L_.sat) { this.applySatelite(L_); setTimeout(() => this.rayos(), 600); return; }
 
@@ -1898,6 +1908,88 @@ const Maps = {
       this.status(`Radar AEMET · compuesto nacional · observación real, no previsión · ${cuanto}`);
     } catch (e) {
       this.status('radar de AEMET no disponible: ' + e.message);
+    }
+  },
+
+  /* ── RADAR + PREVISIÓN: la tira mixta ──────────────────────────────
+     Fotogramas del radar observado (RainViewer: pasado + media hora de
+     extrapolación) y, a continuación, las horas del modelo de
+     reflectividad hasta 24 h. Cada paso sabe lo que es. */
+  async applyMixta() {
+    try {
+      if (!this.radarFrames) {
+        const d = await jget(API.rain, {}, { timeout:12000 });
+        this.radarHost = d.host;
+        this.radarFrames = [...(d.radar?.past ?? []), ...(d.radar?.nowcast ?? [])];
+      }
+      const LR = TLAYERS.find(l => l.id === 'refl');
+      const R = await this.resolverModelo(LR);
+      if (!R) throw new Error('ningún modelo publica la reflectividad');
+      this.usando = R;
+      const radar = (this.radarFrames || []).map(f => ({ kind:'radar', time: f.time * 1000, f }));
+      const ultimoRadar = radar.length ? radar[radar.length - 1].time : Date.now();
+      const T = R.meta?.valid_times ?? [];
+      const modelo = [];
+      T.forEach((iso, i) => {
+        const ms = new Date(iso).getTime();
+        if (ms > ultimoRadar && ms <= ultimoRadar + 24 * 3600e3) modelo.push({ kind:'modelo', time: ms, i });
+      });
+      this._mixta = [...radar, ...modelo];
+      if (!this._mixta.length) throw new Error('sin imágenes');
+      const sl = document.querySelector('#mapTime');
+      sl.max = this._mixta.length - 1;
+      this.t = this.pasoEnTira(this._mixta.map(x => x.time));
+      if (this.t >= this._mixta.length) this.t = this._mixta.length - 1;
+      sl.value = this.t;
+      this.frameMixta(this.t);
+      this.legend();
+    } catch (e) {
+      this.status('radar + previsión no disponible: ' + e.message);
+    }
+  },
+
+  frameMixta(t) {
+    const x = this._mixta?.[t];
+    if (!x || !this.map) return;
+    const st = document.querySelector('#mapStamp');
+    const d = new Date(x.time);
+    const hora = d.toLocaleString('es', { weekday:'short', hour:'2-digit', minute:'2-digit' });
+    const M = TMODELS.find(m => m.id === this.usando?.modelo);
+    const nombre = M?.name || this.usando?.modelo || 'modelo';
+    try {
+      if (x.kind === 'radar') {
+        const url = `${this.radarHost}${x.f.path}/256/{z}/{x}/{y}/4/1_1.png`;
+        if (this.map.getSource('radarSrc')) this.map.getSource('radarSrc').setTiles([url]);
+        else {
+          this.map.addSource('radarSrc', { type:'raster', tileSize:256, maxzoom:12, tiles:[url] });
+          this.map.addLayer({ id:'radarLayer', type:'raster', source:'radarSrc',
+            paint:{ 'raster-opacity': this.opacity } }, this.firstLabelLayer());
+        }
+        if (this.map.getLayer('omLayer')) this.map.setLayoutProperty('omLayer', 'visibility', 'none');
+        this.map.setLayoutProperty('radarLayer', 'visibility', 'visible');
+        const pasado = x.time <= Date.now();
+        if (st) { st.textContent = `${hora} · ${pasado ? 'radar' : 'radar, extrapolado'}`; st.style.color = pasado ? '' : 'var(--warn)';
+                  st.title = pasado ? 'Observado (RainViewer)' : 'Extrapolación a corto plazo'; }
+      } else {
+        const LR = TLAYERS.find(l => l.id === 'refl');
+        const url = this.omUrl('precipitation', x.i, this.usando.modelo, this.usando.meta, LR);
+        if (!url) return;
+        if (this.map.getSource('omSrc')) this.map.getSource('omSrc').setTiles([`${url}/{z}/{x}/{y}`]);
+        else {
+          this.map.addSource('omSrc', { type:'raster', tiles:[`${url}/{z}/{x}/{y}`], tileSize:256, maxzoom:12,
+                                        attribution:'Datos de modelo: Open-Meteo' });
+          this.map.addLayer({ id:'omLayer', type:'raster', source:'omSrc',
+            paint:{ 'raster-opacity': this.opacity, 'raster-fade-duration': 120, 'raster-resampling': 'linear' } },
+            this.firstLabelLayer());
+        }
+        if (this.map.getLayer('radarLayer')) this.map.setLayoutProperty('radarLayer', 'visibility', 'none');
+        this.map.setLayoutProperty('omLayer', 'visibility', 'visible');
+        if (st) { st.textContent = `${hora} · previsión ${nombre}`; st.style.color = 'var(--acc)'; st.title = 'Previsión del modelo, reflectividad estimada'; }
+      }
+      const nRadar = this._mixta.filter(y => y.kind === 'radar').length;
+      this.status(`radar observado (${nRadar} imágenes, RainViewer) y después previsión ${nombre} (${this._mixta.length - nRadar} h)`);
+    } catch (e) {
+      this.status('radar + previsión: ' + e.message);
     }
   },
 
@@ -3515,6 +3607,14 @@ const Maps = {
       this.setT(t);
       return;
     }
+    if (this.layer === 'radarprev') {
+      const total = this._mixta?.length ?? 0;
+      if (!total) return;
+      const t = Math.max(0, Math.min(total - 1, this.t + n));
+      document.querySelector('#mapTime').value = t;
+      this.setT(t);
+      return;
+    }
     if (this.layer === 'radar') {
       const total = this.radarFrames?.length ?? 0;
       if (!total) return;
@@ -3574,6 +3674,8 @@ const Maps = {
       } catch { /* si falla, se rehace entera abajo */ }
     }
 
+    // Radar + previsión: solo cambia el fotograma, sin rehacer la capa.
+    if (L_?.id === 'radarprev' && this._mixta?.length) { this.frameMixta(this.t); return; }
     if (!L_ || L_.id === 'radar' || L_.id === 'aemet' || L_.sat || !this.usando || !this.map?.getSource('omSrc')) {
       this.apply(); return;
     }
@@ -3630,6 +3732,7 @@ const Maps = {
   /** Cuántos pasos tiene la capa activa. Cada tipo lleva su propia tira. */
   totalPasos() {
     if (this.layer === 'radar') return this.radarFrames?.length ?? 0;
+    if (this.layer === 'radarprev') return this._mixta?.length ?? 0;
     if (this.layer === 'aemet') return this._aemet?.length ?? 0;
     if (this.capaSat())        return this._sat?.horas?.length ?? 0;
     return this._idx?.length ?? this.meta?.valid_times?.length ?? 0;
@@ -3641,7 +3744,7 @@ const Maps = {
     this.playing = true;
     document.querySelector('#mapPlayIco').innerHTML = '<path d="M8.5 4.5v15M15.5 4.5v15"/>';
     clearInterval(this.timer);
-    const observada = this.layer === 'radar' || this.layer === 'aemet' || this.capaSat();
+    const observada = this.layer === 'radar' || this.layer === 'radarprev' || this.layer === 'aemet' || this.capaSat();
     this.timer = setInterval(() => {
       const total = this.totalPasos();
       if (!total) { this.pause(); return; }
