@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.09-1523';
+const BUILD = '2026.09.09-1530';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11345,10 +11345,15 @@ function renderNow() {
     const hm = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
     const cada = C.interval ? ` · se refresca cada ${Math.round(C.interval / 60)} min` : '';
     const viejo = min >= 60;
+    /* Y la hora en que la app PIDIÓ la previsión, que no es la misma:
+       «Medido a las 15:15» seguía igual mientras la franja de mañana
+       cambiaba, porque la app había recargado a las 15:25 y traído una
+       pasada nueva (Calpe, 09-09-2026). Dos relojes, los dos escritos. */
+    const pedida = S.data?.at ? (d => ` · previsión pedida a las ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`)(new Date(S.data.at)) : '';
     el.innerHTML = `Medido a las <b>${hm}</b>${diaSiNoEsHoy(t)}`
       + (viejo ? ` — <b>hace ${Math.floor(min / 60)} h ${min % 60} min</b>, pulsa recargar`
                : min >= 1 ? ` — hace ${min} min` : '')
-      + cada;
+      + cada + pedida;
   })();
 
   const d0 = fc.daily;
