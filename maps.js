@@ -3211,14 +3211,12 @@ const Maps = {
   },
   async rayos() {
     if (!this.map || !this.verRayos || typeof Rayos === 'undefined') return;
-    // Con el estilo a medio cargar addSource revienta: se espera al mapa.
-    if (typeof this.map.isStyleLoaded === 'function' && !this.map.isStyleLoaded()) {
-      this.map.once('idle', () => this.rayos()); return;
-    }
     clearTimeout(this._rayosTimer);
     this._rayosTimer = setTimeout(() => this.rayos(), 5 * 60e3);
     const pedido = ++this._rayosN;
     const el = document.querySelector('#mapRayos');
+    // La primera lectura tarda (dos mapas de toda España, pixel a pixel): que se sepa.
+    if (el && !this.map.getSource('rayosSrc')) el.textContent = '⚡ leyendo las descargas de AEMET…';
     try {
       const cat = await Rayos.catalogo();
       const c = this.map.getCenter();
@@ -3254,6 +3252,12 @@ const Maps = {
         ? `⚡ ${feats.length} descargas AEMET en lo que ves · rojo última hora, ámbar la anterior · publicado hasta las ${hh}`
         : `⚡ sin descargas AEMET en lo que ves · publicado hasta las ${hh}`;
     } catch (e) {
+      /* Con el estilo del mapa a medio cargar, addSource revienta: se
+         reintenta unas veces antes de darlo por perdido. */
+      if (/style|load/i.test(String(e?.message || e)) && (this._rayosRe = (this._rayosRe || 0) + 1) <= 6) {
+        setTimeout(() => this.rayos(), 1200); return;
+      }
+      this._rayosRe = 0;
       if (el) el.textContent = '⚡ rayos AEMET no disponibles: ' + (e?.message || e);
     }
   },
