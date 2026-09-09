@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.09-1821';
+const BUILD = '2026.09.09-1909';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -12867,6 +12867,31 @@ function avisoTormentaFranja(horas) {
     return `<br><span class="part__ray">⚡ Riesgo de tormenta · ${hh}:00</span>`
          + `<br><span class="part__ray--cif">CAPE ${peor.cape.toFixed(0)} y la tapa en `
          + `${peor.cin.toFixed(0)}: hay gasolina y está abierta</span>`;
+  }
+
+  /* ── SI OTRO MODELO VE TORMENTA EN LA FRANJA, EL TITULAR NO PUEDE
+     DECIR «BAJO» (09-09-2026) ───────────────────────────────────────
+     Calpe, esta tarde: la franja decía «Riesgo eléctrico bajo» con AROME
+     (CAPE 210, tapa 200) mientras la tarjeta Tormenta llevaba desde las
+     9 el chip «GFS ve tormenta: 2.320, tapa 11». A las 16:40 tronaba a
+     7,5 km y hubo 130 descargas en 60 km. Suyo: *«acertó poca lluvia
+     pero no daba tormenta, y se escuchó»*. La regla de la casa ya
+     estaba escrita —el rayo no admite promedios, basta con que uno
+     acierte— y aquí no se aplicaba. Ahora sí: si tu modelo no la ve
+     pero otro sí (CAPE ≥ 700 y tapa < 75 a alguna hora de la franja),
+     sale en ámbar con su nombre y sus cifras, y las tuyas al lado. */
+  {
+    let ajena = null;
+    for (const h of horas) {
+      const o = typeof tormentaQueNoVesTu === 'function' ? tormentaQueNoVesTu(h, h.sitio) : null;
+      if (o && (!ajena || o.cape > ajena.cape)) ajena = { ...o, h };
+    }
+    if (ajena) {
+      const hh = String(ajena.h.date.getHours()).padStart(2, '0');
+      return `<br><span class="part__ray">⚡ Riesgo de tormenta · ${hh}:00 <small>(lo ve ${esc(ajena.quien)})</small></span>`
+           + `<br><span class="part__ray--cif">${esc(ajena.quien)}: CAPE ${Math.round(ajena.cape)} y la tapa en ${Math.round(ajena.cin)}`
+           + ` · tu modelo: ${cifras}</span>`;
+    }
   }
 
   // Cargado, pero sin chispa. Se DICE, no se calla: es distinto de «no
