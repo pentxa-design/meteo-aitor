@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.09-1912';
+const BUILD = '2026.09.09-1913';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -12817,6 +12817,19 @@ function acceso(horas, cota) {
    todo lo demás, calibrada sobre 1.536 horas reales— y se dice a qué
    hora. Si no se da, se calla: una franja tranquila no tiene por qué
    decir nada.                                                          */
+/* De qué hora a qué hora, en texto: «a las 21:00», «de 20:00 a 23:00» o,
+   si van sueltas, «entre las 20:00 y las 23:00 (2 horas)». Suyo,
+   09-09-2026: «que ponga riesgo de tormenta de tal hora a tal hora». */
+function rangoHoras(hs) {
+  const h2 = d => `${String(d.getHours()).padStart(2, '0')}:00`;
+  const xs = hs.map(h => h.date).sort((a, b) => a - b);
+  if (!xs.length) return '';
+  const a = xs[0], b = xs[xs.length - 1];
+  if (xs.length === 1) return `a las ${h2(a)}`;
+  const seguidas = xs.length === Math.round((b - a) / 3600e3) + 1;
+  return seguidas ? `de ${h2(a)} a ${h2(b)}` : `entre las ${h2(a)} y las ${h2(b)} (${xs.length} horas sueltas)`;
+}
+
 function avisoTormentaFranja(horas) {
   if (!horas?.length) return '';
 
@@ -12868,9 +12881,9 @@ function avisoTormentaFranja(horas) {
   if (malas.length) {
     const peor = malas.reduce((a, b) => b.cape > a.cape ? b : a);
     const hh = String(peor.date.getHours()).padStart(2, '0');
-    return `<br><span class="part__ray">⚡ Riesgo de tormenta · ${hh}:00</span>`
-         + `<br><span class="part__ray--cif">CAPE ${peor.cape.toFixed(0)} y la tapa en `
-         + `${peor.cin.toFixed(0)}: hay gasolina y está abierta</span>`;
+    return `<br><span class="part__ray">⚡ Riesgo de tormenta ${rangoHoras(malas)}</span>`
+         + `<br><span class="part__ray--cif">lo peor a las ${hh}:00: CAPE ${peor.cape.toFixed(0)} y la tapa en `
+         + `${peor.cin.toFixed(0)}, hay gasolina y está abierta</span>`;
   }
 
   /* ── SI OTRO MODELO VE TORMENTA EN LA FRANJA, EL TITULAR NO PUEDE
@@ -12886,14 +12899,17 @@ function avisoTormentaFranja(horas) {
      sale en ámbar con su nombre y sus cifras, y las tuyas al lado. */
   {
     let ajena = null;
+    const horasAjenas = [];
     for (const h of horas) {
       const o = typeof tormentaQueNoVesTu === 'function' ? tormentaQueNoVesTu(h, h.sitio) : null;
-      if (o && (!ajena || o.cape > ajena.cape)) ajena = { ...o, h };
+      if (!o) continue;
+      horasAjenas.push(h);
+      if (!ajena || o.cape > ajena.cape) ajena = { ...o, h };
     }
     if (ajena) {
       const hh = String(ajena.h.date.getHours()).padStart(2, '0');
-      return `<br><span class="part__ray">⚡ Riesgo de tormenta · ${hh}:00 <small>(lo ve ${esc(ajena.quien)})</small></span>`
-           + `<br><span class="part__ray--cif">${esc(ajena.quien)}: CAPE ${Math.round(ajena.cape)} y la tapa en ${Math.round(ajena.cin)}`
+      return `<br><span class="part__ray">⚡ Riesgo de tormenta ${rangoHoras(horasAjenas)} <small>(lo ve ${esc(ajena.quien)})</small></span>`
+           + `<br><span class="part__ray--cif">${esc(ajena.quien)}, lo peor a las ${hh}:00: CAPE ${Math.round(ajena.cape)} y la tapa en ${Math.round(ajena.cin)}`
            + ` · tu modelo: ${cifras}</span>`;
     }
   }
@@ -12903,7 +12919,7 @@ function avisoTormentaFranja(horas) {
   if (combinacion.length) {
     const peor = combinacion.reduce((a, b) => b.cape > a.cape ? b : a);
     const hh = String(peor.date.getHours()).padStart(2, '0');
-    return `<br><span class="part__ray--ojo">Ambiente cargado, sin nada que lo dispare · ${hh}:00</span>`
+    return `<br><span class="part__ray--ojo">Ambiente cargado, sin nada que lo dispare ${rangoHoras(combinacion)}</span>`
          + `<br><span class="part__ray--cif">CAPE ${peor.cape.toFixed(0)} y la tapa en `
          + `${peor.cin.toFixed(0)}, pero ${peor.pop} % de probabilidad de lluvia</span>`;
   }
