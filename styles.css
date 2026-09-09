@@ -440,6 +440,8 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;
 .part__tira u{text-decoration:none;font-size:.8125rem;line-height:1.1;color:var(--dim);white-space:nowrap}
 .part__t{font-size:1.0625rem;font-weight:600}
 .part__s{font-size:0.9375rem;color:var(--dim);margin-top:4px;line-height:1.35}
+/* El chip de «otro modelo sí» dentro de la franja salta de línea: con las horas ya no cabe en una (09-09-2026). */
+.part__s .nd__ojo{white-space:normal;line-height:1.25}
 
 .det{display:grid;gap:1px;background:var(--line);border-radius:13px;overflow:hidden;
   grid-template-columns:repeat(auto-fit,minmax(132px,1fr))}
