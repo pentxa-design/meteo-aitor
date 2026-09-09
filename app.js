@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.09-2124';
+const BUILD = '2026.09.09-2125';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11533,6 +11533,9 @@ function renderNow() {
     const R = resumenCielo(sel);
     const code = R ? R.code : codigoFranja(sel);
     const gm = Math.max(...sel.map(h => h.gust ?? 0));
+    // Y a qué hora es esa racha (suyo, 09-09-2026: «que se aplique siempre»).
+    const hGm = sel.find(h => (h.gust ?? 0) === gm)?.date;
+    const gmCuando = gm > 0 && hGm ? ` · a las ${String(hGm.getHours()).padStart(2, '0')}:00` : '';
     /* El viento medio, además de la racha. Suyo, 08-09-2026: «está bien
        saber las rachas pero también me gustaría saber el viento que hay a
        10 m». Va la horquilla de la franja, a la misma altura que la racha. */
@@ -11697,7 +11700,7 @@ function renderNow() {
          Es el mismo motivo por el que la tabla de «Mis torres» lleva
          escrito «a 10 m» en la cabecera desde que él preguntó *«¿es a
          10 m o qué significa?»*. Aquí faltaba. */
-      }${vTxt ? `<br>Viento ${vTxt}<small> a ${S.hgt} m</small>` : ''}${gm > 0 ? `<br>Racha máx ${wtxt(gm, true)}<small> a ${S.hgt} m</small>` : ''}${
+      }${vTxt ? `<br>Viento ${vTxt}<small> a ${S.hgt} m</small>` : ''}${gm > 0 ? `<br>Racha máx ${wtxt(gm, true)}<small> a ${S.hgt} m${gmCuando}</small>` : ''}${
         avisoTormentaFranja(sel)}</div></div>`;
   }).join('');
 
@@ -12525,6 +12528,14 @@ function renderDays() {
     const d = new Date(t + 'T12:00');
     const mx = D.temperature_2m_max[i], mn = D.temperature_2m_min[i];
     const racha = D.wind_gusts_10m_max?.[i];
+    // La hora de esa racha, sacada de las horas del día (09-09-2026).
+    const rachaCuando = (() => {
+      if (!has(racha)) return '';
+      const hs = horasDelDia(S.data?.fc, t).filter(h => has(h.gust10));
+      if (!hs.length) return '';
+      const peor = hs.reduce((a, b) => (b.gust10 > a.gust10 ? b : a));
+      return peor.gust10 >= racha * 0.85 ? ` <small>a las ${String(peor.date.getHours()).padStart(2, '0')}:00</small>` : '';
+    })();
     const pop = D.precipitation_probability_max?.[i];
     const mm = D.precipitation_sum?.[i];
     const tormenta = isStormCode(D.weather_code[i]);
@@ -12539,7 +12550,7 @@ function renderDays() {
       <div class="dcard__t"><b>${has(mx)?mx.toFixed(0)+'°':'—'}</b>
         <span>${has(mn)?mn.toFixed(0)+'°':'—'}</span></div>
       <div class="dcard__r">💧 ${has(pop)?pop+'%':'—'} · ${has(mm)?mmTxt(mm)+' mm':'sin dato'}</div>
-      <div class="dcard__g">Racha ${has(racha) ? wtxt(racha, true) : '—'}</div>
+      <div class="dcard__g">Racha ${has(racha) ? wtxt(racha, true) : '—'}${rachaCuando}</div>
       ${(() => {
         /* ── Y SI OTRO MODELO TE CRUZA EL LISTÓN, SE DICE ─────────────
            MEDIDO el 01-09-2026: el domingo 6 esta tarjeta pintaba «37»
