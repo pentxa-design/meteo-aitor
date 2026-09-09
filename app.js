@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.09-1909';
+const BUILD = '2026.09.09-1912';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -1713,7 +1713,11 @@ function tormentaQueNoVesTu(h, place = null) {
   for (const m of COMPARAR) {
     const cape = C[`cape_${m.om}`]?.[i], cin = C[`convective_inhibition_${m.om}`]?.[i];
     if (!has(cape) || !has(cin)) continue;
-    if (cape >= CAPE_COMBINACION && cin < 75 && (!peor || cape > peor.cape)) peor = { quien: m.name, cape, cin };
+    const auto = m.om === 'best_match';
+    // A igual gasolina, antes un modelo con nombre que el «Automático», que es una mezcla.
+    if (cape >= CAPE_COMBINACION && cin < 75
+        && (!peor || cape > peor.cape || (cape === peor.cape && peor.auto && !auto)))
+      peor = { quien: m.name, cape, cin, auto };
   }
   return peor;
 }
