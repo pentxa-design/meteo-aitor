@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.09-2128';
+const BUILD = '2026.09.09-2130';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -14037,7 +14037,17 @@ async function go(place, { silent = false } = {}) {
     const data = await loadAll(place);
     data.hours = buildHours(data.fc, S.hgt);
     S.data = data;
-    cargarComparativa(place);
+    /* ── LA VOTACIÓN ANTES DE PINTAR (09-09-2026) ────────────────────
+       Calpe, 21:24, dos capturas de «Ahora» del mismo minuto con la mañana
+       del jueves distinta: la primera pintada con el cielo de AROME a
+       secas, la segunda cinco segundos después, cuando llegó la votación
+       de los cuatro modelos y repintó. Las dos eran coherentes por dentro,
+       pero él vio «un icono que cambia solo», y con cuatro semanas de
+       iconos bailando eso ya no vale. Ahora se espera a la comparativa
+       (como mucho 7 s) y lo primero que se pinta es lo definitivo. Si
+       tarda más, se pinta con lo que hay y la votación repinta al llegar,
+       como antes. */
+    await Promise.race([cargarComparativa(place).catch(() => {}), new Promise(r => setTimeout(r, 7000))]);
     /* Y la comparación a diez días, para la pestaña «10 días». Va aquí
        al lado porque comparte el mismo disparador: sitio nuevo, datos
        nuevos. No se espera a ella —llega cuando llega y repinta sola—,
