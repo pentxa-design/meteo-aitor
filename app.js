@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.09-2125';
+const BUILD = '2026.09.09-2128';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -46,6 +46,9 @@ const directo = {
   geo  : 'https://geocoding-api.open-meteo.com/v1/search',
   elev : 'https://api.open-meteo.com/v1/elevation',
   mar  : 'https://marine-api.open-meteo.com/v1/marine',
+  /* via('marine') buscaba `directo.marine` y no existía: en local (sin
+     proxy) el mar salía «Invalid URL» (Calpe, 09-09-2026 21:25). */
+  marine: 'https://marine-api.open-meteo.com/v1/marine',
   aq   : 'https://air-quality-api.open-meteo.com/v1/air-quality',
   /* El catálogo del radar iba directo desde el navegador, saltándose el
      intermediario (revisión del 04-09-2026): era el único dato que no
