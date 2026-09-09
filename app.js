@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.09-1521';
+const BUILD = '2026.09.09-1523';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11588,11 +11588,18 @@ function renderNow() {
       <div class="part__b"><div class="part__i">${(() => {
         /* El dibujo acompaña al texto: si la franja tiene dos cielos,
            dos iconos en su orden. Misma función que decide la frase. */
-        /* Dos iconos si el cielo cambia dentro de la franja: el primer tramo
-           y el peor de los que vienen. Mismos tramos que la frase de abajo. */
+        /* ── UN ICONO POR TRAMO, SIN ELEGIR (09-09-2026, 15:30) ───────
+           Suyo, tras cuatro semanas: *«todos los días hay algo mal en los
+           iconos, la interpretación»*. Y era eso: pedir a dos dibujos que
+           resuman siete horas es interpretar, y cada regla para elegir
+           «los dos» acierta un día y falla al siguiente. Ahora la franja
+           pinta TODOS sus tramos, cada uno con sus horas debajo, en el
+           mismo orden que la frase. No hay nada que elegir. */
         const d = deDia(sel);
-        if (R && R.iconos.length >= 2)
-          return `<span class="part__i2">${icon(R.iconos[0].code, d)}${icon(R.iconos[1].code, d)}</span>`;
+        if (R && R.partes && R.partes.length >= 2) {
+          const rot = t => (t.desde === t.hasta ? `${t.desde} h` : `${t.desde}-${t.hasta} h`);
+          return `<span class="part__tira">${R.partes.map(t => `<i>${icon(t.code, d)}<u>${rot(t)}</u></i>`).join('')}</span>`;
+        }
         return icon(code, d);
       })()}</div>
       <div class="part__t">${ts.length ? `${Math.min(...ts).toFixed(0)}–${Math.max(...ts).toFixed(0)}°` : nd}</div></div>
@@ -12389,10 +12396,12 @@ function iconosDelDia(dia) {
   const R = resumenCielo(delDia);
   if (!R || !has(R.code)) return SIN_DIBUJO;
   const d = deNoche ? 0 : 1;
-  if (R.iconos.length < 2) return icon(R.code, d);
-  const rot = t => (has(t.desde) && has(t.hasta)) ? (t.desde === t.hasta ? `${t.desde} h` : `${t.desde}-${t.hasta} h`) : '';
-  return `<span class="dcard__ii"><i>${icon(R.iconos[0].code, d)}<u>${rot(R.iconos[0])}</u></i>`
-       + `<i>${icon(R.iconos[1].code, d)}<u>${rot(R.iconos[1])}</u></i></span>`;
+  /* Un icono por tramo, sin elegir (09-09-2026): ver la franja de «Ahora».
+     En la tarjeta del día el rótulo es la hora en que empieza cada tramo,
+     que es lo que cabe. */
+  if (!R.partes || R.partes.length < 2) return icon(R.code, d);
+  return `<span class="dcard__ii" data-n="${R.partes.length}">${
+    R.partes.map(t => `<i>${icon(t.code, d)}<u>${has(t.desde) ? `${t.desde}h` : ''}</u></i>`).join('')}</span>`;
 }
 
 function renderDays() {
@@ -14462,7 +14471,7 @@ function comprobarCielo() {
     const sel = S.data.hours.filter(h => h.t >= p.dataset.ini && h.t <= p.dataset.fin);
     const R = resumenCielo(sel);
     if (!R) return;
-    const esperado = R.iconos.length >= 2 ? [R.iconos[0].code, R.iconos[1].code] : [R.code];
+    const esperado = R.partes && R.partes.length >= 2 ? R.partes.map(t => t.code) : [R.code];
     const enDom = codigos(p.querySelector('.part__i'));
     if (enDom.join() !== esperado.join())
       faltas.push(`franja «${p.querySelector('.part__k')?.textContent.trim()}» pinta ${enDom.join('/')} y sus horas dicen ${esperado.join('/')}`);
