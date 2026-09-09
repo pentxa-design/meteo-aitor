@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.09-1530';
+const BUILD = '2026.09.09-1531';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11349,7 +11349,10 @@ function renderNow() {
        «Medido a las 15:15» seguía igual mientras la franja de mañana
        cambiaba, porque la app había recargado a las 15:25 y traído una
        pasada nueva (Calpe, 09-09-2026). Dos relojes, los dos escritos. */
-    const pedida = S.data?.at ? (d => ` · previsión pedida a las ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`)(new Date(S.data.at)) : '';
+    /* En su color, arriba y a mano: «en vez de abajo, que no lo ve nadie»
+       (suyo, 15:32). Es el reloj que hay que mirar antes de comparar dos
+       capturas. */
+    const pedida = S.data?.at ? (d => ` · <b class="cover__pedida">previsión pedida a las ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}</b>`)(new Date(S.data.at)) : '';
     el.innerHTML = `Medido a las <b>${hm}</b>${diaSiNoEsHoy(t)}`
       + (viejo ? ` — <b>hace ${Math.floor(min / 60)} h ${min % 60} min</b>, pulsa recargar`
                : min >= 1 ? ` — hace ${min} min` : '')
