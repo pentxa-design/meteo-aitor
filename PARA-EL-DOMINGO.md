@@ -1,6 +1,6 @@
 # PARA EL DOMINGO · traer al Mac de casa lo hecho en el portátil
 
-Última actualización: 09-09-2026 00:30 (portátil, Calpe). Procedimientos 6A y 6B ensayados el 08-09 sobre copias de e5ab019: los dos aplican limpios. Este documento se actualiza con cada commit de la rama; en caso de duda, la verdad es `git log e5ab019..portatil-2026-09-07`.
+Última actualización: 09-09-2026 09:35 (portátil, Calpe). Procedimientos 6A y 6B ensayados el 08-09 sobre copias de e5ab019: los dos aplican limpios. Este documento se actualiza con cada commit de la rama; en caso de duda, la verdad es `git log e5ab019..portatil-2026-09-07`.
 
 ## 1. Qué es esto y qué tienes que hacer
 
@@ -1101,4 +1101,14 @@ Aitor, 09-09-2026 00:32, con 40 avisos en un día de lluvia: *«me llegan muchos
 5. **Horas de silencio.** De 23:00 a 06:00 solo lo que sea rojo (racha ≥ listón NO, tormenta con CAPE ≥ 700 y tapa < 75). El resto se acumula y sale con el parte de las 06:30.
 
 Cómo comprobarlo en casa: con lluvia general en Bizkaia, un día no debería pasar de 4-6 notificaciones (una por pasada con cambios reales), y ninguna sobre horas ya pasadas.
+
+## 12. El listón de ráfaga que manda, y la tormenta que ve otro modelo (09-09-2026, mañana)
+
+Aitor, con «Tu listón: 45 km/h / 60 km/h» delante: *«eso no es así»*. Y no lo era: en caseta y poste (perfil `hierro`, el 90 % de su trabajo) el veredicto mira `rafagaBestia` (70, y avisa desde 49), pero las tarjetas, los chips «⚠ ICON da 67 — tu listón es 60» y las barras de la comparativa pintaban `gustWarn`/`gustNo` (45/60), que son los de SUBIR. Ahora `listonRafaga()` (junto a `DEFAULT_THR`) devuelve el listón del perfil y lo usan todos los sitios que enseñan o colorean una ráfaga. **Ojo en casa:** la pantalla de Ajustes sigue editando `gustWarn`/`gustNo`, que solo mandan en el perfil de subir; convendría que Ajustes lo dijera o que dejara editar también `rafagaBestia`.
+
+También del mismo repaso de pantallazos:
+- `tormentaQueNoVesTu(h)`: el modelo que salta (CAPE ≥ 700 y tapa < 75) a esa hora según la comparativa. Sale como chip ámbar en la tarjeta «Tormenta» de Detalles y como fila en «Riesgo eléctrico» («⚠ GFS ve tormenta … 2320 J/kg · tapa 11 — abierta»). Antes solo lo decía la tabla de abajo («1 de 3 ven tormenta») y la tarjeta ponía «Inestabilidad baja».
+- La tarjeta «Lluvia» de la ficha decía «Despejado» (código crudo) y el rótulo grande «Mayormente despejado» (votado): ahora las dos usan `cieloVisto`.
+- El OJO de la ventana de trabajo dice de qué modelo es la ráfaga cuando manda la de otro («Ráfaga 62 km/h (lo ve ICON)»).
+- Etiqueta «18-18 h» en 10 días → «18 h».
 
