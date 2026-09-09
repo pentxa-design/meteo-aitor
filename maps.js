@@ -988,6 +988,7 @@ const Maps = {
      (ver `open()`).                                                    */
   map:null, model:'dwd_icon_eu', layer:'precipitation', base:'claro',
   meta:null, t:0, playing:false, verValores:true, verBarbas:true,
+  verRayos:true, _rayosTimer:null, _rayosN:0,
   _frames:[], _encima:[], timer:null, radarFrames:null, radarHost:null,
   /* 0,95 y no 0,85: suyo, 31-08-2026, comparando con Meteored — «el
      contraste, sobre todo los mapas apagados». El 15 % de transparencia
@@ -1036,6 +1037,7 @@ const Maps = {
     this.pasoHoras = LS.get('tpaso', 3);
     this.verValores = LS.get('tvals', true);
     this.verBarbas  = LS.get('tbarbs', true);
+    this.verRayos   = LS.get('trayos', true);
 
     const el = document.querySelector('#mapc');
     el.innerHTML = `<div class="radar__ph">Cargando cartografía…</div>`;
@@ -1101,7 +1103,7 @@ const Maps = {
       // Al mover o ampliar el mapa se sigue precargando, y si estaba
       // reproduciéndose NO se detiene: solo se piden las teselas de la
       // nueva vista.
-      this.map.on('moveend', () => { this.precargar(this._dir ?? 1); this.valores(); this.barbas(); });
+      this.map.on('moveend', () => { this.precargar(this._dir ?? 1); this.valores(); this.barbas(); this.rayosPronto(); });
       this.map.on('move', () => { this.limpiarValores(); this.limpiarBarbas(); });
       this.map.on('zoomend', () => { this._pedidas = new Set(); this.precargar(this._dir ?? 1); });
       this.map.on('click', e => this.consultar(e.lngLat));
@@ -1699,7 +1701,7 @@ const Maps = {
     this.calentarClaves();
     this.stamp();
     this.legend();
-    setTimeout(() => { this.valores(); this.barbas(); }, 600);
+    setTimeout(() => { this.valores(); this.barbas(); this.rayos(); }, 600);
   },
 
   /** Altura del sol sobre el horizonte, en grados, en un punto y momento.
@@ -3179,6 +3181,75 @@ const Maps = {
 
   limpiarBarbas() { const c = document.querySelector('#mapBarbs'); if (c) c.innerHTML = ''; },
 
+  /* ── RAYOS ENCIMA DEL MAPA (09-09-2026) ─────────────────────────────
+     Suyo, en Calpe con la tormenta subiendo por la costa, mirando Windy:
+     «los rayos encima del radar». Las descargas son las de AEMET que ya
+     lee la pestaña Rayos (Rayos.leer, pixel a pixel del mapa oficial), de
+     las dos últimas horas publicadas: ROJO la última, ÁMBAR la anterior;
+     borde blanco las positivas. Se leen para lo que se ve en pantalla,
+     se vuelven a pedir al mover el mapa y cada 5 minutos, y van encima de
+     cualquier capa. AEMET publica por horas y con retraso: el pie del
+     mapa dice hasta qué hora hay dato, que no es «ahora». */
+  setRayos(on) {
+    this.verRayos = !!on; LS.set('trayos', this.verRayos);
+    this.ui(); this.verRayos ? this.rayos() : this.limpiarRayos();
+  },
+  limpiarRayos() {
+    clearTimeout(this._rayosTimer); this._rayosTimer = null;
+    if (!this.map) return;
+    for (const id of ['rayosLayer', 'rayosHalo']) if (this.map.getLayer(id)) this.map.removeLayer(id);
+    if (this.map.getSource('rayosSrc')) this.map.removeSource('rayosSrc');
+    const el = document.querySelector('#mapRayos'); if (el) el.textContent = '';
+  },
+  rayosPronto() {
+    clearTimeout(this._rayosDeb);
+    this._rayosDeb = setTimeout(() => this.rayos(), 700);
+  },
+  async rayos() {
+    if (!this.map || !this.verRayos || typeof Rayos === 'undefined') return;
+    clearTimeout(this._rayosTimer);
+    this._rayosTimer = setTimeout(() => this.rayos(), 5 * 60e3);
+    const pedido = ++this._rayosN;
+    const el = document.querySelector('#mapRayos');
+    try {
+      const cat = await Rayos.catalogo();
+      const c = this.map.getCenter();
+      const amb = Rayos.ambito(cat, { lat: c.lat, lon: c.lng });
+      if (!amb) { if (el) el.textContent = '⚡ AEMET no cubre esta zona'; return; }
+      const b = this.map.getBounds();
+      const caja = { lat0: b.getSouth(), lat1: b.getNorth(), lon0: b.getWest(), lon1: b.getEast() };
+      const marcos = cat.ambitos[amb].marcos.slice(-2);
+      const feats = [];
+      for (let k = 0; k < marcos.length; k++) {
+        const ds = await Rayos.leer(amb, marcos[k], caja, cat);
+        const edad = marcos.length - 1 - k;        // 0 = la última hora publicada
+        for (const d of ds) feats.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [d.lon, d.lat] },
+                                         properties: { edad, pos: d.pos ? 1 : 0 } });
+      }
+      if (pedido !== this._rayosN || !this.verRayos || !this.map) return;   // llegó tarde
+      const data = { type: 'FeatureCollection', features: feats };
+      const src = this.map.getSource('rayosSrc');
+      if (src) src.setData(data);
+      else {
+        this.map.addSource('rayosSrc', { type: 'geojson', data });
+        this.map.addLayer({ id: 'rayosHalo', type: 'circle', source: 'rayosSrc',
+          paint: { 'circle-radius': 7.5, 'circle-color': '#000', 'circle-opacity': 0.35 } });
+        this.map.addLayer({ id: 'rayosLayer', type: 'circle', source: 'rayosSrc',
+          paint: { 'circle-radius': 4.5,
+                   'circle-color': ['case', ['==', ['get', 'edad'], 0], '#ff3b30', '#ffb020'],
+                   'circle-stroke-color': ['case', ['==', ['get', 'pos'], 1], '#ffffff', '#1a1a1a'],
+                   'circle-stroke-width': 1.2, 'circle-opacity': 0.95 } });
+      }
+      const hasta = marcos[marcos.length - 1]?.hasta;
+      const hh = hasta && typeof horaHM === 'function' ? horaHM(hasta) : '—';
+      if (el) el.textContent = feats.length
+        ? `⚡ ${feats.length} descargas AEMET en lo que ves · rojo última hora, ámbar la anterior · publicado hasta las ${hh}`
+        : `⚡ sin descargas AEMET en lo que ves · publicado hasta las ${hh}`;
+    } catch (e) {
+      if (el) el.textContent = '⚡ rayos AEMET no disponibles: ' + (e?.message || e);
+    }
+  },
+
   setBarbas(on) {
     this.verBarbas = !!on; LS.set('tbarbs', this.verBarbas);
     this.ui();
@@ -3239,6 +3310,7 @@ const Maps = {
       `<button class="mbtn${this.terrain ? ' is-on' : ''}" data-tr="1" title="Sombreado del terreno (Esri/USGS)">Relieve</button>` +
       `<button class="mbtn${this.verValores ? ' is-on' : ''}" data-tv="1" title="Números del modelo sobre las ciudades">Valores</button>` +
       `<button class="mbtn${this.verBarbas ? ' is-on' : ''}" data-tb2="1" title="Barbas de viento — media ≈ 9 km/h, entera ≈ 19, banderola ≈ 93 (el símbolo se dibuja en nudos por convenio)">Barbas</button>` +
+      `<button class="mbtn${this.verRayos ? ' is-on' : ''}" data-tl="1" title="Descargas detectadas por AEMET en las dos últimas horas publicadas, encima del mapa">⚡ Rayos</button>` +
       `<span class="msel__k" style="margin-left:12px">Paso</span>` +
       [1,3,6].map(h => `<button class="mbtn${h === this.pasoHoras ? ' is-on' : ''}" data-tp="${h}"
          title="${h === 3 ? 'Como Windy y Ventusky: fluido' : h === 1 ? 'Máximo detalle, más lento' : 'Muy fluido, menos detalle'}">${h} h</button>`).join('');
@@ -3254,6 +3326,8 @@ const Maps = {
     // encajar el mapa o el deslizador se sale de la pantalla.
     if (typeof ajustarAltoMapa === 'function') requestAnimationFrame(ajustarAltoMapa);
 
+    const bR = document.querySelector('#mapRayosBtn');
+    if (bR) bR.classList.toggle('is-on', !!this.verRayos);
     const L_ = TLAYERS.find(l => l.id === this.layer);
     document.querySelector('#mapDesc').textContent =
       L_ ? `${L_.name}${L_.unit ? ` · ${L_.unit}` : ''} — ${L_.desc}` : '';
