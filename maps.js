@@ -171,7 +171,7 @@ const TLAYERS = [
      con su media hora de extrapolación), y a partir de ahí la lluvia del
      modelo convertida a dBZ, hora a hora, 24 h. El sello dice en cada
      paso si es radar, extrapolación o previsión, y de qué modelo. */
-  { id:'radarprev', g:'Lluvia', name:'Radar + previsión', v:null, unit:'dBZ', dbz:true, escala:'dbz', mixta:true,
+  { id:'radarprev', g:'Lluvia', name:'Radar + previsión', v:'precipitation', unit:'dBZ', dbz:true, escala:'dbz', mixta:true,
     desc:'Hasta ahora, lo que ha caído (radar); después, lo que viene según el modelo (reflectividad estimada), en la misma tira' },
 
   { id:'sat_ir', g:'Satélite', name:'Nubes (infrarrojo)', v:null, unit:'', sat:'ir',
@@ -1938,7 +1938,11 @@ const Maps = {
       if (!this._mixta.length) throw new Error('sin imágenes');
       const sl = document.querySelector('#mapTime');
       sl.max = this._mixta.length - 1;
-      this.t = this.pasoEnTira(this._mixta.map(x => x.time));
+      /* Se abre en el ÚLTIMO fotograma observado (el «ahora» del radar), o
+         en la hora que se estaba mirando si vienes de otra capa. */
+      const tiempos = this._mixta.map(x => x.time);
+      if (this.horaPedida) this.t = this.pasoEnTira(tiempos);
+      else { const fut = tiempos.findIndex(h => h > Date.now()); this.t = fut < 0 ? tiempos.length - 1 : Math.max(0, fut - 1); }
       if (this.t >= this._mixta.length) this.t = this._mixta.length - 1;
       sl.value = this.t;
       this.frameMixta(this.t);
