@@ -425,6 +425,13 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;
 .part__k{font-size:0.8125rem;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:650}
 .part__b{display:flex;align-items:center;gap:8px;margin-top:6px}
 .part__i{width:28px;height:28px;flex:none}
+/* La tira de tramos de la franja: un icono por tramo con sus horas
+   debajo, en el orden de la frase (09-09-2026). */
+.part__i:has(.part__tira){width:auto;height:auto}
+.part__tira{display:inline-flex;align-items:flex-start;gap:8px}
+.part__tira i{display:flex;flex-direction:column;align-items:center;gap:1px;font-style:normal}
+.part__tira i > svg{width:26px;height:26px}
+.part__tira u{text-decoration:none;font-size:.8125rem;line-height:1.1;color:var(--dim);white-space:nowrap}
 .part__t{font-size:1.0625rem;font-weight:600}
 .part__s{font-size:0.9375rem;color:var(--dim);margin-top:4px;line-height:1.35}
 
@@ -2552,6 +2559,10 @@ body.sin-scroll{overflow:hidden}
    dos iconos del día, o sea justo lo que hay que distinguir de un
    vistazo. La tarjeta tiene sitio: los iconos van a 34 px y el rótulo
    crece hacia abajo, no hacia los lados. */
+/* Con tres o más tramos el icono se encoge para que quepan (09-09-2026). */
+.dcard__ii[data-n="3"] i > svg{width:28px;height:28px}
+.dcard__ii[data-n="4"] i > svg,.dcard__ii[data-n="5"] i > svg,.dcard__ii[data-n="6"] i > svg{width:22px;height:22px}
+.dcard__ii[data-n="4"],.dcard__ii[data-n="5"],.dcard__ii[data-n="6"]{gap:3px}
 .dcard__ii u{text-decoration:none;font-size:.8125rem;line-height:1.15;
   color:var(--dim);letter-spacing:.02em}
 
