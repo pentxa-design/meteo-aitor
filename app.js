@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.09-1913';
+const BUILD = '2026.09.09-2124';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -5057,22 +5057,27 @@ function lluviaEnLaFranjaQueNoVesTu(desde, hasta) {
     const serie = H[`precipitation_${m.om}`];
     if (!serie) continue;
     let total = 0;
+    const horas = [];                 // a qué horas moja ese modelo (09-09-2026)
     for (let i = 0; i < H.time.length; i++) {
       const t = new Date(H.time[i]).getTime();
       if (t < a || t > b) continue;
-      if (has(serie[i])) total += serie[i];
+      if (has(serie[i])) { total += serie[i]; if (serie[i] > 0) horas.push({ date: new Date(H.time[i]) }); }
     }
-    if (total >= (S.thr?.rainWarn ?? 0.2)) otros.push({ nom: m.name, total });
+    if (total >= (S.thr?.rainWarn ?? 0.2)) otros.push({ nom: m.name, total, horas });
   }
   if (!otros.length) return null;
 
   otros.sort((x, y) => y.total - x.total);
   const deFuera = otros.filter(x => !enSelector.has(x.nom)).map(x => x.nom);
+  /* Suyo, 09-09-2026: «¿a qué horario se refiere?». Las horas del que
+     más agua ve, con la misma regla que las tormentas (rangoHoras). */
+  const cuando = otros[0].horas.length ? rangoHoras(otros[0].horas) : '';
   return {
     quien: listar(otros.map(x => x.nom)),
     soloEnTorre: deFuera.length ? listar(deFuera) : null,
     mm: otros[0].total,
     cuantos: otros.length,
+    cuando,
   };
 }
 
@@ -11676,7 +11681,7 @@ function renderNow() {
           if (has(mm) && mm >= 0.1) return '';
           const o = lluviaEnLaFranjaQueNoVesTu(sel[0].date, sel[sel.length - 1].date);
           if (!o) return '';
-          return ` <span class="nd__ojo">⚠ ${esc(o.quien)} sí (${mmTxt(o.mm)} mm)</span>`;
+          return ` <span class="nd__ojo">⚠ ${esc(o.quien)} sí (${mmTxt(o.mm)} mm${o.cuando ? `, ${o.cuando}` : ''})</span>`;
         })()}`
       /* ── Y A QUÉ ALTURA, QUE SI NO SON DOS CIFRAS SIN DUEÑO ────────
          Cazado el 30-08-2026 comparando dos pantallazos suyos de la
