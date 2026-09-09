@@ -1598,8 +1598,10 @@ const Maps = {
     this.limpiarValores();
     this.limpiarBarbas();
 
-    if (L_.id === 'radar') { this.applyRadar(); return; }
-    if (L_.id === 'aemet') { this.applyAemet(); return; }
+    /* Los rayos van encima de cualquier capa, también de las dos que
+       salen por aquí antes de llegar al final de apply() (09-09-2026). */
+    if (L_.id === 'radar') { this.applyRadar(); setTimeout(() => this.rayos(), 600); return; }
+    if (L_.id === 'aemet') { this.applyAemet(); setTimeout(() => this.rayos(), 600); return; }
     if (L_.sat) { this.applySatelite(L_); return; }
 
     // ¿Este modelo publica la capa, o hay que ir a buscarla a otro?
