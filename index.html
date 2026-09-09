@@ -1109,6 +1109,7 @@ GORBEA  43°02'13"N  2°46'59"W</pre>
       <button class="ib ib--now" id="mapNow" title="Volver a la hora actual">ahora</button>
       <input type="range" id="mapTime" min="0" max="0" value="0" aria-label="Hora del mapa">
       <b id="mapStamp">—</b>
+      <button class="mbtn mbtn--rayos" id="mapRayosBtn" data-tl="1" title="Descargas detectadas por AEMET en las dos últimas horas publicadas, encima del mapa">⚡ Rayos</button>
       <span class="opa">
         <label for="mapOpa">Capa</label>
         <input type="range" id="mapOpa" min="20" max="100" value="85" aria-label="Opacidad de la capa">
@@ -1116,6 +1117,7 @@ GORBEA  43°02'13"N  2°46'59"W</pre>
     </div>
 
     <div class="mapfoot"><span id="mapDesc"></span><span id="mapStatus" class="faint"></span></div>
+    <div class="mapfoot mapfoot--rayos"><span id="mapRayos" class="faint"></span></div>
   </div>
 
   <p class="note"><b>Resolución nativa.</b> El mapa se dibuja a la resolución real del modelo

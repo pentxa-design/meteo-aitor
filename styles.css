@@ -297,6 +297,10 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;
 .opa label{font-size:0.8125rem;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:650}
 .opa input[type=range]{width:92px;accent-color:var(--acc);height:4px}
 
+/* El botón de rayos va en la barra del reloj, visible en Mac y en móvil (09-09-2026). */
+.mbtn--rayos{padding:5px 10px;font-size:.8125rem;white-space:nowrap}
+.mbtn--rayos.is-on{color:#ffd166;border-color:#ffb02066;background:#f0c67422}
+.mapfoot--rayos{margin-top:2px}
 .mapfoot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
   padding:9px 13px 12px;font-size:0.8125rem;color:var(--dim);border-top:1px solid var(--line)}
 

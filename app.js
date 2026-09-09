@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.09-1531';
+const BUILD = '2026.09.09-1723';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -15219,7 +15219,10 @@ function bind() {
     if (b.dataset.tv) Maps.setValores(!Maps.verValores);
     if (b.dataset.tp) Maps.setPaso(+b.dataset.tp);
     if (b.dataset.tb2) Maps.setBarbas(!Maps.verBarbas);
+    if (b.dataset.tl) Maps.setRayos(!Maps.verRayos);
   });
+  // El botón de rayos de la barra del reloj (Mac y móvil)
+  $('#mapRayosBtn')?.addEventListener('click', () => Maps.setRayos(!Maps.verRayos));
   // Selector de móvil
   $('#mapMob').addEventListener('click', e => {
     const b = e.target.closest('[data-abrir]');
