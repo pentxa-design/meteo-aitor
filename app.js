@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.09-0928';
+const BUILD = '2026.09.09-1521';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11184,12 +11184,22 @@ function resumenCielo(sel) {
   const peso = c => (c >= HAY_AGUA ? 100 + c : tapado(c));
   let iconos;
   if (partes && partes.length >= 2) {
-    const peor = partes.slice(1).reduce((a, b) => (peso(b.code) > peso(a.code) ? b : a));
-    iconos = [partes[0], peor];
-    /* Dos iconos iguales no cuentan nada (dos ratos de llovizna con una
-       hora seca en medio): se deja uno, que abarca los dos. */
+    /* ── LO PEOR Y LO QUE MÁS DURA, EN ORDEN DE RELOJ (09-09-2026) ─────
+       Calpe, 15:17, la mañana del jueves: «sol · lluvia desde las 7 ·
+       sol desde las 9», y los iconos ponían sol y luego lluvia. Suyo:
+       *«sol a la mañana y pone de 7 a 9 lluvia»*. La regla anterior
+       cogía el PRIMER tramo (las 6, una hora sola) y el peor, y se leía
+       «empieza bien y acaba lloviendo», al revés de lo que decía el
+       dato. Ahora: el tramo peor (lo que le frena) y el más largo de los
+       demás (lo que más va a ver), pintados en el orden en que pasan.
+       Para esa mañana: lluvia 7-8 h y después sol 9-13 h. */
+    const peor = partes.reduce((a, b) => (peso(b.code) > peso(a.code) ? b : a));
+    const resto = partes.filter(t => t !== peor);
+    const largo = resto.reduce((a, b) => (b.n > a.n ? b : a));
+    iconos = [peor, largo].sort((a, b) => a.desde - b.desde);
+    /* Dos iconos iguales no cuentan nada: se deja uno, que abarca los dos. */
     if (iconos[0].code === iconos[1].code)
-      iconos = [{ code: iconos[0].code, dia, desde: iconos[0].desde, hasta: peor.hasta }];
+      iconos = [{ code: iconos[0].code, dia, desde: iconos[0].desde, hasta: iconos[1].hasta }];
   } else {
     const hn = h => (h.date instanceof Date) ? h.date.getHours() : Number(String(h.t).slice(11, 13));
     iconos = [{ code, dia, desde: hn(hs[0]), hasta: hn(hs[hs.length - 1]) }];
