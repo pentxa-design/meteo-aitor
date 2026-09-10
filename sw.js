@@ -10,7 +10,7 @@
      pantalla con la hora de la descarga.
    ═══════════════════════════════════════════════════════════════════ */
 
-const V     = 'torre-2026.09.10-1117';
+const V     = 'torre-2026.09.10-1120';
 const SHELL = [
   './', './index.html', './styles.css', './app.js', './maps.js',
   './manifest.webmanifest',
@@ -200,7 +200,25 @@ self.addEventListener('fetch', e => {
     const conCache = async () => (await guardada())
       || (request.mode === 'navigate' ? caches.match('./index.html') : undefined);
 
-    const red = fetch(request).then(net => {
+    /* El casco de la app (index, app.js, maps.js, styles.css) se pide
+       REVALIDANDO. GitHub Pages lo sirve con max-age=600: tras publicar,
+       el navegador tenía hasta 10 minutos un app.js VIEJO que este mismo
+       handler guardaba en la caché nueva; version.json (sin caché) decía
+       otro build y la app recargaba en bucle hasta que caducaba (cazado
+       el 10-09-2026 en el Mac; es el «parpadeo» del iPhone del 07-09).
+       Con cache:'no-cache' el servidor contesta 304 si no ha cambiado:
+       cuesta lo mismo y nunca sirve un casco caducado. */
+    const nombre = url.pathname.split('/').pop();
+    const esCasco = nombre === '' || /^(index\.html|styles\.css|app\.js|maps\.js|version\.json)$/.test(nombre);
+    let pedida = request;
+    if (esCasco) {
+      try {
+        pedida = request.mode === 'navigate'
+          ? new Request(request.url, { cache: 'no-cache', credentials: 'same-origin' })
+          : new Request(request, { cache: 'no-cache' });
+      } catch { pedida = request; }
+    }
+    const red = fetch(pedida).then(net => {
       if (net && net.status === 200) {
         const copy = net.clone();
         caches.open(V).then(c => c.put(request, copy)).catch(() => {});

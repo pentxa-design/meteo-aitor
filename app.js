@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.10-1117';
+const BUILD = '2026.09.10-1120';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -14764,6 +14764,17 @@ async function comprobarVersion({ recargar = true } = {}) {
     if (!build || build === BUILD) return build;
 
     if (recargar && !sessionStorage.getItem('recargando')) {
+      /* Red de seguridad: si por lo que sea el aparato no consigue el
+         build nuevo (caché HTTP, CDN a medias), NO se recarga sin fin.
+         A la tercera en 3 minutos se para y se le dice qué hacer. */
+      let veces = [];
+      try { veces = JSON.parse(sessionStorage.getItem('recargasVersion') || '[]').filter(t => Date.now() - t < 180e3); } catch {}
+      if (veces.length >= 3) {
+        toast(`No consigo actualizar a ${build} (sigo en ${BUILD}). Cierra la app del todo y vuelve a abrirla.`, 6000);
+        return build;
+      }
+      veces.push(Date.now());
+      try { sessionStorage.setItem('recargasVersion', JSON.stringify(veces)); } catch {}
       sessionStorage.setItem('recargando', build);
       toast(`Versión nueva (${build}) — actualizando…`, 2000);
       // Limpiar cachés propias para que no quede nada viejo
@@ -14773,7 +14784,15 @@ async function comprobarVersion({ recargar = true } = {}) {
            Hasta el 05-09-2026 se tiraba aquí en cada publicación; el
            service worker tampoco la tira ya (sw.js, DE_SIEMPRE). */
         if ('caches' in window)
-          (await caches.keys()).filter(k => k !== 'avisos-recibidos').forEach(k => caches.delete(k));
+          await Promise.all((await caches.keys()).filter(k => k !== 'avisos-recibidos').map(k => caches.delete(k)));
+        /* Y el casco de verdad, saltándose la caché HTTP del navegador:
+           GitHub Pages lo sirve con max-age=600 y, tras publicar, la
+           recarga volvía a coger el app.js viejo durante 10 minutos →
+           version.json nuevo + BUILD viejo → otra recarga, y otra
+           (10-09-2026). cache:'reload' lo trae fresco y lo deja en la
+           caché HTTP y en la del service worker. */
+        await Promise.all(['index.html', 'styles.css', 'app.js', 'maps.js']
+          .map(f => fetch(f, { cache: 'reload' }).catch(() => {})));
         const rs = await navigator.serviceWorker?.getRegistrations?.() ?? [];
         await Promise.all(rs.map(x => x.update()));
       } catch {}
