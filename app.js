@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.10-1909';
+const BUILD = '2026.09.10-1912';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -3563,7 +3563,16 @@ function horaDe(fc, i, height, place, extra) {
       levels: lv, wind: w.v, windExact: w.exact, alpha: w.alpha, windNote: w.note, techo: w.techo,
       w10: lv[10], gust10: H.wind_gusts_10m?.[i], gust: g.v, gustEst: !g.exact,
       gustLim: !!g.limitada,
-      dir: H.wind_direction_80m?.[i] ?? H.wind_direction_10m?.[i],
+      /* La dirección va al nivel del viento que se enseña: a pie de
+         caseta (10 m) la de 10 m; en lo alto de la torre (≥ 40 m) la de
+         80 m, el nivel publicado más cercano. Antes iba siempre la de
+         80 m con las cifras de viento a 10 m al lado («Viento a 10 m» y
+         «De donde viene el viento a 80 m», Calpe, 10-09-2026 19:09). */
+      dir: (height >= 40 && has(H.wind_direction_80m?.[i])) ? H.wind_direction_80m[i]
+         : (H.wind_direction_10m?.[i] ?? H.wind_direction_80m?.[i]),
+      dirNivel: (height >= 40 && has(H.wind_direction_80m?.[i])) ? 80
+              : has(H.wind_direction_10m?.[i]) ? 10
+              : has(H.wind_direction_80m?.[i]) ? 80 : null,
       dir80: H.wind_direction_80m?.[i],
       temp: H.temperature_2m?.[i], feels: H.apparent_temperature?.[i],
       hum: H.relative_humidity_2m?.[i], dew: H.dew_point_2m?.[i],
@@ -3996,7 +4005,7 @@ function renderTower() {
     ]),
     kpi('Dirección',
         has(c.dir) ? `${rumboLargo(c.dir)}<i>${c.dir.toFixed(0)}°</i>` : nd,
-        `De donde viene el viento a ${has(c.dir80) ? 80 : 10} m`),
+        `De donde viene el viento a ${c.dirNivel ?? (has(c.dir80) ? 80 : 10)} m`),
     /* El riesgo eléctrico lleva SIEMPRE la tapa al lado. Un CAPE suelto
        engaña: 90 J/kg se lee como «tranquilo» y 1.360 como «peligro»,
        cuando lo que decide es la pareja. Lo que cazó las tormentas del
@@ -13084,8 +13093,17 @@ function pintarMareas() {
   if (!lista) return;
 
   if (!enCostaVasca(S.place)) {
-    lista.innerHTML = `<p class="note">La tabla oficial de Euskalmet cubre la costa vasca.
-      Para este punto no hay tabla, y <b>no se muestra una estimación del modelo</b>:
+    /* El rótulo decía «no se muestra una estimación del modelo» con la
+       curva del modelo dibujada justo encima (Calpe, 10-09-2026 19:09):
+       otra vez el texto diciendo una cosa y la pantalla otra. La curva
+       de arriba SÍ es el nivel del mar del modelo, y sirve para ver si
+       sube o baja; lo que no se da fuera de la costa vasca es la TABLA
+       de horas de pleamar y bajamar, porque calculada puede irse media
+       hora y eso no sirve para salir a la mar. Se dice tal cual. */
+    lista.innerHTML = `<p class="note">La curva de arriba es el <b>nivel del mar según el modelo</b>:
+      vale para ver si sube o baja, no para fiarse de la hora exacta.
+      La tabla oficial de pleamares y bajamares (Euskalmet) cubre solo la costa vasca;
+      para este punto no hay tabla, y <b>no se calcula una a partir del modelo</b>:
       una marea calculada puede irse media hora, y eso no sirve para salir a la mar.</p>`;
     if (nota) nota.innerHTML = '';
     return;
