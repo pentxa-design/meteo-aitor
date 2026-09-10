@@ -458,10 +458,18 @@ const AEMET_RADAR = {
    *  80 % de la imagen y tapa el mapa entero. Publicada, la app la pide
    *  por su propio intermediario, que sí da permiso.                */
   via(fichero) {
-    const enWeb = (location.protocol === 'https:' || location.protocol === 'http:')
-      && !/^(localhost|127\.|192\.168\.)/.test(location.hostname);
-    return enWeb ? `${typeof BACKEND !== 'undefined' ? BACKEND : location.origin}/radar-aemet?f=${fichero}`
-                 : this.base + fichero;
+    /* Antes, en localhost/127.0.0.1 se pedía DIRECTO a aemet.es, y como
+       aemet.es no manda CORS el navegador no deja leer los píxeles:
+       «Radar AEMET no disponible (Failed to fetch)» en la app del Mac
+       (127.0.0.1:8767) el 10-09-2026 a las 11:02 y a las 19:05, con el
+       servidor de Vercel contestando en 0,2 s. Ahora, siempre que la app
+       venga de un servidor (http/https), va por su intermediario:
+       en el Mac lo reenvía servir.js a Vercel, en Pages BACKEND es Vercel
+       y en Vercel es el propio origen. Directo solo si se abre como
+       fichero (file://), que es donde no hay intermediario posible. */
+    const conServidor = location.protocol === 'https:' || location.protocol === 'http:';
+    return conServidor ? `${typeof BACKEND !== 'undefined' ? BACKEND : location.origin}/radar-aemet?f=${fichero}`
+                       : this.base + fichero;
   },
 
   /** Nombres de los últimos N fotogramas, de más antiguo a más reciente. */
