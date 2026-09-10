@@ -59,6 +59,9 @@
    el host viejo no vuelva a colarse por ningún sitio.
    ═══════════════════════════════════════════════════════════════════ */
 const TILES_DIRECTO = 'https://openmeteo.s3.amazonaws.com/data_spatial';
+/** Zoom máximo que sirve RainViewer de verdad (medido 10-09-2026). */
+const RAINVIEWER_ZMAX = 7;
+
 const TILES_PROXY   = (typeof location !== 'undefined')
   ? (typeof BACKEND !== 'undefined' ? BACKEND : location.origin) + '/omtiles' : TILES_DIRECTO;
 
@@ -1876,12 +1879,21 @@ const Maps = {
       // Si la limpieza falla, NO se pinta la imagen cruda haciendo como
       // si nada: se dice que no se ha podido y se deja el mapa limpio.
       let limpia;
+      /* Un «Failed to fetch» suelto (red que parpadea, función de Vercel
+         arrancando) no es que AEMET no esté: el 10-09-2026 a las 11:02
+         salió el cartel con el servidor respondiendo en 0,2 s. Se
+         reintenta una vez a los 1,5 s antes de decir que no hay radar. */
       try { limpia = await limpiarRadarAemet(f.url); }
-      catch (err) {
-        this.status(`Radar AEMET no disponible ahora mismo (${err.message}). `
-                  + `No se pinta nada: un mapa en blanco no significa que no llueva.`);
-        document.querySelector('#mapLegend').hidden = true;
-        return;
+      catch (err1) {
+        this.status('Radar AEMET: primer intento fallido, reintentando…');
+        await new Promise(r => setTimeout(r, 1500));
+        try { limpia = await limpiarRadarAemet(f.url); }
+        catch (err) {
+          this.status(`Radar AEMET no disponible ahora mismo (${err.message}). `
+                    + `No se pinta nada: un mapa en blanco no significa que no llueva.`);
+          document.querySelector('#mapLegend').hidden = true;
+          return;
+        }
       }
       this._ecoAemet = limpia;
 
@@ -1965,7 +1977,12 @@ const Maps = {
         const url = `${this.radarHost}${x.f.path}/256/{z}/{x}/{y}/4/1_1.png`;
         if (this.map.getSource('radarSrc')) this.map.getSource('radarSrc').setTiles([url]);
         else {
-          this.map.addSource('radarSrc', { type:'raster', tileSize:256, maxzoom:12, tiles:[url] });
+          /* RainViewer solo sirve teselas hasta z7: de z8 en adelante
+           devuelve una imagen «Zoom Level Not Supported» (medido el
+           10-09-2026 en 256 y 512 px). Con maxzoom 12 el mapa las pedía y
+           al acercarse a Calpe el radar se quedaba en blanco o con
+           cajitas grises. Con 7, el mapa estira la de z7. */
+        this.map.addSource('radarSrc', { type:'raster', tileSize:256, maxzoom:RAINVIEWER_ZMAX, tiles:[url] });
           this.map.addLayer({ id:'radarLayer', type:'raster', source:'radarSrc',
             paint:{ 'raster-opacity': this.opacity } }, this.firstLabelLayer());
         }
@@ -2015,7 +2032,8 @@ const Maps = {
 
       const f = F[this.t];
       this.map.addSource('radarSrc', {
-        type:'raster', tileSize:256, maxzoom:12,
+        // maxzoom 7: RainViewer no sirve más (ver RAINVIEWER_ZMAX)
+        type:'raster', tileSize:256, maxzoom:RAINVIEWER_ZMAX,
         tiles:[`${this.radarHost}${f.path}/256/{z}/{x}/{y}/4/1_1.png`],
       });
       this.map.addLayer({ id:'radarLayer', type:'raster', source:'radarSrc',
@@ -2858,6 +2876,13 @@ const Maps = {
     const R = this.usando;
     const url = this.omUrl(L_.v, this.t, R?.modelo, R?.meta);
     if (!url) return;
+    /* Turno: si mientras se descodifican las teselas (segundos) el
+       usuario cambia de hora, capa o modelo, esta pasada ya no vale y
+       NO debe pintar. Sin esto, la pasada vieja podía terminar después
+       de la nueva y dejar los números de otra hora bajo el sello de
+       esta (10-09-2026). */
+    const turno = (this._turnoVal = (this._turnoVal || 0) + 1);
+    const vigente = () => turno === this._turnoVal && url === this.omUrl(L_.v, this.t, this.usando?.modelo, this.usando?.meta);
 
     // Ciudades que el propio mapa base ya está etiquetando
     let puntos = [];
@@ -2909,6 +2934,7 @@ const Maps = {
     await Promise.all(this.tilesVisibles(zc).slice(0, 9).map(([x, y]) =>
       OMWeatherMapLayer.omProtocol({ url: `${url}/${zc}/${x}/${y}`, type: 'image' },
         new AbortController()).catch(() => {})));
+    if (!vigente()) return;
 
     // Lo peor que puede hacer una capa NO es quedarse en blanco: es dar
     // un número creíble y equivocado. El 24-08-2026 la Presión ponía
@@ -2920,6 +2946,7 @@ const Maps = {
     for (const p of puntos) {
       let v = null;
       try { v = (await OMWeatherMapLayer.getValueFromLatLong(p.lat, p.lng, limpiarMarca(url)))?.value; } catch {}
+      if (!vigente()) return;
       if (!valorReal(v, L_)) continue;
       const pt = this.map.project([p.lng, p.lat]);
       const simbolo = e?.unidad === '°C' ? '°' : '';
@@ -2928,6 +2955,7 @@ const Maps = {
       const d = Math.abs(txt) >= 100 ? 0 : dec;
       frag.push(`<span class="mval" style="left:${pt.x.toFixed(0)}px;top:${pt.y.toFixed(0)}px">${txt.toFixed(d)}${simbolo}</span>`);
     }
+    if (!vigente()) return;
     cap.innerHTML = frag.join('');
     this.avisoRango(imposible);
   },
@@ -3198,6 +3226,9 @@ const Maps = {
     const uUrl = this.omUrl(C.u, this.t, R.modelo, R.meta);
     const vUrl = this.omUrl(C.v, this.t, R.modelo, R.meta);
     if (!uUrl || !vUrl) { cont.innerHTML = ''; return; }
+    // Mismo turno que valores(): barbas de otra hora son un dato falso.
+    const turnoB = (this._turnoBarb = (this._turnoBarb || 0) + 1);
+    const vigenteB = () => turnoB === this._turnoBarb && uUrl === this.omUrl(C.u, this.t, this.usando?.modelo, this.usando?.meta);
 
     // Rejilla regular sobre lo que se ve, con separación cómoda.
     //
@@ -3222,6 +3253,7 @@ const Maps = {
     await Promise.all([uUrl, vUrl].flatMap(u => tiles.map(([x, y]) =>
       OMWeatherMapLayer.omProtocol({ url:`${u}/${z}/${x}/${y}`, type:'image' },
         new AbortController()).catch(() => {}))));
+    if (!vigenteB()) return;
 
     const marca = `${R.modelo}|${this.layer}|${this.t}`;
     this._marcaBarbas = marca;
@@ -3695,6 +3727,13 @@ const Maps = {
       }
       this.stamp();
       this.precargar(dirMov);
+      /* Los números y las barbas son de la hora ANTERIOR hasta que
+         lleguen los nuevos, y con ECMWF HRES eso son 17-24 s. El
+         10-09-2026 a las 11:05 Aitor tenía dos capturas de «14:00» con
+         Argel al 77 % y al 37 %: una era de otra hora. Se borran YA y
+         se vuelven a pintar cuando estén descodificados los de esta. */
+      this.limpiarValores();
+      this.limpiarBarbas();
       clearTimeout(this._tv);
       this._tv = setTimeout(() => { this.valores(); this.barbas(); }, 500);
     } catch { this.apply(); }
