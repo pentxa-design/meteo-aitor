@@ -2904,6 +2904,9 @@ const Maps = {
     if (puntos.length < 6) {
       const c = this.map.getCanvas();
       const W = c.clientWidth, H = c.clientHeight;
+      // Mapa sin tamaño (pestaña oculta, candado puesto): no hay dónde
+      // repartir puntos; sin esto salían seis etiquetas iguales en (0,0).
+      if (!W || !H) { this.limpiarValores(); return; }
       const cols = Math.max(3, Math.min(7, Math.round(W / 190)));
       const filas = Math.max(2, Math.min(6, Math.round(H / 170)));
       puntos = [];
