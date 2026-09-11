@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.12-0038';
+const BUILD = '2026.09.12-0053';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11535,7 +11535,15 @@ function renderNow() {
     return has(media) && media >= 8 && media <= 19 ? 1 : 0;
   };
 
-  const bands = [['Mañana', 6, 13], ['Tarde', 14, 20], ['Noche', 21, 23]];
+  /* ── LA MADRUGADA TAMBIÉN ES HORA DE TRABAJO ──────────────────────
+     Suyo, 12-09-2026 a las 00:50, al preguntarle si hacía falta:
+     *«trabajo de noche casi siempre»*. Hasta hoy las franjas eran
+     Mañana, Tarde y Noche, y las horas de 0 a 5 no tenían franja: a las
+     00:35 la app enseñaba «Mañana 6-13» como lo primero que venía, con
+     cinco horas de averías sin resumen. Cuatro franjas, ordenadas por
+     hora; la de madrugada va con luna y sale la de mañana cuando la de
+     hoy ya ha pasado, igual que las otras. */
+  const bands = [['Madrugada', 0, 5], ['Mañana', 6, 13], ['Tarde', 14, 20], ['Noche', 21, 23]];
   const diaDe = d => d.toDateString();
   const hoy = hrs.length ? diaDe(hrs[0].date) : null;
 
