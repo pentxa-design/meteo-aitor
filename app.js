@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.10-1912';
+const BUILD = '2026.09.11-1044';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -4339,14 +4339,17 @@ function renderTimeline(hrs) {
        mandar gente. */
     const mismoDia = a.toDateString() === b.toDateString();
     const nombreDia = nombreDeDia;
+    /* «hasta las 09:00 de el domingo» (Calpe, 11-09-2026 10:41): el
+       nombre del día ya trae el artículo. Aquí se contrae. */
+    const deDia = d => { const n = nombreDia(d); return /^el /.test(n) ? `del ${n.slice(3)}` : `de ${n}`; };
 
     hint = start === 0
-      ? `apta ahora y hasta las ${f(b)}${mismoDia ? '' : ` de ${nombreDia(b)}`}`
+      ? `apta ahora y hasta las ${f(b)}${mismoDia ? '' : ` ${deDia(b)}`}`
         + (dud.sabido && end + 1 < hrs.length && enDuda(hrs[end + 1])
             ? ', que es cuando los modelos dejan de coincidir' : '')
       : mismoDia
         ? `próxima ventana apta: ${nombreDia(a)} de ${f(a)} a ${f(b)}`
-        : `próxima ventana apta: de ${nombreDia(a)} a las ${f(a)} `
+        : `próxima ventana apta: ${deDia(a)} a las ${f(a)} `
           + `hasta ${nombreDia(b)} a las ${f(b)}`;
   }
   $('#windowHint').textContent = `· ${hint}`;
@@ -5827,6 +5830,13 @@ function tablaNubes(H, i, hora) {
     cab = { s: 'warn', t: 'No coinciden en el cielo',
             x: `Del que menos al que más hay ${Math.round(abanico)} puntos.`
              + ` Cuando se abren así es que no lo saben: asómate o mira el satélite.` };
+  } else if (abanico >= 20) {
+    /* Con 41 puntos entre ICON y el europeo decía «poca diferencia»
+       (Calpe, 11-09-2026 10:41). Ni es desacuerdo ni es poca cosa: se
+       dice el número y ya. */
+    cab = { s: 'go', t: 'Se parecen, sin ser iguales',
+            x: `Del que menos al que más hay ${Math.round(abanico)} puntos:`
+             + ` no es para preocuparse, pero no lo ven igual.` };
   } else {
     cab = { s: 'go', t: 'Coinciden en el cielo',
             x: 'Los modelos ven el mismo cielo, con poca diferencia entre ellos.' };
