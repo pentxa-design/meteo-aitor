@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.11-1045';
+const BUILD = '2026.09.12-0038';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -5599,8 +5599,17 @@ function tablaTormenta(H, i, hora) {
                + `estaciones, que usa ${(COBERTURA.convective_inhibition || [])
                     .map(om => nombreDeModelo(om)).join(' y ') || 'los que la publican'}.` };
   } else if (!losQueSaltan.length) {
+    /* «Sigue puesta» con la tapa en 18 (abierta) y CAPE 130 (Calpe,
+       12-09-2026 00:34): la tapa no estaba puesta, lo que no había era
+       gasolina. Se dice cuál de las dos falta. */
+    const abiertos = losQueSaben.filter(f => f.cin < 75);
+    const capeMax = Math.round(Math.max(...losQueSaben.map(f => f.cape)));
     cab = { s: 'go', t: 'Ninguno de los que saben ve tormenta',
-            x: `${listar(losQueSaben.map(f => f.name))} publican la tapa: sigue puesta con la gasolina que hay.` };
+            x: abiertos.length
+              ? `${listar(losQueSaben.map(f => f.name))} publican la tapa. `
+                + `${abiertos.length === losQueSaben.length ? 'Está abierta' : `En ${listar(abiertos.map(f => f.name))} está abierta`}, `
+                + `pero no hay gasolina: CAPE máximo ${capeMax}, y hacen falta ${CAPE_COMBINACION}.`
+              : `${listar(losQueSaben.map(f => f.name))} publican la tapa: sigue puesta con la gasolina que hay.` };
   } else if (losQueSaltan.length === losQueSaben.length) {
     cab = { s: 'no', t: 'Todos los que saben ven tormenta',
             x: 'Coinciden los que publican la tapa.' };
@@ -12149,11 +12158,20 @@ function renderNow() {
        has(c.frz) && c.frz < 1000 ? 'warn' : 'go'),
 
     /* Y lo que de verdad se nota en la piel andando o en el agua. */
+    /* «24 °C · Como marca el termómetro» con el aire a 22 (Calpe,
+       12-09-2026 00:34): con 2° de diferencia no es «como marca». Se
+       dice la diferencia siempre que llegue a 1°, y el porqué a partir
+       de 3°. */
     dt('Sensación', has(c?.feels) ? `${c.feels.toFixed(0)}<small> °C</small>` : nd,
        has(c?.feels) && has(c?.temp)
-         ? (c.feels - c.temp <= -3 ? 'Más frío de lo que marca: viento'
-            : c.feels - c.temp >= 3 ? 'Más calor: humedad y sol'
-            : 'Como marca el termómetro')
+         ? (() => {
+             const dif = Math.round(c.feels) - Math.round(c.temp);
+             if (Math.abs(dif) < 1) return 'Como marca el termómetro';
+             if (dif <= -3) return `${-dif}° menos que el aire: viento`;
+             if (dif < 0)   return `${-dif}° menos que el aire`;
+             if (dif >= 3)  return `${dif}° más que el aire: humedad y sol`;
+             return `${dif}° más que el aire`;
+           })()
          : ''),
   ].join('') + (() => {
     /* CADA FRASE, SOLO CUANDO ES VERDAD. Con el Automático cargado, la
@@ -12245,7 +12263,11 @@ function pintarMarAhora(dt) {
   const T = C.wave_period;
   /* Cómo se llama esa mar. Escala marina de siempre: por debajo de 6 s es
      mar de viento —corta y picada—; de 8 para arriba, mar de fondo. */
+  /* Con 0,3 m de ola no hay «corta y picada» aunque el periodo sea
+     corto (Calpe, 12-09-2026 00:34: «corta y picada» al lado de «la mar
+     está limpia»). Por debajo de medio metro, la forma da igual. */
   const forma = !has(T) ? ''
+    : (has(C.wave_height) && C.wave_height < 0.5) ? 'mar rizada: apenas nada'
     : T < 6 ? 'mar de viento: corta y picada'
     : T < 8 ? 'entre viento y fondo'
     : T < 11 ? 'mar de fondo: con forma'
@@ -12274,7 +12296,15 @@ function pintarMarAhora(dt) {
     dt('Temp. del agua', show(C.sea_surface_temperature, '°C', 1)),
     dt('Mar de fondo', show(M.hourly?.swell_wave_height?.[0], 'm', 1),
        [has(C.swell_wave_period) ? `Periodo ${C.swell_wave_period.toFixed(1).replace('.', ',')} s` : '',
-        'La que viene de lejos, por debajo de la del viento'].filter(Boolean).join('<br>')),
+        /* Decía «por debajo de la del viento» con fondo 0,3 y viento 0,0
+           (Calpe, 12-09-2026 00:34). Se compara de verdad. */
+        (() => {
+          const sw = M.hourly?.swell_wave_height?.[0], wv = C.wind_wave_height;
+          if (!has(sw)) return '';
+          if (sw < 0.2) return 'La que viene de lejos: casi nada';
+          if (has(wv) && sw >= wv) return 'La que viene de lejos, y es la que manda';
+          return 'La que viene de lejos, por debajo de la del viento';
+        })()].filter(Boolean).join('<br>')),
     /* ── Y LO QUE DE VERDAD DISTINGUE UN DÍA DE OTRO ─────────────────
        Puesto el 29-08-2026 al ver que la tarjeta se quedaba con cuatro
        cifras y medio panel en blanco —su norma: «vacío jamás nada»—.
