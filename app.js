@@ -4341,15 +4341,15 @@ function renderTimeline(hrs) {
     const nombreDia = nombreDeDia;
     /* «hasta las 09:00 de el domingo» (Calpe, 11-09-2026 10:41): el
        nombre del día ya trae el artículo. Aquí se contrae. */
-    const deDia = d => { const n = nombreDia(d); return /^el /.test(n) ? `del ${n.slice(3)}` : `de ${n}`; };
+    const conDe = d => { const n = nombreDia(d); return /^el /.test(n) ? `del ${n.slice(3)}` : `de ${n}`; };
 
     hint = start === 0
-      ? `apta ahora y hasta las ${f(b)}${mismoDia ? '' : ` ${deDia(b)}`}`
+      ? `apta ahora y hasta las ${f(b)}${mismoDia ? '' : ` ${conDe(b)}`}`
         + (dud.sabido && end + 1 < hrs.length && enDuda(hrs[end + 1])
             ? ', que es cuando los modelos dejan de coincidir' : '')
       : mismoDia
         ? `próxima ventana apta: ${nombreDia(a)} de ${f(a)} a ${f(b)}`
-        : `próxima ventana apta: ${deDia(a)} a las ${f(a)} `
+        : `próxima ventana apta: ${conDe(a)} a las ${f(a)} `
           + `hasta ${nombreDia(b)} a las ${f(b)}`;
   }
   $('#windowHint').textContent = `· ${hint}`;
