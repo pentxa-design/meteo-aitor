@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.12-0053';
+const BUILD = '2026.09.12-1108';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11661,7 +11661,11 @@ function renderNow() {
         }
         return icon(code, d);
       })()}</div>
-      <div class="part__t">${ts.length ? `${Math.min(...ts).toFixed(0)}–${Math.max(...ts).toFixed(0)}°` : nd}</div></div>
+      <div class="part__t">${ts.length ? (() => {
+        // «21–21°» en la madrugada (12-09-2026 11:06): si mín y máx coinciden, un solo número.
+        const lo = Math.min(...ts).toFixed(0), hi = Math.max(...ts).toFixed(0);
+        return lo === hi ? `${lo}°` : `${lo}–${hi}°`;
+      })() : nd}</div></div>
       <div class="part__s">${esc(tituloFranja(sel, code, desde))}${
         /* Las franjas se ven en Ahora, en Torre y en Mis torres: con esto
            el aviso del cielo llega a las tres de una vez. Ver
