@@ -1155,3 +1155,14 @@ También del mismo repaso de pantallazos:
 - **12-09-2026, 11:40: EL VOTO DEL CIELO, PONDERADO POR RESOLUCIÓN.** Aitor, con fotos de medio cielo tapado en la ladera y la app en «Despejado»/«Mayormente despejado» (11:31): *«de 8 a 13 despejado no creo, sería mayormente… ¿o se me escapa algo?»*. No se le escapaba nada: AROME (1,3 km) daba nube baja 55-96 % e ICON 82-88 % de baja+media, y el europeo (25 km) y GFS la daban rasa; la mediana a un voto por cabeza se quedaba en 29 → «mayormente despejado». Tercera vez en la semana (10-09 18 h velo, 12-09 07 h y 11 h). Arreglo: `COMPARAR` lleva `peso` (AROME 3, ICON 2, ECMWF 1, GFS 1) y `cieloVotado()` usa `medianaPonderada()` para baja+media y para altas; el `abanico` sigue sin pesos porque mide el desacuerdo. Probado en node con los casos reales de la semana: sáb 12 mediodía 29→55 («parcialmente nuboso», lo que había); mié 10 18 h 44→25 con altas 100 («sol velado», lo que había); vie 11 y «todos rasos» siguen «despejado»; «solo AROME tapado» sigue despejado (3 de 7 no es mayoría, ningún modelo manda solo). `scratchpad/voto.test.js` de la sesión 8632751f.
 
 - **12-09-2026, 11:50: chip «⚠ AROME ve nubes» en las franjas.** Aitor: *«si alguno ve nubes al menos que lo ponga, ¿no?»*. Misma regla que la lluvia, la racha y el CAPE. `nubesEnLaFranjaQueNoVesTu(sel, code)`: cuando el cielo votado de la franja es despejado, mayormente o velado y un modelo fino (peso ≥ 2: AROME, ICON) ve nube baja+media ≥ 40 % en al menos la mitad de las horas, la franja lleva el chip con el pico («baja y media hasta el 82 %»). Se pinta tras `tituloFranja()` en `.part__s`.
+
+## 14. Seguir la sesión del iMac desde el iPhone (sí se puede)
+
+Aitor, 12-09-2026: *«dile al otro chat de casa cómo estar conectado con el iMac, porque me decía que no se podía»*. Sí se puede, y así ha funcionado toda la semana con el portátil en Calpe:
+
+1. La sesión tiene que correr en la **app de escritorio de Claude** (pestaña Code), no en un `claude` de terminal. Las sesiones de la app se ven desde el iPhone; las del terminal, no.
+2. La app de Claude del Mac tiene que quedarse **abierta** y el iMac **despierto**. La propia app impide el reposo mientras la sesión está viva (`pmset -g` lo enseña como «sleep prevented by Claude»), pero si el iMac se apaga o pierde la red, el iPhone se queda sin conexión hasta que vuelve. El chat no se pierde: sigue en el Mac con todo.
+3. En el iPhone, la app de Claude, misma cuenta (pentxa@gmail.com), pestaña Code → aparece la sesión del iMac y se puede leer, escribir y mandar fotos. Las fotos y pantallazos que manda desde ahí llegan a la sesión igual que desde el Mac.
+4. Si la conexión desde el iPhone se cae (pasó el 12-09 a mediodía), suele volver sola; si no, cerrar y abrir la app del iPhone. No hace falta tocar nada en el Mac.
+
+Esta sesión (portátil, Calpe) se llama «Prueba iPhone y Mac». La del iMac puede llamarse como él quiera.
