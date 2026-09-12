@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.12-1108';
+const BUILD = '2026.09.12-1134';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -665,15 +665,18 @@ function cieloVotado(t, place = null) {
     if (m.om === 'best_match') continue;               // mezcla: no vota
     const b = C[`cloud_cover_low_${m.om}`]?.[i], md = C[`cloud_cover_mid_${m.om}`]?.[i];
     if (!has(b) || !has(md)) continue;
-    bm.push(Math.min(100, b + md));
+    bm.push({ v: Math.min(100, b + md), peso: m.peso || 1 });
     const a = C[`cloud_cover_high_${m.om}`]?.[i];
-    if (has(a)) alta.push(a);
+    if (has(a)) alta.push({ v: a, peso: m.peso || 1 });
   }
   if (bm.length < 3) return null;
-  const med = xs => { const o = [...xs].sort((p, q) => p - q), k = o.length;
-    return k % 2 ? o[(k - 1) / 2] : (o[k / 2 - 1] + o[k / 2]) / 2; };
-  const o = [...bm].sort((p, q) => p - q);
-  return { bm: med(bm), alta: alta.length ? med(alta) : null, n: bm.length, abanico: o[o.length - 1] - o[0] };
+  /* Mediana PONDERADA por resolución (12-09-2026): con AROME 55, ICON
+     82, ECMWF 3 y GFS 0 la mediana simple daba 29 («mayormente
+     despejado») con medio cielo tapado en la ladera; ponderada da 55
+     («parcialmente nuboso»), que es lo que había. El abanico sigue
+     siendo del que menos al que más, sin pesos: es el desacuerdo. */
+  const o = bm.map(p => p.v).sort((p, q) => p - q);
+  return { bm: medianaPonderada(bm), alta: alta.length ? medianaPonderada(alta) : null, n: bm.length, abanico: o[o.length - 1] - o[0] };
 }
 function codigoVotado(v) {
   if (v.bm >= 70) return 3;
@@ -5158,11 +5161,27 @@ function lluviaEnLaFranjaQueNoVesTu(desde, hasta) {
    Si algún día quiere volver a verlos, se añaden aquí y ya. */
 const COMPARAR = [
   { om:'best_match',                  name:'Automático', res:'variable' },
-  { om:'ecmwf_ifs025',                name:'ECMWF',    res:'25 km' },
-  { om:'meteofrance_arome_france_hd', name:'AROME HD', res:'1,3 km' },
-  { om:'icon_seamless',               name:'ICON',     res:'7-13 km' },
-  { om:'gfs_seamless',                name:'GFS',      res:'13-25 km' },
+  /* `peso`: cuánto vale el voto de cada uno en el CIELO (cieloVotado).
+     Tres veces esta semana en la ladera de Calpe (10-09 tarde, 12-09
+     mañana y mediodía) AROME e ICON veían la nube baja que había y los
+     dos globales de 25 km la daban rasa; la mediana a un voto por cabeza
+     se quedaba en «mayormente despejado» con medio cielo tapado. El de
+     1,3 km ve la ladera; el de 25 km ve una celda con mar dentro. */
+  { om:'ecmwf_ifs025',                name:'ECMWF',    res:'25 km',    peso:1 },
+  { om:'meteofrance_arome_france_hd', name:'AROME HD', res:'1,3 km',   peso:3 },
+  { om:'icon_seamless',               name:'ICON',     res:'7-13 km',  peso:2 },
+  { om:'gfs_seamless',                name:'GFS',      res:'13-25 km', peso:1 },
 ];
+
+/** Mediana ponderada: cada valor pesa lo que pese su modelo. */
+function medianaPonderada(pares) {
+  const o = pares.filter(p => has(p.v)).sort((a, b) => a.v - b.v);
+  const total = o.reduce((a, p) => a + (p.peso || 1), 0);
+  if (!total) return null;
+  let acum = 0;
+  for (const p of o) { acum += (p.peso || 1); if (acum >= total / 2) return p.v; }
+  return o[o.length - 1].v;
+}
 
 /* ═══ LOS 10 DÍAS, ¿SE CREEN ENTRE ELLOS? ════════════════════════════
    Cazado con su pantallazo del 31-08-2026 a las 17:24: la tarjeta del
