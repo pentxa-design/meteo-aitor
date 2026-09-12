@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.12-1134';
+const BUILD = '2026.09.12-1157';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -5061,6 +5061,37 @@ function lluviaQueVieneYNoVesTu() {
  *
  *  Devuelve `null` si no hay nada que añadir. No cambia el número: le
  *  pone al lado quién ve agua, igual que `avisoCielo()` con las nubes. */
+/* ── Y SI EL VOTO DICE RASO PERO UN MODELO FINO VE NUBES, SE DICE ──
+   Suyo, 12-09-2026 a las 11:45, con medio cielo tapado en la ladera y
+   la franja en «Despejado»: *«si alguno ve nubes al menos que lo ponga,
+   ¿no?»*. La misma regla que ya tienen la lluvia («GFS y ECMWF sí»), la
+   racha y el CAPE: el número de la franja es el votado, y al lado va
+   quién ve otra cosa. Solo cuentan los modelos finos (peso ≥ 2: AROME e
+   ICON), que son los que ven una ladera; y solo si ven nube baja o
+   media (≥ 40 %) en al menos la mitad de las horas de la franja. */
+function nubesEnLaFranjaQueNoVesTu(sel, code) {
+  if (!sel?.length || !(code === 0 || code === 1 || code === VELADO)) return '';
+  const H = deEsteSitio(S.comparativa)?.hourly;
+  if (!H?.time) return '';
+  H.__porHora ??= new Map(H.time.map((x, i) => [String(x).slice(0, 13), i]));
+  const ven = [];
+  for (const m of COMPARAR) {
+    if (m.om === 'best_match' || (m.peso || 1) < 2) continue;
+    let n = 0, tot = 0, max = 0;
+    for (const h of sel) {
+      const i = H.__porHora.get(String(h.t).slice(0, 13));
+      if (i === undefined) continue;
+      const b = H[`cloud_cover_low_${m.om}`]?.[i], md = H[`cloud_cover_mid_${m.om}`]?.[i];
+      if (!has(b) || !has(md)) continue;
+      tot++; const v = Math.min(100, b + md); if (v >= 40) n++; max = Math.max(max, v);
+    }
+    if (tot && n * 2 >= tot) ven.push({ nom: m.name, max });
+  }
+  if (!ven.length) return '';
+  const pico = Math.round(Math.max(...ven.map(x => x.max)));
+  return ` <span class="nd__ojo">⚠ ${esc(listar(ven.map(x => x.nom)))} ${ven.length > 1 ? 'ven' : 've'} nubes (baja y media hasta el ${pico} %)</span>`;
+}
+
 function lluviaEnLaFranjaQueNoVesTu(desde, hasta) {
   const H = deEsteSitio(S.comparativa)?.hourly;   // la de ESTE sitio, no la del anterior
   if (!H?.time || !desde || !hasta) return null;
@@ -11685,7 +11716,7 @@ function renderNow() {
         const lo = Math.min(...ts).toFixed(0), hi = Math.max(...ts).toFixed(0);
         return lo === hi ? `${lo}°` : `${lo}–${hi}°`;
       })() : nd}</div></div>
-      <div class="part__s">${esc(tituloFranja(sel, code, desde))}${
+      <div class="part__s">${esc(tituloFranja(sel, code, desde))}${nubesEnLaFranjaQueNoVesTu(sel, code)}${
         /* Las franjas se ven en Ahora, en Torre y en Mis torres: con esto
            el aviso del cielo llega a las tres de una vez. Ver
            `avisoCielo()`. Solo en la franja que está EN CURSO, que es la
