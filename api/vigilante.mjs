@@ -602,7 +602,7 @@ export default async function handler(req, res) {
          hacíamos nada por levantarlo. */
       if (haceMin > 240) {
         const base = `${APP}/api/vigilante`;
-        fetch(base, { method: 'POST', headers: { 'x-clave': process.env.CRON_SECRET || '' } })
+        fetch(base, { method: 'POST', headers: { 'x-clave': process.env.CRON_SECRET || '', 'x-revivido': '1' } })
           .catch(() => {});
         return res.status(200).json({ ultima: e.cuando, haceMin, envia,
           parteDe: e.parteDe ?? null,
@@ -694,6 +694,21 @@ export default async function handler(req, res) {
         porQue: 'la clave de fuera va limitada a una pasada cada 20 min' });
     }
   }
+
+  /* ── UNA RESURRECCIÓN NO ES UNA PASADA POR MINUTO (13-09-2026) ────
+     Cada pulso de la app con el sello viejo disparaba una pasada entera.
+     Con el sello escrito en cada pasada (abajo) ya no debería pasar; y
+     por si el almacén no pudiera guardar, una pasada resucitada no se
+     repite si en esta instancia hubo otra hace menos de 20 min. */
+  const revivido = req.headers['x-revivido'] === '1';
+  if (revivido && globalThis.__ultimaPasadaVigilante) {
+    const hace = (Date.now() - globalThis.__ultimaPasadaVigilante) / 60000;
+    if (hace < 20) {
+      return res.status(200).json({ ok: true, saltado: true, haceMin: Math.round(hace),
+        porQue: 'resucitada hace menos de 20 min' });
+    }
+  }
+  globalThis.__ultimaPasadaVigilante = Date.now();
 
   /* La hora de AQUÍ, no la del servidor (que va en UTC). Es el mismo
      fallo que dejó muerta la comparación del parte en la app. */
@@ -1194,8 +1209,16 @@ export default async function handler(req, res) {
     /* Y aunque no cambie, se refresca una vez al día: así el pulso de
        «última pasada hace X» no envejece y él sigue viendo que está vivo.
        Son 30 escrituras al mes, no 1.440. */
+    /* 25 MINUTOS, NO 20 HORAS (13-09-2026). Con el sello viejo todo el día,
+       el pulso de la app (que resucita al vigilante pasadas 4 h) disparaba
+       una pasada en cada apertura, y cada pasada mandaba «⚠ He estado 12 h
+       sin vigilar» porque el hueco se mide contra ese mismo sello que no
+       se escribía: tres seguidos el 10-09 a las 18:55, 18:57 y 18:58, y la
+       CPU de Vercel al 180 %. Las 20 h eran por la cuota del Blob; el
+       almacén es Redis desde el 04-09 y una escritura cada media hora no
+       cuesta nada. */
     const viejo = !antes?.cuando
-      || (Date.now() - new Date(antes.cuando).getTime()) > 20 * 3600e3;
+      || (Date.now() - new Date(antes.cuando).getTime()) > 25 * 60e3;
 
     if (cambia || viejo) {
       try { await guardarEstado(nuevo); }
@@ -1207,7 +1230,7 @@ export default async function handler(req, res) {
         noSeGuardo = String(e?.message || e).slice(0, 80);
       }
     }
-    // si no cambia nada, NO se escribe: es lo que agotó la cuota del mes
+    // si no cambia nada y el sello es de hace menos de 25 min, no se escribe
   }
 
   /* ── Y DE PASO, EL MARCADOR ────────────────────────────────────────
@@ -1217,9 +1240,14 @@ export default async function handler(req, res) {
   try { marcador = await apuntarEnElMarcador(sitios); }
   catch (e) { marcador = { error: String(e?.message || e).slice(0, 80) }; }
 
+  /* Lo que no se pudo leer o guardar se DICE: hasta el 13-09-2026 eran dos
+     banderas que se calculaban y nadie leía (las cazó ESLint el 05-09). */
+  if (noSeGuardo) console.error('vigilante: no se guardó el estado:', noSeGuardo);
+  if (noPudeLeerElEstado) console.error('vigilante: no se pudo leer el estado:', noPudeLeerElEstado);
   return res.status(200).json({
     ok: true, hora: hh(h0), mirados: buenos.length, fallos: fallos.map(f => f.n),
     marcador,
+    noSeGuardo: noSeGuardo || undefined, noPudeLeerElEstado: noPudeLeerElEstado || undefined,
     /* De dónde salió la lista. Si es la de respaldo, el vigilante está
        mirando emplazamientos viejos y eso NO puede pasar en silencio: es
        justo el fallo del 29-08, que se dejó cuatro sitios suyos fuera. */

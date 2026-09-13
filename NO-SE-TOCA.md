@@ -116,3 +116,6 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **Al cambiar de versión, la app no tira la caché de avisos recibidos** | `comprobarVersion() no tira la caché avisos-recibidos al cambiar de versión` (pruebas.js) |
 | **La app escucha al service worker: casco incompleto y suscripción renovada** | `la app escucha precache-faltan y avisoRenovado del service worker` (pruebas.js) |
 | **Al arrancar se revisa el casco mirando cada fichero en la caché, no la lista a ciegas** | `al arrancar se revisa el casco (__faltan.json) mirando cada fichero en la caché, no la lista a ciegas` (pruebas.js) |
+| **El sello «cuando» del vigilante se escribe en cada pasada; el pulso no resucita en bucle** | `el sello «cuando» del vigilante se escribe en cada pasada, no una vez cada 20 h` (pruebas-servidor.cjs) |
+| **Una pasada resucitada por el pulso no se repite antes de 20 min** | `una pasada resucitada por el pulso no se repite antes de 20 min` (pruebas-servidor.cjs) |
+| **El vigilante dice en su respuesta si no pudo leer o guardar el estado** | `si el estado no se pudo guardar o leer, la pasada lo dice en su respuesta` (pruebas-servidor.cjs) |

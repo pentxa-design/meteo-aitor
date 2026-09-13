@@ -854,9 +854,9 @@ ok('solo escribe su estado si algo ha cambiado',
 ok('la hora se deja FUERA de la comparación (si no, cambiaría siempre)',
    /const \{ cuando, \.\.\.r \} = e \|\| \{\}; return JSON\.stringify\(r\);/.test(vig),
    'con la hora dentro, todo cambia siempre y no se ahorra nada');
-ok('pero se refresca una vez al día, para que el pulso no envejezca',
-   /> 20 \* 3600e3/.test(vig),
-   'él mira «última pasada hace X min» y tiene que seguir vivo');
+ok('pero se refresca al menos cada 25 min, para que el pulso no envejezca ni resucite en bucle',
+   /> 25 \* 60e3/.test(vig) && !/> 20 \* 3600e3/.test(vig),
+   'él mira «última pasada hace X min»; con 20 h de sello viejo el pulso resucitaba al vigilante en cada apertura (13-09-2026)');
 
 console.log('\n  Publicar no puede fallar en silencio');
 const srcDeploy = fs.readFileSync(path.join(__dirname, 'deploy.sh'), 'utf8');
@@ -920,6 +920,20 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
      && /sinHora: `el modelo no tiene la hora \$\{marca\}`/.test(srcFoto)
      && !/if \(i < 0\) i = 0;/.test(srcCampo) && !/if \(i < 0\) i = 0;/.test(srcFoto),
      '`if (i < 0) i = 0` cogía la primera hora del fichero: las 00:00');
+}
+
+
+/* ── El vigilante escribe su sello en cada pasada (13-09-2026) ───────── */
+{
+  const vig2 = fs.readFileSync(path.join(__dirname, 'api', 'vigilante.mjs'), 'utf8');
+  ok('el sello «cuando» del vigilante se escribe en cada pasada, no una vez cada 20 h',
+     /> 25 \* 60e3;/.test(vig2) && !/> 20 \* 3600e3;/.test(vig2),
+     'con el sello viejo, cada pulso resucitaba al vigilante y llegaban «He estado 12 h sin vigilar» en bucle');
+  ok('una pasada resucitada por el pulso no se repite antes de 20 min',
+     /'x-revivido': '1'/.test(vig2) && /__ultimaPasadaVigilante/.test(vig2));
+  ok('si el estado no se pudo guardar o leer, la pasada lo dice en su respuesta',
+     /noSeGuardo: noSeGuardo \|\| undefined/.test(vig2) && /noPudeLeerElEstado: noPudeLeerElEstado \|\| undefined/.test(vig2),
+     'eran dos banderas mudas');
 }
 
 console.log(`\n  ${bien} bien, ${mal} mal`);
