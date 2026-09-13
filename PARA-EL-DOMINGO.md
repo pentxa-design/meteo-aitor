@@ -1166,3 +1166,5 @@ Aitor, 12-09-2026: *«dile al otro chat de casa cómo estar conectado con el iMa
 4. Si la conexión desde el iPhone se cae (pasó el 12-09 a mediodía), suele volver sola; si no, cerrar y abrir la app del iPhone. No hace falta tocar nada en el Mac.
 
 Esta sesión (portátil, Calpe) se llama «Prueba iPhone y Mac». La del iMac puede llamarse como él quiera.
+
+- **13-09-2026, 18:40, vigilante, dato nuevo:** el pulso dice `ultima: 2026-09-13T04:00:44Z` (06:00 hora local). El 10-09 decía `2026-09-10T04:00:44Z`. O sea: **el sello SÍ se escribe, pero solo una vez al día, a las 06:00 local**; las pasadas que mandan push a lo largo del día (las de «he estado X h sin vigilar», cada minuto en algún momento) NO lo escriben. Buscar en `api/vigilante` qué distingue la pasada de las 06:00 (¿un cron de Vercel diario? ¿`parteDe`?) de las que dispara el pulso/revivido: ahí está la diferencia entre escribir el sello y no escribirlo.
