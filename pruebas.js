@@ -169,14 +169,14 @@ const rompe = h => assess(h, THR, 'hierro').reasons
    de salir». Aquí se EJECUTAN de verdad, sacadas de app.js, para que las
    pruebas de casa no tengan que fingirlas. Si una no se encuentra, se
    dice y se sigue: la prueba que la necesite es la que fallará. */
-for (const n of ['VELADO', 'tapado', 'SALIR_HORAS', 'SALIR_MEDIDA_VIEJA', 'TORRE_ALTO_M']) {
+for (const n of ['VELADO', 'tapado', 'SALIR_HORAS', 'SALIR_MEDIDA_VIEJA', 'TORRE_ALTO_M', 'HAY_AGUA']) {
   try { eval(sacarConst(n)); } catch (e) { console.log(`  (sin ${n}: ${e.message})`); }
 }
 for (const f of ['listonRafaga', 'veladoSiToca', 'medianaPonderada', 'cieloVotado', 'codigoVotado',
                  'esDeDia', 'cieloVisto', 'textoVisto', 'textoCielo', 'rangoDeHoras', 'tramosDeCielo',
                  'resumenCielo', 'extrasDe', 'horaDe', 'conAhora', 'horasDelDia', 'iconosDelDia',
                  'aguaPrestada', 'tormentaQueNoVesTu', 'nubesEnLaFranjaQueNoVesTu',
-                 'aguaDelDiaQueNoVenTodos', 'estadoSalir']) {
+                 'aguaDelDiaQueNoVenTodos', 'estadoSalir', 'tramosCortos', 'rachaEnLaFranjaQueNoVesTu']) {
   try { eval(sacar(`function ${f}(`)); } catch (e) { console.log(`  (sin ${f}: ${e.message})`); }
 }
 
@@ -7071,6 +7071,39 @@ grupo('Vuelta de Calpe · la horquilla de viento no repite el número');
      /const vTxt = vs\.length \? \(wtxt\(vLo\) === wtxt\(vHi\)/.test(src)
      && !/Math\.min\(\.\.\.vs\) === Math\.max\(\.\.\.vs\)/.test(src),
      '4,6 y 5,4 km/h imprimían «5–5 km/h»');
+}
+
+
+/* ═══ «ASÍ CON TODO» (13-09-2026) ═══════════════════════════════════════
+   Suyo, tras revisar ocho pantallazos: «si una ve despejado y otra lo
+   mismo, pero GFS ve algo de lluvia, pues se pone "despejado, pero GFS
+   ve algo de lluvia de 10 a 12"; eso es lo que quiero. Información,
+   datos. Así con todo.» El dato no cambia; al lado, qué ve distinto otro
+   modelo y a qué horas. */
+grupo('Así con todo (13-09): al lado del dato, qué ve distinto otro modelo y cuándo');
+{
+  ok('la franja dice «GFS ve algo de lluvia de 10:00 a 12:00» aunque no llegue al listón',
+     /if \(total >= 0\.1\) otros\.push/.test(src) && /'algo de lluvia' : 'lluvia'/.test(src)
+     && !/⚠ \$\{esc\(o\.quien\)\} sí \(/.test(src));
+  ok('en 10 días el agua que solo ve un modelo dice a qué horas cae, y «de noche» si cae fuera del día',
+     /const hsAgua = horasDelDia\(S\.data\?\.fc, t\)/.test(src) && /'de noche'/.test(src));
+  ok('la racha de otro modelo va al lado de la de la franja, con sus horas',
+     /function rachaEnLaFranjaQueNoVesTu\(sel\)/.test(src) && /da \$\{wtxt\(r\.max, true\)\} a 10 m/.test(src));
+  ok('las nubes que ve otro modelo llevan sus horas',
+     /nubes\$\{cuando\} \(baja y media hasta el/.test(src));
+  ok('la sensación compara lo que se imprime: 23° con aire a 22° dice «1° más que el aire»',
+     /const dif = Math\.round\(c\.feels\) - Math\.round\(c\.temp\);\n\s*const aire =/.test(src));
+
+  /* Comportamiento, no texto: una franja corta con dos cielos se cuenta con su hora. */
+  const HC = (cs, h0) => cs.map((c, i) => ({ code: c, date: new Date(2026, 8, 13, h0 + i), day: 0 }));
+  const corta = tramosCortos(HC([0, 4], 22));
+  ok('una franja de dos horas con cielos distintos se cuenta con su hora',
+     !!corta && corta.length === 2 && corta[0].code === 0 && corta[1].code === 4 && corta[1].hora === '23:00',
+     JSON.stringify(corta));
+  const fr = tituloFranja(HC([0, 4], 22), 4, '');
+  ok('y la frase dice «Despejado · velo de nubes altas desde las 23:00»',
+     fr === 'Despejado · velo de nubes altas desde las 23:00', `salió «${fr}»`);
+  ok('con un solo cielo, una franja corta sigue en una palabra', tramosCortos(HC([0, 0, 1], 21)) === null);
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');

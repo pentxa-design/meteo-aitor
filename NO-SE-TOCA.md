@@ -127,3 +127,6 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **Una horquilla cuyos extremos redondean igual se imprime como un solo número (viento y temperatura)** | `la horquilla de viento de la franja compara lo que se imprime, no el dato crudo` |
 | **La cadencia del vigilante sube sola: verde cada 2 h, ámbar cada media, rojo cada cuarto** | `y el rojo es rayo de HOY por delante, racha de 70 por delante o tormenta ya avisada` (pruebas-servidor.cjs) |
 | **El cartel del pulso dice la cadencia real del vigilante, no una vieja** | `el cartel del pulso no promete una cadencia que el vigilante ya no tiene` (pruebas-servidor.cjs) |
+| **Al lado del dato seco va quién ve agua y a qué horas, aunque no llegue al listón** | `la franja dice «GFS ve algo de lluvia de 10:00 a 12:00» aunque no llegue al listón` |
+| **Una franja corta con dos cielos se cuenta con su hora, no con una sola palabra** | `y la frase dice «Despejado · velo de nubes altas desde las 23:00»` |
+| **La sensación compara lo que se imprime, no el dato crudo** | `la sensación compara lo que se imprime: 23° con aire a 22° dice «1° más que el aire»` |

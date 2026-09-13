@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.13-2145';
+const BUILD = '2026.09.13-2236';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -4023,7 +4023,13 @@ function renderTower() {
         isStormCode(c.code) ? 'no' : cSt),
     kpi('Sensación',
         has(c.feels) ? `${c.feels.toFixed(0)}<i>°C</i>` : nd,
-        has(c.temp) ? `Temperatura del aire ${c.temp.toFixed(0)} °C` : 'Sin temperatura'),
+        !has(c.temp) ? 'Sin temperatura' : !has(c.feels) ? `Temperatura del aire ${c.temp.toFixed(0)} °C` : (() => {
+          /* Se compara lo que se IMPRIME, no el dato crudo: 23° con el aire a
+             22° decía «Temperatura del aire 22 °C» sin más (13-09-2026). */
+          const dif = Math.round(c.feels) - Math.round(c.temp);
+          const aire = `Temperatura del aire ${c.temp.toFixed(0)} °C`;
+          return dif === 0 ? aire : `${Math.abs(dif)}° ${dif > 0 ? 'más' : 'menos'} que el aire (${c.temp.toFixed(0)} °C)`;
+        })()),
     /* El número solo no basta: 0,0 mm con sirimiri se lee «no llueve» y
        moja. Va la palabra delante y los milímetros detrás. */
     (() => {
@@ -5078,19 +5084,57 @@ function nubesEnLaFranjaQueNoVesTu(sel, code) {
   const ven = [];
   for (const m of COMPARAR) {
     if (m.om === 'best_match' || (m.peso || 1) < 2) continue;
-    let n = 0, tot = 0, max = 0;
+    let n = 0, tot = 0, max = 0; const horas = [];
     for (const h of sel) {
       const i = H.__porHora.get(String(h.t).slice(0, 13));
       if (i === undefined) continue;
       const b = H[`cloud_cover_low_${m.om}`]?.[i], md = H[`cloud_cover_mid_${m.om}`]?.[i];
       if (!has(b) || !has(md)) continue;
-      tot++; const v = Math.min(100, b + md); if (v >= 40) n++; max = Math.max(max, v);
+      tot++; const v = Math.min(100, b + md); if (v >= 40) { n++; horas.push({ date: h.date }); } max = Math.max(max, v);
     }
-    if (tot && n * 2 >= tot) ven.push({ nom: m.name, max });
+    if (tot && n * 2 >= tot) ven.push({ nom: m.name, max, horas });
   }
   if (!ven.length) return '';
   const pico = Math.round(Math.max(...ven.map(x => x.max)));
-  return ` <span class="nd__ojo">⚠ ${esc(listar(ven.map(x => x.nom)))} ${ven.length > 1 ? 'ven' : 've'} nubes (baja y media hasta el ${pico} %)</span>`;
+  const top = ven.reduce((a, b) => (b.max > a.max ? b : a));
+  const cuando = top.horas.length ? ` ${rangoDeHoras(top.horas)}` : '';   // a qué horas (13-09-2026)
+  return ` <span class="nd__ojo">⚠ ${esc(listar(ven.map(x => x.nom)))} ${ven.length > 1 ? 'ven' : 've'} nubes${cuando} (baja y media hasta el ${pico} %)</span>`;
+}
+
+/* ── «ASÍ CON TODO» (suyo, 13-09-2026): también la racha ────────────────
+   El número de la franja es el de su modelo; al lado, si otro modelo ve
+   a 10 m una racha claramente mayor (10 km/h o más por encima, o cruza
+   su listón de aviso sin que la suya lo cruce), quién es, cuánto y a qué
+   horas. Información, no veredicto: el número no cambia. */
+function rachaEnLaFranjaQueNoVesTu(sel) {
+  const H = deEsteSitio(S.comparativa)?.hourly;
+  if (!H?.time || !sel?.length) return null;
+  const mias = sel.map(h => h.gust10).filter(has);
+  if (!mias.length) return null;
+  const mia = Math.max(...mias);
+  H.__porHora ??= new Map(H.time.map((x, i) => [String(x).slice(0, 13), i]));
+  const cargado = modeloDato().name;
+  const { warn } = listonRafaga();
+  const otros = [];
+  for (const m of COMPARAR) {
+    if (m.om === 'best_match' || m.name === cargado) continue;
+    const serie = H[`wind_gusts_10m_${m.om}`];
+    if (!serie) continue;
+    let max = null; const horas = [];
+    for (const h of sel) {
+      const i = H.__porHora.get(String(h.t).slice(0, 13));
+      if (i === undefined || !has(serie[i])) continue;
+      if (max === null || serie[i] > max) max = serie[i];
+      if (serie[i] > mia) horas.push({ date: h.date });
+    }
+    if (max === null) continue;
+    const cruza = wRed(max) >= wRed(warn) && wRed(mia) < wRed(warn);
+    if (cruza || wRed(max) >= wRed(mia) + 10) otros.push({ nom: m.name, max, horas, cruza });
+  }
+  if (!otros.length) return null;
+  otros.sort((a, b) => b.max - a.max);
+  const o = otros[0];
+  return { quien: o.nom, max: o.max, mia, cruza: o.cruza, cuando: o.horas.length ? rangoDeHoras(o.horas) : '' };
 }
 
 function lluviaEnLaFranjaQueNoVesTu(desde, hasta) {
@@ -5113,7 +5157,7 @@ function lluviaEnLaFranjaQueNoVesTu(desde, hasta) {
       if (t < a || t > b) continue;
       if (has(serie[i])) { total += serie[i]; if (serie[i] > 0) horas.push({ date: new Date(H.time[i]) }); }
     }
-    if (total >= (S.thr?.rainWarn ?? 0.2)) otros.push({ nom: m.name, total, horas });
+    if (total >= 0.1) otros.push({ nom: m.name, total, horas });   // «algo de lluvia» también se dice (suyo, 13-09-2026)
   }
   if (!otros.length) return null;
 
@@ -11259,6 +11303,39 @@ function tramosDeCielo(sel) {
   });
 }
 
+/* Franjas cortas (2-3 horas: la Noche 21-23 al final del día) no llegan
+   a los 4 tramos de tramosDeCielo(), y si las horas tienen cielos
+   distintos la palabra única mentía a medias: «Velo de nubes altas» con
+   las 22 limpias (Bermeo, 13-09-2026 22:14). Aquí se cuentan tal cual,
+   sin fundir nada, solo para la frase; el dibujo sigue siendo uno. */
+function tramosCortos(sel) {
+  const hs = (sel || []).map(h => ({ c: codigoQueSeVe(h, h.code), h })).filter(x => has(x.c));
+  if (hs.length < 2 || hs.length >= 4) return null;
+  const bando = c => (c >= HAY_AGUA ? 3 : c === VELADO ? 1 : c <= 1 ? 0 : 2);
+  const horaNum = h => (h?.date instanceof Date) ? h.date.getHours()
+                     : (h?.t ? Number(String(h.t).slice(11, 13)) : NaN);
+  const tr = [];
+  for (const x of hs) {
+    const b = bando(x.c);
+    if (tr.length && tr[tr.length - 1].b === b) { tr[tr.length - 1].cs.push(x.c); tr[tr.length - 1].hs.push(x.h); }
+    else tr.push({ b, cs: [x.c], hs: [x.h] });
+  }
+  if (tr.length < 2) return null;
+  const gana = xs => { const c = new Map();
+    for (const x of xs) c.set(x, (c.get(x) ?? 0) + 1);
+    return [...c.entries()].sort((a, b) => b[1] - a[1] || tapado(b[0]) - tapado(a[0]))[0][0]; };
+  return tr.map(t => {
+    const mojan = t.cs.filter(c => c >= HAY_AGUA);
+    const code = mojan.length ? Math.max(...mojan) : gana(t.cs);
+    const desde = horaNum(t.hs[0]), hasta = horaNum(t.hs[t.hs.length - 1]);
+    const medio = t.hs[Math.floor(t.hs.length / 2)];
+    const hm = horaNum(medio);
+    const dia = has(medio?.day) ? medio.day : (hm >= 8 && hm <= 19 ? 1 : 0);
+    return { code, dia, txt: textoVisto(code, dia) ?? '—',
+             hora: `${String(desde).padStart(2, '0')}:00`, desde, hasta, b: t.b, n: t.hs.length };
+  });
+}
+
 /* ═══ EL RESUMEN DE UN CONJUNTO DE HORAS, UNA SOLA VEZ ═════════════════
    Franjas de «Ahora» y tarjetas de «10 días» pintan con ESTO y con nada
    más. code: el de la franja (el agua manda por lo peor; si no, el más
@@ -11321,7 +11398,7 @@ function tituloFranja(sel, code, desde = '') {
      dos iconos. Así no puede pasar lo de Bermeo a las 00:20: icono de
      cubierto y llovizna con la frase «Mayormente despejado». La línea de
      los milímetros de debajo sigue diciendo de qué hora a qué hora moja. */
-  const linea = tramosDeCielo(sel);
+  const linea = tramosDeCielo(sel) || tramosCortos(sel);
   if (linea && linea.length >= 2)
     return linea.map((t, i) => i === 0 ? t.txt : `${t.txt.toLowerCase()} desde las ${t.hora}`).join(' · ');
 
@@ -11783,7 +11860,10 @@ function renderNow() {
           if (has(mm) && mm >= 0.1) return '';
           const o = lluviaEnLaFranjaQueNoVesTu(sel[0].date, sel[sel.length - 1].date);
           if (!o) return '';
-          return ` <span class="nd__ojo">⚠ ${esc(o.quien)} sí (${mmTxt(o.mm)} mm${o.cuando ? `, ${o.cuando}` : ''})</span>`;
+          /* Suyo, 13-09-2026: «se pone despejado, pero GFS ve algo de lluvia
+             de 10 a 12; eso es lo que quiero». Información al lado del dato. */
+          const algo = o.mm < (S.thr?.rainWarn ?? 0.2) ? 'algo de lluvia' : 'lluvia';
+          return ` <span class="nd__ojo">⚠ ${esc(o.quien)} ${o.cuantos > 1 ? 'ven' : 've'} ${algo}${o.cuando ? ` ${o.cuando}` : ''} (${mmTxt(o.mm)} mm)</span>`;
         })()}`
       /* ── Y A QUÉ ALTURA, QUE SI NO SON DOS CIFRAS SIN DUEÑO ────────
          Cazado el 30-08-2026 comparando dos pantallazos suyos de la
@@ -11799,7 +11879,10 @@ function renderNow() {
          Es el mismo motivo por el que la tabla de «Mis torres» lleva
          escrito «a 10 m» en la cabecera desde que él preguntó *«¿es a
          10 m o qué significa?»*. Aquí faltaba. */
-      }${vTxt ? `<br>Viento ${vTxt}<small> a ${S.hgt} m</small>` : ''}${gm > 0 ? `<br>Racha máx ${wtxt(gm, true)}<small> a ${S.hgt} m${gmCuando}</small>` : ''}${
+      }${vTxt ? `<br>Viento ${vTxt}<small> a ${S.hgt} m</small>` : ''}${gm > 0 ? `<br>Racha máx ${wtxt(gm, true)}<small> a ${S.hgt} m${gmCuando}</small>` : ''}${(() => {
+          const r = rachaEnLaFranjaQueNoVesTu(sel);
+          return r ? ` <span class="nd__ojo">⚠ ${esc(r.quien)} da ${wtxt(r.max, true)} a 10 m${r.cuando ? ` ${r.cuando}` : ''}${r.cruza ? ` — tu listón es ${wtxt(listonRafaga().warn, true)}` : ''}</span>` : '';
+        })()}${
         avisoTormentaFranja(sel)}</div></div>`;
   }).join('');
 
@@ -12706,9 +12789,16 @@ function renderDays() {
         if (!(has(mm) && mm >= 0.1)) return '';
         const A = aguaDelDiaQueNoVenTodos(t);
         if (!A) return '';
+        /* Y a qué horas cae el agua de la tarjeta (las horas del modelo que la
+           da); si cae fuera de las 6-20 h que dibuja el día, se dice «de noche»
+           (viernes 18-09: 2,4 mm con dibujos secos). Suyo, 13-09-2026. */
+        const hsAgua = horasDelDia(S.data?.fc, t).filter(h => has(h.prec) && h.prec > 0);
+        const deNoche = hsAgua.length > 0 && hsAgua.every(h => h.date.getHours() < 6 || h.date.getHours() > 20);
+        let cuando = hsAgua.length ? rangoDeHoras(hsAgua) : '';
+        if (deNoche) cuando = /sueltas/.test(cuando) ? 'de noche' : `${cuando}, de noche`;
         const quien = A.mojan.length
-          ? `solo <b>${esc(A.mojan[0].nom)}</b> ve agua (${mmTxt(A.mojan[0].v)} mm)`
-          : `ninguno pasa de 0,5 mm en el día`;
+          ? `solo <b>${esc(A.mojan[0].nom)}</b> ve agua (${mmTxt(A.mojan[0].v)} mm${cuando ? `, ${cuando}` : ''})`
+          : `ninguno pasa de 0,5 mm en el día${cuando ? ` (${cuando})` : ''}`;
         const lista = xs => xs.length <= 1 ? xs.join('') : xs.slice(0, -1).join(', ') + ' y ' + xs[xs.length - 1];
         return `<div class="dcard__x" title="${esc(A.secos.join(', '))}: secos">⚠ ${quien} · `
              + `${esc(lista(A.secos))}, ${A.secos.length === 1 ? 'seco' : 'secos'}</div>`;
