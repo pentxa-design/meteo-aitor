@@ -7129,8 +7129,17 @@ grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
      /antes despejado$/.test(cdc(k, 3, 0) || ''));
   ok('de noche el «antes» se dice con la palabra de noche',
      (() => { const k2 = `${hoyK}·Noche2·prueba`; cdc(k2, 4, 0); return /antes velo de nubes altas$/.test(cdc(k2, 0, 0) || ''); })());
+  /* El voto de modelos llega segundos después del primer pintado, dentro de la
+     MISMA bajada: eso no es un cambio del tiempo (medido en producción, 22:55). */
+  const k3 = `${hoyK}·Tarde·prueba`;
+  ok('dentro de la misma bajada, repintar con otro cielo NO cuenta como cambio',
+     cdc(k3, 0, 0, 100) === '' && cdc(k3, 3, 0, 100) === '' && cdc(k3, 3, 0, 200) === '',
+     'el voto de modelos salía como «ha cambiado a las 22:55»');
+  const c5 = cdc(k3, 0, 0, 300);
+  ok('y entre dos bajadas distintas sí se dice',
+     /^Ha cambiado a las \d\d:\d\d: antes cubierto$/.test(c5 || ''), `salió «${c5}»`);
   ok('la franja pinta esa línea junto al titular',
-     /const cambio = cambioDeCielo\(`\$\{String\(sel\[0\]\?\.t \?\? ''\)\.slice\(0, 10\)\}·\$\{name\}·\$\{S\.model\}`, code/.test(src)
+     /const cambio = cambioDeCielo\(`\$\{String\(sel\[0\]\?\.t \?\? ''\)\.slice\(0, 10\)\}·\$\{name\}·\$\{S\.model\}`, code, R\?\.dia \?\? esDeDia\(sel\),\n\s*S\.data\?\.at \? \+new Date\(S\.data\.at\) : null\)/.test(src)
      && /class="part__cambio">\$\{esc\(cambio\)\}/.test(src));
   ok('todas las pestañas salen de la misma bajada: franjas y 10 días leen S.data.fc',
      /function horasDelDia\(fc, dia\)/.test(src) && /const hs = horasDelDia\(S\.data\?\.fc, dia\);/.test(src)

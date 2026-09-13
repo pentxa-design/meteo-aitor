@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.13-2254';
+const BUILD = '2026.09.13-2301';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11342,13 +11342,19 @@ function tramosCortos(sel) {
    franja lo dice mientras el nuevo se mantenga. Un cambio de pasada del
    modelo se lee así como cambio del tiempo, no como icono que baila.
    Regla del 13-09-2026. */
-function cambioDeCielo(clave, code, dia = 1) {
+function cambioDeCielo(clave, code, dia = 1, bajada = null) {
   if (!has(code) || !clave) return '';
   let reg;
   try { reg = LS.get('cieloFranjas', {}) || {}; } catch { return ''; }
   const antes = reg[clave];
-  if (!antes) reg[clave] = { code, desde: null, antes: null };
-  else if (has(antes.code) && antes.code !== code) reg[clave] = { code, desde: Date.now(), antes: antes.code };
+  if (!antes) reg[clave] = { code, desde: null, antes: null, bajada };
+  /* La MISMA bajada de datos repintada —llega el voto de modelos segundos
+     después del primer pintado, se cambia de pestaña— no es un cambio del
+     tiempo: se queda lo último que se ve y no se apunta nada. Medido el
+     13-09-2026 a las 22:55: sin esto, el voto salía como «ha cambiado». */
+  else if (bajada != null && antes.bajada === bajada) reg[clave] = { ...antes, code };
+  else if (has(antes.code) && antes.code !== code) reg[clave] = { code, desde: Date.now(), antes: antes.code, bajada };
+  else reg[clave] = { ...antes, code, bajada };
   const r = reg[clave];
   let txt = '';
   if (r.desde && has(r.antes) && r.antes !== code) {
@@ -11730,7 +11736,8 @@ function renderNow() {
        Regla fija del 13-09-2026 (la sesión del portátil, y él la hizo suya):
        para distinguir un cambio del tiempo de un fallo de la app, la franja
        lo dice en una línea: «Ha cambiado a las 22:10: antes despejado». */
-    const cambio = cambioDeCielo(`${String(sel[0]?.t ?? '').slice(0, 10)}·${name}·${S.model}`, code, R?.dia ?? esDeDia(sel));
+    const cambio = cambioDeCielo(`${String(sel[0]?.t ?? '').slice(0, 10)}·${name}·${S.model}`, code, R?.dia ?? esDeDia(sel),
+                                 S.data?.at ? +new Date(S.data.at) : null);
     const gm = Math.max(...sel.map(h => h.gust ?? 0));
     // Y a qué hora es esa racha (suyo, 09-09-2026: «que se aplique siempre»).
     const hGm = sel.find(h => has(h.gust) && h.gust === gm)?.date;   // sin «?? 0»: un hueco no es una racha
