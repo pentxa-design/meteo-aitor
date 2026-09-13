@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.14-0001';
+const BUILD = '2026.09.14-0007';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11342,18 +11342,28 @@ function tramosCortos(sel) {
    franja lo dice mientras el nuevo se mantenga. Un cambio de pasada del
    modelo se lee así como cambio del tiempo, no como icono que baila.
    Regla del 13-09-2026. */
-function cambioDeCielo(clave, code, dia = 1, bajada = null) {
+function cambioDeCielo(clave, code, dia = 1, bajada = null, forma = null) {
   if (!has(code) || !clave) return '';
+  /* Antes del voto de modelos no se apunta ni se compara: el primer pintado
+     (sin voto) contra el segundo (con voto) NO es un cambio del tiempo. Lo
+     cazó la sesión del portátil en el build 2301, 13-09-2026 a las 23:54:
+     «Ha cambiado a las 23:54: antes mayormente despejado» con tres segundos
+     entre el antes y el ahora. */
+  if (forma && forma.votado === false) return '';
   let reg;
   try { reg = LS.get('cieloFranjas', {}) || {}; } catch { return ''; }
   const antes = reg[clave];
-  if (!antes) reg[clave] = { code, desde: null, antes: null, bajada };
-  /* La MISMA bajada de datos repintada —llega el voto de modelos segundos
-     después del primer pintado, se cambia de pestaña— no es un cambio del
-     tiempo: se queda lo último que se ve y no se apunta nada. Medido el
-     13-09-2026 a las 22:55: sin esto, el voto salía como «ha cambiado». */
+  /* Si la franja ha perdido horas por el paso del reloj (la Noche 22-23 a
+     las 23:10 ya solo tiene una hora), no es comparable: se empieza de nuevo
+     sin decir nada. */
+  const mismaForma = !forma || !antes || (antes.n === forma.n && antes.ini === forma.ini);
+  const base = { n: forma?.n ?? null, ini: forma?.ini ?? null };
+  if (!antes || !mismaForma) reg[clave] = { code, desde: null, antes: null, bajada, ...base };
+  /* La MISMA bajada de datos repintada —copia guardada y bajada fresca, el
+     voto, un cambio de pestaña— no es un cambio del tiempo: se queda lo
+     último que se ve y no se apunta nada. */
   else if (bajada != null && antes.bajada === bajada) reg[clave] = { ...antes, code };
-  else if (has(antes.code) && antes.code !== code) reg[clave] = { code, desde: Date.now(), antes: antes.code, bajada };
+  else if (has(antes.code) && antes.code !== code) reg[clave] = { code, desde: Date.now(), antes: antes.code, bajada, ...base };
   else reg[clave] = { ...antes, code, bajada };
   const r = reg[clave];
   let txt = '';
@@ -11737,7 +11747,11 @@ function renderNow() {
        para distinguir un cambio del tiempo de un fallo de la app, la franja
        lo dice en una línea: «Ha cambiado a las 22:10: antes despejado». */
     const cambio = cambioDeCielo(`${String(sel[0]?.t ?? '').slice(0, 10)}·${name}·${S.model}`, code, R?.dia ?? esDeDia(sel),
-                                 S.data?.at ? +new Date(S.data.at) : null);
+                                 /* La bajada se identifica por los DATOS (la hora en curso del modelo),
+                                    no por el reloj: la copia guardada, la bajada fresca y el voto se
+                                    pintan en segundos y son la misma (falsa alarma del 13-09, 23:54). */
+                                 S.data?.fc?.current?.time ?? null,
+                                 { n: sel.length, ini: sel[0]?.t ?? null, votado: !!deEsteSitio(S.comparativa) });
     const gm = Math.max(...sel.map(h => h.gust ?? 0));
     // Y a qué hora es esa racha (suyo, 09-09-2026: «que se aplique siempre»).
     const hGm = sel.find(h => has(h.gust) && h.gust === gm)?.date;   // sin «?? 0»: un hueco no es una racha

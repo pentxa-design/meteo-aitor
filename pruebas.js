@@ -7138,8 +7138,28 @@ grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
   const c5 = cdc(k3, 0, 0, 300);
   ok('y entre dos bajadas distintas sí se dice',
      /^Ha cambiado a las \d\d:\d\d: antes cubierto$/.test(c5 || ''), `salió «${c5}»`);
+  /* EL CASO EXACTO DEL PORTÁTIL (build 2301, 13-09-2026 23:54): registro con
+     bajada 1789336462550 y desde 1789336465675, tres segundos después: mismo
+     fetch, primer pintado sin voto (mayormente despejado) contra pintado con
+     voto (velo). Ahora la bajada es la hora en curso del modelo y antes del
+     voto no se apunta nada. */
+  const k4 = `${hoyK}·Noche·caso2301`;
+  const f2 = { n: 2, ini: `${hoyK}T22:00`, votado: true };
+  ok('antes del voto no se apunta ni se compara nada',
+     cdc(k4, 1, 0, '2026-09-13T23:45', { ...f2, votado: false }) === ''
+     && !(LS.get('cieloFranjas', {}) || {})[k4]);
+  ok('el caso del 2301: mayormente despejado sin voto y velo con voto, misma hora en curso → NO es cambio',
+     cdc(k4, 1, 0, '2026-09-13T23:45', f2) === '' && cdc(k4, 4, 0, '2026-09-13T23:45', f2) === '',
+     'salía «Ha cambiado a las 23:54: antes mayormente despejado»');
+  ok('la misma hora en curso repintada por cualquier motivo tampoco cuenta',
+     cdc(k4, 0, 0, '2026-09-13T23:45', f2) === '');
+  ok('con otra hora en curso del modelo (bajada nueva) y el mismo tramo de horas, sí se dice',
+     /^Ha cambiado a las \d\d:\d\d: antes despejado$/.test(cdc(k4, 4, 0, '2026-09-14T00:00', f2) || ''));
+  ok('si la franja ha perdido horas por el reloj, no se compara: se empieza de nuevo sin decir nada',
+     cdc(k4, 0, 0, '2026-09-14T00:15', { n: 1, ini: `${hoyK}T23:00`, votado: true }) === ''
+     && cdc(k4, 0, 0, '2026-09-14T00:30', { n: 1, ini: `${hoyK}T23:00`, votado: true }) === '');
   ok('la franja pinta esa línea junto al titular',
-     /const cambio = cambioDeCielo\(`\$\{String\(sel\[0\]\?\.t \?\? ''\)\.slice\(0, 10\)\}·\$\{name\}·\$\{S\.model\}`, code, R\?\.dia \?\? esDeDia\(sel\),\n\s*S\.data\?\.at \? \+new Date\(S\.data\.at\) : null\)/.test(src)
+     /const cambio = cambioDeCielo\(`\$\{String\(sel\[0\]\?\.t \?\? ''\)\.slice\(0, 10\)\}·\$\{name\}·\$\{S\.model\}`, code, R\?\.dia \?\? esDeDia\(sel\),[\s\S]{0,400}S\.data\?\.fc\?\.current\?\.time \?\? null,\n\s*\{ n: sel\.length, ini: sel\[0\]\?\.t \?\? null, votado: !!deEsteSitio\(S\.comparativa\) \}\)/.test(src)
      && /class="part__cambio">\$\{esc\(cambio\)\}/.test(src));
   ok('todas las pestañas salen de la misma bajada: franjas y 10 días leen S.data.fc',
      /function horasDelDia\(fc, dia\)/.test(src) && /const hs = horasDelDia\(S\.data\?\.fc, dia\);/.test(src)
