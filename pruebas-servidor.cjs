@@ -840,6 +840,25 @@ ok('y saltarse una pasada NO cuenta como estar caído (el aviso salta a las 4 h)
    /huecoMin > 240/.test(vg),
    'con cadencia de 1 h, un listón de 4 h no da falsos avisos');
 
+/* Y LO QUE LE DICE LA PANTALLA TIENE QUE SER ESA MISMA CADENCIA. El cartel
+   del pulso decía «lo lanza cron-job.org cada media hora» y «Debería hacerlo
+   cada 3 horas» cuando ya no era ni una cosa ni la otra (lo apuntó la revisión
+   del 04-09 y seguía igual al cambiar a verde/ámbar/rojo el 13-09-2026). Con
+   la cadencia verde de 2 h, «debería pasar cada 3 horas» le haría leer un
+   hueco normal como avería, y el revés: dar por perdida UNA pasada cuando son
+   dos. La regla es de clase: el texto del cartel no puede nombrar una cadencia
+   que el vigilante no tenga. */
+{
+  const appSrc = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  const i = appSrc.indexOf('function textoPulso');
+  const cartel = i < 0 ? '' : appSrc.slice(i, i + 4000);
+  ok('el cartel del pulso no promete una cadencia que el vigilante ya no tiene',
+     cartel.length > 0 && !/cada 3 horas/.test(cartel)
+     && !/cron-job\.org cada media hora/.test(cartel)
+     && /cada 2 h/.test(cartel) && /cada media hora o cada cuarto/.test(cartel),
+     'con el verde de 2 h, «debería pasar cada 3 horas» convierte un hueco normal en avería');
+}
+
 console.log('\n  Tocar el aviso abre la app');
 const swSrc = fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf8');
 ok('la dirección del aviso se resuelve ENTERA, no relativa',

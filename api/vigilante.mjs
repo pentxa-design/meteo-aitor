@@ -443,9 +443,10 @@ async function empujar(titulo, cuerpo, tag, importante, url) {
    él abría la app**. Si no la abría, nadie medía. Y para elegir modelo
    hacen falta cientos de casos, no los tres ratos que mire el móvil.
 
-   Ahora lo apunta el vigilante, que ya pasa **cada media hora** lanzado
-   por cron-job.org y no depende de su Mac ni de que abra nada. Salen
-   unas 48 rondas al día.
+   Ahora lo apunta el vigilante, lanzado por cron-job.org, sin depender de
+   su Mac ni de que abra nada. OJO con el número de muestras: desde la
+   cadencia verde/ámbar/rojo del 13-09-2026 un día tranquilo da ~12 rondas
+   (una cada 2 h) y no las 48 de antes; los días movidos siguen dando 48.
 
    ── LO QUE NO PUEDE PASAR ──
    Esto es un cuaderno de fondo. **Jamás puede estropear un aviso.** Va
@@ -790,8 +791,11 @@ export default async function handler(req, res) {
   /* ── VERDE, ÁMBAR, ROJO: LA CADENCIA SUBE SOLA (13-09-2026) ──────────
      Suyo: «cada 2 h vale si es solo para los días en verde; que suba sola
      a cada media hora en ámbar y a cada cuarto de hora en rojo: una
-     tormenta de verano se monta en una hora». cron-job.org llama cada
-     cuarto de hora y AQUÍ se decide si toca pasar:
+     tormenta de verano se monta en una hora». El cron externo llama y AQUÍ
+     se decide si toca pasar. OJO (13-09-2026): cron-job.org está puesto
+     **cada media hora**, así que el rojo sale cada media, no cada cuarto;
+     para que el cuarto de hora sea de verdad hay que bajar el trabajo
+     «Vigilante Aitor Meteo» a 15 min en su consola de cron-job.org.
        verde  — nada guardado en marcha → una pasada cada 2 h
        ámbar  — hay rayo, agua o racha apuntados (hoy o mañana) → cada media
        rojo   — rayo de HOY todavía por delante, racha de 70 por delante, o
@@ -1142,7 +1146,7 @@ export default async function handler(req, res) {
     });
   }
 
-  /* Un hueco de más de 4 horas y media (una pasada perdida) se le dice.
+  /* Un hueco de más de 4 h (dos pasadas verdes perdidas) se le dice.
      El 27-08 fueron ONCE horas y se enteró por casualidad. */
   if (huecoMin !== null && huecoMin > 240) {   // mismo listón que la app y que el revivir
     const h = Math.floor(huecoMin / 60);

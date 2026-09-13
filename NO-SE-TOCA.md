@@ -126,3 +126,4 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **No hay horas de silencio: trabaja de noche y los avisos van las 24 horas** | `no hay horas de silencio: trabaja de noche y los avisos van las 24 horas` (pruebas-servidor.cjs) |
 | **Una horquilla cuyos extremos redondean igual se imprime como un solo número (viento y temperatura)** | `la horquilla de viento de la franja compara lo que se imprime, no el dato crudo` |
 | **La cadencia del vigilante sube sola: verde cada 2 h, ámbar cada media, rojo cada cuarto** | `y el rojo es rayo de HOY por delante, racha de 70 por delante o tormenta ya avisada` (pruebas-servidor.cjs) |
+| **El cartel del pulso dice la cadencia real del vigilante, no una vieja** | `el cartel del pulso no promete una cadencia que el vigilante ya no tiene` (pruebas-servidor.cjs) |

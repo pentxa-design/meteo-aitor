@@ -15,9 +15,10 @@
    esté el Mac como esté.
 
    LO QUE NO PUEDE HACER, y hay que decirlo claro: el plan gratuito de
-   Vercel **solo permite una tarea al día**. El vigilante de tormentas
-   cada 3 horas sigue dependiendo del Mac hasta que él decida si pasa a
-   plan de pago. Aquí no se disimula esa carencia.
+   Vercel **solo permite una tarea al día**. Por eso el vigilante de
+   tormentas no lo lanza Vercel: lo llama cron-job.org desde fuera (cada
+   media hora) y él decide su cadencia —2 h en verde, media en ámbar,
+   cuarto en rojo—. Del Mac ya no depende nada. Aquí no se disimula.
    ═══════════════════════════════════════════════════════════════════ */
 
 import webpush from 'web-push';

@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.13-2107';
+const BUILD = '2026.09.13-2145';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -17204,7 +17204,11 @@ async function mirarPulso() {
    Así que ahora se dice SIEMPRE en cuál de los tres estados está. Es la
    regla 2 de esta app aplicada al propio vigilante: un hueco callado se
    confunde con «aquí no pasa nada». */
-const PULSO_MALO = 240;        // 4 h. La pasada va cada 3 h: una perdida ya se ve.
+/* 4 h. Desde el 13-09-2026 la pasada va cada 2 h en día tranquilo (verde),
+   cada media hora si hay algo apuntado (ámbar) y cada cuarto si hay rayo o
+   racha de 70 por delante (rojo). Cuatro horas son DOS pasadas verdes
+   perdidas: el listón sigue valiendo y no chilla en un día en calma. */
+const PULSO_MALO = 240;
 
 function estadoPulso(d) {
   /* ── «NO CONTESTA» Y «CONTESTA PERO NO LO SABE» NO SON LO MISMO ────
@@ -17248,10 +17252,10 @@ function textoPulso(d) {
      funciona le hace desconfiar de las que sí están rotas. */
   if (e === 'sinmarca')
     return `<b>El vigilante contesta, pero no sabe decir cuándo pasó.</b>
-      <b>Está corriendo</b> —lo lanza cron-job.org cada media hora, no depende
-      de tu Mac—: lo que no hay es el sello de la última pasada. Suele ser que
-      aún no ha hecho ninguna desde el último cambio; en media hora estará.
-      Los avisos siguen saliendo.`;
+      <b>Está corriendo</b> —lo lanza cron-job.org, no depende de tu Mac—: lo
+      que no hay es el sello de la última pasada. Suele ser que aún no ha hecho
+      ninguna desde el último cambio; en un rato estará (en día tranquilo pasa
+      cada 2 h). Los avisos siguen saliendo.`;
 
   if (e === 'nolose')
     return `<b>No he podido preguntar por el vigilante.</b> Sin cobertura o el
@@ -17262,8 +17266,9 @@ function textoPulso(d) {
     const h = Math.floor(d.haceMin / 60), m = d.haceMin % 60;
     return `<b>⚠ NADIE ESTÁ VIGILANDO</b><br>
       El vigilante lleva <b>${h} h ${m} min</b> sin pasar por tus emplazamientos.
-      Debería hacerlo cada 3 horas. <b>Lo que ves aquí es del último rato que miró</b>
-      — los números que ves son del último rato que miró.`;
+      En día tranquilo pasa cada 2 h, y cada media hora o cada cuarto si hay algo
+      montándose: <b>esto son varias pasadas perdidas</b>, no una.
+      Los números que ves son del último rato que miró.`;
   }
 
   const cuanto = d.haceMin < 60 ? `hace ${Math.max(0, d.haceMin)} min`
