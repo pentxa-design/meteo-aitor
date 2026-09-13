@@ -835,7 +835,7 @@ ok('pero vuelve a media hora en cuanto hay rayo, agua, racha o aviso vivo',
    && /antes\.ultimoAviso/.test(vg) && /aguaSitios/.test(vg) && /rachaSitios/.test(vg));
 ok('nunca se salta su ojeada a mano ni la ventana del parte',
    /const ojeadaAMano = req\.query\?\.mirar === '1'/.test(vg)
-   && /!ojeadaAMano && !algoEnMarcha && !ventanaDelParte/.test(vg));
+   && /!ojeadaAMano && !ventanaDelParte && huecoPrevio !== null && huecoPrevio < cadaMin/.test(vg));
 ok('y saltarse una pasada NO cuenta como estar caído (el aviso salta a las 4 h)',
    /huecoMin > 240/.test(vg),
    'con cadencia de 1 h, un listón de 4 h no da falsos avisos');
@@ -961,8 +961,9 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
   ok('un aviso por pasada con todas las torres en el título («AGUA HOY · 3 torres»)',
      (vig3.match(/torres` : c\.n\}`/g) || []).length === 3 && !/QueValen\.slice\(0, 3\)/.test(vig3) && !/QueVale\.slice\(0, 3\)/.test(vig3),
      'el mismo «se adelanta» llegaba en tres notificaciones seguidas, una por torre');
-  ok('de 23:00 a 06:00 solo sale lo rojo; lo demás se calla y lo cuenta el parte de las 06:30',
-     /const deNoche = h0 >= 23 \|\| h0 < HORA_PARTE;/.test(vig3) && /if \(deNoche && !a\.importante\)/.test(vig3));
+  ok('no hay horas de silencio: trabaja de noche y los avisos van las 24 horas',
+     !/deNoche/.test(vig3) && /for \(const a of avisos\) enviados\.push/.test(vig3),
+     'suyo, 13-09-2026: «que la madrugada cuente igual que el resto del día»');
 }
 
 console.log(`\n  ${bien} bien, ${mal} mal`);

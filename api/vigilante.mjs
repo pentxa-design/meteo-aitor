@@ -1158,16 +1158,11 @@ export default async function handler(req, res) {
 
   const enviados = [];
   if (!soloMirar) {
-    /* ── HORAS DE SILENCIO (§11 del guion, 13-09-2026) ─────────────────
-       De 23:00 a 06:00 solo lo rojo: tormenta inminente, racha de 70 y
-       «he estado sin vigilar» (van como `importante`). Lo demás no se
-       pierde: el estado se guarda igual y el parte de las 06:30 lo cuenta.
-       Suyo, con 40 avisos en un día de lluvia: «me llegan muchos». */
-    const deNoche = h0 >= 23 || h0 < HORA_PARTE;
-    for (const a of avisos) {
-      if (deNoche && !a.importante) { enviados.push({ ...a, enviados: 0, nota: 'callado: horas de silencio (23-06)' }); continue; }
-      enviados.push({ ...a, ...(await empujar(a.titulo, a.cuerpo, a.tag, a.importante, a.url)) });
-    }
+    /* SIN HORAS DE SILENCIO. Se probó un 23:00-06:00 solo para lo rojo
+       (§11 del guion) y lo quitó él la misma noche, 13-09-2026: «trabajo
+       de día y de noche, necesito los avisos las 24 horas; que la
+       madrugada cuente igual que el resto del día». */
+    for (const a of avisos) enviados.push({ ...a, ...(await empujar(a.titulo, a.cuerpo, a.tag, a.importante, a.url)) });
   }
 
   /* Se guarda SIEMPRE, aunque no se avise: si no, la comparación de la

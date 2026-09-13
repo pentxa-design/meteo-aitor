@@ -123,6 +123,6 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **El vigilante no avisa de horas ya pasadas** | `no se avisa de horas ya pasadas: un tramo de hoy que acabó antes de esta hora no es cambio` (pruebas-servidor.cjs) |
 | **Con la racha igual al listón se dice «llega», «por encima» solo si lo supera** | `la racha dice «llega a tu listón» cuando iguala 70 y «por encima» solo si lo supera` (pruebas-servidor.cjs) |
 | **Un aviso por pasada, con todas las torres afectadas en el título** | `un aviso por pasada con todas las torres en el título («AGUA HOY · 3 torres»)` (pruebas-servidor.cjs) |
-| **De 23:00 a 06:00 el vigilante solo manda lo rojo** | `de 23:00 a 06:00 solo sale lo rojo; lo demás se calla y lo cuenta el parte de las 06:30` (pruebas-servidor.cjs) |
+| **No hay horas de silencio: trabaja de noche y los avisos van las 24 horas** | `no hay horas de silencio: trabaja de noche y los avisos van las 24 horas` (pruebas-servidor.cjs) |
 | **Una horquilla cuyos extremos redondean igual se imprime como un solo número (viento y temperatura)** | `la horquilla de viento de la franja compara lo que se imprime, no el dato crudo` |
 | **La cadencia del vigilante sube sola: verde cada 2 h, ámbar cada media, rojo cada cuarto** | `y el rojo es rayo de HOY por delante, racha de 70 por delante o tormenta ya avisada` (pruebas-servidor.cjs) |
