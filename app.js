@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.13-1941';
+const BUILD = '2026.09.13-1948';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11630,9 +11630,14 @@ function renderNow() {
        saber las rachas pero también me gustaría saber el viento que hay a
        10 m». Va la horquilla de la franja, a la misma altura que la racha. */
     const vs = sel.map(h => h.wind).filter(has);
-    const vTxt = vs.length ? (Math.min(...vs) === Math.max(...vs)
-                   ? wtxt(vs[0], true)
-                   : `${wtxt(Math.min(...vs))}–${wtxt(Math.max(...vs), true)}`) : null;
+    /* «Viento 5–5 km/h» en la franja Noche (13-09-2026, 19:40): mínimo y
+       máximo distintos que REDONDEAN al mismo número son un solo número,
+       igual que el «21–21°» de la temperatura. Se compara lo que se
+       imprime, no el dato crudo. */
+    const vLo = vs.length ? Math.min(...vs) : null, vHi = vs.length ? Math.max(...vs) : null;
+    const vTxt = vs.length ? (wtxt(vLo) === wtxt(vHi)
+                   ? wtxt(vHi, true)
+                   : `${wtxt(vLo)}–${wtxt(vHi, true)}`) : null;
     // Los milímetros ESCRITOS. Con solo el icono no se distingue una
     // llovizna de un chaparrón, y el número no admite interpretación.
     const mm = sel.map(h => h.prec).filter(has).reduce((a, b) => a + b, 0);

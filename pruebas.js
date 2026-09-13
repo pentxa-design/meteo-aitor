@@ -7063,6 +7063,16 @@ grupo('Revisión 04-09 · la app y el service worker se hablan');
      && /setTimeout\(revisarCasco, 4000\)/.test(src));
 }
 
+
+/* ── «Viento 5–5 km/h» (13-09-2026, franja Noche, visto desde el portátil) ── */
+grupo('Vuelta de Calpe · la horquilla de viento no repite el número');
+{
+  ok('la horquilla de viento de la franja compara lo que se imprime, no el dato crudo',
+     /const vTxt = vs\.length \? \(wtxt\(vLo\) === wtxt\(vHi\)/.test(src)
+     && !/Math\.min\(\.\.\.vs\) === Math\.max\(\.\.\.vs\)/.test(src),
+     '4,6 y 5,4 km/h imprimían «5–5 km/h»');
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');
