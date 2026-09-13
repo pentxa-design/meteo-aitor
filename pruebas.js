@@ -176,7 +176,7 @@ for (const f of ['listonRafaga', 'veladoSiToca', 'medianaPonderada', 'cieloVotad
                  'esDeDia', 'cieloVisto', 'textoVisto', 'textoCielo', 'rangoDeHoras', 'tramosDeCielo',
                  'resumenCielo', 'extrasDe', 'horaDe', 'conAhora', 'horasDelDia', 'iconosDelDia',
                  'aguaPrestada', 'tormentaQueNoVesTu', 'nubesEnLaFranjaQueNoVesTu',
-                 'aguaDelDiaQueNoVenTodos', 'estadoSalir', 'tramosCortos', 'rachaEnLaFranjaQueNoVesTu']) {
+                 'aguaDelDiaQueNoVenTodos', 'estadoSalir', 'tramosCortos', 'rachaEnLaFranjaQueNoVesTu', 'cambioDeCielo']) {
   try { eval(sacar(`function ${f}(`)); } catch (e) { console.log(`  (sin ${f}: ${e.message})`); }
 }
 
@@ -3576,6 +3576,7 @@ grupo('Los ajustes viajan: el Mac, una calca del móvil (30-08-2026, 19:50)');
     'cache.': 'copias de datos para sin cobertura, de este aparato',
     'campo.pendientes': 'notas suyas aún sin mandar DESDE este aparato',
     'monte.t': 'marca de tiempo interna de este aparato',
+    cieloFranjas: 'el último cielo pintado por franja, para decir «ha cambiado a las…»: es de este aparato y de esta pasada (13-09-2026)',
   };
   const guardadas = [...new Set([...src.matchAll(/LS\.set\('([^']+)'/g)].map(m => m[1]))];
   const sinDecidir = guardadas.filter(k =>
@@ -7105,6 +7106,34 @@ grupo('Así con todo (13-09): al lado del dato, qué ve distinto otro modelo y c
      fr === 'Despejado · velo de nubes altas desde las 23:00', `salió «${fr}»`);
   ok('con un solo cielo, una franja corta sigue en una palabra',
      typeof tramosCortos === 'function' && tramosCortos(HC([0, 0, 1], 21)) === null);
+}
+
+
+/* ═══ LA FRANJA DICE SI SU CIELO HA CAMBIADO (13-09-2026) ═══════════════
+   «Cuando una franja cambie de cielo respecto a la pasada anterior, que lo
+   diga en una línea, para distinguir un cambio del tiempo de un fallo de
+   la app.» Nada de parches diarios: la causa, una vez, y su prueba. */
+grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
+{
+  const hoyK = new Date().toISOString().slice(0, 10);
+  const k = `${hoyK}·Noche·prueba`;
+  try { LS.set('cieloFranjas', {}); } catch {}
+  const c1 = typeof cambioDeCielo === 'function' ? cambioDeCielo(k, 0, 0) : null;
+  ok('la primera vez que se pinta una franja no dice nada', c1 === '');
+  ok('si se repinta con el mismo cielo, tampoco', cambioDeCielo(k, 0, 0) === '');
+  const c3 = cambioDeCielo(k, 3, 0);
+  ok('si cambia el cielo, lo dice con la hora y con el de antes',
+     /^Ha cambiado a las \d\d:\d\d: antes despejado$/.test(c3), `salió «${c3}»`);
+  ok('y lo sigue diciendo mientras el nuevo se mantenga',
+     /antes despejado$/.test(cambioDeCielo(k, 3, 0)));
+  ok('de noche el «antes» se dice con la palabra de noche',
+     (() => { const k2 = `${hoyK}·Noche2·prueba`; cambioDeCielo(k2, 4, 0); return /antes velo de nubes altas$/.test(cambioDeCielo(k2, 0, 0)); })());
+  ok('la franja pinta esa línea junto al titular',
+     /const cambio = cambioDeCielo\(`\$\{String\(sel\[0\]\?\.t \?\? ''\)\.slice\(0, 10\)\}·\$\{name\}·\$\{S\.model\}`, code/.test(src)
+     && /class="part__cambio">\$\{esc\(cambio\)\}/.test(src));
+  ok('todas las pestañas salen de la misma bajada: franjas y 10 días leen S.data.fc',
+     /function horasDelDia\(fc, dia\)/.test(src) && /const hs = horasDelDia\(S\.data\?\.fc, dia\);/.test(src)
+     && /const hrs = S\.data\.hours;/.test(src));
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');

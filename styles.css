@@ -2749,3 +2749,5 @@ body.sin-scroll{overflow:hidden}
 .salir__ir{font:inherit;font-size:0.8125rem;padding:1px 8px;border-radius:999px;cursor:pointer;
   border:1px solid color-mix(in srgb,var(--warn) 55%,transparent);background:transparent;color:var(--warn)}
 .salir__ir:hover{background:color-mix(in srgb,var(--warn) 18%,transparent)}
+/* La franja dice si su cielo ha cambiado respecto a lo pintado antes (13-09-2026). */
+.part__cambio{color:var(--warn);opacity:.9}

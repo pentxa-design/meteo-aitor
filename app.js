@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.13-2236';
+const BUILD = '2026.09.13-2254';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11336,6 +11336,33 @@ function tramosCortos(sel) {
   });
 }
 
+/* ── EL CIELO QUE SE PINTÓ ANTES, PARA DECIR SI HA CAMBIADO ──────────────
+   Se guarda por franja (día · nombre · modelo) el último código pintado.
+   Si en un repintado sale otro, se apunta la hora y el de antes, y la
+   franja lo dice mientras el nuevo se mantenga. Un cambio de pasada del
+   modelo se lee así como cambio del tiempo, no como icono que baila.
+   Regla del 13-09-2026. */
+function cambioDeCielo(clave, code, dia = 1) {
+  if (!has(code) || !clave) return '';
+  let reg;
+  try { reg = LS.get('cieloFranjas', {}) || {}; } catch { return ''; }
+  const antes = reg[clave];
+  if (!antes) reg[clave] = { code, desde: null, antes: null };
+  else if (has(antes.code) && antes.code !== code) reg[clave] = { code, desde: Date.now(), antes: antes.code };
+  const r = reg[clave];
+  let txt = '';
+  if (r.desde && has(r.antes) && r.antes !== code) {
+    const d = new Date(r.desde);
+    txt = `Ha cambiado a las ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}: antes ${String(textoVisto(r.antes, dia) ?? '').toLowerCase()}`;
+  }
+  // Solo hoy y mañana: lo demás se tira para que no crezca.
+  const hoy = new Date(), man = new Date(Date.now() + 86400e3);
+  const vale = k => k.startsWith(hoy.toISOString().slice(0, 10)) || k.startsWith(man.toISOString().slice(0, 10));
+  for (const k of Object.keys(reg)) if (!vale(k)) delete reg[k];
+  try { LS.set('cieloFranjas', reg); } catch { /* sin sitio no pasa nada */ }
+  return txt;
+}
+
 /* ═══ EL RESUMEN DE UN CONJUNTO DE HORAS, UNA SOLA VEZ ═════════════════
    Franjas de «Ahora» y tarjetas de «10 días» pintan con ESTO y con nada
    más. code: el de la franja (el agua manda por lo peor; si no, el más
@@ -11699,6 +11726,11 @@ function renderNow() {
        lo mismo que en «10 días» (09-09-2026). */
     const R = resumenCielo(sel);
     const code = R ? R.code : codigoFranja(sel);
+    /* ── SI EL CIELO DE LA FRANJA HA CAMBIADO RESPECTO A LO PINTADO ANTES ──
+       Regla fija del 13-09-2026 (la sesión del portátil, y él la hizo suya):
+       para distinguir un cambio del tiempo de un fallo de la app, la franja
+       lo dice en una línea: «Ha cambiado a las 22:10: antes despejado». */
+    const cambio = cambioDeCielo(`${String(sel[0]?.t ?? '').slice(0, 10)}·${name}·${S.model}`, code, R?.dia ?? esDeDia(sel));
     const gm = Math.max(...sel.map(h => h.gust ?? 0));
     // Y a qué hora es esa racha (suyo, 09-09-2026: «que se aplique siempre»).
     const hGm = sel.find(h => has(h.gust) && h.gust === gm)?.date;   // sin «?? 0»: un hueco no es una racha
@@ -11799,7 +11831,7 @@ function renderNow() {
         const lo = Math.min(...ts).toFixed(0), hi = Math.max(...ts).toFixed(0);
         return lo === hi ? `${lo}°` : `${lo}–${hi}°`;
       })() : nd}</div></div>
-      <div class="part__s">${esc(tituloFranja(sel, code, desde))}${nubesEnLaFranjaQueNoVesTu(sel, code)}${
+      <div class="part__s">${esc(tituloFranja(sel, code, desde))}${cambio ? `<br><small class="part__cambio">${esc(cambio)}</small>` : ''}${nubesEnLaFranjaQueNoVesTu(sel, code)}${
         /* Las franjas se ven en Ahora, en Torre y en Mis torres: con esto
            el aviso del cielo llega a las tres de una vez. Ver
            `avisoCielo()`. Solo en la franja que está EN CURSO, que es la

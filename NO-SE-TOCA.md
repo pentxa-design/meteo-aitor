@@ -130,3 +130,5 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **Al lado del dato seco va quién ve agua y a qué horas, aunque no llegue al listón** | `la franja dice «GFS ve algo de lluvia de 10:00 a 12:00» aunque no llegue al listón` |
 | **Una franja corta con dos cielos se cuenta con su hora, no con una sola palabra** | `y la frase dice «Despejado · velo de nubes altas desde las 23:00»` |
 | **La sensación compara lo que se imprime, no el dato crudo** | `la sensación compara lo que se imprime: 23° con aire a 22° dice «1° más que el aire»` |
+| **Si el cielo de una franja cambia respecto a lo pintado antes, la franja lo dice con la hora y el de antes** | `si cambia el cielo, lo dice con la hora y con el de antes` |
+| **Nada de parches diarios: todas las pestañas salen de la misma bajada de datos y cambian juntas** | `todas las pestañas salen de la misma bajada: franjas y 10 días leen S.data.fc` |
