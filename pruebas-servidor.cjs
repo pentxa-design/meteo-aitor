@@ -314,10 +314,10 @@ ok('se pide la lluvia y la racha en la MISMA consulta, sin llamadas nuevas',
 
 ok('la primera pasada no avisa de agua: se estrena en silencio',
    /const hayAguaGuardada = !!antes\?\.aguaSitios;/.test(vig)
-   && /if \(vb && !va && hayAguaGuardada\)/.test(vig));
+   && /if \(vb && !va && hayAguaGuardada && !\(cual === 'hoy' && vb\.fin < h0\)\)/.test(vig));   // + horas pasadas fuera (13-09)
 ok('ni de racha',
    /const hayRachaGuardada = !!antes\?\.rachaSitios;/.test(vig)
-   && /if \(rb && !ra && hayRachaGuardada\)/.test(vig));
+   && /if \(rb && !ra && hayRachaGuardada && !\(cual === 'hoy' && rb\.fin < h0\)\)/.test(vig));
 ok('y se guardan las dos, o la pasada siguiente volvería a estrenar',
    /aguaSitios: Object\.fromEntries/.test(vig) && /rachaSitios: Object\.fromEntries/.test(vig));
 
@@ -934,6 +934,30 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
   ok('si el estado no se pudo guardar o leer, la pasada lo dice en su respuesta',
      /noSeGuardo: noSeGuardo \|\| undefined/.test(vig2) && /noPudeLeerElEstado: noPudeLeerElEstado \|\| undefined/.test(vig2),
      'eran dos banderas mudas');
+}
+
+
+/* ── Los avisos del vigilante ya no gritan por todo (§11 del guion, 13-09-2026) ── */
+{
+  const vig3 = fs.readFileSync(path.join(__dirname, 'api', 'vigilante.mjs'), 'utf8');
+  const hh = h => String(h).padStart(2, '0') + 'h';
+  const mT = vig3.match(/const tramoTxt = .*;\n/);
+  const tramoTxt = mT ? new Function('hh', mT[0] + 'return tramoTxt;')(hh) : () => null;   // sin la función, la prueba falla en rojo, no revienta
+  ok('una sola hora se dice «a las 18h», no «de 18h a 18h»',
+     tramoTxt(18, 18) === 'a las 18h' && tramoTxt(5, 7) === 'de 05h a 07h'
+     && !/de \$\{hh\((vb|rb|b)\.ini\)\} a \$\{hh\((vb|rb|b)\.fin\)\}/.test(vig3),
+     'le llegó «racha de 71 km/h de 18h a 18h»');
+  ok('no se avisa de horas ya pasadas: un tramo de hoy que acabó antes de esta hora no es cambio',
+     /cual === 'hoy' && b\.fin < h0/.test(vig3) && /cual === 'hoy' && vb\.fin < h0/.test(vig3) && /cual === 'hoy' && rb\.fin < h0/.test(vig3),
+     'a las 20:30 le llegó «racha de 71 de 18h a 18h»');
+  ok('la racha dice «llega a tu listón» cuando iguala 70 y «por encima» solo si lo supera',
+     /rMax > RACHA_TOPE \? `Por encima de tu listón de \$\{RACHA_TOPE\} km\/h` : `Llega a tu listón/.test(vig3)
+     && !/\. Por encima de 70 km\/h\./.test(vig3));
+  ok('un aviso por pasada con todas las torres en el título («AGUA HOY · 3 torres»)',
+     (vig3.match(/torres` : c\.n\}`/g) || []).length === 3 && !/QueValen\.slice\(0, 3\)/.test(vig3) && !/QueVale\.slice\(0, 3\)/.test(vig3),
+     'el mismo «se adelanta» llegaba en tres notificaciones seguidas, una por torre');
+  ok('de 23:00 a 06:00 solo sale lo rojo; lo demás se calla y lo cuenta el parte de las 06:30',
+     /const deNoche = h0 >= 23 \|\| h0 < HORA_PARTE;/.test(vig3) && /if \(deNoche && !a\.importante\)/.test(vig3));
 }
 
 console.log(`\n  ${bien} bien, ${mal} mal`);

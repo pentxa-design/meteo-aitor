@@ -119,3 +119,8 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **El sello «cuando» del vigilante se escribe en cada pasada; el pulso no resucita en bucle** | `el sello «cuando» del vigilante se escribe en cada pasada, no una vez cada 20 h` (pruebas-servidor.cjs) |
 | **Una pasada resucitada por el pulso no se repite antes de 20 min** | `una pasada resucitada por el pulso no se repite antes de 20 min` (pruebas-servidor.cjs) |
 | **El vigilante dice en su respuesta si no pudo leer o guardar el estado** | `si el estado no se pudo guardar o leer, la pasada lo dice en su respuesta` (pruebas-servidor.cjs) |
+| **Una sola hora en un aviso se dice «a las 18h», nunca «de 18h a 18h»** | `una sola hora se dice «a las 18h», no «de 18h a 18h»` (pruebas-servidor.cjs) |
+| **El vigilante no avisa de horas ya pasadas** | `no se avisa de horas ya pasadas: un tramo de hoy que acabó antes de esta hora no es cambio` (pruebas-servidor.cjs) |
+| **Con la racha igual al listón se dice «llega», «por encima» solo si lo supera** | `la racha dice «llega a tu listón» cuando iguala 70 y «por encima» solo si lo supera` (pruebas-servidor.cjs) |
+| **Un aviso por pasada, con todas las torres afectadas en el título** | `un aviso por pasada con todas las torres en el título («AGUA HOY · 3 torres»)` (pruebas-servidor.cjs) |
+| **De 23:00 a 06:00 el vigilante solo manda lo rojo** | `de 23:00 a 06:00 solo sale lo rojo; lo demás se calla y lo cuenta el parte de las 06:30` (pruebas-servidor.cjs) |

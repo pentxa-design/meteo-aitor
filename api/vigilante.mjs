@@ -213,6 +213,10 @@ const SITIOS = [
 ];
 
 const hh = h => String(h).padStart(2, '0') + 'h';
+/* «de 18h a 18h» no es un tramo: una sola hora se dice «a las 18h» (§11 del
+   guion del domingo, 13-09-2026; le llegó «racha de 71 km/h de 18h a 18h»). */
+const tramoTxt = (ini, fin) => (ini === fin ? `a las ${hh(ini)}` : `de ${hh(ini)} a ${hh(fin)}`);
+const rangoTxt = (ini, fin) => (ini === fin ? hh(ini) : `${hh(ini)}-${hh(fin)}`);
 
 /* Parte horas sueltas en tramos SEGUIDOS. Sin esto, un sitio que salta a
    las 14:00 y otra vez a las 23:00 sale como «14h-23h»: nueve horas que
@@ -860,10 +864,11 @@ export default async function handler(req, res) {
       for (const [clave, cual] of [[claveHoy, 'hoy'], [claveManana, 'mañana']]) {
         const a = antes.sitios[d.n]?.[clave], b = d.dias[clave];
         if (!a && !b) continue;
-        if (!a && b) { cambios.push({ n: d.n, lat: d.lat, lon: d.lon, cual, txt: `ahora da rayo de ${hh(b.ini)} a ${hh(b.fin)}`, peor: true, critico: d.critico }); continue; }
-        if (a && !b) { cambios.push({ n: d.n, lat: d.lat, lon: d.lon, cual, txt: `ya no da rayo (antes ${hh(a.ini)}-${hh(a.fin)})`, peor: false, critico: d.critico }); continue; }
-        if (a.ini !== b.ini || a.fin !== b.fin) {
-          cambios.push({ n: d.n, lat: d.lat, lon: d.lon, cual, txt: `${hh(a.ini)}-${hh(a.fin)} pasa a ${hh(b.ini)}-${hh(b.fin)}`,
+        /* Lo que ya pasó no es aviso (§11): un tramo de HOY que acabó antes de esta hora se calla. */
+        if (!a && b) { if (!(cual === 'hoy' && b.fin < h0)) cambios.push({ n: d.n, lat: d.lat, lon: d.lon, cual, txt: `ahora da rayo ${tramoTxt(b.ini, b.fin)}`, peor: true, critico: d.critico }); continue; }
+        if (a && !b) { cambios.push({ n: d.n, lat: d.lat, lon: d.lon, cual, txt: `ya no da rayo (antes ${rangoTxt(a.ini, a.fin)})`, peor: false, critico: d.critico }); continue; }
+        if ((a.ini !== b.ini || a.fin !== b.fin) && !(cual === 'hoy' && b.fin < h0)) {
+          cambios.push({ n: d.n, lat: d.lat, lon: d.lon, cual, txt: `${rangoTxt(a.ini, a.fin)} pasa a ${rangoTxt(b.ini, b.fin)}`,
                          peor: b.ini < a.ini || b.fin > a.fin, critico: d.critico });
         }
       }
@@ -902,30 +907,30 @@ export default async function handler(req, res) {
     for (const d of buenos) {
       for (const [clave, cual] of [[claveHoy, 'hoy'], [claveManana, 'mañana']]) {
         const va = antes.aguaSitios?.[d.n]?.[clave], vb = d.agua?.[clave];
-        if (vb && !va && hayAguaGuardada) {
+        if (vb && !va && hayAguaGuardada && !(cual === 'hoy' && vb.fin < h0)) {
           cambiosAgua.push({ n: d.n, lat: d.lat, lon: d.lon, cual, peor: true, critico: d.critico,
-            txt: `${vb.fuerte ? 'lluvia fuerte' : 'agua'} de ${hh(vb.ini)} a ${hh(vb.fin)}`
+            txt: `${vb.fuerte ? 'lluvia fuerte' : 'agua'} ${tramoTxt(vb.ini, vb.fin)}`
                + ` (${vb.mm} mm/h, lo ve ${vb.quien})` });
-        } else if (vb && va) {
+        } else if (vb && va && !(cual === 'hoy' && vb.fin < h0)) {
           const aFuerte = !va.fuerte && vb.fuerte;
           const antesDe = vb.ini <= va.ini - 2;
           if (aFuerte || antesDe) {
             cambiosAgua.push({ n: d.n, lat: d.lat, lon: d.lon, cual, peor: true, critico: d.critico,
               txt: aFuerte
-                ? `el agua pasa a fuerte: ${vb.mm} mm/h de ${hh(vb.ini)} a ${hh(vb.fin)}`
+                ? `el agua pasa a fuerte: ${vb.mm} mm/h ${tramoTxt(vb.ini, vb.fin)}`
                 : `el agua se adelanta: ${hh(va.ini)} pasa a ${hh(vb.ini)}` });
           }
         }
 
         const ra = antes.rachaSitios?.[d.n]?.[clave], rb = d.racha?.[clave];
-        if (rb && !ra && hayRachaGuardada) {
-          cambiosRacha.push({ n: d.n, lat: d.lat, lon: d.lon, cual, peor: true, critico: d.critico,
-            txt: `racha de ${rb.kmh} km/h de ${hh(rb.ini)} a ${hh(rb.fin)} (lo ve ${rb.quien})` });
-        } else if (rb && ra) {
+        if (rb && !ra && hayRachaGuardada && !(cual === 'hoy' && rb.fin < h0)) {
+          cambiosRacha.push({ n: d.n, lat: d.lat, lon: d.lon, cual, peor: true, critico: d.critico, kmh: rb.kmh,
+            txt: `racha de ${rb.kmh} km/h ${tramoTxt(rb.ini, rb.fin)} (lo ve ${rb.quien})` });
+        } else if (rb && ra && !(cual === 'hoy' && rb.fin < h0)) {
           const masFuerte = rb.kmh >= ra.kmh + 10;
           const antesDe = rb.ini <= ra.ini - 2;
           if (masFuerte || antesDe) {
-            cambiosRacha.push({ n: d.n, lat: d.lat, lon: d.lon, cual, peor: true, critico: d.critico,
+            cambiosRacha.push({ n: d.n, lat: d.lat, lon: d.lon, cual, peor: true, critico: d.critico, kmh: rb.kmh,
               txt: masFuerte
                 ? `la racha sube: ${ra.kmh} pasa a ${rb.kmh} km/h`
                 : `la racha se adelanta: ${hh(ra.ini)} pasa a ${hh(rb.ini)}` });
@@ -959,10 +964,10 @@ export default async function handler(req, res) {
   if (cambiosQueValen.length) {
     const c = cambiosQueValen[0];
     avisos.push({
-      titulo: `⚡ CAMBIO ${c.cual.toUpperCase()} · ${c.n}`,
+      titulo: `⚡ CAMBIO ${c.cual.toUpperCase()} · ${cambiosQueValen.length > 1 ? `${cambiosQueValen.length} torres` : c.n}`,
       /* De un sitio concreto: se abre ESE. */
       url: c.lat != null && c.lon != null ? `./?sitio=${c.lat},${c.lon}` : './?v=torres',
-      cuerpo: cambiosQueValen.slice(0, 3).map(x => `${x.n} (${x.cual}): ${x.txt}`).join('. ')
+      cuerpo: cambiosQueValen.slice(0, 6).map(x => `${x.n} (${x.cual}): ${x.txt}`).join('. ')
             + `. Datos de las ${hh(h0)}.`,
       tag: 'cambio', importante: false,
     });
@@ -973,9 +978,9 @@ export default async function handler(req, res) {
   if (aguaQueVale.length) {
     const c = aguaQueVale[0];
     avisos.push({
-      titulo: `🌧 AGUA ${c.cual.toUpperCase()} · ${c.n}`,
+      titulo: `🌧 AGUA ${c.cual.toUpperCase()} · ${aguaQueVale.length > 1 ? `${aguaQueVale.length} torres` : c.n}`,
       url: c.lat != null && c.lon != null ? `./?sitio=${c.lat},${c.lon}` : './?v=torres',
-      cuerpo: aguaQueVale.slice(0, 3).map(x => `${x.n} (${x.cual}): ${x.txt}`).join('. ')
+      cuerpo: aguaQueVale.slice(0, 6).map(x => `${x.n} (${x.cual}): ${x.txt}`).join('. ')
             + `. Datos de las ${hh(h0)}.`,
       tag: 'agua', importante: false,
     });
@@ -986,11 +991,14 @@ export default async function handler(req, res) {
   const rachaQueVale = cambiosRacha.filter(c => (c.cual === 'hoy' || h0 >= 18) && c.peor);
   if (rachaQueVale.length) {
     const c = rachaQueVale[0];
+    const rMax = Math.max(...rachaQueVale.map(x => x.kmh ?? 0));
     avisos.push({
-      titulo: `💨 RACHA ${c.cual.toUpperCase()} · ${c.n}`,
+      titulo: `💨 RACHA ${c.cual.toUpperCase()} · ${rachaQueVale.length > 1 ? `${rachaQueVale.length} torres` : c.n}`,
       url: c.lat != null && c.lon != null ? `./?sitio=${c.lat},${c.lon}` : './?v=torres',
-      cuerpo: rachaQueVale.slice(0, 3).map(x => `${x.n} (${x.cual}): ${x.txt}`).join('. ')
-            + `. Por encima de 70 km/h. Datos de las ${hh(h0)}.`,
+      cuerpo: rachaQueVale.slice(0, 6).map(x => `${x.n} (${x.cual}): ${x.txt}`).join('. ')
+            /* «Racha de 70. Por encima de 70» no: si iguala el listón, llega; solo
+               si lo supera está por encima (§11). */
+            + `. ${rMax > RACHA_TOPE ? `Por encima de tu listón de ${RACHA_TOPE} km/h` : `Llega a tu listón de ${RACHA_TOPE} km/h`}. Datos de las ${hh(h0)}.`,
       tag: 'racha', importante: true,
     });
   }
@@ -1097,7 +1105,7 @@ export default async function handler(req, res) {
     if (conAgua.length) {
       const peor = conAgua.reduce((a2, b2) => b2.agua[claveHoy].mm > a2.agua[claveHoy].mm ? b2 : a2);
       trozos.push(`🌧 agua en ${conAgua.length}: lo más fuerte ${peor.n} `
-        + `${peor.agua[claveHoy].mm} mm/h de ${hh(peor.agua[claveHoy].ini)} a ${hh(peor.agua[claveHoy].fin)}`);
+        + `${peor.agua[claveHoy].mm} mm/h ${tramoTxt(peor.agua[claveHoy].ini, peor.agua[claveHoy].fin)}`);
     }
     if (conRacha.length) {
       const peor = conRacha.reduce((a2, b2) => b2.racha[claveHoy].kmh > a2.racha[claveHoy].kmh ? b2 : a2);
@@ -1133,7 +1141,16 @@ export default async function handler(req, res) {
 
   const enviados = [];
   if (!soloMirar) {
-    for (const a of avisos) enviados.push({ ...a, ...(await empujar(a.titulo, a.cuerpo, a.tag, a.importante, a.url)) });
+    /* ── HORAS DE SILENCIO (§11 del guion, 13-09-2026) ─────────────────
+       De 23:00 a 06:00 solo lo rojo: tormenta inminente, racha de 70 y
+       «he estado sin vigilar» (van como `importante`). Lo demás no se
+       pierde: el estado se guarda igual y el parte de las 06:30 lo cuenta.
+       Suyo, con 40 avisos en un día de lluvia: «me llegan muchos». */
+    const deNoche = h0 >= 23 || h0 < HORA_PARTE;
+    for (const a of avisos) {
+      if (deNoche && !a.importante) { enviados.push({ ...a, enviados: 0, nota: 'callado: horas de silencio (23-06)' }); continue; }
+      enviados.push({ ...a, ...(await empujar(a.titulo, a.cuerpo, a.tag, a.importante, a.url)) });
+    }
   }
 
   /* Se guarda SIEMPRE, aunque no se avise: si no, la comparación de la
