@@ -7118,16 +7118,17 @@ grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
   const hoyK = new Date().toISOString().slice(0, 10);
   const k = `${hoyK}·Noche·prueba`;
   try { LS.set('cieloFranjas', {}); } catch {}
-  const c1 = typeof cambioDeCielo === 'function' ? cambioDeCielo(k, 0, 0) : null;
+  const cdc = typeof cambioDeCielo === 'function' ? cambioDeCielo : () => null;   // sin la función, rojo limpio
+  const c1 = cdc(k, 0, 0);
   ok('la primera vez que se pinta una franja no dice nada', c1 === '');
-  ok('si se repinta con el mismo cielo, tampoco', cambioDeCielo(k, 0, 0) === '');
-  const c3 = cambioDeCielo(k, 3, 0);
+  ok('si se repinta con el mismo cielo, tampoco', cdc(k, 0, 0) === '');
+  const c3 = cdc(k, 3, 0);
   ok('si cambia el cielo, lo dice con la hora y con el de antes',
      /^Ha cambiado a las \d\d:\d\d: antes despejado$/.test(c3), `salió «${c3}»`);
   ok('y lo sigue diciendo mientras el nuevo se mantenga',
-     /antes despejado$/.test(cambioDeCielo(k, 3, 0)));
+     /antes despejado$/.test(cdc(k, 3, 0) || ''));
   ok('de noche el «antes» se dice con la palabra de noche',
-     (() => { const k2 = `${hoyK}·Noche2·prueba`; cambioDeCielo(k2, 4, 0); return /antes velo de nubes altas$/.test(cambioDeCielo(k2, 0, 0)); })());
+     (() => { const k2 = `${hoyK}·Noche2·prueba`; cdc(k2, 4, 0); return /antes velo de nubes altas$/.test(cdc(k2, 0, 0) || ''); })());
   ok('la franja pinta esa línea junto al titular',
      /const cambio = cambioDeCielo\(`\$\{String\(sel\[0\]\?\.t \?\? ''\)\.slice\(0, 10\)\}·\$\{name\}·\$\{S\.model\}`, code/.test(src)
      && /class="part__cambio">\$\{esc\(cambio\)\}/.test(src));
