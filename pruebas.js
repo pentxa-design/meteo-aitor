@@ -7096,14 +7096,15 @@ grupo('Así con todo (13-09): al lado del dato, qué ve distinto otro modelo y c
 
   /* Comportamiento, no texto: una franja corta con dos cielos se cuenta con su hora. */
   const HC = (cs, h0) => cs.map((c, i) => ({ code: c, date: new Date(2026, 8, 13, h0 + i), day: 0 }));
-  const corta = tramosCortos(HC([0, 4], 22));
+  const corta = typeof tramosCortos === 'function' ? tramosCortos(HC([0, 4], 22)) : null;   // sin la función, rojo limpio, no reventón
   ok('una franja de dos horas con cielos distintos se cuenta con su hora',
      !!corta && corta.length === 2 && corta[0].code === 0 && corta[1].code === 4 && corta[1].hora === '23:00',
      JSON.stringify(corta));
   const fr = tituloFranja(HC([0, 4], 22), 4, '');
   ok('y la frase dice «Despejado · velo de nubes altas desde las 23:00»',
      fr === 'Despejado · velo de nubes altas desde las 23:00', `salió «${fr}»`);
-  ok('con un solo cielo, una franja corta sigue en una palabra', tramosCortos(HC([0, 0, 1], 21)) === null);
+  ok('con un solo cielo, una franja corta sigue en una palabra',
+     typeof tramosCortos === 'function' && tramosCortos(HC([0, 0, 1], 21)) === null);
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
