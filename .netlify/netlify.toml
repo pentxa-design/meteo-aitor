@@ -1,0 +1,84 @@
+functionsDirectory = "/Volumes/SSD EXTERNO/CLAUDE/weather-app/netlify/functions"
+functionsDirectoryOrigin = "default"
+plugins = []
+redirects = []
+
+[build]
+publish = "/Volumes/SSD EXTERNO/CLAUDE/weather-app"
+publishOrigin = "config"
+functions = "/Volumes/SSD EXTERNO/CLAUDE/weather-app/netlify/functions"
+
+[build.environment]
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[functions]
+
+[functions."*"]
+node_bundler = "esbuild"
+
+[[headers]]
+for = "/version.json"
+
+[headers.values]
+Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+for = "/manifest.webmanifest"
+
+[headers.values]
+Content-Type = "application/manifest+json; charset=utf-8"
+Cache-Control = "public, max-age=3600"
+
+[[headers]]
+for = "/sw.js"
+
+[headers.values]
+Content-Type = "text/javascript; charset=utf-8"
+Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+for = "/index.html"
+
+[headers.values]
+Cache-Control = "no-cache"
+
+[[headers]]
+for = "/"
+
+[headers.values]
+Cache-Control = "no-cache"
+
+[[headers]]
+for = "/app.js"
+
+[headers.values]
+Cache-Control = "no-cache"
+
+[[headers]]
+for = "/maps.js"
+
+[headers.values]
+Cache-Control = "no-cache"
+
+[[headers]]
+for = "/styles.css"
+
+[headers.values]
+Cache-Control = "no-cache"
+
+[[headers]]
+for = "/icons/*"
+
+[headers.values]
+Cache-Control = "public, max-age=604800"

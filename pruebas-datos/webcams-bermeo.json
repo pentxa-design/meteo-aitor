@@ -1,0 +1,3048 @@
+{
+ "_origen": "Respuesta REAL de /webcams (Windy) medida el 02-09-2026 desde BI BERMEO (43.413,-2.718) con radio=60 km. Traída en dos páginas de 50 y 3 con el parámetro `desde`, porque Windy no sirve más de 50 de golpe. Viene ordenada por cercanía, tal cual la manda Windy. Donostia empieza en la posición 46 — por eso el tope de 40 se la comía entera.",
+ "total": 53,
+ "webcams": [
+  {
+   "title": "Baquio",
+   "viewCount": 416558,
+   "webcamId": 1760900296,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:33:28.000Z",
+   "categories": [
+    {
+     "id": "beach",
+     "name": "Playa"
+    },
+    {
+     "id": "coast",
+     "name": "Costa"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1760900296/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1760900296/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1760900296/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1760900296/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1760900296/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1760900296/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Baquio",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.43035,
+    "longitude": -2.81173
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1760900296/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1760900296/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1760900296/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1760900296/lifetime"
+   }
+  },
+  {
+   "title": "Larrabezúa",
+   "viewCount": 89869,
+   "webcamId": 1360190472,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:36:05.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1360190472/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1360190472/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1360190472/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1360190472/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1360190472/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1360190472/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Larrabezúa",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.26252,
+    "longitude": -2.81485
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1360190472/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1360190472/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1360190472/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1360190472/lifetime"
+   }
+  },
+  {
+   "title": "Lujua › Suroeste: A Bilbao Errepidea",
+   "viewCount": 266507,
+   "webcamId": 1360191872,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:37:21.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1360191872/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1360191872/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1360191872/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1360191872/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1360191872/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1360191872/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Lujua",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.30782,
+    "longitude": -2.89695
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1360191872/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1360191872/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1360191872/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1360191872/lifetime"
+   }
+  },
+  {
+   "title": "Larrabezúa",
+   "viewCount": 71727,
+   "webcamId": 1360190252,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:35:21.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1360190252/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1360190252/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1360190252/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1360190252/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1360190252/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1360190252/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Larrabezúa",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.26487,
+    "longitude": -2.83138
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1360190252/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1360190252/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1360190252/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1360190252/lifetime"
+   }
+  },
+  {
+   "title": "Zamudio › Oeste: Uxinako Ariztia - Corredor del Txorierri",
+   "viewCount": 116127,
+   "webcamId": 1351093655,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:34:15.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1351093655/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1351093655/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1351093655/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1351093655/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1351093655/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1351093655/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Zamudio",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.27289,
+    "longitude": -2.85545
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1351093655/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1351093655/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1351093655/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1351093655/lifetime"
+   }
+  },
+  {
+   "title": "Zamudio",
+   "viewCount": 86912,
+   "webcamId": 1360190890,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:37:37.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1360190890/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1360190890/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1360190890/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 352,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1360190890/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1360190890/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1360190890/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Zamudio",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.27669,
+    "longitude": -2.86935
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1360190890/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1360190890/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1360190890/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1360190890/lifetime"
+   }
+  },
+  {
+   "title": "Zamudio: Derio",
+   "viewCount": 62202,
+   "webcamId": 1360191040,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:36:39.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1360191040/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1360191040/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1360191040/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 352,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1360191040/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1360191040/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1360191040/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Zamudio",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.27886,
+    "longitude": -2.87629
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1360191040/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1360191040/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1360191040/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1360191040/lifetime"
+   }
+  },
+  {
+   "title": "Urdúliz: Nudo de Derio",
+   "viewCount": 131193,
+   "webcamId": 1360191298,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:37:52.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1360191298/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1360191298/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1360191298/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1360191298/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1360191298/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1360191298/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Urdúliz",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.28561,
+    "longitude": -2.89158
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1360191298/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1360191298/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1360191298/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1360191298/lifetime"
+   }
+  },
+  {
+   "title": "Amorebieta-Echano: Boroa",
+   "viewCount": 119392,
+   "webcamId": 1351174280,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:35:57.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1351174280/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1351174280/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1351174280/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1351174280/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1351174280/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1351174280/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Amorebieta-Echano",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.22998,
+    "longitude": -2.75089
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1351174280/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1351174280/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1351174280/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1351174280/lifetime"
+   }
+  },
+  {
+   "title": "Galdácano: Erletxe",
+   "viewCount": 91545,
+   "webcamId": 1360190061,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:34:34.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1360190061/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1360190061/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1360190061/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1360190061/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1360190061/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1360190061/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Galdácano",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.23552,
+    "longitude": -2.80373
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1360190061/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1360190061/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1360190061/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1360190061/lifetime"
+   }
+  },
+  {
+   "title": "Amorebieta-Echano: Amorebieta",
+   "viewCount": 191818,
+   "webcamId": 1351173973,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:37:32.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1351173973/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1351173973/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1351173973/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1351173973/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1351173973/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1351173973/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Amorebieta-Echano",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.22151,
+    "longitude": -2.72697
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1351173973/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1351173973/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1351173973/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1351173973/lifetime"
+   }
+  },
+  {
+   "title": "Bilbao: Santo Domingo",
+   "viewCount": 322836,
+   "webcamId": 1361634226,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:36:09.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1361634226/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1361634226/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1361634226/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 352,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1361634226/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1361634226/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1361634226/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Bilbao",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.26995,
+    "longitude": -2.90639
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1361634226/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1361634226/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1361634226/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1361634226/lifetime"
+   }
+  },
+  {
+   "title": "Galdácano: El Gallo",
+   "viewCount": 87265,
+   "webcamId": 1361640794,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:37:18.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1361640794/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1361640794/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1361640794/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1361640794/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1361640794/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1361640794/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Galdácano",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.22953,
+    "longitude": -2.82269
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1361640794/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1361640794/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1361640794/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1361640794/lifetime"
+   }
+  },
+  {
+   "title": "Galdácano: Galdakano",
+   "viewCount": 136374,
+   "webcamId": 1361641258,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:36:46.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1361641258/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1361641258/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1361641258/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1361641258/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1361641258/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1361641258/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Galdácano",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.23509,
+    "longitude": -2.84367
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1361641258/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1361641258/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1361641258/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1361641258/lifetime"
+   }
+  },
+  {
+   "title": "Ibarra: Montorra",
+   "viewCount": 222547,
+   "webcamId": 1351173783,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:36:11.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1351173783/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1351173783/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1351173783/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1351173783/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1351173783/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1351173783/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Ibarra",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.21192,
+    "longitude": -2.71985
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1351173783/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1351173783/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1351173783/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1351173783/lifetime"
+   }
+  },
+  {
+   "title": "Sondica › Noroeste: Corredor del Txorierri",
+   "viewCount": 255666,
+   "webcamId": 1360192051,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:33:39.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1360192051/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1360192051/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1360192051/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1360192051/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1360192051/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1360192051/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Sondica",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.28677,
+    "longitude": -2.93762
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1360192051/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1360192051/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1360192051/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1360192051/lifetime"
+   }
+  },
+  {
+   "title": "San Mamés: Nudo de Kukularra",
+   "viewCount": 143807,
+   "webcamId": 1361636832,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:35:28.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1361636832/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1361636832/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1361636832/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 352,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1361636832/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1361636832/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1361636832/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "San Mamés",
+    "region": "Comunidad de Madrid",
+    "region_code": "",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.31086,
+    "longitude": -2.96359
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1361636832/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1361636832/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1361636832/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1361636832/lifetime"
+   }
+  },
+  {
+   "title": "Erandio: Salida de Asua",
+   "viewCount": 72212,
+   "webcamId": 1360192185,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:34:18.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1360192185/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1360192185/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1360192185/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1360192185/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1360192185/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1360192185/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Erandio",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.29845,
+    "longitude": -2.95361
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1360192185/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1360192185/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1360192185/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1360192185/lifetime"
+   }
+  },
+  {
+   "title": "San Mamés: Rotonda de la universidad",
+   "viewCount": 192494,
+   "webcamId": 1361637039,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:33:39.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1361637039/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1361637039/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1361637039/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1361637039/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1361637039/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1361637039/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "San Mamés",
+    "region": "Comunidad de Madrid",
+    "region_code": "",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.31603,
+    "longitude": -2.96897
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1361637039/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1361637039/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1361637039/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1361637039/lifetime"
+   }
+  },
+  {
+   "title": "Bilbao: Max Center 2",
+   "viewCount": 191916,
+   "webcamId": 1571728440,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:36:24.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1571728440/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1571728440/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1571728440/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1571728440/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1571728440/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1571728440/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Bilbao",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.25133,
+    "longitude": -2.90054
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1571728440/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1571728440/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1571728440/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1571728440/lifetime"
+   }
+  },
+  {
+   "title": "Bilbao: Ibarsusi",
+   "viewCount": 303116,
+   "webcamId": 1361634490,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:35:13.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1361634490/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1361634490/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1361634490/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 352,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1361634490/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1361634490/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1361634490/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Bilbao",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.25103,
+    "longitude": -2.90121
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1361634490/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1361634490/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1361634490/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1361634490/lifetime"
+   }
+  },
+  {
+   "title": "Berango: Acceso Artea",
+   "viewCount": 234230,
+   "webcamId": 1361638267,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:34:28.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1361638267/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1361638267/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1361638267/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 352,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1361638267/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1361638267/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1361638267/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Berango",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.34294,
+    "longitude": -2.99441
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1361638267/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1361638267/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1361638267/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1361638267/lifetime"
+   }
+  },
+  {
+   "title": "Lejona › Noroeste: Iparragirre Etorbidea",
+   "viewCount": 260112,
+   "webcamId": 1361637655,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:35:36.000Z",
+   "categories": [
+    {
+     "id": "city",
+     "name": "Ciudad"
+    },
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1361637655/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1361637655/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1361637655/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1361637655/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1361637655/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1361637655/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Lejona",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.3241,
+    "longitude": -2.98396
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1361637655/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1361637655/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1361637655/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1361637655/lifetime"
+   }
+  },
+  {
+   "title": "Guecho › Sureste: Mimenaga",
+   "viewCount": 517152,
+   "webcamId": 1361638597,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:36:59.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1361638597/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1361638597/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1361638597/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1361638597/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1361638597/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1361638597/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Guecho",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.36306,
+    "longitude": -3.00274
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1361638597/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1361638597/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1361638597/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1361638597/lifetime"
+   }
+  },
+  {
+   "title": "Bilbao: Enekuri",
+   "viewCount": 74122,
+   "webcamId": 1361635200,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:31:17.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1361635200/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1361635200/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1361635200/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 352,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1361635200/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1361635200/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1361635200/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Bilbao",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.28918,
+    "longitude": -2.96122
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1361635200/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1361635200/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1361635200/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1361635200/lifetime"
+   }
+  },
+  {
+   "title": "Bilbao: Deusto",
+   "viewCount": 438714,
+   "webcamId": 1361636326,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:40:11.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1361636326/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1361636326/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1361636326/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1361636326/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1361636326/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1361636326/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Bilbao",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.27796,
+    "longitude": -2.9551
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1361636326/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1361636326/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1361636326/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1361636326/lifetime"
+   }
+  },
+  {
+   "title": "Guecho: Artaza",
+   "viewCount": 321919,
+   "webcamId": 1361637982,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:37:28.000Z",
+   "categories": [
+    {
+     "id": "city",
+     "name": "Ciudad"
+    },
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1361637982/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1361637982/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1361637982/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 352,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1361637982/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1361637982/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1361637982/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Guecho",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.3332,
+    "longitude": -3.00178
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1361637982/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1361637982/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1361637982/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1361637982/lifetime"
+   }
+  },
+  {
+   "title": "Bilbao",
+   "viewCount": 620083,
+   "webcamId": 1580770527,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:37:33.000Z",
+   "categories": [
+    {
+     "id": "city",
+     "name": "Ciudad"
+    },
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1580770527/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1580770527/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1580770527/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1580770527/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1580770527/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1580770527/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Bilbao",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.24534,
+    "longitude": -2.91926
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1580770527/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1580770527/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1580770527/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1580770527/lifetime"
+   }
+  },
+  {
+   "title": "Bilbao: San Mames Stadium",
+   "viewCount": 463309,
+   "webcamId": 1737389866,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:34:21.000Z",
+   "categories": [
+    {
+     "id": "river",
+     "name": "Río"
+    },
+    {
+     "id": "building",
+     "name": "Edificio"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1737389866/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1737389866/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1737389866/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1737389866/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1737389866/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1737389866/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Bilbao",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.26547,
+    "longitude": -2.94825
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1737389866/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1737389866/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1737389866/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1737389866/lifetime"
+   }
+  },
+  {
+   "title": "Guecho › Oeste",
+   "viewCount": 700639,
+   "webcamId": 1691075117,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:39:17.000Z",
+   "categories": [
+    {
+     "id": "beach",
+     "name": "Playa"
+    },
+    {
+     "id": "coast",
+     "name": "Costa"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1691075117/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1691075117/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1691075117/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1691075117/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1691075117/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1691075117/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Guecho",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.34679,
+    "longitude": -3.01124
+   },
+   "player": {
+    "live": "https://webcams.windy.com/webcams/public/embed/player/1691075117/live",
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1691075117/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1691075117/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1691075117/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1691075117/lifetime"
+   }
+  },
+  {
+   "title": "Yurreta: Euba",
+   "viewCount": 260662,
+   "webcamId": 1351173652,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:40:21.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1351173652/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1351173652/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1351173652/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1351173652/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1351173652/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1351173652/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Yurreta",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.18721,
+    "longitude": -2.67339
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1351173652/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1351173652/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1351173652/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1351173652/lifetime"
+   }
+  },
+  {
+   "title": "Bilbao › Oeste: A-8",
+   "viewCount": 262774,
+   "webcamId": 1724527146,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:37:26.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1724527146/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1724527146/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1724527146/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1724527146/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1724527146/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1724527146/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Bilbao",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.24816,
+    "longitude": -2.93616
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1724527146/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1724527146/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1724527146/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1724527146/lifetime"
+   }
+  },
+  {
+   "title": "Bilbao › Oeste: A-8",
+   "viewCount": 84140,
+   "webcamId": 1724527294,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:40:17.000Z",
+   "categories": [
+    {
+     "id": "city",
+     "name": "Ciudad"
+    },
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1724527294/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1724527294/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1724527294/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1724527294/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1724527294/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1724527294/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Bilbao",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.27463,
+    "longitude": -2.97172
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1724527294/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1724527294/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1724527294/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1724527294/lifetime"
+   }
+  },
+  {
+   "title": "El Desierto › Norte: Ansio - Baracaldo - Vizcaya - Pais Vasco - España - Spain",
+   "viewCount": 113438,
+   "webcamId": 1254416107,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:34:11.000Z",
+   "categories": [
+    {
+     "id": "city",
+     "name": "Ciudad"
+    },
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1254416107/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1254416107/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1254416107/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1254416107/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1254416107/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1254416107/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "El Desierto",
+    "region": "Canarias",
+    "region_code": "ES.53",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.28816,
+    "longitude": -2.98546
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1254416107/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1254416107/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1254416107/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1254416107/lifetime"
+   }
+  },
+  {
+   "title": "Baracaldo: Puente de Rontegui - Vizcaya - País Vasco - España - Spain",
+   "viewCount": 169320,
+   "webcamId": 1254416032,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:37:53.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1254416032/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1254416032/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1254416032/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1254416032/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1254416032/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1254416032/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Baracaldo",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.28495,
+    "longitude": -2.98622
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1254416032/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1254416032/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1254416032/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1254416032/lifetime"
+   }
+  },
+  {
+   "title": "Baracaldo",
+   "viewCount": 66003,
+   "webcamId": 1595690751,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:37:56.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1595690751/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1595690751/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1595690751/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1595690751/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1595690751/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1595690751/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Baracaldo",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.27818,
+    "longitude": -2.9809
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1595690751/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1595690751/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1595690751/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1595690751/lifetime"
+   }
+  },
+  {
+   "title": "Yurreta › Sur: Autopista del Cantábrico",
+   "viewCount": 310572,
+   "webcamId": 1351173527,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:37:02.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1351173527/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1351173527/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1351173527/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1351173527/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1351173527/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1351173527/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Yurreta",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.18025,
+    "longitude": -2.64296
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1351173527/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1351173527/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1351173527/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1351173527/lifetime"
+   }
+  },
+  {
+   "title": "Motrico › Noroeste: Saturraran Hondartza",
+   "viewCount": 493750,
+   "webcamId": 1793869968,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:35:26.000Z",
+   "categories": [
+    {
+     "id": "beach",
+     "name": "Playa"
+    },
+    {
+     "id": "coast",
+     "name": "Costa"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1793869968/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1793869968/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1793869968/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1793869968/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1793869968/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1793869968/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Motrico",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.32045,
+    "longitude": -2.41084
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1793869968/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1793869968/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1793869968/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1793869968/lifetime"
+   }
+  },
+  {
+   "title": "Baracaldo › Noroeste: Tráfico en el entorno de Bilbao",
+   "viewCount": 329382,
+   "webcamId": 1275375807,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:34:23.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1275375807/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1275375807/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1275375807/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1275375807/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1275375807/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1275375807/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Baracaldo",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.28875,
+    "longitude": -3.00541
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1275375807/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1275375807/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1275375807/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1275375807/lifetime"
+   }
+  },
+  {
+   "title": "Mallabia: Zaldibar Este",
+   "viewCount": 243621,
+   "webcamId": 1351172465,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:34:50.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1351172465/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1351172465/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1351172465/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1351172465/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1351172465/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1351172465/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Mallabia",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.17702,
+    "longitude": -2.52512
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1351172465/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1351172465/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1351172465/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1351172465/lifetime"
+   }
+  },
+  {
+   "title": "Etxebarria › Noreste: Autopista del Cantábrico",
+   "viewCount": 268462,
+   "webcamId": 1351173252,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:35:34.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1351173252/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1351173252/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1351173252/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1351173252/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1351173252/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1351173252/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Etxebarria",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.17161,
+    "longitude": -2.53395
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1351173252/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1351173252/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1351173252/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1351173252/lifetime"
+   }
+  },
+  {
+   "title": "Zaldibar › Oeste: La Nueva Era Del Periodismo - Variante de Ermua",
+   "viewCount": 401738,
+   "webcamId": 1351172300,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:35:10.000Z",
+   "categories": [
+    {
+     "id": "traffic",
+     "name": "Tráfico"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1351172300/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1351172300/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1351172300/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1351172300/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1351172300/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1351172300/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Zaldibar",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.17742,
+    "longitude": -2.49624
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1351172300/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1351172300/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1351172300/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1351172300/lifetime"
+   }
+  },
+  {
+   "title": "Zumaya: Itzurun Hondartza / Playa",
+   "viewCount": 227574,
+   "webcamId": 1751823155,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:21:52.000Z",
+   "categories": [
+    {
+     "id": "beach",
+     "name": "Playa"
+    },
+    {
+     "id": "coast",
+     "name": "Costa"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1751823155/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1751823155/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1751823155/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1751823155/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1751823155/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1751823155/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Zumaya",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.29665,
+    "longitude": -2.25712
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1751823155/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1751823155/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1751823155/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1751823155/lifetime"
+   }
+  },
+  {
+   "title": "Ceánuri",
+   "viewCount": 219973,
+   "webcamId": 1738091127,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:34:58.000Z",
+   "categories": [
+    {
+     "id": "landscape",
+     "name": "Paisaje"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1738091127/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1738091127/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1738091127/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1738091127/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1738091127/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1738091127/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Ceánuri",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.05386,
+    "longitude": -2.79423
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1738091127/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1738091127/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1738091127/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1738091127/lifetime"
+   }
+  },
+  {
+   "title": "Zarauz: Zarautz Beach",
+   "viewCount": 229411,
+   "webcamId": 1751824073,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:21:18.000Z",
+   "categories": [
+    {
+     "id": "beach",
+     "name": "Playa"
+    },
+    {
+     "id": "coast",
+     "name": "Costa"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1751824073/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1751824073/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1751824073/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1751824073/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1751824073/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1751824073/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Zarauz",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.28349,
+    "longitude": -2.17235
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1751824073/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1751824073/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1751824073/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1751824073/lifetime"
+   }
+  },
+  {
+   "title": "Zarauz: Zarautz Beach",
+   "viewCount": 217020,
+   "webcamId": 1751825115,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:24:15.000Z",
+   "categories": [
+    {
+     "id": "beach",
+     "name": "Playa"
+    },
+    {
+     "id": "coast",
+     "name": "Costa"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1751825115/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1751825115/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1751825115/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1751825115/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1751825115/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1751825115/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "Zarauz",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.28349,
+    "longitude": -2.17235
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1751825115/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1751825115/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1751825115/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1751825115/lifetime"
+   }
+  },
+  {
+   "title": "San Sebastián › Sur: País Vasco, España - España",
+   "viewCount": 230254,
+   "webcamId": 1482863361,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:33:33.000Z",
+   "categories": [
+    {
+     "id": "meteo",
+     "name": "Tiempo"
+    },
+    {
+     "id": "landscape",
+     "name": "Paisaje"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1482863361/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1482863361/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1482863361/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1482863361/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1482863361/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1482863361/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "San Sebastián",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.31166,
+    "longitude": -2.01567
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1482863361/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1482863361/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1482863361/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1482863361/lifetime"
+   }
+  },
+  {
+   "title": "San Sebastián › Sur: San Sebastian",
+   "viewCount": 676569,
+   "webcamId": 1455392631,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:35:12.000Z",
+   "categories": [
+    {
+     "id": "meteo",
+     "name": "Tiempo"
+    },
+    {
+     "id": "landscape",
+     "name": "Paisaje"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1455392631/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1455392631/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1455392631/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1455392631/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1455392631/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1455392631/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "San Sebastián",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.3115,
+    "longitude": -2.01535
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1455392631/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1455392631/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1455392631/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1455392631/lifetime"
+   }
+  },
+  {
+   "title": "San Sebastián › Oeste",
+   "viewCount": 225095,
+   "webcamId": 1759918867,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:35:00.000Z",
+   "categories": [
+    {
+     "id": "landscape",
+     "name": "Paisaje"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1759918867/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1759918867/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1759918867/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1759918867/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1759918867/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1759918867/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "San Sebastián",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.30372,
+    "longitude": -2.01546
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1759918867/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1759918867/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1759918867/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1759918867/lifetime"
+   }
+  },
+  {
+   "title": "San Sebastián: Beach of La Concha",
+   "viewCount": 379411,
+   "webcamId": 1562515414,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:34:39.000Z",
+   "categories": [
+    {
+     "id": "beach",
+     "name": "Playa"
+    },
+    {
+     "id": "coast",
+     "name": "Costa"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1562515414/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1562515414/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1562515414/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1562515414/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1562515414/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1562515414/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "San Sebastián",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.31829,
+    "longitude": -2.01102
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1562515414/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1562515414/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1562515414/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1562515414/lifetime"
+   }
+  },
+  {
+   "title": "San Sebastián › Norte: Beach of La Concha",
+   "viewCount": 393803,
+   "webcamId": 1562344635,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:37:20.000Z",
+   "categories": [
+    {
+     "id": "beach",
+     "name": "Playa"
+    },
+    {
+     "id": "coast",
+     "name": "Costa"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1562344635/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1562344635/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1562344635/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1562344635/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1562344635/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1562344635/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "San Sebastián",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.31477,
+    "longitude": -1.99837
+   },
+   "player": {
+    "live": "https://webcams.windy.com/webcams/public/embed/player/1562344635/live",
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1562344635/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1562344635/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1562344635/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1562344635/lifetime"
+   }
+  },
+  {
+   "title": "San Sebastián › Noroeste: Kontxa hondartza - bay of La Concha - Santa Clara Island - Motako Gaztelua",
+   "viewCount": 672826,
+   "webcamId": 1341515310,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:37:29.000Z",
+   "categories": [
+    {
+     "id": "beach",
+     "name": "Playa"
+    },
+    {
+     "id": "coast",
+     "name": "Costa"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1341515310/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1341515310/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1341515310/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1341515310/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1341515310/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1341515310/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "San Sebastián",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.31551,
+    "longitude": -1.98927
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1341515310/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1341515310/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1341515310/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1341515310/lifetime"
+   }
+  },
+  {
+   "title": "San Sebastián: Paesi Baschi, Spagna: Plaza _ Lasala",
+   "viewCount": 492253,
+   "webcamId": 1569578663,
+   "status": "active",
+   "lastUpdatedOn": "2026-09-02T16:34:09.000Z",
+   "categories": [
+    {
+     "id": "beach",
+     "name": "Playa"
+    },
+    {
+     "id": "coast",
+     "name": "Costa"
+    }
+   ],
+   "images": {
+    "current": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/current/1569578663/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/current/1569578663/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/current/1569578663/original.jpg?v=2"
+    },
+    "sizes": {
+     "icon": {
+      "width": 48,
+      "height": 48
+     },
+     "thumbnail": {
+      "width": 200,
+      "height": 112
+     },
+     "preview": {
+      "width": 400,
+      "height": 224
+     }
+    },
+    "daylight": {
+     "icon": "https://imgproxy.windy.com/_/icon/plain/daylight/1569578663/original.jpg?v=2",
+     "thumbnail": "https://imgproxy.windy.com/_/thumbnail/plain/daylight/1569578663/original.jpg?v=2",
+     "preview": "https://imgproxy.windy.com/_/preview/plain/daylight/1569578663/original.jpg?v=2"
+    }
+   },
+   "location": {
+    "city": "San Sebastián",
+    "region": "País Vasco",
+    "region_code": "ES.59",
+    "country": "España",
+    "country_code": "ES",
+    "continent": "Europe",
+    "continent_code": "EU",
+    "latitude": 43.32255,
+    "longitude": -1.98657
+   },
+   "player": {
+    "day": "https://webcams.windy.com/webcams/public/embed/player/1569578663/day",
+    "month": "https://webcams.windy.com/webcams/public/embed/player/1569578663/month",
+    "year": "https://webcams.windy.com/webcams/public/embed/player/1569578663/year",
+    "lifetime": "https://webcams.windy.com/webcams/public/embed/player/1569578663/lifetime"
+   }
+  }
+ ]
+}

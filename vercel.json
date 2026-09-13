@@ -1,0 +1,115 @@
+{
+  "rewrites": [
+    {
+      "source": "/om",
+      "destination": "/api/om"
+    },
+    {
+      "source": "/estaciones",
+      "destination": "/api/estaciones"
+    },
+    {
+      "source": "/mareas",
+      "destination": "/api/mareas"
+    },
+    {
+      "source": "/satelite",
+      "destination": "/api/satelite"
+    },
+    {
+      "source": "/webcams",
+      "destination": "/api/webcams"
+    },
+    {
+      "source": "/radar-aemet",
+      "destination": "/api/radar"
+    },
+    {
+      "source": "/rayos",
+      "destination": "/api/rayos"
+    },
+    {
+      "source": "/omtiles/(.*)",
+      "destination": "/api/omtiles?ruta=$1"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/version.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/javascript; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/manifest.webmanifest",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/(index.html)?",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/(app|maps).js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/styles.css",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/icons/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/parte",
+      "schedule": "30 4 * * *"
+    }
+  ]
+}

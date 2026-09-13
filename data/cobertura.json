@@ -1,0 +1,249 @@
+{
+  "cuando": "2026-09-05T04:13:48.887Z",
+  "sitios": [
+    "Bermeo",
+    "Calpe"
+  ],
+  "fuera": "Miami",
+  "cobertura": {
+    "temperature_2m": [
+      "best_match",
+      "meteofrance_arome_france_hd",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "apparent_temperature": [
+      "best_match",
+      "meteofrance_arome_france_hd",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "relative_humidity_2m": [
+      "best_match",
+      "meteofrance_arome_france_hd",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "dew_point_2m": [
+      "best_match",
+      "meteofrance_arome_france_hd",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "precipitation": [
+      "best_match",
+      "meteofrance_arome_france_hd",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "precipitation_probability": [
+      "best_match",
+      "icon_seamless",
+      "ecmwf_ifs025",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "weather_code": [
+      "best_match",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "cloud_cover": [
+      "best_match",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "cloud_cover_low": [
+      "best_match",
+      "meteofrance_arome_france_hd",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "cloud_cover_mid": [
+      "best_match",
+      "meteofrance_arome_france_hd",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "cloud_cover_high": [
+      "best_match",
+      "meteofrance_arome_france_hd",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "visibility": [
+      "best_match",
+      "icon_seamless",
+      "knmi_harmonie_arome_europe",
+      "gfs_seamless"
+    ],
+    "wind_speed_10m": [
+      "best_match",
+      "meteofrance_arome_france_hd",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "wind_speed_80m": [
+      "best_match",
+      "meteofrance_arome_france_hd",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "wind_speed_120m": [
+      "best_match",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "wind_speed_180m": [
+      "best_match",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "knmi_harmonie_arome_europe"
+    ],
+    "wind_direction_10m": [
+      "best_match",
+      "meteofrance_arome_france_hd",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "wind_direction_80m": [
+      "best_match",
+      "meteofrance_arome_france_hd",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "wind_gusts_10m": [
+      "best_match",
+      "meteofrance_arome_france_hd",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "snowfall": [
+      "best_match",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "knmi_harmonie_arome_europe",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "snow_depth": [
+      "best_match",
+      "icon_seamless",
+      "ecmwf_ifs025",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "cape": [
+      "best_match",
+      "meteofrance_arome_france_hd",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "lifted_index": [
+      "best_match",
+      "gfs_seamless"
+    ],
+    "convective_inhibition": [
+      "best_match",
+      "icon_seamless",
+      "gfs_seamless"
+    ],
+    "freezing_level_height": [
+      "best_match",
+      "icon_seamless",
+      "gfs_seamless"
+    ],
+    "surface_pressure": [
+      "best_match",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "pressure_msl": [
+      "best_match",
+      "icon_seamless",
+      "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
+      "gem_seamless",
+      "gfs_seamless"
+    ],
+    "uv_index": [
+      "best_match",
+      "gfs_seamless"
+    ]
+  },
+  "globales": [
+    "best_match",
+    "icon_seamless",
+    "ecmwf_ifs025",
+    "gem_seamless",
+    "gfs_seamless"
+  ]
+}

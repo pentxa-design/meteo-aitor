@@ -1,0 +1,33 @@
+/version.json
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# Tipos y caché correctos en Netlify.
+
+/manifest.webmanifest
+  Content-Type: application/manifest+json; charset=utf-8
+  Cache-Control: public, max-age=3600
+
+# El service worker nunca se cachea: si no, el móvil se queda con una
+# versión vieja de la app y no se entera de las correcciones.
+/sw.js
+  Content-Type: text/javascript; charset=utf-8
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# El HTML tampoco: siempre se revalida contra el servidor.
+/index.html
+  Cache-Control: no-cache
+
+/
+  Cache-Control: no-cache
+
+/app.js
+  Cache-Control: no-cache
+
+/maps.js
+  Cache-Control: no-cache
+
+/styles.css
+  Cache-Control: no-cache
+
+/icons/*
+  Cache-Control: public, max-age=604800

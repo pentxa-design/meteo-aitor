@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chuleta de capas · Aitor Meteo</title>
+<style>
+  :root{
+    --tinta:#12171f; --suave:#5a6472; --tenue:#8a94a3; --linea:#e2e7ee;
+    --papel:#ffffff; --fondo:#f4f6fa;
+    --go:#0f8a4a; --warn:#b8730a; --no:#c9451f; --no2:#b31232;
+    --lluvia:#1668b8; --torre:#0f8a4a; --tormenta:#c02236; --cielo:#6d4fb8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fondo);color:var(--tinta);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%}
+  .hoja{max-width:760px;margin:0 auto;background:var(--papel);
+    padding:30px 26px 40px;box-shadow:0 1px 30px rgba(20,30,50,.07)}
+
+  header{border-bottom:3px solid var(--tinta);padding-bottom:14px;margin-bottom:22px}
+  h1{margin:0;font-size:27px;letter-spacing:-.02em}
+  .sub{margin:5px 0 0;color:var(--suave);font-size:14.5px}
+
+  .orden{background:#eef3fb;border:1px solid #d3e0f2;border-radius:12px;
+    padding:16px 18px;margin-bottom:26px}
+  .orden h2{margin:0 0 10px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--lluvia)}
+  .orden ol{margin:0;padding-left:20px}
+  .orden li{margin-bottom:6px;font-size:15px}
+  .orden li:last-child{margin-bottom:0}
+  .orden .fin{margin:11px 0 0;font-size:13.5px;color:var(--suave)}
+
+  h2.g{font-size:12px;letter-spacing:.11em;text-transform:uppercase;
+    margin:30px 0 4px;padding-bottom:7px;border-bottom:2px solid currentColor}
+  h2.g[data-g=lluvia]{color:var(--lluvia)}
+  h2.g[data-g=torre]{color:var(--torre)}
+  h2.g[data-g=tormenta]{color:var(--tormenta)}
+  h2.g[data-g=cielo]{color:var(--cielo)}
+
+  .q{padding:15px 0;border-bottom:1px solid var(--linea);break-inside:avoid}
+  .q:last-child{border-bottom:0}
+  .q h3{margin:0;font-size:17.5px;letter-spacing:-.01em;display:flex;
+    align-items:baseline;gap:9px;flex-wrap:wrap}
+  .q h3 span{font-size:11px;font-weight:600;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--tenue)}
+  .q p{margin:6px 0 0;font-size:15px;color:var(--suave)}
+  .q p b{color:var(--tinta)}
+
+  .esc{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .esc span{font-size:12.5px;font-weight:650;padding:5px 11px;border-radius:20px;
+    border:1.5px solid currentColor}
+  .esc span[data-s=go]{color:var(--go);background:#eaf7f0}
+  .esc span[data-s=warn]{color:var(--warn);background:#fdf4e3}
+  .esc span[data-s=no]{color:var(--no);background:#fdeee8}
+  .esc span[data-s=no2]{color:var(--no2);background:#fdeaef}
+
+  .ojo{margin-top:10px;font-size:14px;line-height:1.5;color:#8a5a05;
+    background:#fdf6e6;border-left:3px solid #e0a92b;
+    padding:9px 13px;border-radius:0 8px 8px 0}
+  .ojo b{color:#7a4f04}
+
+  footer{margin-top:34px;padding-top:16px;border-top:2px solid var(--tinta);
+    font-size:13.5px;color:var(--suave)}
+  footer b{color:var(--tinta)}
+
+  @media print{
+    body{background:#fff}
+    .hoja{box-shadow:none;max-width:none;padding:0}
+    h2.g{margin-top:20px}
+    .q{padding:11px 0}
+  }
+  @media(max-width:520px){
+    .hoja{padding:22px 17px 32px}
+    h1{font-size:23px}
+    .q h3{font-size:16.5px}
+  }
+</style>
+</head>
+<body>
+<div class="hoja">
+
+<header>
+  <h1>Chuleta de capas</h1>
+  <p class="sub">Aitor Meteo · trabajo en altura · qué mirar y cuándo parar</p>
+</header>
+
+<div class="orden">
+  <h2>El orden</h2>
+  <ol>
+    <li><b>Ráfagas</b> a tu altura. Si pasa tu umbral, se acabó. No mires nada más.</li>
+    <li><b>Índice de elevación</b> y <b>CAPE</b>. ¿Hay tormenta encima?</li>
+    <li><b>Radar AEMET</b>. ¿Está cayendo ahora?</li>
+    <li><b>Punto de rocío</b> e <b>Isocero</b>. ¿Resbala? ¿Hay hielo?</li>
+  </ol>
+  <p class="fin">Lo demás es contexto. No decide tu día.</p>
+</div>
+
+<h2 class="g" data-g="torre">Torre · lo que decide</h2>
+
+<div class="q">
+  <h3>Ráfagas <span>kt</span></h3>
+  <p>El golpe máximo, no la media. <b>La media no te tira, la racha sí.</b></p>
+  <div class="ojo">El mapa da la racha a <b>10 m del suelo</b>. A 40 m de torre cuenta
+    un <b>20-40 % más</b>. En la pestaña Torre ya va corregida a tu altura.</div>
+</div>
+
+<div class="q">
+  <h3>Viento 10 / 20 / 50 / 100 m <span>kt</span></h3>
+  <p>Cuánto crece el viento al subir. Mira 10 m y 100 m en el mismo punto: esa
+    diferencia es lo que se encuentra el operario según trepa.</p>
+  <div class="ojo">En cumbres el modelo se queda <b>corto</b>: alisa las cimas y no
+    ve la aceleración del cordal. Medido: pone el Sollube a 413 m cuando son unos 680.</div>
+</div>
+
+<h2 class="g" data-g="tormenta">Tormenta</h2>
+
+<div class="q">
+  <h3>Índice de elevación <span>°C · negativo es malo</span></h3>
+  <p>El aviso rápido. Va al revés que todo lo demás.</p>
+  <div class="esc">
+    <span data-s="go">+3 o más · nada</span>
+    <span data-s="warn">0 a −2 · ojo</span>
+    <span data-s="no">−2 a −5 · probable</span>
+    <span data-s="no2">bajo −5 · fuerte</span>
+  </div>
+</div>
+
+<div class="q">
+  <h3>CAPE <span>J/kg · cuanto más, peor</span></h3>
+  <p>La energía disponible para formar tormenta.</p>
+  <div class="esc">
+    <span data-s="go">menos de 300 · nada</span>
+    <span data-s="warn">300 a 1.000 · posible</span>
+    <span data-s="no">1.000 a 2.000 · seria</span>
+    <span data-s="no2">más de 2.000 · fuerte</span>
+  </div>
+  <div class="ojo">CAPE alto <b>no es un rayo</b>. Es la gasolina, no la chispa.</div>
+</div>
+
+<div class="q">
+  <h3>Inhibición <span>J/kg</span></h3>
+  <p>La tapa que impide que la tormenta rompa. Mientras haya, el CAPE está retenido.</p>
+  <div class="ojo">Aquí sale en <b>positivo</b> (150 = tapa fuerte). En AguaceroWx y otros
+    visores lo verás en <b>negativo</b> (−150): es la misma cosa con el signo cambiado.</div>
+  <div class="ojo">CAPE alto <b>+ la tapa que desaparece a media tarde</b> = la peor
+    combinación del día. Sale todo de golpe.</div>
+</div>
+
+<div class="q">
+  <h3>Base convectiva <span>m · lo bajo es lo malo</span></h3>
+  <p>La altura donde <b>empieza</b> la nube de tormenta. Compárala con la cota
+    de tu emplazamiento.</p>
+  <div class="ojo">Si la base baja de tu cota, <b>la torre está dentro de la nube</b>.
+    Y una torre metálica dentro de una nube convectiva es un pararrayos.</div>
+</div>
+
+<div class="q">
+  <h3>Tope convectivo <span>m · lo alto es lo malo</span></h3>
+  <p>Hasta dónde llega la nube por arriba. Cuanto más alto, más violenta.</p>
+  <div class="esc"><span data-s="no2">más de 9.000 m · cumulonimbo con granizo</span></div>
+</div>
+
+<div class="q">
+  <h3>Isocero <span>m</span></h3>
+  <p>La altura donde la temperatura pasa por cero.</p>
+  <div class="ojo">Por debajo de la cota de tu torre = <b>hielo en la estructura</b>.
+    Agarre nulo y desprendimientos sobre quien esté abajo.</div>
+</div>
+
+<h2 class="g" data-g="lluvia">Lluvia</h2>
+
+<div class="q">
+  <h3>Radar AEMET <span>observación real</span></h3>
+  <p>Lo que está cayendo <b>de verdad ahora mismo</b>, medido por radar. Cada 10 minutos.
+    Es la capa más fiable de todas para saber qué pasa en este momento.</p>
+  <div class="ojo">Si no llega la imagen, la app lo dice. <b>Un mapa en blanco no
+    significa que no llueva.</b></div>
+</div>
+
+<div class="q">
+  <h3>Precipitación <span>mm/h</span></h3>
+  <p>Lo que el modelo prevé que caiga.</p>
+  <div class="esc">
+    <span data-s="go">menos de 0,5 · chirimiri</span>
+    <span data-s="warn">1 a 4 · lluvia</span>
+    <span data-s="no">más de 4 · chaparrón</span>
+  </div>
+</div>
+
+<div class="q">
+  <h3>Reflectividad <span>dBZ · estimada</span></h3>
+  <p>La lluvia del modelo puesta en escala de radar. <b>No es un eco real</b>,
+    es una conversión.</p>
+  <div class="esc">
+    <span data-s="go">menos de 30 · verde</span>
+    <span data-s="warn">35 a 40 · amarillo</span>
+    <span data-s="no">45 · naranja</span>
+    <span data-s="no2">más de 50 · rojo</span>
+  </div>
+</div>
+
+<h2 class="g" data-g="cielo">Cielo y aire</h2>
+
+<div class="q">
+  <h3>Visibilidad <span>km</span></h3>
+  <p>Si no se ve la torre desde abajo, no se sube: no hay vigilancia ni rescate rápido.</p>
+  <div class="esc">
+    <span data-s="no2">menos de 1 km</span>
+    <span data-s="no">1 a 2 km</span>
+    <span data-s="warn">2 a 4 km</span>
+    <span data-s="go">más de 15 km</span>
+  </div>
+</div>
+
+<div class="q">
+  <h3>Punto de rocío <span>°C</span></h3>
+  <p>Si se acerca a la temperatura, el aire condensa sobre el metal.</p>
+  <div class="ojo">Diferencia <b>menor de 2 °C</b>: estructura mojada aunque no llueva.
+    Es el resbalón traicionero, con el cielo despejado.</div>
+</div>
+
+<div class="q">
+  <h3>Nubes bajas <span>%</span></h3>
+  <p>Las que tapan la torre y las que mojan. <b>Usa esta, no «Nubes total»</b>:
+    el total mezcla un cirro a 10 km de altura con un estrato pegado al suelo.</p>
+  <div class="ojo">La nubosidad es el campo <b>menos fiable</b> de cualquier modelo:
+    se calcula, no se mide. No decidas por ese número.</div>
+</div>
+
+<footer>
+  <p><b>Ninguna de estas capas mide rayos.</b> No existe fuente gratuita de descargas
+  eléctricas para Euskadi. Para la regla del 30/30, AEMET o Euskalmet.</p>
+  <p><b>Esto es apoyo a la decisión, no la decisión.</b> Contrasta siempre con AEMET,
+  Euskalmet y con lo que se mida en el propio emplazamiento antes de autorizar un ascenso.</p>
+</footer>
+
+</div>
+</body>
+</html>
