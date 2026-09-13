@@ -1168,3 +1168,24 @@ Aitor, 12-09-2026: *«dile al otro chat de casa cómo estar conectado con el iMa
 Esta sesión (portátil, Calpe) se llama «Prueba iPhone y Mac». La del iMac puede llamarse como él quiera.
 
 - **13-09-2026, 18:40, vigilante, dato nuevo:** el pulso dice `ultima: 2026-09-13T04:00:44Z` (06:00 hora local). El 10-09 decía `2026-09-10T04:00:44Z`. O sea: **el sello SÍ se escribe, pero solo una vez al día, a las 06:00 local**; las pasadas que mandan push a lo largo del día (las de «he estado X h sin vigilar», cada minuto en algún momento) NO lo escriben. Buscar en `api/vigilante` qué distingue la pasada de las 06:00 (¿un cron de Vercel diario? ¿`parteDe`?) de las que dispara el pulso/revivido: ahí está la diferencia entre escribir el sello y no escribirlo.
+
+## 15. LO QUE ENSEÑA EL PANEL DE VERCEL (visto el 13-09-2026 a las 18:45, leer ANTES de tocar el vigilante)
+
+Equipo `meteo-aitor-bermeo`, plan **Hobby**, banner **«Exceeded free resources»**:
+
+| Recurso | Usado / límite |
+|---|---|
+| Fluid Active CPU | **7 h 12 min / 4 h** (180 %) |
+| Blob Advanced Operations | **2K / 2K** (agotado) |
+| Blob Simple Operations | 8,5K / 10K (a punto) |
+| Deployment Storage | 5,88 GB / 10 GB |
+
+Lo que esto explica, casi seguro: el vigilante corre (manda push), pero **el sello `ultima` no se escribe porque la escritura en Blob falla al estar la cuota agotada** (las operaciones avanzadas —list, copy— a cero; las simples —put/get— a punto de agotarse). La pasada de las 06:00 sí lo escribe: quizá usa otra vía o pilla la cuota diaria de otro recurso; comprobar en `api/vigilante` qué operación de Blob hace cada pasada. Y la CPU al 180 % viene de las pasadas cada minuto de estos días. En Hobby, al pasarse, Vercel puede pausar funciones o rechazar operaciones hasta el siguiente ciclo (mirar en Usage la fecha de reinicio).
+
+**Además:** el proyecto `meteo_aitor_bermeo` (meteoaitorbermeo.vercel.app) está **conectado al repo de GitHub** (pentxa-design/meteo-aitor · v10.157 · Aug 21), así que **cada push a la rama `portatil-2026-09-07` ha generado un Preview Deployment** («Recent Previews: portatil-2026-09-07 · Guion del domingo…»). Son unos 40 previews esta semana: consumen build, CPU y almacenamiento. El proyecto `weather-app` (weather-app-ochre-one-76.vercel.app, el de trabajo de Aitor y el BACKEND de la app provisional) NO está conectado a git: se publica con la CLI (Sep 5). Hay otros dos proyectos: `agenda-familiar` y `meteo-aitor-movil-v1`.
+
+Para el chat del iMac, por orden:
+1. **Antes que nada**, en Vercel → Usage, ver cuándo se reinicia la cuota y si hay funciones pausadas.
+2. En `api/vigilante`: quitar la pasada por minuto (que el pulso no dispare pasadas; una cada 30 min como mucho, y el sello en UNA operación simple `put`), y que el aviso «he estado X h sin vigilar» salga una sola vez.
+3. Pausar los previews de la rama del portátil en `meteo_aitor_bermeo` (Settings → Git → ignorar ramas que no sean main, o desconectar) y borrar deployments viejos para bajar los 5,88 GB.
+4. Solo después, publicar.
