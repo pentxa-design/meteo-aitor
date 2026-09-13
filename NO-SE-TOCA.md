@@ -125,3 +125,4 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **Un aviso por pasada, con todas las torres afectadas en el título** | `un aviso por pasada con todas las torres en el título («AGUA HOY · 3 torres»)` (pruebas-servidor.cjs) |
 | **De 23:00 a 06:00 el vigilante solo manda lo rojo** | `de 23:00 a 06:00 solo sale lo rojo; lo demás se calla y lo cuenta el parte de las 06:30` (pruebas-servidor.cjs) |
 | **Una horquilla cuyos extremos redondean igual se imprime como un solo número (viento y temperatura)** | `la horquilla de viento de la franja compara lo que se imprime, no el dato crudo` |
+| **La cadencia del vigilante sube sola: verde cada 2 h, ámbar cada media, rojo cada cuarto** | `y el rojo es rayo de HOY por delante, racha de 70 por delante o tormenta ya avisada` (pruebas-servidor.cjs) |

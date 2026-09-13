@@ -822,9 +822,14 @@ ok('el marcador tampoco contesta «cero muestras» cuando no puede leer',
 
 console.log('\n  El vigilante afloja cuando no pasa nada');
 const vg = fs.readFileSync(path.join(__dirname, 'api', 'vigilante.mjs'), 'utf8');
-ok('si no hay nada en marcha, se salta la pasada (cadencia de dos horas, suya del 13-09)',
-   /saltada: true/.test(vg) && /huecoPrevio < 115/.test(vg) && !/huecoPrevio < 55/.test(vg),
+ok('si no hay nada en marcha, se salta la pasada (verde cada 2 h, ámbar cada media, rojo cada cuarto)',
+   /saltada: true/.test(vg) && /const cadaMin = \{ verde: 115, ambar: 25, rojo: 10 \}\[nivel\];/.test(vg)
+   && /huecoPrevio < cadaMin/.test(vg) && !/huecoPrevio < 55/.test(vg),
    'pasar cada media hora un día tranquilo se llevaba 3,2 de las 4 h de CPU del mes');
+ok('y el rojo es rayo de HOY por delante, racha de 70 por delante o tormenta ya avisada',
+   /const rojo = !!\(antes && \(/.test(vg) && /porDelante\(d\?\.\[claveHoy\]\)/.test(vg)
+   && /kmh >= RACHA_TOPE && porDelante/.test(vg) && /nivel = rojo \? 'rojo' : algoEnMarcha \? 'ambar' : 'verde'/.test(vg),
+   'una tormenta de verano se monta en una hora: con 2 h fijas le pillaría sin aviso');
 ok('pero vuelve a media hora en cuanto hay rayo, agua, racha o aviso vivo',
    /const algoEnMarcha = !!\(antes && \(/.test(vg)
    && /antes\.ultimoAviso/.test(vg) && /aguaSitios/.test(vg) && /rachaSitios/.test(vg));

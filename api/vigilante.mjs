@@ -787,16 +787,29 @@ export default async function handler(req, res) {
 
   /* `mirar=1` es su ojeada a mano: esa nunca se salta. Se lee aquí
      directo porque `pedidoMirar` se declara más abajo. */
+  /* ── VERDE, ÁMBAR, ROJO: LA CADENCIA SUBE SOLA (13-09-2026) ──────────
+     Suyo: «cada 2 h vale si es solo para los días en verde; que suba sola
+     a cada media hora en ámbar y a cada cuarto de hora en rojo: una
+     tormenta de verano se monta en una hora». cron-job.org llama cada
+     cuarto de hora y AQUÍ se decide si toca pasar:
+       verde  — nada guardado en marcha → una pasada cada 2 h
+       ámbar  — hay rayo, agua o racha apuntados (hoy o mañana) → cada media
+       rojo   — rayo de HOY todavía por delante, racha de 70 por delante, o
+                tormenta inminente ya avisada → cada cuarto
+     La app, al abrirse, sigue pidiendo el tiempo en vivo: eso no depende
+     de esto. Una llamada saltada cuesta ~50 ms de CPU. */
+  const porDelante = x => x && (x.fin == null || x.fin >= h0);
+  const rojo = !!(antes && (
+    antes.ultimoAviso
+    || Object.values(antes.sitios || {}).some(d => porDelante(d?.[claveHoy]))
+    || Object.values(antes.rachaSitios || {}).some(r => r?.[claveHoy] && r[claveHoy].kmh >= RACHA_TOPE && porDelante(r[claveHoy]))));
+  const nivel = rojo ? 'rojo' : algoEnMarcha ? 'ambar' : 'verde';
+  const cadaMin = { verde: 115, ambar: 25, rojo: 10 }[nivel];
   const ojeadaAMano = req.query?.mirar === '1' || req.body?.mirar === true;
-  if (!ojeadaAMano && !algoEnMarcha && !ventanaDelParte
-      && huecoPrevio !== null && huecoPrevio < 115) {
-    /* CADA DOS HORAS EN DÍA TRANQUILO (suyo, 13-09-2026: «Ventusky y Windy
-       se actualizan cada 3; o ponla cada 2 si no gasta»). Los modelos no
-       cambian más deprisa, y la app pinta «NADIE VIGILA» a los 240 min,
-       así que 120 sobran. Con algo en marcha, media hora, como siempre. */
+  if (!ojeadaAMano && !ventanaDelParte && huecoPrevio !== null && huecoPrevio < cadaMin) {
     return res.status(200).json({
-      ok: true, saltada: true,
-      nota: 'nada en marcha: se pasa cada dos horas en vez de cada media (se ahorra CPU)',
+      ok: true, saltada: true, nivel,
+      nota: `${nivel}: se pasa cada ${nivel === 'verde' ? 'dos horas' : nivel === 'ambar' ? 'media hora' : 'cuarto de hora'}`,
       ultimaPasada: antes.cuando,
     });
   }
@@ -1266,7 +1279,7 @@ export default async function handler(req, res) {
   if (noSeGuardo) console.error('vigilante: no se guardó el estado:', noSeGuardo);
   if (noPudeLeerElEstado) console.error('vigilante: no se pudo leer el estado:', noPudeLeerElEstado);
   return res.status(200).json({
-    ok: true, hora: hh(h0), mirados: buenos.length, fallos: fallos.map(f => f.n),
+    ok: true, hora: hh(h0), nivel, mirados: buenos.length, fallos: fallos.map(f => f.n),
     marcador,
     noSeGuardo: noSeGuardo || undefined, noPudeLeerElEstado: noPudeLeerElEstado || undefined,
     /* De dónde salió la lista. Si es la de respaldo, el vigilante está
