@@ -7146,6 +7146,26 @@ grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
      && /const hrs = S\.data\.hours;/.test(src));
 }
 
+
+/* ═══ EL MAPA ELIGE EL ORIGEN DE LAS TESELAS POR VELOCIDAD (13-09-2026) ═══
+   «Revisa mapas que va muy lento todo». Medido: S3 directo 2,6 s al primer
+   byte desde su iMac, por Vercel 0,5 s; el mapa elegía el directo solo
+   porque respondía. */
+grupo('El mapa elige el origen de las teselas por velocidad, no por «responde»');
+{
+  const M = require('fs').readFileSync(require('path').join(__dirname, 'maps.js'), 'utf8');
+  ok('el origen de las teselas sale de una carrera entre S3 y el intermediario, con el mismo fichero',
+     /const \[tDirecto, tProxy\] = await Promise\.all\(\[/.test(M)
+     && /mide\(`\$\{TILES_DIRECTO\}\/dwd_icon_eu\/latest\.json`\)/.test(M)
+     && /mide\(`\$\{TILES_PROXY\}\/dwd_icon_eu\/latest\.json`\)/.test(M)
+     && /const directo = tDirecto < Infinity && tDirecto <= tProxy;/.test(M),
+     'antes bastaba con que S3 respondiera en 6 s para ir directo, aunque tardara 5');
+  ok('y lo medido se guarda con el elegido, para poder mirarlo',
+     /ms: \{ directo: tDirecto, proxy: tProxy \}/.test(M));
+  ok('si el intermediario también falla, se queda el directo y el mapa lo dirá',
+     /\(tProxy < Infinity \? TILES_PROXY : TILES_DIRECTO\)/.test(M));
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');

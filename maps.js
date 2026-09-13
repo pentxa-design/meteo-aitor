@@ -82,21 +82,35 @@ async function elegirOrigenTeselas() {
     }
   } catch { /* si no se puede leer, se prueba */ }
 
-  // Prueba corta contra el host de Open-Meteo. Si responde, directo.
-  let directo = false;
-  try {
+  /* ── CARRERA, NO «¿RESPONDE?» ─────────────────────────────────────────
+     Suyo, 13-09-2026 23:10: «revisa mapas que va muy lento todo». Medido
+     desde su iMac: al S3 de Open-Meteo, 500 ms de ida y vuelta y 2,6 s
+     hasta el primer byte de un fichero de 5 KB; el mismo fichero por el
+     intermediario de Vercel, 0,5 s. El mapa pide decenas de trozos por
+     hora, así que elegir el directo solo porque «responde» era lo que
+     lo hacía arrastrarse. Ahora se pide el MISMO fichero pequeño por los
+     dos caminos a la vez y gana el más rápido; se recuerda 6 h. */
+  const mide = async (url) => {
+    const t0 = Date.now();
     const ac = new AbortController();
     const reloj = setTimeout(() => ac.abort(), 6000);
-    const r = await fetch(`${TILES_DIRECTO}/dwd_icon_eu/latest.json`,
-                          { signal: ac.signal, cache: 'no-store' });
-    clearTimeout(reloj);
-    directo = r.ok;
-  } catch { directo = false; }
-
-  TILES = directo ? TILES_DIRECTO : TILES_PROXY;
+    try {
+      const r = await fetch(url, { signal: ac.signal, cache: 'no-store' });
+      clearTimeout(reloj);
+      if (!r.ok) return Infinity;
+      await r.arrayBuffer();
+      return Date.now() - t0;
+    } catch { clearTimeout(reloj); return Infinity; }
+  };
+  const [tDirecto, tProxy] = await Promise.all([
+    mide(`${TILES_DIRECTO}/dwd_icon_eu/latest.json`),
+    mide(`${TILES_PROXY}/dwd_icon_eu/latest.json`),
+  ]);
+  const directo = tDirecto < Infinity && tDirecto <= tProxy;
+  TILES = directo ? TILES_DIRECTO : (tProxy < Infinity ? TILES_PROXY : TILES_DIRECTO);
   try {
     localStorage.setItem('torre.origenTeselas2',
-      JSON.stringify({ proxy: !directo, t: Date.now() }));
+      JSON.stringify({ proxy: TILES === TILES_PROXY, t: Date.now(), ms: { directo: tDirecto, proxy: tProxy } }));
   } catch { /* sin sitio para guardarlo: se vuelve a probar la próxima vez */ }
   return TILES;
 }
