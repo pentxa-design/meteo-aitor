@@ -789,10 +789,14 @@ export default async function handler(req, res) {
      directo porque `pedidoMirar` se declara más abajo. */
   const ojeadaAMano = req.query?.mirar === '1' || req.body?.mirar === true;
   if (!ojeadaAMano && !algoEnMarcha && !ventanaDelParte
-      && huecoPrevio !== null && huecoPrevio < 55) {
+      && huecoPrevio !== null && huecoPrevio < 115) {
+    /* CADA DOS HORAS EN DÍA TRANQUILO (suyo, 13-09-2026: «Ventusky y Windy
+       se actualizan cada 3; o ponla cada 2 si no gasta»). Los modelos no
+       cambian más deprisa, y la app pinta «NADIE VIGILA» a los 240 min,
+       así que 120 sobran. Con algo en marcha, media hora, como siempre. */
     return res.status(200).json({
       ok: true, saltada: true,
-      nota: 'nada en marcha: se pasa cada hora en vez de cada media (se ahorra CPU)',
+      nota: 'nada en marcha: se pasa cada dos horas en vez de cada media (se ahorra CPU)',
       ultimaPasada: antes.cuando,
     });
   }
