@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.13-1901';
+const BUILD = '2026.09.05-0616';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -2569,7 +2569,6 @@ const COBERTURA = {
     "best_match",
     "icon_seamless",
     "ecmwf_ifs025",
-    "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
   ],
