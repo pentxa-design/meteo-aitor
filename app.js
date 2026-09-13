@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.12-1157';
+const BUILD = '2026.09.13-1928';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -2783,6 +2783,7 @@ const COBERTURA = {
     "best_match",
     "icon_seamless",
     "ecmwf_ifs025",
+    "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
   ],
@@ -11623,7 +11624,7 @@ function renderNow() {
     const code = R ? R.code : codigoFranja(sel);
     const gm = Math.max(...sel.map(h => h.gust ?? 0));
     // Y a qué hora es esa racha (suyo, 09-09-2026: «que se aplique siempre»).
-    const hGm = sel.find(h => (h.gust ?? 0) === gm)?.date;
+    const hGm = sel.find(h => has(h.gust) && h.gust === gm)?.date;   // sin «?? 0»: un hueco no es una racha
     const gmCuando = gm > 0 && hGm ? ` · a las ${String(hGm.getHours()).padStart(2, '0')}:00` : '';
     /* El viento medio, además de la racha. Suyo, 08-09-2026: «está bien
        saber las rachas pero también me gustaría saber el viento que hay a

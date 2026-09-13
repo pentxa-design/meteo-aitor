@@ -163,6 +163,23 @@ const H = (cape, cin, pop, prec = 0, code = 1) => ({
 const rompe = h => assess(h, THR, 'hierro').reasons
   .some(r => /la combinación que rompe|tormenta en marcha/i.test(r.txt));
 
+/* ── LO QUE TRAJO EL PORTÁTIL (13-09-2026) ───────────────────────────
+   Del 05 al 13-09 Aitor cambió la app desde Calpe (rama portatil-2026-09-07):
+   35 funciones nuevas del cielo, las franjas, el listón de ráfaga y «Antes
+   de salir». Aquí se EJECUTAN de verdad, sacadas de app.js, para que las
+   pruebas de casa no tengan que fingirlas. Si una no se encuentra, se
+   dice y se sigue: la prueba que la necesite es la que fallará. */
+for (const n of ['VELADO', 'tapado', 'SALIR_HORAS', 'SALIR_MEDIDA_VIEJA', 'TORRE_ALTO_M']) {
+  try { eval(sacarConst(n)); } catch (e) { console.log(`  (sin ${n}: ${e.message})`); }
+}
+for (const f of ['listonRafaga', 'veladoSiToca', 'medianaPonderada', 'cieloVotado', 'codigoVotado',
+                 'esDeDia', 'cieloVisto', 'textoVisto', 'textoCielo', 'rangoDeHoras', 'tramosDeCielo',
+                 'resumenCielo', 'extrasDe', 'horaDe', 'conAhora', 'horasDelDia', 'iconosDelDia',
+                 'aguaPrestada', 'tormentaQueNoVesTu', 'nubesEnLaFranjaQueNoVesTu',
+                 'aguaDelDiaQueNoVenTodos', 'estadoSalir']) {
+  try { eval(sacar(`function ${f}(`)); } catch (e) { console.log(`  (sin ${f}: ${e.message})`); }
+}
+
 grupo('La regla de la tormenta — casos reales, no inventados');
 ok('Lekeitio 23-08 23:00 (1350/15/23%) avisa — reventó postes', rompe(H(1350, 15, 23)));
 ok('Durango 23-08 23:00 (1070/56/15%) avisa — reventó', rompe(H(1070, 56, 15)));
@@ -1418,7 +1435,7 @@ ok('sin cota en ninguno de los dos lados no se inventa una',
      · a la CASETA va salvo rayos, más de 70 de racha o diluvio;
      · a la TORRE **no se sube ni lloviendo ni con más de 60**. */
 
-const horaDe = (g10, g, cuando) => ({ gust10: g10, gust: g, date: cuando });
+const horaRacha = (g10, g, cuando) => ({ gust10: g10, gust: g, date: cuando });   // (era «horaDe»; ese nombre es de app.js desde el 09-09)
 const isoDe = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
 const cuando1 = new Date(); cuando1.setMinutes(0, 0, 0);
 
@@ -1434,32 +1451,32 @@ S.comparativa = { _sitio: selloDe(), hourly: {
   wind_gusts_10m_meteofrance_arpege_europe: [46],
 } };
 
-let r_ = peorRacha(horaDe(19, 19, cuando1));
+let r_ = peorRacha(horaRacha(19, 19, cuando1));
 ok('SOLLUBE 27-08: coge el peor de los modelos, no el cargado',
    r_ && r_.v10 === 46 && r_.quien === 'ARPEGE',
    JSON.stringify(r_));
 
 /* A LA ALTURA DE TRABAJO, con el factor del propio modelo cargado.
    Comparar 10 m contra un umbral de 40 m sería inflarlo sin querer. */
-r_ = peorRacha(horaDe(20, 30, cuando1));      // factor 1,5
+r_ = peorRacha(horaRacha(20, 30, cuando1));      // factor 1,5
 ok('y lo escala a la altura con el factor del modelo cargado',
    r_ && Math.abs(r_.v - 69) < 0.5, r_ && String(r_.v));
 
 /* SIN COMPARATIVA NO SE INVENTA NADA: él en el monte sin cobertura. */
 S.comparativa = null;
 ok('sin comparativa devuelve null y el semáforo va como siempre',
-   peorRacha(horaDe(19, 19, cuando1)) === null,
+   peorRacha(horaRacha(19, 19, cuando1)) === null,
    'sin cobertura no se puede empeorar el veredicto con datos que no hay');
 
 S.comparativa = { _sitio: selloDe(), hourly: { time: [isoDe(cuando1).slice(0, 16)] } };
 ok('con la comparativa pero sin rachas, tampoco',
-   peorRacha(horaDe(19, 19, cuando1)) === null);
+   peorRacha(horaRacha(19, 19, cuando1)) === null);
 
 /* Y una hora que no está en la comparativa no se coge de otra. */
 S.comparativa = { _sitio: selloDe(), hourly: { time: ['2020-01-01T00:00'],
   wind_gusts_10m_ecmwf_ifs025: [99] } };
 ok('una hora que no está NO se rellena con la de al lado',
-   peorRacha(horaDe(19, 19, cuando1)) === null,
+   peorRacha(horaRacha(19, 19, cuando1)) === null,
    'sería el fallo de las franjas que mezclaban dos días');
 
 /* ── EL POSTE DE LA ACOMETIDA, CON LLUVIA ────────────────────────
@@ -3234,8 +3251,8 @@ ok('se dice de quién sale ese dato, no aparece a secas',
      'una por cada sitio que escribe el cielo, más la definición');
   /* Desde el 30-08 el rótulo pinta `codVisto` —cielo del dueño del
      cielo, agua del dueño de la lluvia—, no el código crudo. */
-  ok('el rótulo grande lo lleva', /textoCielo\(codVisto\)\) \+ avisoCielo/.test(src));
-  ok('la ficha de Torre lo lleva', /wmoText\(c\.code\) \?\? ''\) \+ avisoCielo/.test(src));
+  ok('el rótulo grande lo lleva', /textoCielo\(codVisto, V\.dia\)\) \+ avisoCielo/.test(src));   // V = cieloVisto(c), un solo camino (09-09)
+  ok('la ficha de Torre lo lleva', /\(cieloVisto\(c\)\.txt \?\? ''\) \+ avisoCielo/.test(src));
   ok('y las franjas también, que salen en las tres pestañas',
      /avisoCielo\(sel\[0\]\.cloud/.test(src));
   ok('NO cambia el símbolo: solo pone al lado lo que ven los demás',
@@ -3421,9 +3438,9 @@ ok('se dice de quién sale ese dato, no aparece a secas',
      f({ codeLluvia: 61 }, 3) === 61);
 
   ok('lo usan el rótulo grande y su dibujo',
-     /const codVisto = codigoQueSeVe\(c, C\.weather_code\)/.test(src)
-     && /icon\(codVisto, C\.is_day\)/.test(src)
-     && /textoCielo\(codVisto\)/.test(src));
+     /const V = cieloVisto\(c\);\n\s*const codVisto = V\.code;/.test(src)
+     && /icon\(codVisto, V\.dia\)/.test(src)
+     && /textoCielo\(codVisto, V\.dia\)/.test(src));
   ok('y las franjas, que salen en las tres pestañas',
      /sel\.map\(h => codigoQueSeVe\(h, h\.code\)\)/.test(src));
 }
@@ -3650,8 +3667,8 @@ grupo('Su tanda de pantallazos de las 21:05-21:21 (30-08)');
      /'wind_speed_80m', 'wind_direction_80m',\s*\n\];/.test(src),
      'con ECMWF el perfil ponía «80 m sin dato» teniendo ICON el dato');
   ok('la tarjeta de Dirección dice el nivel del que sale de verdad',
-     /De donde viene el viento a \$\{has\(c\.dir80\) \? 80 : 10\} m/.test(src),
-     'caía al rumbo de 10 m con un rótulo fijo de 80');
+     /De donde viene el viento a \$\{c\.dirNivel \?\? \(has\(c\.dir80\) \? 80 : 10\)\} m/.test(src),
+     'caía al rumbo de 10 m con un rótulo fijo de 80; desde el 10-09 la dirección va al nivel del viento que se enseña (dirNivel)');
   const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   ok('la tarjeta de letra ya no dice que se queda en este aparato',
      /viaja a tus dos aparatos/.test(html) && !/Se guarda en este\s+aparato/.test(html),
@@ -4040,7 +4057,9 @@ grupo('«Me pasan a las 2 de la mañana: Arbaiza» — el viaje entra en la resp
   const fuera = [];
   /* Los nombres que SÍ salen de la puerta. `cM`, `cT` y `code` los
      producen `codigoFranja`/`cieloPartido`, que se comprueban abajo. */
-  const VALIDAS = new Set(['codVisto', 'cM', 'cT', 'code', 'codigoDiario', 'p.m1', 'p.m2']);
+  /* `t.code`, `v.code` y `R.code` los producen `tramosDeCielo`, `cieloVisto` y
+     `resumenCielo` (09-09-2026), que pasan por la puerta: se comprueba abajo. */
+  const VALIDAS = new Set(['codVisto', 'cM', 'cT', 'code', 'codigoDiario', 'p.m1', 'p.m2', 't.code', 'v.code', 'R.code']);
   /* El primer argumento entero, con los paréntesis balanceados: la
      primera versión cortaba en el primer «)» y partía en dos el ternario
      `has(cM) ? cM : codigoDiario` (02-09-2026). */
@@ -4069,6 +4088,10 @@ grupo('«Me pasan a las 2 de la mañana: Arbaiza» — el viaje entra en la resp
   ok('ningún sol ni nube se pinta con un código suelto',
      fuera.length === 0,
      `a pelo: ${fuera.join(' · ')} — tienen que salir de codigoQueSeVe()`);
+  ok('y cieloVisto y los tramos de cielo salen de esa misma puerta',
+     /function cieloVisto\(h\) \{[\s\S]{0,160}const code = codigoQueSeVe\(h, h\.code\);/.test(src)
+     && /function tramosDeCielo\(sel\) \{\n\s*const hs = \(sel \|\| \[\]\)\.map\(h => \(\{ c: codigoQueSeVe\(h, h\.code\)/.test(src),
+     'si un día pintan t.code sin pasar por codigoQueSeVe, esto lo para');
 
   /* Y las tres funciones que los alimentan, que también tienen que pasar
      por la puerta. Son las que producen `cM`, `cT`, `code`, `p.m1/m2`. */
@@ -4398,12 +4421,19 @@ grupo('Dos horas de llovizna no pintan ocho horas (31-08-2026, 00:05)');
   eval(sacar('function tituloFranja'));
   const H = cs => cs.map(c => ({ code: c }));
 
+  /* Desde el 09-09-2026 la frase cuenta los TRAMOS con su hora, los mismos
+     de los que salen los iconos (tramosDeCielo): el agua nunca se absorbe y
+     el cielo seco de antes se dice con su nombre. Las horas llevan fecha
+     porque la frase dice «desde las HH:00». */
+  const HD = cs => cs.map((c, i) => ({ code: c, date: new Date(2026, 8, 1, 12 + i) }));
+  const seisYdos = tituloFranja(HD([0, 0, 1, 1, 2, 2, 51, 51]), 51, ' desde las 12:00');
   ok('su caso real: seis horas de cielo y dos de llovizna → se dicen las dos',
-     tituloFranja(H([0, 0, 1, 1, 2, 2, 51, 51]), 51, ' desde las 12:00')
-       === 'Parcialmente nuboso, con llovizna débil desde las 12:00',
-     'antes decía solo «Llovizna débil» para las ocho horas');
-  ok('si moja en un tercio o más, el rótulo es el agua a secas',
-     tituloFranja(H([2, 2, 2, 51, 51, 51]), 51, '') === 'Llovizna débil');
+     /^Mayormente despejado · parcialmente nuboso desde las 16:00 · llovizna débil desde las 18:00$/.test(seisYdos),
+     `antes decía solo «Llovizna débil» para las ocho horas; ahora: «${seisYdos}»`);
+  const tresYtres = tituloFranja(HD([2, 2, 2, 51, 51, 51]), 51, '');
+  ok('si moja, el agua va en el rótulo con su hora y nunca se diluye',
+     /llovizna débil desde las 15:00$/.test(tresYtres) && /^Parcialmente nuboso/.test(tresYtres),
+     `salió «${tresYtres}»`);
   ok('una franja seca no cambia nada',
      tituloFranja(H([3, 3, 3, 1]), 3, '') === wmoText(3));
   ok('si moja TODA la franja, tampoco se matiza',
@@ -4616,9 +4646,12 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
      solo aquí. Lo medido sigue en pie (HRES cae a la 5.ª capa, ICON-EU
      aguanta 9), y por eso lo que esta prueba fija AHORA es la RED: que
      los dos lados arranquen igual y que la marcha atrás siga puesta. */
-  ok('el mapa arranca en el europeo de 9 km, el mismo que usa Windy',
-     /LS\.get\('tmodel', 'ecmwf_ifs'\)/.test(M)
-     && /model:'ecmwf_ifs'/.test(M),
+  /* Y LE MOLESTÓ (Calpe, 06-09-2026 19:20, «va fatal mapas»): cuatro días
+     con HRES de fábrica y la red de seguridad saltando a diario. Vuelve
+     ICON-EU, que aguanta nueve capas; el europeo de 9 km queda a un toque. */
+  ok('el mapa arranca en ICON-EU (06-09: con HRES de fábrica se recargaba a diario) y el europeo de 9 km queda a un toque',
+     /LS\.get\('tmodel', 'dwd_icon_eu'\)/.test(M)
+     && /model:'dwd_icon_eu'/.test(M) && /'ecmwf_ifs'/.test(M),
      'es el único sitio donde puede tener los 9 km: la API solo da 25');
   ok('y los dos sitios donde se fija el modelo dicen lo mismo',
      (M.match(/'ecmwf_ifs'/g) || []).length >= 2,
@@ -4954,9 +4987,10 @@ grupo('EL SOL DE LA MAÑANA NO SE BORRA (01-09-2026, su queja de siempre)');
   ok('la franja, sus dos iconos y el día de 10 días usan la MISMA función',
      (src.match(/cieloPartido\(/g) || []).length >= 3,
      'si cada pantalla se hace su cuenta, vuelven a discrepar');
-  ok('y el dibujo del día parte por donde dice la función, no por el reloj',
-     /const parte = delDia\.length >= 4 \? cieloPartido\(delDia\) : null;/.test(src)
-     && /parte\.corte/.test(src));
+  ok('y el dibujo del día parte por donde dicen los tramos, no por el reloj',
+     /const R = resumenCielo\(delDia\);/.test(src)
+     && /R\.partes\.map\(t => `<i>\$\{icon\(t\.code, d\)\}/.test(src),
+     'desde el 09-09 el día pinta un icono por tramo de resumenCielo, la misma función que la franja');
 }
 
 grupo('La racha que la tarjeta de 10 días te escondía (01-09-2026)');
@@ -4979,8 +5013,10 @@ grupo('La racha que la tarjeta de 10 días te escondía (01-09-2026)');
     wind_gusts_10m_max_gfs_seamless: [31.0],
     wind_gusts_10m_max_best_match: [43.2] };
   const R = rachaDelDiaQueNoVesTu(dia);
+  /* El listón es el del PERFIL (listonRafaga, 09-09-2026): en caseta, la
+     bestia de 70 avisa desde 49, no los 45/60 de subir. «Eso no es así». */
   ok('salta cuando otro modelo cruza su listón y la tarjeta no',
-     !!R && Math.round(R.peor.v) === 54 && R.listón === 45,
+     !!R && Math.round(R.peor.v) === 54 && R.listón === 49,
      R ? `${R.peor.nom} ${R.peor.v}` : 'no saltó — el domingo 6 se leería como día tranquilo');
 
   /* Y NO salta cuando todos están del mismo lado: un aviso que sale
@@ -5001,7 +5037,7 @@ grupo('La racha que la tarjeta de 10 días te escondía (01-09-2026)');
     wind_gusts_10m_max_icon_seamless: [72] };
   const T = rachaDelDiaQueNoVesTu(dia);
   ok('y si otro cruza su TOPE, se dice con el tope',
-     !!T && T.listón === 60);
+     !!T && T.listón === 70, T ? `listón ${T.listón}` : 'no saltó');
 
   S.thr = antesThr; S.diariaMulti = antesD;
   ok('la tarjeta pinta ese aviso',
@@ -5546,15 +5582,16 @@ grupo('La revisión de las tres pasadas (31-08-2026, noche)');
 
   /* Los de app.js */
   ok('Horas pinta el icono con el agua del dueño, como el resto de pantallas',
-     /icon\(codigoQueSeVe\(h, h\.code\), h\.day\)/.test(src),
-     'era la única pantalla que usaba el código crudo');
+     /icon\(v\.code, v\.dia\)\)\(cieloVisto\(h\)\)/.test(src),
+     'era la única pantalla que usaba el código crudo; desde el 09-09 pasa por cieloVisto, como todas');
   ok('ningún «0,0» inventado donde no hay dato de lluvia',
      !/'0,0'/.test(src.replace(/\/\*[\s\S]*?\*\//g, '')),
      'la probabilidad ya decía «—» y los mm mentían un cero');
   ok('is_day nulo no pinta luna a mediodía: respaldo por hora local',
      /has\(H\.is_day\?\.\[i\]\) \? H\.is_day\[i\]/.test(src));
   ok('iconosDelDia distingue «sin código» de «null» (has, no === null)',
-     /if \(cM === cT \|\| !has\(cT\)\)/.test(src) && /if \(!has\(cM\)\)/.test(src));
+     /const conDato = hs\.filter\(h => has\(codigoQueSeVe\(h, h\.code\)\)\)/.test(src)
+     && /if \(!R \|\| !has\(R\.code\)\) return SIN_DIBUJO;/.test(src));
   ok('la pestaña 10 días se repinta al entrar (el chip del 41° nacía muerto)',
      /if \(v === 'days'\)   renderDays\(\);/.test(src));
   ok('la tabla de racha toma el máximo de los cinco, no el modelo cargado',
@@ -5578,11 +5615,16 @@ grupo('El martes doble: la franja dice el orden del cielo (31-08, 21:17)');
      martes real: 4-7 luna, 8-10 sol-nube («que será lo lógico»), 11-13
      nube. Una palabra para un tramo partido miente con la verdad. */
   const H = cs => cs.map(c => ({ code: c }));
-  ok('el tramo partido se dice en orden: despejado al principio, cubierto después',
-     /despejado al principio, cubierto después/i
-       .test(tituloFranja(H([0, 0, 1, 1, 3, 3, 3, 3]), 3, '')));
+  /* Desde el 08-09-2026 («eso nada, cielo azul todo el rato», Calpe) la
+     franja dice A QUÉ HORA cambia el cielo, no «al principio»; y desde el
+     09-09 son los mismos tramos que los iconos. Horas con fecha: 6 → 13. */
+  const HJ = cs => cs.map((c, i) => ({ code: c, date: new Date(2026, 8, 1, 6 + i) }));
+  const martes = tituloFranja(HJ([0, 0, 1, 1, 3, 3, 3, 3]), 3, '');
+  ok('el tramo partido se dice en orden: despejado primero, cubierto desde su hora',
+     /^Mayormente despejado · cubierto desde las 10:00$/.test(martes), `salió «${martes}»`);
+  const martes2 = tituloFranja(HJ([0, 0, 2, 1, 2, 3, 3, 3]), 3, '');
   ok('su martes exacto (luna, sol-nube, nube) sale con las dos mitades',
-     /al principio, .* después/.test(tituloFranja(H([0, 0, 2, 1, 2, 3, 3, 3]), 3, '')));
+     /^Despejado · cubierto desde las \d\d:00$/.test(martes2), `salió «${martes2}»`);
   ok('un tramo uniforme sigue en una palabra',
      tituloFranja(H([3, 3, 3, 3, 2, 3]), 3, '') === wmoText(3));
   ok('entre vecinos (parcial y cubierto) no se montan frases',
@@ -5590,12 +5632,12 @@ grupo('El martes doble: la franja dice el orden del cielo (31-08, 21:17)');
      'el matiz solo cuando el cambio es de verdad: de despejado a tapado');
   /* «¿Por qué no pinta un sol también?» — si el texto cuenta dos
      mitades, el dibujo también, y de la MISMA función. */
-  ok('el dibujo acompaña: franja partida = dos iconos de la misma función',
-     /cieloPartido\(sel\)/.test(src)
-     && /class="part__i2">\$\{icon\(p\.m1, deDia\(sel\)\)\}\$\{icon\(p\.m2, deDia\(sel\)\)\}/.test(src),
+  ok('el dibujo acompaña: franja partida = un icono por tramo, de la misma función que la frase',
+     /resumenCielo\(sel\)/.test(src)
+     && /class="part__tira">\$\{R\.partes\.map\(t => `<i>\$\{icon\(t\.code, d\)\}<u>\$\{rot\(t\)\}<\/u><\/i>`\)/.test(src),
      'texto e icono no pueden calcular el corte cada uno por su lado');
-  ok('y el dibujo del día corta la mañana donde las franjas: a las 6',
-     /getHours\(\) >= 6 && h\.date\.getHours\(\) <= 13\);/.test(src),
+  ok('y el dibujo del día empieza donde las franjas: a las 6',
+     /h\.date\.getHours\(\) >= 6 && h\.date\.getHours\(\) <= 20\);/.test(src),
      'una hora de diferencia rompía el empate y salían dos veredictos');
 }
 
@@ -5773,7 +5815,7 @@ grupo('El cielo en el mano a mano modelos-estación (31-08-2026, 18:26)');
      comparaba racha, viento, lluvia, temperatura y humedad, y el cielo
      no estaba. */
   ok('la fila Cielo existe, con el código visto y el % de nubes',
-     /fila\('Cielo',/.test(src) && /wmoText\(codigoQueSeVe\(H, H\.code\)\)/.test(src));
+     /fila\('Cielo',/.test(src) && /esc\(cieloVisto\(H\)\.txt \?\? '—'\)/.test(src));
   ok('y la estación dice la verdad: ningún aparato suyo mide la nube',
      /fila\('Cielo',[\s\S]{0,700}ningún aparato lo mide/.test(src),
      'una celda vacía sin porqué se lee como fallo de la estación');
@@ -6399,12 +6441,15 @@ eval(sacar('function rachaQueNoVesTu(racha10) {'));
   ok('BI SOLLUBEMENDI 30-08 14:00: Automático 27 e ICON 55 se canta',
      sollube !== null && sollube.quien === 'ICON' && sollube.suya === 55,
      'su aviso está en 45: con el Automático puesto no vería nada');
+  /* El listón es el del PERFIL (listonRafaga, 09-09-2026): en caseta —el
+     90 % de su trabajo— la bestia de 70 avisa desde 49; los 45/60 de
+     S.thr solo mandan al subir. Suyo: «Tu listón: 45 / 60. Eso no es así». */
   ok('y se dice QUÉ listón cruza, con sus números',
-     sollube && sollube.limite === 45, JSON.stringify(sollube));
+     sollube && sollube.limite === 49, JSON.stringify(sollube));
 
-  const orduna = racha(38, [35, 62, 14, 24, 37]);
-  ok('BI VIRGEN ORDUÑA 30-08 15:00: otro cruza sus 60 y se dice ese listón',
-     orduna && orduna.limite === 60, 'el tope manda sobre el aviso');
+  const orduna = racha(38, [35, 72, 14, 24, 37]);
+  ok('BI VIRGEN ORDUÑA 30-08 15:00: otro cruza tu tope de 70 y se dice ese listón',
+     orduna && orduna.limite === 70, 'el tope manda sobre el aviso');
 
   /* LO QUE NO PUEDE SALTAR, que es la mitad del trabajo. Estas tres
      vienen de la calibración: las reglas por proporción saltaban en el
@@ -6433,9 +6478,12 @@ eval(sacar('function rachaQueNoVesTu(racha10) {'));
   ok('sin racha propia tampoco', racha(null, [35, 55, 14, 24, 37]) === null);
 
   /* Y SUS umbrales, no los de por defecto: los puede cambiar en Ajustes. */
+  const perfil0 = globalThis.perfil;
+  globalThis.perfil = () => ({ vientoManda: true });   // al subir mandan S.thr
   ok('usa TUS listones, no los de fábrica',
      racha(27, [35, 33, 14, 24, 37], { gustWarn: 30, gustNo: 40 })?.limite === 30,
      'con el aviso en 30, ECMWF 35 ya lo cruza');
+  globalThis.perfil = perfil0;
 }
 
 /* ── Y ESTÁ ENGANCHADO DONDE TIENE QUE ESTAR ─────────────────────────
@@ -6493,7 +6541,7 @@ eval(sacar('function rachaQueNoVesTu(racha10) {'));
   ok('y cuando no cruza listón, dice cuánto se separa',
      /se separa \$\{difVista\(r\.suya, r\.mia/.test(casilla));
   ok('tu listón se sigue diciendo siempre, salte o no',
-     (casilla.match(/tu listón: \$\{wtxt\(S\.thr\.gustWarn/gi) || []).length >= 2);
+     (casilla.match(/tu listón: \$\{wtxt\(listonRafaga\(\)\.warn, true\)\}/gi) || []).length >= 2);
 }
 
 
@@ -6737,7 +6785,7 @@ console.log('\n  Revisión 04-09: el parte no dice «hoy» para otro día');
 console.log('\n  Revisión 04-09: los dos dibujos del día dicen QUÉ horas resumen');
 {
   const src = require('fs').readFileSync(require('path').join(__dirname, 'app.js'), 'utf8');
-  const i = src.indexOf('const iconosDelDia = (dia, codigoDiario)');
+  const i = src.indexOf('function iconosDelDia(dia)');
   const cuerpo = src.slice(i, i + 6000);
   /* 2. El hermano del sábado: el corte lo pone cieloPartido donde cambia
      el cielo (8:00-19:00) y debajo seguía «mañana»/«tarde» fijo. */
@@ -6745,8 +6793,8 @@ console.log('\n  Revisión 04-09: los dos dibujos del día dicen QUÉ horas resu
      !/<u>mañana<\/u>/.test(cuerpo) && !/<u>tarde<\/u>/.test(cuerpo),
      'con el corte a las 16:00, «tarde» resumía solo de 17 a 20 h');
   ok('el rótulo sale de las MISMAS horas que el dibujo',
-     /const rot = arr => arr\?\.length/.test(cuerpo)
-     && /<u>\$\{rot\(manana\)\}<\/u>/.test(cuerpo) && /<u>\$\{rot\(tarde\)\}<\/u>/.test(cuerpo));
+     /R\.partes\.map\(t => `<i>\$\{icon\(t\.code, d\)\}<u>\$\{has\(t\.desde\) \? `\$\{t\.desde\}h` : ''\}<\/u><\/i>`\)/.test(cuerpo),
+     'desde el 09-09 cada tramo lleva su icono y su hora, del mismo objeto');
   /* Ejecutado, la función de rótulo tal cual está escrita. */
   const rot = arr => arr?.length ? `${arr[0].date.getHours()}-${arr[arr.length - 1].date.getHours()} h` : '';
   const h = n => ({ date: new Date(2026, 8, 10, n) });
@@ -6814,11 +6862,11 @@ console.log('\n  Revisión 04-09: AEMET caído no se lee como «ninguna estació
 console.log('\n  El dibujo del día sale de sus horas, no del peor rato');
 {
   const src = require('fs').readFileSync(require('path').join(__dirname, 'app.js'), 'utf8');
-  const i = src.indexOf('const iconosDelDia = (dia, codigoDiario)');
+  const i = src.indexOf('function iconosDelDia(dia)');
   const cuerpo = src.slice(i, i + 3200);
 
   ok('la función existe y recibe el día',
-     i > 0 && /const iconosDelDia = \(dia, codigoDiario\)/.test(cuerpo));
+     i > 0 && /function iconosDelDia\(dia\)/.test(cuerpo));
 
   ok('el código DIARIO ya no se pinta nunca como icono',
      !/return icon\(codigoDiario/.test(cuerpo),
@@ -6833,10 +6881,9 @@ console.log('\n  El dibujo del día sale de sus horas, no del peor rato');
      /const conDato = hs\.filter\(h => has\(codigoQueSeVe\(h, h\.code\)\)\)/.test(cuerpo),
      'con AROME cargado no hay ni una hora de 240 con weather_code propio');
 
-  ok('y las dos mitades del día salen de esas horas, no de la lista cruda',
-     /let manana = conDato\.filter/.test(cuerpo)
-     && /let tarde  = conDato\.filter/.test(cuerpo)
-     && /const delDia = conDato\.filter/.test(cuerpo));
+  ok('y el día (6-20 h, o la noche si no hay más) sale de esas horas, no de la lista cruda',
+     /let delDia = conDato\.filter\(h => h\.date\.getHours\(\) >= 6/.test(cuerpo)
+     && /delDia = conDato\.filter\(h => h\.date\.getHours\(\) >= 21/.test(cuerpo));
 
   /* Y la cuenta, ejecutada: con nueve horas de sol y un diario que dice
      «cubierto», tiene que ganar el sol. Es el caso del 04-09. */
@@ -7004,7 +7051,7 @@ grupo('Revisión 04-09 · clases 3 y 7: lo que se leía como calma');
 grupo('Revisión 04-09 · la app y el service worker se hablan');
 {
   ok('comprobarVersion() no tira la caché avisos-recibidos al cambiar de versión',
-     /\(await caches\.keys\(\)\)\.filter\(k => k !== 'avisos-recibidos'\)\.forEach\(k => caches\.delete\(k\)\)/.test(src)
+     /\(await caches\.keys\(\)\)\.filter\(k => k !== 'avisos-recibidos'\)\.map\(k => caches\.delete\(k\)\)/.test(src)
      && !/\(await caches\.keys\(\)\)\.forEach\(k => caches\.delete\(k\)\)/.test(src),
      'sus últimos 40 avisos se perdían en cada publicación');
   ok('la app escucha precache-faltan y avisoRenovado del service worker',

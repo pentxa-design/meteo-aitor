@@ -270,6 +270,7 @@ const sitio = { lat: 43.42, lon: -2.72 };
   {
     globalThis.location = { protocol: 'https:', hostname: 'torre.test', origin: 'https://torre.test' };
     eval(sacarConst('PROXY'));
+    eval(sacarConst('BACKEND'));   // desde el 07-09 via() sale por BACKEND (en Vercel es el propio origen)
     eval(sacarConst('directo'));
     eval(sacarConst('via'));
     eval(sacar('const API = {', '\n};').replace('const API', 'globalThis.API'));

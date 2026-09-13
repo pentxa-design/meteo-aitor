@@ -23,6 +23,17 @@ for f in app.js maps.js sw.js middleware.js lib/*.mjs netlify/functions/*.js api
 done
 echo "✓ sintaxis"
 
+# ── NOMBRES REPETIDOS DE PRIMER NIVEL (guion del domingo, §12) ─────────
+# El 09-09 un rangoHoras(hs) nuevo pisó al rangoHoras(a, b) de la pestaña
+# Rayos durante dos horas: en JavaScript la última declaración gana sin
+# avisar. Con 16.000 líneas, esto lo mira la máquina, no la memoria.
+for f in app.js maps.js; do
+  dup=$( { grep -oE "^(async )?function [A-Za-z_\$][A-Za-z0-9_\$]*" "$f" | sed -E 's/^(async )?function //';
+          grep -oE "^(const|let|var) [A-Za-z_\$][A-Za-z0-9_\$]*" "$f" | awk '{print $2}'; } | sort | uniq -d )
+  [ -n "$dup" ] && { echo "✗ NO SE PUBLICA: nombre repetido en $f:"; echo "$dup"; exit 1; }
+done
+echo "✓ sin nombres repetidos de primer nivel"
+
 # 2) Ámbitos y demás
 if [ ! -x node_modules/.bin/eslint ]; then
   echo "▸ Instalando ESLint (solo la primera vez)…"

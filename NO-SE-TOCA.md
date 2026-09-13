@@ -76,7 +76,7 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **El veredicto resta el número que se ENSEÑA, no otro** | `el veredicto resta el número que se ENSEÑA, no otro` |
 | **Con otros aparatos apuntados no se dice «ningún aviso»** | `con otros aparatos apuntados, no se dice «ningún aviso»` |
 | **El aviso del cielo dice POR QUÉ ha saltado (abanico o descolgado)** | `si saltó porque UNO se fue a un abismo, se dice quién y qué ve` |
-| **El mapa arranca en el europeo de 9 km, el de Windy** | `el mapa arranca en el europeo de 9 km, el mismo que usa Windy` |
+| **El mapa arranca en el europeo de 9 km, el de Windy** | `el mapa arranca en ICON-EU (06-09: con HRES de fábrica se recargaba a diario) y el europeo de 9 km queda a un toque` |
 | **El aviso del cielo salta el 5 % de las horas, no el 65 %** | `lo de HOY: él 3 % y los otros 8-20 — se CALLA` |
 | **«No contesta» y «contesta pero no lo sabe» son estados distintos** | `si está MUDO, lo dice: pasa pero no avisa` |
 | **El parte dice qué emplazamientos NO ha podido mirar** | `y se dicen con su NOMBRE, no solo cuántos` |
