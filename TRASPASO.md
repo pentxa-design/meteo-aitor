@@ -394,3 +394,4 @@ Reglas de siempre: nada inventado, km/h, coma, prueba en rojo antes de publicar,
 - **22:30: los puntos 1-5 de §9b los hace la sesión APP METEO -PRINCIPAL (iMac), orden de Aitor «hazlo». El chat del iPhone NO toca app.js hasta que esa publicación salga (se apuntará aquí).**
 - **22:50, publicado §9b (build 2026.09.13-2236), commit a6df9b3.** El chat del iPhone puede volver a tocar app.js.
 - 22:47: cron-job.org «Vigilante Aitor Meteo» pasado a cada 15 min (*/15 * * * *) por Aitor. El rojo ya es de verdad cada cuarto de hora; en verde el vigilante sigue saltando las llamadas hasta las 2 h.
+- **22:58: regla fija «nada de parches diarios» (memoria nada-de-parches-diarios.md) y publicado el aviso de cambio por franja (build 2026.09.13-2254): «Ha cambiado a las HH:MM: antes despejado» cuando el cielo de una franja cambia respecto a lo pintado antes, por aparato y modelo (LS cieloFranjas, local a propósito). 7 pruebas nuevas, 2 filas en NO-SE-TOCA.
