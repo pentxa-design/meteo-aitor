@@ -1457,7 +1457,8 @@ const Maps = {
       const z = 5;
       const t0 = Date.now();
       let bien = 0;
-      for (const [x, y] of tilesAlrededor(p.lat, p.lon, z)) {
+      const tiles = tilesAlrededor(p.lat, p.lon, z);
+      for (const [x, y] of tiles) {
         if (ac.signal.aborted) return;
         try {
           await OMWeatherMapLayer.omProtocol({ url: `${url}/${z}/${x}/${y}`, type: 'image' }, ac);
@@ -1465,7 +1466,26 @@ const Maps = {
         } catch { /* una tesela que falle no para las demás */ }
       }
       if (bien) LS.set('calentado', sello);
-      console.info(`mapa precalentado: ${bien} teselas de ${modelo} en ${Math.round((Date.now() - t0) / 100) / 10} s`);
+      /* Y LAS DOS HORAS SIGUIENTES DEL DESLIZADOR (15-09-2026, 0:50): la
+         tesela del sitio nada más, que es la que abre el fichero (cabecera
+         e índice: lo que de verdad tarda). Con el paso que él tenga puesto
+         (3 h de fábrica), como hace `precargar()` con el mapa abierto. Así
+         mover la hora tampoco espera la primera vez. */
+      this.pasoHoras = LS.get('tpaso', 3);
+      const idx = this.indices(meta);
+      const pos = idx.indexOf(t);
+      let vecinas = 0;
+      for (const off of [1, 2]) {
+        const t2 = pos >= 0 ? idx[pos + off] : undefined;
+        if (t2 === undefined || ac.signal.aborted) break;
+        const u2 = limpiarMarca(this.omUrl(L_.v, t2, modelo, meta, L_) || '');
+        if (!u2) continue;
+        try {
+          await OMWeatherMapLayer.omProtocol({ url: `${u2}/${z}/${tiles[0][0]}/${tiles[0][1]}`, type: 'image' }, ac);
+          vecinas++;
+        } catch { /* igual: un extra */ }
+      }
+      console.info(`mapa precalentado: ${bien} teselas de ${modelo} + ${vecinas} horas siguientes en ${Math.round((Date.now() - t0) / 100) / 10} s`);
     } catch (e) {
       console.warn('precalentar mapa:', e?.message || e);
     } finally {
