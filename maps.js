@@ -691,6 +691,9 @@ const Peticiones = {
           return r;
         } catch (e) {
           if (ac?.signal?.aborted) throw e;            // abortada: no cuenta
+          // Abortada por la propia librería (sin `ac` nuestro, al cambiar de
+          // capa o de hora): tampoco cuenta ni se reintenta (14-09-2026).
+          if (e?.name === 'AbortError' || /abort/i.test(String(e?.message || ''))) throw e;
           if (i === intentos - 1) {
             this.fallos++;
             this.onCambio?.(this.fallos, this.servidas);
@@ -1142,7 +1145,7 @@ const Maps = {
       // Al mover o ampliar el mapa se sigue precargando, y si estaba
       // reproduciéndose NO se detiene: solo se piden las teselas de la
       // nueva vista.
-      this.map.on('moveend', () => { this.precargar(this._dir ?? 1); this.valores(); this.barbas(); this.rayosPronto(); });
+      this.map.on('moveend', () => { this.precargar(this._dir ?? 1); this.trasPintar(() => { this.valores(); this.barbas(); }); this.rayosPronto(); });
       this.map.on('move', () => { this.limpiarValores(); this.limpiarBarbas(); });
       this.map.on('zoomend', () => { this._pedidas = new Set(); this.precargar(this._dir ?? 1); });
       this.map.on('click', e => this.consultar(e.lngLat));
@@ -1744,7 +1747,7 @@ const Maps = {
     this.calentarClaves();
     this.stamp();
     this.legend();
-    setTimeout(() => { this.valores(); this.barbas(); this.rayos(); }, 600);
+    this.trasPintar(() => { this.valores(); this.barbas(); this.rayos(); });
   },
 
   /** Altura del sol sobre el horizonte, en grados, en un punto y momento.
@@ -2895,6 +2898,22 @@ const Maps = {
      pulsar: son valores del modelo, no etiquetas decorativas. Si un
      punto no tiene dato, no se pinta nada — no se rellena con el vecino. */
 
+  /* ── PRIMERO LA CAPA, LUEGO LOS NÚMEROS Y LAS BARBAS (14-09-2026) ────
+     Medido en su iMac con ICON-EU, caché vaciada: lluvia 3,0 s, reflectividad
+     2,9 s, ráfagas 8,0 s. La diferencia eran las barbas: a los 500 ms de
+     pintar se lanzaban valores() y barbas(), y en Ráfagas las barbas
+     descodifican DOS variables más (u y v) que se ponían en la misma cola
+     de dos en dos que las teselas. Ahora se piden cuando el mapa ha
+     terminado de pintar (evento idle); si el idle no llega (mapa oculto),
+     a los 6 s igual, una sola vez. */
+  trasPintar(fn, tope = 6000) {
+    if (!this.map) return;
+    let hecho = false;
+    const una = () => { if (hecho) return; hecho = true; try { this.map.off('idle', una); } catch {} clearTimeout(reloj); fn(); };
+    const reloj = setTimeout(una, tope);
+    this.map.once('idle', una);
+  },
+
   async valores() {
     if (!this.map || !this.meta || !this.verValores) { this.limpiarValores(); return; }
     const L_ = TLAYERS.find(l => l.id === this.layer);
@@ -3764,7 +3783,7 @@ const Maps = {
       this.limpiarValores();
       this.limpiarBarbas();
       clearTimeout(this._tv);
-      this._tv = setTimeout(() => { this.valores(); this.barbas(); }, 500);
+      this.trasPintar(() => { this.valores(); this.barbas(); });
     } catch { this.apply(); }
   },
 
