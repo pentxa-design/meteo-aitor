@@ -74,6 +74,9 @@ console.log('\n  cabeceras(): lo que entiende el CDN de Vercel\n');
      cabeceras(900, { revalidar: 0 })['cdn-cache-control']);
   ok('el max-age del navegador que se pasa, manda',
      cabeceras(600, { navegador: 120 })['cache-control'] === 'public, max-age=120');
+ok('con cdn: false el navegador guarda y el CDN no (los trozos con Range del mapa, 14-09)',
+   /^private, max-age=300$/.test(cabeceras(300, { navegador: 300, cdn: false })['cache-control'])
+   && cabeceras(300, { navegador: 300, cdn: false })['cdn-cache-control'] === 'no-store');
   ok('stale-if-error NO sale si no se pide',
      !('stale-if-error' in cdn), h['cdn-cache-control']);
   ok('y con siError sale con su valor (las mareas: 86400)',

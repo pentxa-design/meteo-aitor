@@ -227,6 +227,8 @@ console.log('\n  omtiles, el camino de reserva de las teselas: a quién pide y q
       cache:  'omtiles api (Vercel): y ese fallo no se queda cacheado, ni en el navegador ni en el CDN',
       s503:   'omtiles api (Vercel): con el S3 en 503 reenvía el 503 sin cachearlo, no lo disfraza de 200',
       s404:   'omtiles api (Vercel): con la pasada aún sin publicar (404 del S3) reenvía el 404 sin cachearlo',
+      cl:     'omtiles api (Vercel): un trozo pedido con Range vuelve con Content-Length exacto y sin guardarse en el CDN (la librería del mapa lo exige)',
+      head:   'omtiles api (Vercel): un HEAD se reenvía como HEAD y vuelve sin cuerpo y con el Content-Length del fichero (así abre cada .om la librería)',
     },
   };
   const DOS = [
@@ -245,12 +247,12 @@ console.log('\n  omtiles, el camino de reserva de las teselas: a quién pide y q
   for (const [et, fichero, urlApp] of DOS) {
     const N = NOMBRES[et];
     const mod = await import(pathToFileURL(path.join(aqui, fichero)).href + '?v=omtiles');
-    const llamar = async (contesta, cab = {}) => {
-      let pedido = null, cabPedida = {};
-      globalThis.fetch = async (u, o) => { pedido = String(u); cabPedida = o?.headers ?? {}; return contesta(); };
-      const r = await mod.default(new Request(urlApp, { headers: cab }));
+    const llamar = async (contesta, cab = {}, method = 'GET') => {
+      let pedido = null, cabPedida = {}, metodo = null;
+      globalThis.fetch = async (u, o) => { pedido = String(u); cabPedida = o?.headers ?? {}; metodo = o?.method ?? 'GET'; return contesta(); };
+      const r = await mod.default(new Request(urlApp, { headers: cab, method }));
       const cache = CACHE.filter(h => r.headers.get(h)).map(h => `${h}: ${r.headers.get(h)}`).join(' · ');
-      return { r, txt: await r.text(), pedido, cabPedida, cache };
+      return { r, txt: await r.text(), pedido, cabPedida, cache, metodo };
     };
 
     const normal = await llamar(() => new Response('{"ok":1}', { status: 200 }));
@@ -266,6 +268,22 @@ console.log('\n  omtiles, el camino de reserva de las teselas: a quién pide y q
        rango.cabPedida.range === 'bytes=0-3' && rango.r.status === 206
        && rango.r.headers.get('content-range') === 'bytes 0-3/1000' && rango.txt.length === 4,
        `range pedido=${rango.cabPedida.range} · ${rango.r.status} · content-range=${rango.r.headers.get('content-range')} · ${rango.txt.length} bytes`);
+    /* 14-09-2026: 24 «Content-Length header missing» en dos cambios de capa: el
+       HEAD con el que la librería abre cada .om volvía sin tamaño. */
+    if (N.head) {
+      const head = await llamar(() => new Response(null, {
+        status: 200, headers: { 'content-length': '12345', 'content-type': 'application/octet-stream', 'accept-ranges': 'bytes' },
+      }), {}, 'HEAD');
+      ok(N.head,
+         head.metodo === 'HEAD' && head.r.status === 200 && head.r.headers.get('content-length') === '12345'
+         && head.txt.length === 0 && /no-store/.test(head.r.headers.get('cdn-cache-control') || ''),
+         `método=${head.metodo} · ${head.r.status} · content-length=${head.r.headers.get('content-length')} · cuerpo=${head.txt.length} · cdn=${head.r.headers.get('cdn-cache-control')}`);
+    }
+    if (N.cl) ok(N.cl,
+       rango.r.headers.get('content-length') === '4'
+       && /no-store/.test(rango.r.headers.get('cdn-cache-control') || '')
+       && /Range/.test(rango.r.headers.get('vary') || ''),
+       `content-length=${rango.r.headers.get('content-length')} · cdn=${rango.r.headers.get('cdn-cache-control')} · vary=${rango.r.headers.get('vary')}`);
 
     const sinRed = await llamar(() => { const e = new Error('fetch failed'); e.cause = { code: 'ENOTFOUND' }; throw e; });
     ok(N.sinRed,

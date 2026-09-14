@@ -133,3 +133,5 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **Si el cielo de una franja cambia respecto a lo pintado antes, la franja lo dice con la hora y el de antes** | `si cambia el cielo, lo dice con la hora y con el de antes` |
 | **Nada de parches diarios: todas las pestañas salen de la misma bajada de datos y cambian juntas** | `todas las pestañas salen de la misma bajada: franjas y 10 días leen S.data.fc` |
 | **El origen de las teselas del mapa se elige por velocidad medida, no por «responde»** | `el origen de las teselas sale de una carrera entre S3 y el intermediario, con el mismo fichero` |
+| **Los trozos del mapa pedidos con Range vuelven con Content-Length exacto y no se guardan en el CDN** | `omtiles api (Vercel): un trozo pedido con Range vuelve con Content-Length exacto y sin guardarse en el CDN (la librería del mapa lo exige)` (prueba-fuente-caida.mjs) |
+| **Un HEAD al intermediario de teselas se reenvía como HEAD y vuelve con el tamaño del fichero** | `omtiles api (Vercel): un HEAD se reenvía como HEAD y vuelve sin cuerpo y con el Content-Length del fichero (así abre cada .om la librería)` (prueba-fuente-caida.mjs) |

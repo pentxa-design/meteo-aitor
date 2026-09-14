@@ -90,15 +90,19 @@ async function elegirOrigenTeselas() {
      hora, así que elegir el directo solo porque «responde» era lo que
      lo hacía arrastrarse. Ahora se pide el MISMO fichero pequeño por los
      dos caminos a la vez y gana el más rápido; se recuerda 6 h. */
+  /* Se mide con un HEAD, que es como la librería abre cada .om, y un
+     origen que conteste sin Content-Length no vale por rápido que sea:
+     la librería lo rechaza («Content-Length header missing») y reintenta
+     con esperas de 5 s. Medido el 14-09-2026: el intermediario en el borde
+     de Vercel gana la carrera y luego pierde cada apertura. */
   const mide = async (url) => {
     const t0 = Date.now();
     const ac = new AbortController();
     const reloj = setTimeout(() => ac.abort(), 6000);
     try {
-      const r = await fetch(url, { signal: ac.signal, cache: 'no-store' });
+      const r = await fetch(url, { method: 'HEAD', signal: ac.signal, cache: 'no-store' });
       clearTimeout(reloj);
-      if (!r.ok) return Infinity;
-      await r.arrayBuffer();
+      if (!r.ok || !r.headers.get('content-length')) return Infinity;
       return Date.now() - t0;
     } catch { clearTimeout(reloj); return Infinity; }
   };

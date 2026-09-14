@@ -42,7 +42,16 @@ export default async (request) => {
   if (range) cab.range = range;
 
   try {
-    const r = await fetch(`${BASE}/${ruta}${cola ? '?' + cola : ''}`, { headers: cab });
+    /* ── EL HEAD SE REENVÍA COMO HEAD ──────────────────────────────────────
+       La librería del mapa abre cada .om con un HEAD y exige el
+       Content-Length (el tamaño del fichero, para leer por rangos). Hasta
+       el 14-09-2026 aquí todo era GET: para contestar un HEAD se bajaba el
+       fichero ENTERO de S3 y encima la respuesta salía sin Content-Length
+       (el borde la trocea). Resultado medido en su iMac: «OmHttpBackendError:
+       Content-Length header missing», 24 veces en dos cambios de capa, con
+       reintentos de 5 s; 12-16 s por capa. */
+    const esHead = request.method === 'HEAD';
+    const r = await fetch(`${BASE}/${ruta}${cola ? '?' + cola : ''}`, { method: esHead ? 'HEAD' : 'GET', headers: cab });
     const salida = new Headers();
     for (const h of ['content-type','content-length','content-range',
                      'accept-ranges','etag','last-modified']) {
@@ -60,10 +69,40 @@ export default async (request) => {
     // puesto arriba (`tipo: null` lo deja); el CORS lo pone la puerta. Con
     // error, no-store: un 5xx no se queda pegado.
     const comun = { tipo: null, origen: 'open-meteo-tiles' };
+    /* ── LOS RANGOS NO SE GUARDAN EN EL CDN Y LLEVAN CONTENT-LENGTH ────────
+       Medido el 14-09-2026 a las 00:40 desde su iMac, con el intermediario
+       elegido por ser más rápido: el lector .om de la librería del mapa
+       pide trozos con `Range`, el CDN de Vercel le servía una copia ENTERA
+       guardada (200, sin Content-Range) y troceada (sin Content-Length), y
+       la librería la rechaza —«OmHttpBackendError: Content-Length header
+       missing», 24 veces en dos cambios de capa— y reintenta con esperas
+       de 0,5, 2 y 4,5 s. Eso eran los 12-16 s por capa.
+       Ahora: con `Range`, el trozo se lee entero aquí (son cientos de KB) para
+       que salga con su Content-Length exacto, el CDN no lo guarda (un 206 no
+       se cachea y una copia entera rompería los rangos siguientes) y `Vary:
+       Range` por si acaso. Sin `Range`, como antes. */
+    if (esHead) {
+      // Sin cuerpo, con el tamaño y sin CDN: una copia guardada sin tamaño rompería la apertura.
+      for (const [k, v] of Object.entries(cabeceras(300, { navegador: 300, cdn: false, ...comun }))) salida.set(k, v);
+      return new Response(null, { status: r.status, headers: salida });
+    }
+    if (range && (r.ok || r.status === 206)) {
+      const cuerpo = await r.arrayBuffer();
+      salida.set('content-length', String(cuerpo.byteLength));
+      for (const [k, v] of Object.entries(cabeceras(300, { navegador: 300, cdn: false, ...comun }))) salida.set(k, v);
+      salida.set('vary', 'Range');
+      return new Response(cuerpo, { status: r.status, headers: salida });
+    }
     const cache = !(r.ok || r.status === 206) ? cabeceras(0, comun)
       : esMeta ? cabeceras(120, { navegador: 60, revalidar: 600, ...comun })
                : cabeceras(86400, { navegador: 300, revalidar: 604800, ...comun });
     for (const [k, v] of Object.entries(cache)) salida.set(k, v);
+    if (esMeta && r.ok) {
+      /* El catálogo también sale con Content-Length: leído entero (5 KB). */
+      const cuerpo = await r.arrayBuffer();
+      salida.set('content-length', String(cuerpo.byteLength));
+      return new Response(cuerpo, { status: r.status, headers: salida });
+    }
     return new Response(r.body, { status: r.status, headers: salida });
   } catch (e) {
     return new Response(`no se ha podido llegar a Open-Meteo: ${e.message}`, { status: 502 });

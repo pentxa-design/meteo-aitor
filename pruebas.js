@@ -7180,6 +7180,10 @@ grupo('El mapa elige el origen de las teselas por velocidad, no por «responde»
      && /mide\(`\$\{TILES_PROXY\}\/dwd_icon_eu\/latest\.json`\)/.test(M)
      && /const directo = tDirecto < Infinity && tDirecto <= tProxy;/.test(M),
      'antes bastaba con que S3 respondiera en 6 s para ir directo, aunque tardara 5');
+  ok('la carrera se corre con HEAD y un origen sin Content-Length queda fuera (la librería lo rechaza)',
+     /fetch\(url, \{ method: 'HEAD', signal: ac\.signal, cache: 'no-store' \}\)/.test(M)
+     && /if \(!r\.ok \|\| !r\.headers\.get\('content-length'\)\) return Infinity;/.test(M),
+     '14-09-2026: el intermediario ganaba la carrera y luego fallaba cada apertura de .om');
   ok('y lo medido se guarda con el elegido, para poder mirarlo',
      /ms: \{ directo: tDirecto, proxy: tProxy \}/.test(M));
   ok('si el intermediario también falla, se queda el directo y el mapa lo dirá',
