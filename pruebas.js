@@ -7363,11 +7363,16 @@ grupo('La tarjeta de 10 días dice de quién es cada cifra que no es del modelo 
   }
   try { eval(sacarConst('mmTxt')); } catch (e) { console.log(`  (sin mmTxt: ${e.message})`); }
   const hay = ['queFaltaba', 'origenDelDato', 'textoAguaNoVenTodos'].every(f => { try { return typeof eval(f) === 'function'; } catch { return false; } });
+  /* El amanecer y el ocaso vienen TODOS los días de cualquier modelo (son
+     astronomía, no previsión): un día sin previsión no puede pasar por
+     «con datos» por tener amanecer. Visto en producción el 14-09 a las 11:00:
+     rellenoDias = [] con AROME HD y el viernes entero de ECMWF sin etiqueta. */
   const D = { time: ['2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17'],
+              sunrise: ['2026-09-14T07:35', '2026-09-15T07:36', '2026-09-16T07:37', '2026-09-17T07:38'],
               temperature_2m_max: [26, 26, null, null], precipitation_sum: [0, 0, null, null],
               precipitation_probability_max: [null, null, null, null], wind_gusts_10m_max: [18, 65, null, null] };
   const Q = hay ? queFaltaba(D) : null;
-  ok('antes de rellenar se apunta qué faltaba: los días enteros sin dato y los campos que el modelo no publica',
+  ok('antes de rellenar se apunta qué faltaba: los días enteros sin previsión (aunque traigan amanecer) y los campos que el modelo no publica',
      hay && JSON.stringify(Q.dias) === JSON.stringify(['2026-09-16', '2026-09-17'])
      && JSON.stringify(Q.campos) === JSON.stringify(['precipitation_probability_max'])
      && /f\.rellenoDias = faltaba\.dias; f\.rellenoCampos = faltaba\.campos;/.test(src),

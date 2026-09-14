@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.14-1058';
+const BUILD = '2026.09.14-1105';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -3191,7 +3191,11 @@ function queFaltaba(D) {
   if (!D?.time?.length) return { dias: [], campos: [] };
   const claves = Object.keys(D).filter(k => k !== 'time' && Array.isArray(D[k]));
   const vacio = v => v === null || v === undefined;
-  const dias = D.time.filter((t, i) => claves.every(k => vacio(D[k][i])));
+  /* Un día «sin previsión» se mira en lo que PREVÉ el modelo: el amanecer y
+     el ocaso vienen todos los días de cualquier modelo (astronomía) y
+     hacían pasar por «con datos» un viernes entero de relleno (14-09-2026). */
+  const prevision = claves.filter(k => !/^(sunrise|sunset|daylight_duration|sunshine_duration|uv_index|uv_index_clear_sky)/.test(k));
+  const dias = D.time.filter((t, i) => prevision.length > 0 && prevision.every(k => vacio(D[k][i])));
   const conDatos = D.time.map((t, i) => i).filter(i => !dias.includes(D.time[i]));
   const campos = claves.filter(k => conDatos.length > 0 && conDatos.every(i => vacio(D[k][i])));
   return { dias, campos };
