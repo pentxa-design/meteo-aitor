@@ -465,3 +465,17 @@ Pendiente de medir en producción tras publicar: `x-vercel-cache: HIT` en los `?
 Lo que queda: el primer toque de cada bloque de cada hora sigue siendo borde → S3 (0,6-3 s). Siguiente paso, ahora que ya son cacheables: calentar desde el servidor (cron, cada pasada nueva) la cabecera + índice + bloques de las horas próximas de los modelos que él usa (ICON-EU, ECMWF 25 km, AROME HD), así el primer usuario también los encuentra en el CDN. Y medir `msHastaUltima` con cuidado: incluye precargas tardías (moveend), no es «tiempo hasta pintar».
 
 **Ojo, un resto del deploy desde el portátil:** `probar-avisos.sh` no encontró `clave-avisos.txt` (vive en el iMac), así que el aparato de mentira «prueba automática» (endpoint `…/PRUEBA-AUTOMATICA-<epoch>`, dado de alta ~18:33 UTC) se quedó guardado en el almacén: `/api/suscribir` dice 4 aparatos. Se limpia solo en el primer envío real de `avisar.mjs` (410 → de baja). Si quieres quitarlo antes, desde el iMac: `U=… ./probar-avisos.sh` entero, que ese sí tiene la clave y lo da de baja.
+
+### §14 · 14-09-2026, 21:00-21:50, desde el portátil: el mapa se precalienta solo al abrir la app (build 2026.09.14-2133)
+
+Suyo: «¿para que el mapa tire más rápido? … si es para mejoras, adelante».
+
+Por qué desde el aparato y no desde un cron: la caché del CDN de Vercel es por región; lo que pida un cron desde Alemania no calienta el nodo de París que usan sus móviles. Así que `Maps.calentar()` (maps.js) arranca a los 15 s de cargar la app, con la pestaña a la vista, y pide con la librería —misma caché de bloques de 256 KB, `ajustarCacheDeBloques()` compartida con `open()`— la tesela del sitio y sus 8 vecinas al zoom 5 de la hora actual del modelo y capa guardados. Una vez por pasada/hora/sitio (`torre.calentado`), de una en una, nunca con ahorro de datos ni 2G, y `open()` la aborta si abre el mapa antes. Fallos tragados: es un extra.
+
+**Medido en producción** (portátil, 21:45): con ECMWF 25 km + temperatura guardados, a los 22 s de abrir la app ya estaban pedidos 1 `?cabecera=1` + 5 `?rango=` del fichero 2100Z (sello puesto). Después, tocar «Mapa»: **las 6 teselas pintadas en 2,09 s desde el clic, con CERO peticiones de bloques a la red** (ni a la caché HTTP: salieron de la caché de bloques de la librería, ya llena). Antes, ese mismo modelo en frío: 16,7 s.
+
+Ojo para medirlo: con la pestaña OCULTA (`document.visibilityState === 'hidden'`) el precalentado no arranca, a propósito. En el panel del navegador del portátil hubo que forzar `visibilityState` a mano para probarlo.
+
+`pruebas.js`: la prueba «cambia la caché de bloques a 256 KB antes de la primera tesela» buscaba el `new vieja.constructor(...)` dentro de open(); ahora comprueba que open() llama a `ajustarCacheDeBloques()` antes de `addProtocol` y que hay ≥ 2 llamadas (open + calentar). `prueba-mapas.mjs`: una comprobación estática más.
+
+**Resto de las dos publicaciones desde el portátil:** `probar-avisos.sh` no tiene aquí la clave (`clave-avisos.txt` vive en el iMac), así que quedó al menos UN aparato de mentira «prueba automática» en el almacén (`/api/suscribir` → 4 aparatos a las 21:50; antes de hoy eran 3). Se dan de baja solos en el primer aviso real (410). Desde el iMac, `U=https://weather-app-ochre-one-76.vercel.app ./probar-avisos.sh` los limpia antes.

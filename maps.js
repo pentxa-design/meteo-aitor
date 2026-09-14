@@ -709,6 +709,21 @@ function teselasPorDefecto(nav = globalThis.navigator) {
   } catch { return 2; }
 }
 
+/** La tesela de un punto y sus ocho vecinas a un zoom: lo que el mapa
+ *  enseña al abrirse (zoom 5,2 en un móvil son ~2×3 teselas de 256 px).
+ *  La del sitio va primero: si se aborta a medias, lo importante ya está. */
+function tilesAlrededor(lat, lon, z) {
+  const n = 2 ** z;
+  const cx = Math.floor((lon + 180) / 360 * n);
+  const cy = Math.floor((1 - Math.asinh(Math.tan(lat * Math.PI / 180)) / Math.PI) / 2 * n);
+  const out = [[cx, cy]];
+  for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0], [-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    const x = cx + dx, y = cy + dy;
+    if (x >= 0 && x < n && y >= 0 && y < n) out.push([x, y]);
+  }
+  return out;
+}
+
 const Peticiones = {
   /* CUÁNTAS TESELAS SE DESCODIFICAN A LA VEZ.
      Es lo que marca si el mapa va fluido o a tirones, y también lo que
@@ -1253,6 +1268,8 @@ const Maps = {
   },
 
   async open() {
+    // Si se estaba precalentando, se para: el mapa abierto ya pide lo suyo.
+    if (this._acCalor) { try { this._acCalor.abort(); } catch {} this._acCalor = null; }
     // Si el mapa ya estaba montado, al volver a la pestaña se recentra en
     // el emplazamiento actual (por si se cambió de sitio con el mapa cerrado).
     if (this.map) { setTimeout(() => this.map.resize(), 60); this.irA(S.place); return; }
@@ -1302,13 +1319,7 @@ const Maps = {
          con los ajustes por defecto (los mismos con los que se pide luego,
          con o sin escala propia). Misma clase de caché que trae la
          librería, solo que con bloques de 256 KB (ver BLOQUE_OM). */
-      try {
-        const inst = OMWeatherMapLayer.getProtocolInstance(OMWeatherMapLayer.defaultOmProtocolSettings);
-        const vieja = inst?.omFileReader?.cache;
-        if (vieja?.constructor && typeof vieja.blockSize === 'function' && vieja.blockSize() < BLOQUE_OM) {
-          inst.omFileReader.cache = new vieja.constructor(BLOQUE_OM, BLOQUES_OM);
-        }
-      } catch (e) { console.warn('caché de bloques: se queda la de la librería', e); }
+      this.ajustarCacheDeBloques();
 
       maplibregl.addProtocol('om', (params, ac) => {
         const nombre = marcaDe(params.url);
@@ -1371,6 +1382,98 @@ const Maps = {
   },
 
   /* Carga diferida: nada de esto pesa en el arranque de la app. */
+  /** La caché de bloques de la librería, con bloques de 256 KB (BLOQUE_OM).
+   *  La instancia del protocolo es única y la crea getProtocolInstance()
+   *  con los ajustes por defecto (64 KB); se cambia ANTES de la primera
+   *  tesela. Lo usan open() y calentar(): los dos tienen que pedir los
+   *  MISMOS bloques, o lo calentado no sirve (las URL `?rango=` cambian
+   *  con el tamaño del bloque). */
+  ajustarCacheDeBloques() {
+    try {
+      const inst = OMWeatherMapLayer.getProtocolInstance(OMWeatherMapLayer.defaultOmProtocolSettings);
+      const vieja = inst?.omFileReader?.cache;
+      if (vieja?.constructor && typeof vieja.blockSize === 'function' && vieja.blockSize() < BLOQUE_OM) {
+        inst.omFileReader.cache = new vieja.constructor(BLOQUE_OM, BLOQUES_OM);
+      }
+    } catch (e) { console.warn('caché de bloques: se queda la de la librería', e); }
+  },
+
+  /* ═══════════════════════════════════════════════════════════════════
+     PRECALENTAR EL MAPA AL ABRIR LA APP (14-09-2026)
+     ───────────────────────────────────────────────────────────────────
+     Suyo, esa noche, tras publicar los bloques por URL: «¿para que el
+     mapa tire más rápido? … si es para mejoras, adelante».
+
+     Con los bloques ya cacheables (ver instalarBloquesPorUrl), lo que
+     sigue doliendo es el PRIMER toque de cada hora: cada bloque va
+     borde → S3 (0,6-3 s) y ECMWF 25 km en frío son 31 bloques, 16,7 s
+     medidos. Un calentado desde el servidor no vale: la caché del CDN
+     de Vercel es por región, y lo que se pida desde un cron en
+     Alemania no calienta el nodo de París que usan sus móviles.
+
+     Así que se calienta DESDE EL PROPIO APARATO, sin abrir el mapa: a
+     los 15 s de abrir la app, con la pestaña a la vista, se pide con la
+     librería —la misma que usa el mapa, misma caché de bloques de
+     256 KB— la tesela del sitio y sus vecinas (3×3 al zoom 5, que es lo
+     que enseña el mapa al abrirse) de la hora actual del modelo y la
+     capa que él tenga guardados. Eso deja los bloques en la caché HTTP
+     del navegador (un día) y en el CDN de su región. Cuando toque
+     «Mapa», la capa sale de la caché: milisegundos por bloque.
+
+     Una vez por pasada del modelo y sitio (sello en localStorage), de
+     una tesela en una, nunca con «ahorro de datos» activado ni en 2G, y
+     se para en seco si abre el mapa (open() aborta). Los fallos se
+     tragan: es un extra, no puede romper nada ni avisar de nada.
+
+     Por qué no se hizo el 31-08 (nota en precargar): entonces cada
+     bloque iba al origen y calentar EXPULSABA de la caché de 8 MB lo que
+     se estaba mirando. Ahora un bloque expulsado vuelve de la caché
+     HTTP en 10-30 ms, y la caché de bloques es de 32 MB (BLOQUES_OM).
+     ═══════════════════════════════════════════════════════════════════ */
+  async calentar() {
+    if (this.map || this._calentando) return;
+    try {
+      if (typeof document === 'undefined' || document.visibilityState !== 'visible') return;
+      const con = (typeof navigator !== 'undefined' && navigator.connection) || {};
+      if (con.saveData || /2g/.test(String(con.effectiveType || ''))) return;
+      const modelo = LS.get('tmodel', 'dwd_icon_eu');
+      const L_ = TLAYERS.find(l => l.id === LS.get('tlayer', 'precipitation'));
+      if (!L_?.v) return;                       // radar, satélite…: no hay .om que calentar
+      const p = (typeof S !== 'undefined' && S.place) || null;
+      if (!p || !Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return;
+      await elegirOrigenTeselas();
+      const meta = await jgetMeta(`${TILES}/${modelo}/latest.json`, { timeout: 12000 });
+      const t = this.nowIndex(meta);
+      const vt = meta?.valid_times?.[t];
+      if (!vt) return;
+      const sello = `${modelo}|${L_.v}|${meta.reference_time}|${vt}|${p.lat.toFixed(1)},${p.lon.toFixed(1)}`;
+      if (LS.get('calentado', '') === sello) return;
+      this._calentando = true;
+      await this.libs();
+      this.ajustarCacheDeBloques();
+      const url = limpiarMarca(this.omUrl(L_.v, t, modelo, meta, L_) || '');
+      if (!url) return;
+      const ac = this._acCalor = new AbortController();
+      const z = 5;
+      const t0 = Date.now();
+      let bien = 0;
+      for (const [x, y] of tilesAlrededor(p.lat, p.lon, z)) {
+        if (ac.signal.aborted) return;
+        try {
+          await OMWeatherMapLayer.omProtocol({ url: `${url}/${z}/${x}/${y}`, type: 'image' }, ac);
+          bien++;
+        } catch { /* una tesela que falle no para las demás */ }
+      }
+      if (bien) LS.set('calentado', sello);
+      console.info(`mapa precalentado: ${bien} teselas de ${modelo} en ${Math.round((Date.now() - t0) / 100) / 10} s`);
+    } catch (e) {
+      console.warn('precalentar mapa:', e?.message || e);
+    } finally {
+      this._calentando = false;
+      this._acCalor = null;
+    }
+  },
+
   libs() {
     if (window.maplibregl && window.OMWeatherMapLayer) return Promise.resolve();
     const css = u => new Promise(ok => {
@@ -4133,3 +4236,10 @@ const Maps = {
     clearInterval(this.timer);
   },
 };
+
+/* El precalentado arranca solo a los 15 s de cargar la app (ver
+   Maps.calentar): tiempo de sobra para que la pantalla principal esté
+   pintada y sus datos pedidos, y antes de que a él le dé por tocar «Mapa». */
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  setTimeout(() => { try { Maps.calentar(); } catch (e) { console.warn('precalentar mapa:', e); } }, 15000);
+}

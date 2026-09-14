@@ -84,6 +84,9 @@ import { readFileSync, readdirSync } from 'node:fs';
   ok('api/omtiles.js entiende el bloque por URL (?rango=a-b) y la cabecera (?cabecera=1)',
      /searchParams\.get\('rango'\)/.test(proxy) && /searchParams\.get\('cabecera'\)/.test(proxy));
   ok('… y los contesta con 200 y un día de CDN (cabeceras(86400', /cabeceras\(86400, \{ navegador: 86400/.test(proxy));
+  ok('maps.js precalienta el mapa al abrir la app con la MISMA caché de bloques que open()',
+     /async calentar\(\)/.test(mapa) && (mapa.match(/this\.ajustarCacheDeBloques\(\)/g) || []).length >= 2
+     && /Maps\.calentar\(\)/.test(mapa));
   ok('maps.js envuelve fetch: HEAD .om → ?cabecera=1 y Range → ?rango=',
      /\?cabecera=1/.test(mapa) && /\?rango=\$\{m\[1\]\}-\$\{m\[2\]\}/.test(mapa) && /instalarBloquesPorUrl\(\);/.test(mapa));
 }

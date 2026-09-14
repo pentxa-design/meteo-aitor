@@ -7309,7 +7309,12 @@ grupo('La caché de bloques del mapa va a 256 KB: tres viajes por tesela, no onc
   ok('el mapa cambia la caché de bloques de la librería a 256 KB × 128 antes de la primera tesela',
      /const BLOQUE_OM = 256 \* 1024, BLOQUES_OM = 128;/.test(M)
      && /inst\.omFileReader\.cache = new vieja\.constructor\(BLOQUE_OM, BLOQUES_OM\);/.test(M)
-     && M.indexOf('new vieja.constructor(BLOQUE_OM, BLOQUES_OM)') < M.indexOf("maplibregl.addProtocol('om'"),
+     /* Desde el 14-09-2026 (noche) el cambio vive en ajustarCacheDeBloques(),
+        que comparten open() y el precalentado calentar(): lo que se mira es
+        que open() la LLAME antes de registrar el protocolo (primera tesela). */
+     && M.indexOf('this.ajustarCacheDeBloques();') > 0
+     && M.indexOf('this.ajustarCacheDeBloques();') < M.indexOf("maplibregl.addProtocol('om'")
+     && (M.match(/this\.ajustarCacheDeBloques\(\);/g) || []).length >= 2,
      'con 64 KB, la racha de una tesela son once viajes de ~280 ms');
   ok('y la librería sigue teniendo esa caché tal y como se toca: constructor(tamaño, bloques), blockSize() y 64 KB × 128 por defecto',
      /constructor\(e=64\*1024,t=256\)\{this\._blockSize=e,this\.maxBlocks=t\}blockSize\(\)\{return this\._blockSize\}/.test(lib)
