@@ -453,3 +453,15 @@ Suyo, esa noche, con la app en la mano: «los mapas van muy muy lentos», «van 
 Probado con `scratchpad/prueba-bloques.mjs` (25 comprobaciones contra el S3 de verdad, arrancando el manejador en Node: cabecera, bloque, último bloque parcial, rangos malos, fichero inexistente, camino viejo, y el envoltorio en un window de mentira) y tres comprobaciones estáticas nuevas en `prueba-mapas.mjs`. Lo que queda igual de lento: el PRIMER toque de cada bloque de cada hora (borde → S3). Lo que cambia: todos los siguientes, desde cualquier móvil, salen del CDN de París.
 
 Pendiente de medir en producción tras publicar: `x-vercel-cache: HIT` en los `?rango=` a la segunda carga, y el tiempo de ECMWF 25 km temperatura. Si el primer toque sigue doliendo, el siguiente paso es calentar desde el servidor (cron) la cabecera + índice de las horas próximas de los modelos que usa, ahora que los bloques ya son cacheables.
+
+**Publicado y medido (build 2026.09.14-2032, 20:35-20:55, desde el portátil, conexión floja de ~0,5 MB/s):**
+
+- ICON-EU (temperatura 2 m), segunda apertura: 3,7 s hasta la última petición (antes 14,9 s). Los 13 bloques `?rango=` en 8-75 ms.
+- Bloque nuevo (hora 0600 de mañana, nunca pedido): 1º toque MISS 1,0 s → 2º toque **HIT** 0,54 s (son 256 KB por esta conexión; la cabecera `?cabecera=1` MISS 454 ms → HIT 76 ms). El CDN los guarda.
+- **ECMWF 25 km, temperatura 2 m, en frío** (primer usuario de esa hora): 31 bloques, 0,6-3,2 s cada uno, 16,7 s hasta el último (abre 4 horas: la que ves y las vecinas de la precarga). Eso es lo que tenía él con «23 s».
+- **ECMWF 25 km, segunda apertura** (misma sesión, tras recargar la página): los 24 bloques en 8-27 ms, ninguno de red.
+- El envoltorio está activo (`window.fetch.bloquesPorUrl === true`), ningún `.om` se pide ya sin `?rango=`/`?cabecera=`.
+
+Lo que queda: el primer toque de cada bloque de cada hora sigue siendo borde → S3 (0,6-3 s). Siguiente paso, ahora que ya son cacheables: calentar desde el servidor (cron, cada pasada nueva) la cabecera + índice + bloques de las horas próximas de los modelos que él usa (ICON-EU, ECMWF 25 km, AROME HD), así el primer usuario también los encuentra en el CDN. Y medir `msHastaUltima` con cuidado: incluye precargas tardías (moveend), no es «tiempo hasta pintar».
+
+**Ojo, un resto del deploy desde el portátil:** `probar-avisos.sh` no encontró `clave-avisos.txt` (vive en el iMac), así que el aparato de mentira «prueba automática» (endpoint `…/PRUEBA-AUTOMATICA-<epoch>`, dado de alta ~18:33 UTC) se quedó guardado en el almacén: `/api/suscribir` dice 4 aparatos. Se limpia solo en el primer envío real de `avisar.mjs` (410 → de baja). Si quieres quitarlo antes, desde el iMac: `U=… ./probar-avisos.sh` entero, que ese sí tiene la clave y lo da de baja.
