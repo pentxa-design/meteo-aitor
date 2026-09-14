@@ -3976,3 +3976,31 @@ con la temperatura.
 **Y un apunte del propio sello:** ECMWF y AROME HD no publican la tapa
 tampoco aquí (0 de las horas), que es lo ya sabido desde el 23-08. No es un
 fallo del buzón.
+
+## 14-09-2026 · BERMEO 13:30 — 24 °C en el coche y cielo azul con algunas nubes altas blancas
+
+**Lo suyo:** termómetro del coche **24 °C** (el reloj del coche marca 12:30: va 1 h
+atrasado, como siempre; la hora real es 13:30). Foto del cielo desde el coche
+en el casco: azul limpio; él añade «algunas nubes altas blancas». No mandó
+anemómetro ni termómetro de mano: la temperatura es la del coche, sin calibrar.
+
+**Lo que decía la app a esa hora (pedido por /om a las 13:15 del servidor,
+Bermeo 43,42 / -2,72):**
+
+| | 13:00 °C | 14:00 °C | altas 13 h | altas 14 h | total 13 h | cielo (código) |
+|---|---|---|---|---|---|---|
+| AROME HD (el suyo) | **24,7** | 24,9 | 87 % | 7 % | no lo publica | no lo publica |
+| ECMWF | 29,9 | 31,1 | 30 % | 35 % | 0 % | 0 · despejado |
+| ICON | 27,4 | 28,2 | 22 % | 23 % | 22 % | 1 · casi despejado |
+| GFS | 31,7 | 32,3 | 5 % | 5 % | 7 % | 0 · despejado |
+| Automático | 24,8 | 25,0 | 0 % | 0 % | 87 % | 3 · cubierto |
+
+**Temperatura:** AROME HD clava (24,7 contra 24 medido). ECMWF se va **6°** y
+GFS **8°**: es el «los 5 modelos van de 26° a 32°» que llevaba hoy la tarjeta
+de 10 días, y hoy los que mienten son ellos. En Bermeo, temperatura: AROME HD.
+**Cielo:** «algunas nubes altas blancas» cuadra con ECMWF (30 % de altas y
+despejado) e ICON (22 %). La app ponía «Despejado» a las 13:00 (pantallazo
+de las 10:32, Horas): bien. AROME HD pone 87 % de altas a las 13 y 7 % a las
+14 —demasiado a las 13 para esta foto— y el **Automático** dice «cubierto»
+(87 % de nubes) a las 13:00 con este cielo: fallo gordo, el mismo que se le
+midió el 02-09 (33 % de fallos gordos de cielo). Un dato más para el marcador.
