@@ -137,3 +137,6 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **Un HEAD al intermediario de teselas se reenvía como HEAD y vuelve con el tamaño del fichero** | `omtiles api (Vercel): un HEAD se reenvía como HEAD y vuelve sin cuerpo y con el Content-Length del fichero (así abre cada .om la librería)` (prueba-fuente-caida.mjs) |
 | **El tamaño de cada .om del mapa llega por x-content-length: parche en vendor/ y copia en el intermediario** | `la librería del mapa acepta x-content-length si falta Content-Length al abrir un .om` |
 | **El mapa pinta la capa antes de pedir números y barbas (idle, no un temporizador)** | `los números y las barbas se piden cuando el mapa ha pintado (idle), no a los 500 ms` |
+| **La marca de escala propia vale para todas las escalas, mayúsculas incluidas (CAPE «capeE» salía sin color)** | `limpiarMarca quita la marca ENTERA y marcaDe devuelve el nombre ENTERO para cada escala (capeE incluida)` |
+| **El calentador de capas clave no suma «trozos sin cargar»** | `el calentador de capas clave no suma «trozos sin cargar»: solo cuentan las teselas que se ven` |
+| **Tres teselas a la vez en un Mac con memoria, dos en el móvil y dos siempre en HRES** | `tres teselas a la vez en un Mac con memoria, dos en el móvil y en Safari, y dos siempre con ECMWF HRES` |

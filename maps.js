@@ -358,7 +358,13 @@ const MARCA = 'escala_propia';
    dos regex solo admitían letras — `marcaDe` devolvía "t" y `limpiarMarca`
    dejaba `interpolation=linear850`, así que la capa T850 se quedaba sin su
    escala nueva (y con la URL rota). Reproducido en node el 31-08-2026. */
-const limpiarMarca = u => u.replace(new RegExp(`[&?]${MARCA}=[a-z0-9]+`), '');
+/* [A-Za-z0-9_], no [a-z0-9]: el 14-09-2026 la SEGUNDA vez, con «capeE»
+   —mayúscula—: `limpiarMarca` dejaba `interpolation=linearE` («Invalid
+   interpolation»), CAPE salía sin color con «5 trozos sin cargar» y el
+   calentador de capas clave sumaba un «trozo sin cargar» desde cualquier
+   otra capa. MEDIDO en producción con el mapa a la vista. Ahora la prueba
+   recorre TODAS las escalas declaradas, no un caso. */
+const limpiarMarca = u => u.replace(new RegExp(`[&?]${MARCA}=[A-Za-z0-9_]+`), '');
 
 /* IDs REALES de TMODELS: los tres globales llevaban nombres inventados
    (gfs_global, gfs025, icon_global) y el cartel «es de los que más tardan»
@@ -387,7 +393,7 @@ function fueraDeRango(L_, valor) {
   return `OJO: ${L_.name} da ${valor.toFixed(1)} ${u}, que es imposible. `
        + `La fuente ha debido de cambiar la unidad: NO te fíes de esta capa hasta revisarla.`;
 }
-const marcaDe = u => u.match(new RegExp(`${MARCA}=([a-z0-9]+)`))?.[1] ?? null;
+const marcaDe = u => u.match(new RegExp(`${MARCA}=([A-Za-z0-9_]+)`))?.[1] ?? null;
 
 const ESCALA_DBZ = {
   type: 'breakpoint',
@@ -581,6 +587,21 @@ function svgBarba(kt, gradosDesde) {
 
    Por eso: se limita cuántas van a la vez, se reintenta con espera
    creciente, y lo que aun así falle SE AVISA en pantalla.            */
+/* ── CUÁNTAS TESELAS A LA VEZ, SEGÚN EL APARATO (14-09-2026) ─────────
+   Tres en un ordenador con memoria (≥ 8 GB declarados y sin pinta de
+   móvil); dos en el móvil y en todo lo que no diga cuánta memoria tiene
+   (Safari no lo dice nunca: en Safari son dos, que es lo prudente).
+   El OOM del 23-08 fue con cuatro; el del 25-08, en el Mac con tres Y
+   ECMWF HRES, que ahora va topado a dos por `topeAhora()` aunque el
+   aparato aguante tres. El castigo por falta de memoria
+   (`avisoSinMemoria`) sigue mandando por encima de esto.              */
+function teselasPorDefecto(nav = globalThis.navigator) {
+  try {
+    const movil = /Mobi|Android|iPhone|iPad/i.test(String(nav?.userAgent || ''));
+    return (!movil && Number(nav?.deviceMemory) >= 8) ? 3 : 2;
+  } catch { return 2; }
+}
+
 const Peticiones = {
   /* CUÁNTAS TESELAS SE DESCODIFICAN A LA VEZ.
      Es lo que marca si el mapa va fluido o a tirones, y también lo que
@@ -619,9 +640,10 @@ const Peticiones = {
            un mal día en una app lenta de por vida.
 
            Ahora: si el último corte de memoria fue hace más de 24 h, se
-           recupera UN punto por arranque, con techo en 2 — el 3 se probó
-           en su máquina el 25-08 y provocó OOM a los dos minutos, así
-           que ahí no se vuelve solo. */
+           recupera UN punto por arranque, con techo en lo que le toca al
+           aparato (`teselasPorDefecto()`: 3 en un Mac con memoria, 2 en
+           el móvil). El 3 del 25-08 tumbó el Mac con ECMWF HRES; HRES va
+           ahora topado a 2 en `topeAhora()`, así que sí se vuelve. */
         const cuando = +localStorage.getItem('torre.oomCuando') || 0;
         /* ── Y EL CASTIGO DEL 30-08 SE LEVANTA YA, UNA VEZ ────────────
            Su pregunta del 31-08: «hace 1 semana los mapas iban de cine,
@@ -637,7 +659,7 @@ const Peticiones = {
           localStorage.setItem('torre.teselasALaVez', '2');
           return 2;
         }
-        if (g < 2 && Date.now() - cuando > 24 * 3600e3) {
+        if (g < teselasPorDefecto() && Date.now() - cuando > 24 * 3600e3) {
           const mas = g + 1;
           localStorage.setItem('torre.teselasALaVez', String(mas));
           return mas;
@@ -660,7 +682,12 @@ const Peticiones = {
     // Si alguien vuelve a intentar subirlo: hay que medirlo EN SU
     // MÁQUINA con el mapa a la vista, no razonarlo. Desde un panel
     // oculto no se piden teselas y la prueba no mide nada.
-    return 2;
+    //
+    // 14-09-2026: subido a 3 SOLO en un ordenador con memoria y con HRES
+    // topado a 2 (`topeAhora()`); el móvil sigue en 2. Lo decidió Aitor
+    // tras medir el 0924: «lo prudente después del desbordamiento del
+    // 23 de agosto».
+    return teselasPorDefecto();
   })(),
   enCurso: 0,
   espera: [],
@@ -668,8 +695,13 @@ const Peticiones = {
   servidas: 0,
   onCambio: null,
 
+  /** El tope que rige AHORA: el de siempre, salvo con ECMWF HRES, que se
+   *  queda en dos aunque el aparato aguante tres (OOM del 25-08-2026). */
+  topeAhora(modelo = (typeof Maps !== 'undefined' ? Maps.model : null)) {
+    return modelo === 'ecmwf_ifs' ? Math.min(this.max, 2) : this.max;
+  },
   turno() {
-    if (this.enCurso < this.max) { this.enCurso++; return Promise.resolve(); }
+    if (this.enCurso < this.topeAhora()) { this.enCurso++; return Promise.resolve(); }
     return new Promise(r => this.espera.push(r));
   },
   libera() {
@@ -679,8 +711,12 @@ const Peticiones = {
   },
 
   /** Ejecuta fn con reintentos. No reintenta si se ha abortado a
-   *  propósito (cambio de hora o de capa): eso no es un fallo. */
-  async conReintento(fn, ac, intentos = 3) {
+   *  propósito (cambio de hora o de capa): eso no es un fallo.
+   *  `cuenta: false` es para lo que se pide en segundo plano (el
+   *  calentador de capas clave): si no entra, no es «un trozo del mapa
+   *  sin cargar», porque no se ve; al pulsar esa capa se pide de verdad
+   *  y entonces sí cuenta (14-09-2026). */
+  async conReintento(fn, ac, intentos = 3, cuenta = true) {
     await this.turno();
     try {
       for (let i = 0; i < intentos; i++) {
@@ -695,8 +731,10 @@ const Peticiones = {
           // capa o de hora): tampoco cuenta ni se reintenta (14-09-2026).
           if (e?.name === 'AbortError' || /abort/i.test(String(e?.message || ''))) throw e;
           if (i === intentos - 1) {
-            this.fallos++;
-            this.onCambio?.(this.fallos, this.servidas);
+            if (cuenta) {
+              this.fallos++;
+              this.onCambio?.(this.fallos, this.servidas);
+            }
             throw e;
           }
           await new Promise(r => setTimeout(r, 500 * (i + 1) * (i + 1)));
@@ -1511,8 +1549,8 @@ const Maps = {
         this._pedidas.add(k);
         try {
           await Peticiones.conReintento(
-            () => OMWeatherMapLayer.omProtocol({ url: k, type: 'image' }, new AbortController()), null);
-        } catch { /* si no entra, la capa se abrirá al pulsarla */ }
+            () => OMWeatherMapLayer.omProtocol({ url: k, type: 'image' }, new AbortController()), null, 3, false);
+        } catch { /* si no entra, la capa se abrirá al pulsarla; y no cuenta como trozo sin cargar */ }
       }
     }, 1800);
   },
@@ -3608,12 +3646,13 @@ const Maps = {
     this.soltarMemoria();
 
     this.model = id; LS.set('tmodel', id);
-    /* El tope de descargas es el freno de HRES; a los ligeros no hay
-       que frenarlos igual. Con castigo guardado se respeta el castigo. */
+    /* Con castigo guardado se respeta el castigo; si no, lo del aparato.
+       El freno de HRES ya no va aquí: lo pone `Peticiones.topeAhora()`
+       en cada turno, así vale también para el modelo con el que arranca
+       (14-09-2026). */
     try {
       const g = +localStorage.getItem('torre.teselasALaVez');
-      const base = (g >= 1 && g <= 4) ? g : 3;
-      Peticiones.max = (id === 'ecmwf_ifs') ? Math.min(base, 2) : base;
+      Peticiones.max = (g >= 1 && g <= 4) ? g : teselasPorDefecto();
     } catch {}
     this.pause();
     await this.loadMeta();

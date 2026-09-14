@@ -4665,9 +4665,11 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
      /ECMWF HRES sigue en la barra/.test(M));
   ok('el castigo de teselas apunta CUÁNDO fue el corte de memoria',
      /torre\.oomCuando/.test(M) && /String\(Date\.now\(\)\)/.test(M));
-  ok('y caduca: 24 h sin cortes → recupera un punto, con techo en 2',
-     /Date\.now\(\) - cuando > 24 \* 3600e3/.test(M) && /g < 2/.test(M),
-     'el 3 se probó el 25-08 en su máquina y provocó OOM: ahí no se vuelve solo');
+  /* 14-09-2026: el techo ya no es un 2 fijo, es lo que le toca al aparato
+     (3 en un Mac con memoria, 2 en el móvil); HRES va topado aparte. */
+  ok('y caduca: 24 h sin cortes → recupera un punto, con techo en lo del aparato (3 Mac, 2 móvil)',
+     /Date\.now\(\) - cuando > 24 \* 3600e3/.test(M) && /g < teselasPorDefecto\(\) && Date\.now\(\) - cuando/.test(M),
+     'el 3 del 25-08 tumbó el Mac con HRES; HRES va ahora topado a 2 en topeAhora()');
   ok('nunca por debajo de 1 ni por encima del techo probado',
      /Math\.max\(1, ahora - 1\)/.test(M));
 
@@ -4712,8 +4714,12 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
   ok('la caché solo se vacía con HRES delante o tras faltar memoria',
      /if \(this\.model !== 'ecmwf_ifs' && !this\._sinMemoria\) return;/.test(M),
      'vaciarla siempre mataba el precalentado del ratón y el volver-a-capa');
-  ok('los modelos ligeros descargan a 3; HRES sigue frenado a 2',
-     /Peticiones\.max = \(id === 'ecmwf_ifs'\) \? Math\.min\(base, 2\) : base/.test(M));
+  /* 14-09-2026: el freno de HRES pasa de setModel() a Peticiones.topeAhora(),
+     que rige en cada turno y vale también para el modelo con el que arranca. */
+  ok('los modelos ligeros descargan a lo del aparato; HRES sigue frenado a 2 en cada turno',
+     /Peticiones\.max = \(g >= 1 && g <= 4\) \? g : teselasPorDefecto\(\);/.test(M)
+     && /return modelo === 'ecmwf_ifs' \? Math\.min\(this\.max, 2\) : this\.max;/.test(M)
+     && /if \(this\.enCurso < this\.topeAhora\(\)\)/.test(M));
   /* Sus dos peticiones, las dos suyas: 25-08 «apenas se ve el relieve»
      (densas al 0,46) y 31-08 «el contraste, mapas apagados». Solución:
      el tope solo actúa CON el relieve encendido. */
@@ -5554,7 +5560,8 @@ grupo('La revisión de las tres pasadas (31-08-2026, noche)');
   /* G1 — la escala de la T850 no se aplicaba: los regex de la marca solo
      admitían letras y «t850» fue la primera con dígitos. Reproducido. */
   ok('la marca de escala admite dígitos: «t850» ya no se parte en «t»',
-     /MARCA\}=\(\[a-z0-9\]\+\)/.test(M) && /MARCA\}=\[a-z0-9\]\+/.test(M));
+     /MARCA\}=\(\[A-Za-z0-9_\]\+\)/.test(M) && /MARCA\}=\[A-Za-z0-9_\]\+/.test(M),
+     '14-09: y mayúsculas, que «capeE» fue la segunda en romperse');
   ok('y se ejercita el caso que fallaba, no solo el que pasa',
      (() => { const MARCA='escala_propia';
        const u='om://x/f.om?variable=temperature_850hPa&interpolation=linear&'+MARCA+'=t850';
@@ -7221,6 +7228,66 @@ grupo('El mapa pinta la capa antes de pedir números y barbas, y una abortada no
   ok('una petición abortada por la propia librería no cuenta como fallo ni se reintenta',
      /if \(e\?\.name === 'AbortError' \|\| \/abort\/i\.test\(String\(e\?\.message \|\| ''\)\)\) throw e;/.test(M),
      'Peticiones.fallos sumaba 1 en cada cambio de capa sin fallar ninguna tesela');
+}
+
+
+/* ═══ LA MARCA DE ESCALA PROPIA ADMITE MAYÚSCULAS (14-09-2026) ═══════════
+   Cazado en producción el 14-09 con el mapa a la vista: CAPE pedía sus
+   teselas con «interpolation=linearE» —la escala «capeE» lleva mayúscula y
+   los dos regex de la marca solo admitían [a-z0-9]—. La capa salía sin
+   color y con «5 trozos del mapa sin cargar». Y el calentador de capas
+   clave, que pide CAPE en segundo plano desde cualquier otra capa, sumaba
+   «1 trozo sin cargar» en Reflectividad y Radar sin fallar ninguna tesela
+   de las que se ven (lo que el portátil vio el miércoles). Es la misma
+   clase que la de t850 del 31-08: se guarda para TODAS las escalas.    */
+grupo('La marca de escala propia vale para TODAS las escalas, con mayúsculas y todo (14-09-2026)');
+{
+  const M = mapsSrc;
+  const MARCA = 'escala_propia';
+  const limpiarMarca = new Function('MARCA', `return ${(M.match(/const limpiarMarca = (u => [^\n]+);/) || [])[1]};`)(MARCA);
+  const marcaDe = new Function('MARCA', `return ${(M.match(/const marcaDe = (u => [^\n]+);/) || [])[1]};`)(MARCA);
+  const escalas = [...new Set([...M.matchAll(/escala:'([^']+)'/g)].map(m => m[1]))];
+  ok('hay escalas propias declaradas en las capas del mapa', escalas.length >= 10, String(escalas.length));
+  const base = 'om://h/m/2026/09/14/0300Z/2026-09-14T0600.om?variable=cape&interpolation=linear';
+  const rotas = escalas.filter(e => limpiarMarca(`${base}&${MARCA}=${e}`) !== base || marcaDe(`${base}&${MARCA}=${e}`) !== e)
+                       .map(e => `${e} → …${limpiarMarca(`${base}&${MARCA}=${e}`).slice(-22)} / ${marcaDe(`${base}&${MARCA}=${e}`)}`);
+  ok('limpiarMarca quita la marca ENTERA y marcaDe devuelve el nombre ENTERO para cada escala (capeE incluida)',
+     rotas.length === 0 && escalas.includes('capeE'), rotas.join('; ') || 'falta capeE');
+  const registro = M.slice(M.indexOf('_escalas = {'), M.indexOf('};', M.indexOf('_escalas = {')));
+  const sinRegistro = escalas.filter(e => !new RegExp(`\\b${e}\\b`).test(registro));
+  ok('cada escala que pide una capa existe en escalasPropias()', sinRegistro.length === 0, sinRegistro.join(', '));
+
+  // Lo que hace la cola de verdad, en un proceso aparte (aquí no hay await).
+  let r = {};
+  try {
+    r = JSON.parse(require('child_process').execFileSync(process.execPath, ['-e', `
+      const M = require('fs').readFileSync(${JSON.stringify(path.join(__dirname, 'maps.js'))}, 'utf8');
+      const iF = M.indexOf('function teselasPorDefecto('); const iP = M.indexOf('const Peticiones = {');
+      eval(M.slice(iF, M.indexOf('\\n}', iF) + 2));
+      eval(M.slice(iP, M.indexOf('\\n};', iP) + 3).replace('const Peticiones', 'globalThis.Peticiones'));
+      (async () => {
+        const P = Peticiones, r = {};
+        P.max = 3; r.hres = P.topeAhora('ecmwf_ifs'); r.icon = P.topeAhora('dwd_icon_eu');
+        r.mac = teselasPorDefecto({ deviceMemory: 32, userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome' });
+        r.iphone = teselasPorDefecto({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari' });
+        r.android = teselasPorDefecto({ deviceMemory: 8, userAgent: 'Mozilla/5.0 (Linux; Android 14) Mobile' });
+        r.safariMac = teselasPorDefecto({ userAgent: 'Mozilla/5.0 (Macintosh) Safari' });
+        r.sinNav = teselasPorDefecto(undefined);
+        P.fallos = 0;
+        try { await P.conReintento(() => Promise.reject(new Error('404')), null, 1, false); } catch {}
+        r.callado = P.fallos;
+        try { await P.conReintento(() => Promise.reject(new Error('404')), null, 1); } catch {}
+        r.contado = P.fallos;
+        console.log(JSON.stringify(r));
+      })();
+    `], { encoding: 'utf8', timeout: 20000 }));
+  } catch (e) { r = { error: String(e.message || e).slice(0, 120) }; }
+  ok('el calentador de capas clave no suma «trozos sin cargar»: solo cuentan las teselas que se ven',
+     r.callado === 0 && r.contado === 1 && /new AbortController\(\)\), null, 3, false\);/.test(M),
+     JSON.stringify(r));
+  ok('tres teselas a la vez en un Mac con memoria, dos en el móvil y en Safari, y dos siempre con ECMWF HRES',
+     r.mac === 3 && r.iphone === 2 && r.android === 2 && r.safariMac === 2 && r.sinNav === 2 && r.hres === 2 && r.icon === 3,
+     JSON.stringify(r));
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
