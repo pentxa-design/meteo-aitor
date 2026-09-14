@@ -275,7 +275,7 @@ console.log('\n  omtiles, el camino de reserva de las teselas: a quién pide y q
         status: 200, headers: { 'content-length': '12345', 'content-type': 'application/octet-stream', 'accept-ranges': 'bytes' },
       }), {}, 'HEAD');
       ok(N.head,
-         head.metodo === 'HEAD' && head.r.status === 200 && head.r.headers.get('content-length') === '12345'
+         head.metodo === 'HEAD' && head.r.status === 200 && head.r.headers.get('content-length') === '12345' && head.r.headers.get('x-content-length') === '12345'
          && head.txt.length === 0 && /no-store/.test(head.r.headers.get('cdn-cache-control') || ''),
          `método=${head.metodo} · ${head.r.status} · content-length=${head.r.headers.get('content-length')} · cuerpo=${head.txt.length} · cdn=${head.r.headers.get('cdn-cache-control')}`);
     }

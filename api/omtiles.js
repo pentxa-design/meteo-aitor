@@ -53,6 +53,14 @@ export default async (request) => {
     const esHead = request.method === 'HEAD';
     const r = await fetch(`${BASE}/${ruta}${cola ? '?' + cola : ''}`, { method: esHead ? 'HEAD' : 'GET', headers: cab });
     const salida = new Headers();
+    /* EL TAMAÑO VA EN UNA CABECERA PROPIA. El borde de Vercel NUNCA deja
+       pasar Content-Length (medido el 14-09-2026: ni con el cuerpo leído
+       entero), y pasar esto a Node metería todas las teselas en la cuota de
+       CPU de 4 h. Así que el tamaño que S3 da en Content-Length se copia en
+       `x-content-length`, y nuestra copia de la librería (vendor/) lo acepta
+       como respaldo al abrir cada .om. */
+    const tam = r.headers.get('content-length');
+    if (tam) salida.set('x-content-length', tam);
     for (const h of ['content-type','content-length','content-range',
                      'accept-ranges','etag','last-modified']) {
       const v = r.headers.get(h);
@@ -62,7 +70,7 @@ export default async (request) => {
     if (!salida.has('content-type'))
       salida.set('content-type', esMeta ? 'application/json' : 'application/octet-stream');
     salida.set('access-control-expose-headers',
-      'Content-Range, Content-Length, ETag, Accept-Ranges');
+      'Content-Range, Content-Length, X-Content-Length, ETag, Accept-Ranges');
     // latest.json cambia en cada pasada del modelo: poca caché. Los .om
     // son inmutables dentro de una pasada: caché fuerte en el CDN. Mismos
     // números que netlify/functions/omtiles.js. El content-type ya está

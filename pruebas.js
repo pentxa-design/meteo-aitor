@@ -7182,12 +7182,30 @@ grupo('El mapa elige el origen de las teselas por velocidad, no por «responde»
      'antes bastaba con que S3 respondiera en 6 s para ir directo, aunque tardara 5');
   ok('la carrera se corre con HEAD y un origen sin Content-Length queda fuera (la librería lo rechaza)',
      /fetch\(url, \{ method: 'HEAD', signal: ac\.signal, cache: 'no-store' \}\)/.test(M)
-     && /if \(!r\.ok \|\| !r\.headers\.get\('content-length'\)\) return Infinity;/.test(M),
+     && /if \(!r\.ok \|\| !\(r\.headers\.get\('content-length'\) \|\| r\.headers\.get\('x-content-length'\)\)\) return Infinity;/.test(M),
      '14-09-2026: el intermediario ganaba la carrera y luego fallaba cada apertura de .om');
   ok('y lo medido se guarda con el elegido, para poder mirarlo',
      /ms: \{ directo: tDirecto, proxy: tProxy \}/.test(M));
   ok('si el intermediario también falla, se queda el directo y el mapa lo dirá',
      /\(tProxy < Infinity \? TILES_PROXY : TILES_DIRECTO\)/.test(M));
+}
+
+
+/* ═══ EL TAMAÑO DE CADA .om LLEGA POR x-content-length (14-09-2026) ═══════
+   El borde de Vercel no deja pasar Content-Length; la librería del mapa lo
+   exige al abrir cada .om (HEAD). Nuestra copia de la librería acepta
+   x-content-length como respaldo y el intermediario lo manda. Si alguien
+   actualiza vendor/ sin el parche, esto lo para. */
+grupo('El tamaño de cada .om llega por x-content-length (parche en vendor/ y en el intermediario)');
+{
+  const lib = require('fs').readFileSync(require('path').join(__dirname, 'vendor', 'openmeteo-weather-map-layer-0.0.20.js'), 'utf8');
+  ok('la librería del mapa acepta x-content-length si falta Content-Length al abrir un .om',
+     lib.includes('let n=t.headers.get(`content-length`)||t.headers.get(`x-content-length`);if(!n)throw new Rt(`Content-Length header missing`)'),
+     'sin el parche, por el intermediario cada apertura falla y reintenta 5 s (12-16 s por capa)');
+  const om = require('fs').readFileSync(require('path').join(__dirname, 'api', 'omtiles.js'), 'utf8');
+  ok('y el intermediario copia el Content-Length de S3 en x-content-length',
+     /const tam = r\.headers\.get\('content-length'\);\n\s*if \(tam\) salida\.set\('x-content-length', tam\);/.test(om)
+     && /X-Content-Length/.test(om));
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');

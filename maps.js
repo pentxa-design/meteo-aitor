@@ -102,7 +102,7 @@ async function elegirOrigenTeselas() {
     try {
       const r = await fetch(url, { method: 'HEAD', signal: ac.signal, cache: 'no-store' });
       clearTimeout(reloj);
-      if (!r.ok || !r.headers.get('content-length')) return Infinity;
+      if (!r.ok || !(r.headers.get('content-length') || r.headers.get('x-content-length'))) return Infinity;
       return Date.now() - t0;
     } catch { clearTimeout(reloj); return Infinity; }
   };
