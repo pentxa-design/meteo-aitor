@@ -719,6 +719,9 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;
 .dcard__t b{font-weight:700}
 .dcard__t span{color:var(--dim);font-weight:500;margin-left:5px;font-size:.85em}
 .dcard__r{font-size:0.8125rem;color:var(--dim);margin-top:7px}
+/* 14-09-2026: el modelo del día (relleno) bajo la fecha y el de cada cifra al lado */
+.dcard__m{font-size:0.6875rem;color:var(--warn);margin-top:2px;letter-spacing:.02em}
+.dcard__de{font-size:0.6875rem;color:var(--faint);margin-left:2px}
 .dcard__g{margin-top:8px;font-size:0.8125rem;font-weight:650;color:var(--dim);
   background:rgba(255,255,255,.07);border-radius:7px;padding:4px 6px;display:inline-block}
 .dcard[data-s=no] .dcard__g{background:rgba(255,77,94,.2);color:#ffb9c0}

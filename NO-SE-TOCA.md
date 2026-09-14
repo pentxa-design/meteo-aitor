@@ -141,3 +141,7 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **El calentador de capas clave no suma «trozos sin cargar»** | `el calentador de capas clave no suma «trozos sin cargar»: solo cuentan las teselas que se ven` |
 | **Tres teselas a la vez en un Mac con memoria, dos en el móvil y dos siempre en HRES** | `tres teselas a la vez en un Mac con memoria, dos en el móvil y en Safari, y dos siempre con ECMWF HRES` |
 | **La caché de bloques del mapa va a 256 KB × 128 (tres viajes por tesela, no once)** | `el mapa cambia la caché de bloques de la librería a 256 KB × 128 antes de la primera tesela` |
+| **El mar se imprime con las unidades que da la fuente (la corriente en km/h, no «m/s»)** | `la corriente sale en km/h, que es lo que da la API marina (1,2 km/h salían como «1,2 m/s»)` |
+| **Si la fuente del mar cambia una unidad, se dice en pantalla** | `y si la fuente cambia una unidad del mar, se dice en pantalla en vez de imprimirla mal` |
+| **La tarjeta de 10 días dice de quién es cada cifra que no es del modelo cargado** | `y la tarjeta lo pinta: el modelo del día bajo la fecha y el de cada cifra al lado (75 % ECMWF · 0,0 mm)` |
+| **El chip de agua de 10 días dice lo que ven los demás, sin repetir el número de la tarjeta** | `el chip de agua dice lo que ven LOS DEMÁS y no repite el número de la tarjeta con otro redondeo` |

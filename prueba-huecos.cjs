@@ -157,6 +157,8 @@ eval(sacarConst('RELLENO_2'));
 globalThis.DAILY = 'uv_index_max';
 globalThis.API = { fc: 'https://torre.test/om?api=fc' };
 globalThis.nombreDeModelo = om => ({ ecmwf_ifs025: 'ECMWF', gfs_seamless: 'GFS' }[om] ?? om);
+/* 14-09-2026: completarLargo apunta qué faltaba antes de rellenar (queFaltaba). */
+eval(sacar('function queFaltaba('));
 eval(sacar('async function completarLargo(f, p) {'));
 if (tiene('function notaRellenoFallo(fc) {')) eval(sacar('function notaRellenoFallo(fc) {'));
 else globalThis.notaRellenoFallo = () => { throw new Error('notaRellenoFallo no existe en app.js'); };

@@ -2654,6 +2654,9 @@ ok('sin dato a 120 m no se inventa una línea', lineaDron([{ h: 10, v: 20 }]) ==
    y «Ahora» es la pestaña que abre por defecto. */
 console.log('\n  La mar, en la portada');
 globalThis.proximasMareas = globalThis.proximasMareas || (() => []);   // la tabla no está en el banco
+/* 14-09-2026: la portada del mar imprime con la unidad de la respuesta. */
+try { eval(sacarConst('UNIDADES_MAR')); } catch (e) { console.log(`  (sin UNIDADES_MAR: ${e.message})`); }
+for (const f of ['unidadMar', 'avisoUnidadesMar', 'notaUnidadesMar']) { try { eval(sacar(`function ${f}(`)); } catch (e) { console.log(`  (sin ${f}: ${e.message})`); } }
 eval(sacar('function pintarMarAhora(dt) {'));
 /* Las de la app que usa por dentro. `show` y `rumboLargo` se sacan tal
    cual para que la prueba mire el texto de verdad, no una imitación. */
@@ -7311,6 +7314,88 @@ grupo('La caché de bloques del mapa va a 256 KB: tres viajes por tesela, no onc
      && /e\.cache\?\?new Bt\(64\*1024,128\)/.test(lib)
      && /e\.getProtocolInstance=qt/.test(lib),
      'si se actualiza vendor/ y cambia esto, el cambio de caché se quedaría sin efecto sin avisar');
+}
+
+
+/* ═══ EL MAR SE IMPRIME CON LAS UNIDADES QUE DA LA FUENTE (14-09-2026) ═══
+   Pantallazo de Mar del build 1006: «Corriente 1,2 m/s». La API marina da
+   ocean_current_velocity en km/h (`current_units` lo dice) y la app lo
+   etiquetaba m/s sin convertir: cuatro veces más de lo real. Cazado por
+   Aitor y el portátil. La muestra de abajo es REAL (Bermeo, 14-09-2026). */
+grupo('El mar se imprime con las unidades que da la fuente (14-09-2026)');
+{
+  let M = null;
+  try { M = JSON.parse(fs.readFileSync(path.join(__dirname, 'pruebas-datos', 'marina-bermeo-2026-09-14.json'), 'utf8')); } catch {}
+  try { eval(sacarConst('UNIDADES_MAR')); eval(sacar('function unidadMar(')); eval(sacar('function avisoUnidadesMar(')); } catch (e) { console.log(`  (sin unidades del mar: ${e.message})`); }
+  const hay = typeof unidadMar === 'function' && typeof avisoUnidadesMar === 'function' && !!M;
+  ok('la corriente sale en km/h, que es lo que da la API marina (1,2 km/h salían como «1,2 m/s»)',
+     hay && M.current_units.ocean_current_velocity === 'km/h' && unidadMar(M, 'ocean_current_velocity') === 'km/h'
+     && !/show\(C\.ocean_current_velocity, 'm\/s'/.test(src)
+     && (src.match(/show\(C\.ocean_current_velocity, unidadMar\(M, 'ocean_current_velocity'\), 1\)/g) || []).length === 2,
+     'la etiqueta sale de current_units de la respuesta, en Mar y en Sol y aire');
+  ok('todas las magnitudes del mar (ola m, periodo s, agua °C, fondo m, viento m, corriente km/h, marea m) llevan la unidad de la respuesta',
+     hay && avisoUnidadesMar(M) === null
+     && ['wave_height', 'wave_period', 'sea_surface_temperature', 'swell_wave_height', 'wind_wave_height', 'ocean_current_velocity'].every(k => unidadMar(M, k) === (M.current_units[k]))
+     && unidadMar(M, 'sea_level_height_msl') === M.hourly_units.sea_level_height_msl
+     && !/show\(C\.wave_height, 'm', 1\)|show\(C\.wave_period, 's', 1\)|show\(C\.sea_surface_temperature, '°C', 1\)|show\(C\.wind_wave_height, 'm', 1\)/.test(src),
+     'con la muestra real ninguna unidad se sale de lo esperado y no queda ninguna etiqueta escrita a mano');
+  ok('y si la fuente cambia una unidad del mar, se dice en pantalla en vez de imprimirla mal',
+     hay && (() => {
+       const T = JSON.parse(JSON.stringify(M)); T.current_units.ocean_current_velocity = 'm/s';
+       const a = avisoUnidadesMar(T);
+       return typeof a === 'string' && /ocean_current_velocity en m\/s/.test(a) && /km\/h/.test(a) && unidadMar(T, 'ocean_current_velocity') === 'm/s';
+     })() && (src.match(/\]\.join\(''\) \+ notaUnidadesMar\(M\);/g) || []).length === 2,
+     'como la presión en hPa del mapa: la unidad rara se canta, no se disimula');
+}
+
+/* ═══ LA TARJETA DE 10 DÍAS DICE DE QUIÉN ES CADA CIFRA (14-09-2026) ══════
+   Suyo, con cuatro pantallazos del build 1006: «siempre algún error de
+   ahí… pasa a diario lo mismo». La clase: la tarjeta mezclaba tres orígenes
+   sin decirlo —el % de ECMWF con los mm de AROME (martes: 75 % · 0,0 mm),
+   los mm de ECMWF HRES por acierto, los días de más allá enteros de
+   ECMWF— y el chip de al lado repetía el mismo dato con otro redondeo
+   («1,7 mm» arriba, «solo ECMWF ve agua (1,6 mm)» abajo). */
+grupo('La tarjeta de 10 días dice de quién es cada cifra que no es del modelo cargado (14-09-2026)');
+{
+  try { eval(sacarConst('RELLENO_LARGO')); eval(sacarConst('RELLENO_2')); } catch (e) { console.log(`  (sin RELLENO: ${e.message})`); }
+  for (const f of ['queFaltaba', 'origenDelDato', 'textoAguaNoVenTodos']) {
+    try { eval(sacar(`function ${f}(`)); } catch (e) { console.log(`  (sin ${f}: ${e.message})`); }
+  }
+  try { eval(sacarConst('mmTxt')); } catch (e) { console.log(`  (sin mmTxt: ${e.message})`); }
+  const hay = ['queFaltaba', 'origenDelDato', 'textoAguaNoVenTodos'].every(f => { try { return typeof eval(f) === 'function'; } catch { return false; } });
+  const D = { time: ['2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17'],
+              temperature_2m_max: [26, 26, null, null], precipitation_sum: [0, 0, null, null],
+              precipitation_probability_max: [null, null, null, null], wind_gusts_10m_max: [18, 65, null, null] };
+  const Q = hay ? queFaltaba(D) : null;
+  ok('antes de rellenar se apunta qué faltaba: los días enteros sin dato y los campos que el modelo no publica',
+     hay && JSON.stringify(Q.dias) === JSON.stringify(['2026-09-16', '2026-09-17'])
+     && JSON.stringify(Q.campos) === JSON.stringify(['precipitation_probability_max'])
+     && /f\.rellenoDias = faltaba\.dias; f\.rellenoCampos = faltaba\.campos;/.test(src),
+     JSON.stringify(Q));
+  const fc = { prestadosDe: [{ k: 'precipitation_sum', de: 'ecmwf_ifs', porAcierto: true }],
+               rellenoDias: ['2026-09-18'], rellenoCampos: ['precipitation_probability_max', 'uv_index_max'], rellenoDe2: ['uv_index_max'] };
+  ok('cada cifra sabe de quién es: la lluvia por acierto, el día entero de relleno, el campo que el cargado no publica',
+     hay && origenDelDato(fc, 'precipitation_sum', '2026-09-15') === 'ecmwf_ifs'
+     && origenDelDato(fc, 'temperature_2m_max', '2026-09-18') === RELLENO_LARGO
+     && origenDelDato(fc, 'precipitation_probability_max', '2026-09-15') === RELLENO_LARGO
+     && origenDelDato(fc, 'uv_index_max', '2026-09-15') === RELLENO_2
+     && origenDelDato(fc, 'wind_gusts_10m_max', '2026-09-15') === null,
+     'ECMWF HRES la lluvia, ECMWF el día 18 y el %, GFS el UV, nadie la racha');
+  ok('y la tarjeta lo pinta: el modelo del día bajo la fecha y el de cada cifra al lado (75 % ECMWF · 0,0 mm)',
+     /class="dcard__m"/.test(src) && /class="dcard__de"/.test(src)
+     && /\$\{de\('precipitation_probability_max'\)\}/.test(src) && /\$\{de\('precipitation_sum'\)\}/.test(src) && /\$\{de\('wind_gusts_10m_max'\)\}/.test(src)
+     && /\.dcard__m\{/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8')),
+     'sin esto el 75 % de ECMWF y los 0,0 mm de AROME iban en el mismo renglón como si fueran del mismo');
+  const A = { con: [{ om: 'ecmwf_ifs025', nom: 'ECMWF', v: 1.6 }, { om: 'icon_seamless', nom: 'ICON', v: 0 }, { om: 'gfs_seamless', nom: 'GFS', v: 0.4 }] };
+  const X1 = hay ? textoAguaNoVenTodos(A, 'ecmwf_ifs', 'de 09:00 a 14:00') : null;
+  const X2 = hay ? textoAguaNoVenTodos(A, 'ecmwf_ifs025', 'de 09:00 a 14:00') : null;
+  const X3 = hay ? textoAguaNoVenTodos({ con: A.con.map(x => ({ ...x, v: 2 })) }, 'ecmwf_ifs', '') : null;
+  ok('el chip de agua dice lo que ven LOS DEMÁS y no repite el número de la tarjeta con otro redondeo',
+     hay && X1 && X1.texto === 'agua de 09:00 a 14:00 · ECMWF (1,6 mm) también la ve · ICON y GFS, secos'
+     && X2 && X2.texto === 'agua de 09:00 a 14:00 · ICON y GFS, secos' && !/solo/.test(X2.texto)
+     && X3 === null
+     && /textoAguaNoVenTodos\(A, dueno, cuando\)/.test(src) && !/solo <b>\$\{esc\(A\.mojan\[0\]\.nom\)\}<\/b> ve agua/.test(src),
+     JSON.stringify({ X1, X2, X3 }));
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');

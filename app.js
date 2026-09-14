@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.14-1006';
+const BUILD = '2026.09.14-1058';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -515,6 +515,39 @@ const esc   = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 /** Muestra un valor o "sin dato". Nunca sustituye ausencia por cero. */
+/* ── LAS UNIDADES DEL MAR SE LEEN DE LA RESPUESTA, NO SE SUPONEN (14-09-2026) ──
+   La API marina da la corriente en km/h (`current_units` lo dice) y la app
+   la enseñaba como «m/s» sin convertir: 1,2 km/h salían como «1,2 m/s»,
+   cuatro veces más. Cazado por Aitor y el portátil en el pantallazo de Mar
+   del build 1006. Regla: la etiqueta de cada magnitud del mar es la que trae
+   la respuesta, y si no es la esperada se DICE en pantalla, como la presión
+   en hPa del mapa. Nada de nudos: sus números van en km/h. */
+const UNIDADES_MAR = {
+  wave_height: 'm', wave_period: 's', sea_surface_temperature: '°C',
+  swell_wave_height: 'm', swell_wave_period: 's', wind_wave_height: 'm',
+  ocean_current_velocity: 'km/h', sea_level_height_msl: 'm',
+};
+/** La unidad con la que se imprime `k`: la de la respuesta si la trae. */
+function unidadMar(M, k) {
+  return M?.current_units?.[k] || M?.hourly_units?.[k] || UNIDADES_MAR[k] || '';
+}
+/** Aviso si la fuente ha cambiado alguna unidad por debajo; null si todo cuadra. */
+function avisoUnidadesMar(M) {
+  const malas = [];
+  for (const [k, esperada] of Object.entries(UNIDADES_MAR)) {
+    const u = M?.current_units?.[k] ?? M?.hourly_units?.[k];
+    if (u != null && u !== esperada) malas.push(`${k} en ${u} (se esperaba ${esperada})`);
+  }
+  return malas.length
+    ? `OJO: la fuente del mar ha cambiado de unidad: ${malas.join(', ')}. Se imprime con la unidad que da la fuente, pero no te fíes de ese número hasta revisarlo.`
+    : null;
+}
+/** La nota de pantalla cuando alguna unidad del mar no es la esperada. */
+function notaUnidadesMar(M) {
+  const av = avisoUnidadesMar(M);
+  return av ? `<p class="note note--avisa">${esc(av)}</p>` : '';
+}
+
 function show(v, unit = '', d = 0) {
   /* La coma va aquí, en el embudo: el 30-08-2026 sus pantallazos traían
      «1.2 m», «31.1 km», «6.2» y «5.1 µg/m³» — el punto inglés en cada
@@ -3149,6 +3182,32 @@ const RELLENO_2 = 'gfs_seamless';
    eso es lo que hacía el Automático y es lo que él quitó hoy.
 
    Se rellena SOLO lo que falta: las 48 h buenas de AROME no se tocan. */
+/** Qué le faltaba al resumen diario ANTES de rellenarlo: los días con la
+ *  fila entera vacía (el modelo no llega) y los campos vacíos en todos los
+ *  días que sí tienen datos (el modelo no los publica). Es lo que luego
+ *  se etiqueta en la tarjeta de 10 días con el nombre del que lo pone
+ *  (14-09-2026, «siempre algún error de ahí, pasa a diario»). */
+function queFaltaba(D) {
+  if (!D?.time?.length) return { dias: [], campos: [] };
+  const claves = Object.keys(D).filter(k => k !== 'time' && Array.isArray(D[k]));
+  const vacio = v => v === null || v === undefined;
+  const dias = D.time.filter((t, i) => claves.every(k => vacio(D[k][i])));
+  const conDatos = D.time.map((t, i) => i).filter(i => !dias.includes(D.time[i]));
+  const campos = claves.filter(k => conDatos.length > 0 && conDatos.every(i => vacio(D[k][i])));
+  return { dias, campos };
+}
+
+/** De qué modelo es un dato DIARIO de la tarjeta cuando no es del cargado:
+ *  prestado por acierto (la lluvia), día entero de relleno (el cargado no
+ *  llega) o campo que el cargado no publica. null si es del cargado. */
+function origenDelDato(fc, campo, dia) {
+  const prestado = fc?.prestadosDe?.find(x => x.k === campo);
+  if (prestado?.de) return prestado.de;
+  if (fc?.rellenoDias?.includes(dia)) return RELLENO_LARGO;
+  if (fc?.rellenoCampos?.includes(campo)) return fc.rellenoDe2?.includes(campo) ? RELLENO_2 : RELLENO_LARGO;
+  return null;
+}
+
 async function completarLargo(f, p) {
   const H = f?.hourly;
   if (!H?.time?.length) return;
@@ -3202,6 +3261,8 @@ async function completarLargo(f, p) {
        AROME da tres días de resumen diario y ahí se acababa. Su norma,
        dicha esa misma noche: **«vacío jamás nada»**. */
     const D = f.daily;
+    const faltaba = queFaltaba(D);
+    f.rellenoDias = faltaba.dias; f.rellenoCampos = faltaba.campos;
     if (D?.time?.length && d.daily?.time?.length) {
       const claves = Object.keys(D).filter(k => k !== 'time');
       const dd = new Map(d.daily.time.map((t, i) => [t, i]));
@@ -5375,12 +5436,33 @@ function aguaDelDiaQueNoVenTodos(fecha) {
     if (m.om === 'best_match') continue;                 // mezcla de los otros
     const v = D[`precipitation_sum_${m.om}`]?.[i];
     if (!has(v)) continue;
-    con.push({ nom: m.nom, v });
-    if (v >= 0.5) mojan.push({ nom: m.nom, v });
+    con.push({ om: m.om, nom: m.nom, v });
+    if (v >= 0.5) mojan.push({ om: m.om, nom: m.nom, v });
   }
-  if (con.length < 3 || mojan.length > 1) return null;
+  /* Con menos de dos no hay «los demás»; quién habla y quién calla lo
+     decide textoAguaNoVenTodos() respecto al modelo de la tarjeta. */
+  if (con.length < 2) return null;
   const secos = con.filter(x => x.v < 0.5).map(x => x.nom);
-  return { n: con.length, mojan, secos };
+  return { n: con.length, con, mojan, secos };
+}
+
+/** El texto del chip de agua de la tarjeta: lo que ven LOS DEMÁS respecto
+ *  al modelo que pone el agua de la tarjeta (`duenoOm`). Nunca repite el
+ *  número de la tarjeta con otro redondeo ni dice «solo X ve agua» cuando X
+ *  es el de la tarjeta (14-09-2026: «1,7 mm» arriba y «solo ECMWF ve agua
+ *  (1,6 mm)» abajo, los dos de ECMWF). null si no hay nada que matizar. */
+function textoAguaNoVenTodos(A, duenoOm, cuando = '') {
+  if (!A?.con?.length) return null;
+  const otros = A.con.filter(x => x.om !== duenoOm);
+  if (otros.length < 2) return null;
+  const secos = otros.filter(x => x.v < 0.5), mojan = otros.filter(x => x.v >= 0.5);
+  if (!secos.length) return null;                 // todos ven agua: nada que matizar
+  const lista = xs => xs.length <= 1 ? xs.join('') : xs.slice(0, -1).join(', ') + ' y ' + xs[xs.length - 1];
+  const partes = [];
+  if (cuando) partes.push(`agua ${cuando}`);
+  if (mojan.length) partes.push(`${lista(mojan.map(x => `${x.nom} (${mmTxt(x.v)} mm)`))} también ${mojan.length > 1 ? 'la ven' : 'la ve'}`);
+  partes.push(`${lista(secos.map(x => x.nom))}, ${secos.length === 1 ? 'seco' : 'secos'}`);
+  return { texto: partes.join(' · '), secos: secos.map(x => x.nom) };
 }
 
 function desacuerdoDelDia(fecha) {
@@ -12481,12 +12563,12 @@ function pintarMarAhora(dt) {
   const pico = mx?.length ? Math.max(...mx) : null;
 
   el.innerHTML = [
-    dt('Altura de ola', show(C.wave_height, 'm', 1),
+    dt('Altura de ola', show(C.wave_height, unidadMar(M, 'wave_height'), 1),
        [rumboLargo(C.wave_direction) ? `Del ${rumboLargo(C.wave_direction)}` : '',
         has(pico) && pico > C.wave_height + 0.2
           ? `Sube a <b>${pico.toFixed(1).replace('.', ',')} m</b> en las próximas 24 h` : '',
        ].filter(Boolean).join('<br>')),
-    dt('Periodo', show(T, 's', 1), forma),
+    dt('Periodo', show(T, unidadMar(M, 'wave_period'), 1), forma),
     /* ── LAS MAREAS, PEDIDAS POR ÉL AQUÍ MISMO ──────────────────────
        31-08-2026, señalando esta columna: «en la parte derecha falta
        poner horas de bajamar y pleamar». Las dos próximas, de la MISMA
@@ -12497,8 +12579,8 @@ function pintarMarAhora(dt) {
       dt(e.tipo === 'high' ? '▲ Pleamar' : '▼ Bajamar',
          `${esc(e.hora)}`,
          `${esc(e.cuando.toLocaleDateString('es', { weekday: 'short' }))} · ${e.altura.toFixed(2).replace('.', ',')} m · tabla oficial`)),
-    dt('Temp. del agua', show(C.sea_surface_temperature, '°C', 1)),
-    dt('Mar de fondo', show(M.hourly?.swell_wave_height?.[0], 'm', 1),
+    dt('Temp. del agua', show(C.sea_surface_temperature, unidadMar(M, 'sea_surface_temperature'), 1)),
+    dt('Mar de fondo', show(M.hourly?.swell_wave_height?.[0], unidadMar(M, 'swell_wave_height'), 1),
        [has(C.swell_wave_period) ? `Periodo ${C.swell_wave_period.toFixed(1).replace('.', ',')} s` : '',
         /* Decía «por debajo de la del viento» con fondo 0,3 y viento 0,0
            (Calpe, 12-09-2026 00:34). Se compara de verdad. */
@@ -12517,15 +12599,15 @@ function pintarMarAhora(dt) {
        que separa una mar con forma de una picada**, y él hace surf y
        kayak. Medido en Bermeo esa noche: fondo 1,2 m y viento 0,02 —
        mar limpia—. Con esos dos números al lado se ve solo. */
-    dt('Mar de viento', show(C.wind_wave_height, 'm', 1),
+    dt('Mar de viento', show(C.wind_wave_height, unidadMar(M, 'wind_wave_height'), 1),
        has(C.wind_wave_height)
          ? (C.wind_wave_height < 0.2 ? 'Casi nada: la mar está limpia'
             : C.wind_wave_height >= (C.swell_wave_height ?? 0) ? 'Manda el viento: picada'
             : 'La levanta el viento de aquí')
          : ''),
-    dt('Corriente', show(C.ocean_current_velocity, 'm/s', 1),
+    dt('Corriente', show(C.ocean_current_velocity, unidadMar(M, 'ocean_current_velocity'), 1),
        'Del agua, no del viento'),
-  ].join('');
+  ].join('') + notaUnidadesMar(M);
 }
 
 /* ---------- 10. Render: HORAS y DÍAS ---------- */
@@ -12794,6 +12876,21 @@ function renderDays() {
     })();
     const pop = D.precipitation_probability_max?.[i];
     const mm = D.precipitation_sum?.[i];
+    /* ── CADA CIFRA CON SU MODELO CUANDO NO ES EL CARGADO (14-09-2026) ───
+       Suyo, con los pantallazos del build 1006: «siempre algún error de
+       ahí, pasa a diario lo mismo». La clase: la tarjeta mezclaba datos de
+       tres sitios sin decirlo —el % de ECMWF con los mm de AROME, los mm de
+       ECMWF HRES por acierto, los días de más allá enteros de ECMWF— y al
+       comparar con el chip de al lado salían «1,7» contra «1,6» y un «solo
+       ECMWF ve agua» debajo de una tarjeta que era de ECMWF. Ahora el día
+       de relleno lleva su modelo bajo la fecha y cada cifra que no es del
+       modelo del día lleva el suyo al lado. */
+    const fc = S.data?.fc;
+    const modeloDia = origenDelDato(fc, 'temperature_2m_max', t);
+    const de = campo => {
+      const o = origenDelDato(fc, campo, t);
+      return o && o !== modeloDia ? ` <small class="dcard__de">${esc(nombreDeModelo(o))}</small>` : '';
+    };
     const tormenta = isStormCode(D.weather_code[i]);
     // Color del borde por la racha, que es lo que decide el ascenso
     const nivel = !has(racha) ? 'nd'
@@ -12802,11 +12899,12 @@ function renderDays() {
       <div class="dcard__top"></div>
       <div class="dcard__d">${i === 0 ? 'Hoy' : d.toLocaleDateString('es',{weekday:'short'})}</div>
       <div class="dcard__f">${d.toLocaleDateString('es',{day:'numeric',month:'short'})}</div>
+      ${modeloDia ? `<div class="dcard__m">${esc(nombreDeModelo(modeloDia))}</div>` : ''}
       <div class="dcard__i">${iconosDelDia(t)}</div>
       <div class="dcard__t"><b>${has(mx)?mx.toFixed(0)+'°':'—'}</b>
         <span>${has(mn)?mn.toFixed(0)+'°':'—'}</span></div>
-      <div class="dcard__r">💧 ${has(pop)?pop+'%':'—'} · ${has(mm)?mmTxt(mm)+' mm':'sin dato'}</div>
-      <div class="dcard__g">Racha ${has(racha) ? wtxt(racha, true) : '—'}${rachaCuando}</div>
+      <div class="dcard__r">💧 ${has(pop)?pop+'%':'—'}${de('precipitation_probability_max')} · ${has(mm)?mmTxt(mm)+' mm':'sin dato'}${de('precipitation_sum')}</div>
+      <div class="dcard__g">Racha ${has(racha) ? wtxt(racha, true) : '—'}${rachaCuando}${de('wind_gusts_10m_max')}</div>
       ${(() => {
         /* ── Y SI OTRO MODELO TE CRUZA EL LISTÓN, SE DICE ─────────────
            MEDIDO el 01-09-2026: el domingo 6 esta tarjeta pintaba «37»
@@ -12849,12 +12947,12 @@ function renderDays() {
         const deNoche = hsAgua.length > 0 && hsAgua.every(h => h.date.getHours() < 6 || h.date.getHours() > 20);
         let cuando = hsAgua.length ? rangoDeHoras(hsAgua) : '';
         if (deNoche) cuando = /sueltas/.test(cuando) ? 'de noche' : `${cuando}, de noche`;
-        const quien = A.mojan.length
-          ? `solo <b>${esc(A.mojan[0].nom)}</b> ve agua (${mmTxt(A.mojan[0].v)} mm${cuando ? `, ${cuando}` : ''})`
-          : `ninguno pasa de 0,5 mm en el día${cuando ? ` (${cuando})` : ''}`;
-        const lista = xs => xs.length <= 1 ? xs.join('') : xs.slice(0, -1).join(', ') + ' y ' + xs[xs.length - 1];
-        return `<div class="dcard__x" title="${esc(A.secos.join(', '))}: secos">⚠ ${quien} · `
-             + `${esc(lista(A.secos))}, ${A.secos.length === 1 ? 'seco' : 'secos'}</div>`;
+        /* Respecto al modelo que pone el agua de ESTA tarjeta (por acierto,
+           relleno o el cargado): los demás, sin repetir su número. */
+        const dueno = origenDelDato(S.data?.fc, 'precipitation_sum', t) || modeloDato()?.om;
+        const X = textoAguaNoVenTodos(A, dueno, cuando);
+        if (!X) return '';
+        return `<div class="dcard__x" title="${esc(X.secos.join(', '))}: secos">⚠ ${esc(X.texto)}</div>`;
       })()}
       ${tormenta ? `<div class="dcard__s">⚡ Riesgo de tormenta${horaDeTormenta(t) ? ' · ' + horaDeTormenta(t) : ''}</div>` : ''}
     </li>`;
@@ -13485,18 +13583,18 @@ function renderSea() {
      periodo del fondo. Para surf y kayak son justo las que separan una
      mar limpia de una picada, y los campos ya venían en la petición. */
   $('#seaDet').innerHTML = [
-    dt('Altura de ola', show(C.wave_height, 'm', 1), rumboLargo(C.wave_direction) ? `Del ${rumboLargo(C.wave_direction)}` : ''),
-    dt('Periodo', show(C.wave_period, 's', 1)),
-    dt('Temp. del agua', show(C.sea_surface_temperature, '°C', 1)),
-    dt('Mar de fondo', show(C.swell_wave_height ?? M.hourly.swell_wave_height?.[0], 'm', 1),
+    dt('Altura de ola', show(C.wave_height, unidadMar(M, 'wave_height'), 1), rumboLargo(C.wave_direction) ? `Del ${rumboLargo(C.wave_direction)}` : ''),
+    dt('Periodo', show(C.wave_period, unidadMar(M, 'wave_period'), 1)),
+    dt('Temp. del agua', show(C.sea_surface_temperature, unidadMar(M, 'sea_surface_temperature'), 1)),
+    dt('Mar de fondo', show(C.swell_wave_height ?? M.hourly.swell_wave_height?.[0], unidadMar(M, 'swell_wave_height'), 1),
        has(C.swell_wave_period) ? `Periodo ${C.swell_wave_period.toFixed(1).replace('.', ',')} s` : ''),
-    dt('Mar de viento', show(C.wind_wave_height, 'm', 1),
+    dt('Mar de viento', show(C.wind_wave_height, unidadMar(M, 'wind_wave_height'), 1),
        has(C.wind_wave_height)
          ? (C.wind_wave_height < 0.3 ? 'Casi nada: la mar está limpia' : 'La levanta el viento de aquí')
          : ''),
-    dt('Corriente', show(C.ocean_current_velocity, 'm/s', 1),
+    dt('Corriente', show(C.ocean_current_velocity, unidadMar(M, 'ocean_current_velocity'), 1),
        has(C.ocean_current_velocity) ? 'Del agua, no del viento' : ''),
-  ].join('');
+  ].join('') + notaUnidadesMar(M);
 
   /* ── OLEAJE 48 H ──────────────────────────────────────────────────
      Suyo, 29-08-2026 a las 18:25, con una foto del móvil: *«se ve mal
