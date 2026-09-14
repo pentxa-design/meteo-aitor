@@ -7208,6 +7208,21 @@ grupo('El tamaño de cada .om llega por x-content-length (parche en vendor/ y en
      && /X-Content-Length/.test(om));
 }
 
+
+/* ═══ PRIMERO LA CAPA, LUEGO LOS NÚMEROS Y LAS BARBAS (14-09-2026) ═══════ */
+grupo('El mapa pinta la capa antes de pedir números y barbas, y una abortada no es un fallo');
+{
+  const M = require('fs').readFileSync(require('path').join(__dirname, 'maps.js'), 'utf8');
+  ok('los números y las barbas se piden cuando el mapa ha pintado (idle), no a los 500 ms',
+     /trasPintar\(fn, tope = 6000\) \{/.test(M) && (M.match(/this\.trasPintar\(\(\) => \{ this\.valores\(\); this\.barbas\(\);/g) || []).length >= 3
+     && !/setTimeout\(\(\) => \{ this\.valores\(\); this\.barbas\(\); \}, 500\)/.test(M)
+     && !/setTimeout\(\(\) => \{ this\.valores\(\); this\.barbas\(\); this\.rayos\(\); \}, 600\)/.test(M),
+     'en Ráfagas las barbas descodifican u y v en la misma cola que las teselas: 8 s en vez de 3');
+  ok('una petición abortada por la propia librería no cuenta como fallo ni se reintenta',
+     /if \(e\?\.name === 'AbortError' \|\| \/abort\/i\.test\(String\(e\?\.message \|\| ''\)\)\) throw e;/.test(M),
+     'Peticiones.fallos sumaba 1 en cada cambio de capa sin fallar ninguna tesela');
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');
