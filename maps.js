@@ -386,6 +386,8 @@ const LENTOS = new Set(['ecmwf_ifs', 'ecmwf_ifs025', 'ncep_gfs013', 'ncep_gfs025
    (punto de rocío)—. A esa escala un píxel son 5 km y el ECMWF de 25 km,
    rejilla regular, se ve igual y va ligero. Regla: por debajo del zoom 6
    se pinta con ECMWF 25 km y SE DICE en el cartel; desde el 6, el de 9 km. */
+const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero']);
+
 const HRES_ZOOM_MIN = 6;
 function hresDeLejos(modelo, zoom) {
   return modelo === 'ecmwf_ifs' && Number.isFinite(zoom) && zoom < HRES_ZOOM_MIN;
@@ -1498,12 +1500,16 @@ const Maps = {
             || TLAYERS.find(l => l.v === variable);
     if (L_?.arrows)   q.set('arrows', 'true');     // barbas de viento
     if (L_?.contours) q.set('contours', 'true');   // isobaras / isohipsas
-    /* La reflectividad va en bandas de 5 dBZ: con el color plano por
-       banda, cada celda del modelo se veía como un cuadro («se ve pixelado
-       lo verde», 14-09-2026). Con el degradado continuo entre cortes se
-       lee como un radar. Solo aquí: en Ráfagas y CAPE los cortes son SUS
-       listones y tienen que verse como saltos. */
-    if (L_?.escala === 'dbz') q.set('color_blend', 'true');
+    /* Degradado continuo entre cortes en las escalas cuyos cortes NO son
+       listones suyos: reflectividad (bandas de 5 dBZ que dibujaban la
+       malla, «se ve pixelado lo verde»), base y tope convectivos, tapa,
+       agua precipitable e isocero (sus capturas de las 16:21: bloques).
+       En Ráfagas y CAPE los cortes son SUS listones y tienen que verse
+       como saltos; en Presión las bandas son las isobaras. MEDIDO 14-09:
+       en ECMWF HRES (rejilla gaussiana reducida) la librería ignora la
+       interpolación —linear y nearest dan la misma imagen— y las celdas se
+       ven siempre; el degradado es lo único que las suaviza. */
+    if (ESCALAS_SUAVES.has(L_?.escala)) q.set('color_blend', 'true');
     // Las escalas propias se piden con la marca de arriba sobre el mismo
     // esquema `om://`. Registrar un esquema aparte NO funciona: la librería
     // devuelve "Invalid OM protocol URL" y la capa se queda sin una sola

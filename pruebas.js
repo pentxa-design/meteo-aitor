@@ -7430,8 +7430,9 @@ grupo('El mapa se ve debajo del color: costa por encima, opacidad 0,75 y el «no
      && cp.length >= 12 && cp[0] === 0 && cp[1] > 0 && cp[1] < cp[2] && cp[3] >= 0.9 && cp[4] === 1,
      JSON.stringify({ rf, cp }));
   ok('la reflectividad pide color_blend=true: degradado continuo, no bandas estrechas que dibujan la malla',
-     /if \(L_\?\.escala === 'dbz'\) q\.set\('color_blend', 'true'\);/.test(M),
-     'con bandas de 5 dBZ cada celda del modelo se veía como un cuadro');
+     /const ESCALAS_SUAVES = new Set\(\['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero'\]\);/.test(M)
+     && /if \(ESCALAS_SUAVES\.has\(L_\?\.escala\)\) q\.set\('color_blend', 'true'\);/.test(M),
+     'con bandas de 5 dBZ cada celda del modelo se veía como un cuadro; ráfagas, CAPE y presión siguen a saltos (listones e isobaras)');
 }
 
 
