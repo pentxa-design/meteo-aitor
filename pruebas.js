@@ -7290,6 +7290,29 @@ grupo('La marca de escala propia vale para TODAS las escalas, con mayúsculas y 
      JSON.stringify(r));
 }
 
+
+/* ═══ BLOQUES DE 256 KB EN LA CACHÉ DE LA LIBRERÍA (14-09-2026) ═══════════
+   MEDIDO en producción (una tesela z5 de ICON-EU, por variable): con los
+   bloques de 64 KB que trae la librería, la racha son 11 peticiones de
+   ~280 ms seguidas (3,0 s); con 256 KB, 3 peticiones (1,0 s) y los mismos
+   bytes; 1 MB no gana tiempo y dobla los bytes. Esa era la causa de raíz
+   de «tarda 15 s en abrir cualquier capa». La regla se guarda aquí.     */
+grupo('La caché de bloques del mapa va a 256 KB: tres viajes por tesela, no once (14-09-2026)');
+{
+  const M = mapsSrc;
+  const lib = fs.readFileSync(path.join(__dirname, 'vendor', 'openmeteo-weather-map-layer-0.0.20.js'), 'utf8');
+  ok('el mapa cambia la caché de bloques de la librería a 256 KB × 128 antes de la primera tesela',
+     /const BLOQUE_OM = 256 \* 1024, BLOQUES_OM = 128;/.test(M)
+     && /inst\.omFileReader\.cache = new vieja\.constructor\(BLOQUE_OM, BLOQUES_OM\);/.test(M)
+     && M.indexOf('new vieja.constructor(BLOQUE_OM, BLOQUES_OM)') < M.indexOf("maplibregl.addProtocol('om'"),
+     'con 64 KB, la racha de una tesela son once viajes de ~280 ms');
+  ok('y la librería sigue teniendo esa caché tal y como se toca: constructor(tamaño, bloques), blockSize() y 64 KB × 128 por defecto',
+     /constructor\(e=64\*1024,t=256\)\{this\._blockSize=e,this\.maxBlocks=t\}blockSize\(\)\{return this\._blockSize\}/.test(lib)
+     && /e\.cache\?\?new Bt\(64\*1024,128\)/.test(lib)
+     && /e\.getProtocolInstance=qt/.test(lib),
+     'si se actualiza vendor/ y cambia esto, el cambio de caché se quedaría sin efecto sin avisar');
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');

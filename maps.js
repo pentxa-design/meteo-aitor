@@ -595,6 +595,23 @@ function svgBarba(kt, gradosDesde) {
    ECMWF HRES, que ahora va topado a dos por `topeAhora()` aunque el
    aparato aguante tres. El castigo por falta de memoria
    (`avisoSinMemoria`) sigue mandando por encima de esto.              */
+/* ── BLOQUES DE 256 KB EN LA CACHÉ DE LA LIBRERÍA (14-09-2026) ───────
+   La librería lee cada .om por bloques y CADA BLOQUE es una petición de
+   ~280 ms por el intermediario. MEDIDO en producción, una tesela z5 de
+   ICON-EU por variable (tiempo · peticiones · kB), con bloques de
+   64 KB → 256 KB → 1 MB:
+     ráfagas        3,0 s · 11 · 643  →  1,0 s · 3 · 513  →  0,9 s · 2 · 1025
+     viento u       3,4 s · 13 · 772  →  1,3 s · 4 · 769  →  0,9 s · 2 · 1025
+     CAPE           1,7 s ·  6 · 322  →  0,7 s · 2 · 257  →  0,3 s · 1 · —
+     precipitación  1,0 s ·  4 · 193  →  0,6 s · 2 · 257  →  0,7 s · 2 · 1025
+     abrir la hora  3,1 s · 10 · 579  →  2,4 s · 5 · 1025 →  1,7 s · 3 · 2049
+   Con 64 KB la racha de una tesela son once viajes seguidos; con 256 KB
+   son tres y los mismos bytes. 1 MB ya no gana tiempo y dobla los bytes
+   (y en el móvil los bytes cuestan). Se queda en 256 KB × 128 bloques
+   = 32 MB (antes 64 KB × 128 = 8 MB). Es la causa de raíz de «tarda 15 s
+   en abrir cualquier capa»: no era la cola, eran los viajes.          */
+const BLOQUE_OM = 256 * 1024, BLOQUES_OM = 128;
+
 function teselasPorDefecto(nav = globalThis.navigator) {
   try {
     const movil = /Mobi|Android|iPhone|iPad/i.test(String(nav?.userAgent || ''));
@@ -1136,6 +1153,19 @@ const Maps = {
       // Ahora hay un único protocolo y la escala de dBZ se pide con un
       // parámetro propio, que se quita antes de entregar la URL a la
       // librería para que no se confunda.
+      /* La caché de bloques se cambia ANTES de la primera tesela: la
+         instancia del protocolo es única y la crea getProtocolInstance()
+         con los ajustes por defecto (los mismos con los que se pide luego,
+         con o sin escala propia). Misma clase de caché que trae la
+         librería, solo que con bloques de 256 KB (ver BLOQUE_OM). */
+      try {
+        const inst = OMWeatherMapLayer.getProtocolInstance(OMWeatherMapLayer.defaultOmProtocolSettings);
+        const vieja = inst?.omFileReader?.cache;
+        if (vieja?.constructor && typeof vieja.blockSize === 'function' && vieja.blockSize() < BLOQUE_OM) {
+          inst.omFileReader.cache = new vieja.constructor(BLOQUE_OM, BLOQUES_OM);
+        }
+      } catch (e) { console.warn('caché de bloques: se queda la de la librería', e); }
+
       maplibregl.addProtocol('om', (params, ac) => {
         const nombre = marcaDe(params.url);
         const url = nombre ? limpiarMarca(params.url) : params.url;

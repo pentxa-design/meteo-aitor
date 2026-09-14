@@ -140,3 +140,4 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **La marca de escala propia vale para todas las escalas, mayúsculas incluidas (CAPE «capeE» salía sin color)** | `limpiarMarca quita la marca ENTERA y marcaDe devuelve el nombre ENTERO para cada escala (capeE incluida)` |
 | **El calentador de capas clave no suma «trozos sin cargar»** | `el calentador de capas clave no suma «trozos sin cargar»: solo cuentan las teselas que se ven` |
 | **Tres teselas a la vez en un Mac con memoria, dos en el móvil y dos siempre en HRES** | `tres teselas a la vez en un Mac con memoria, dos en el móvil y en Safari, y dos siempre con ECMWF HRES` |
+| **La caché de bloques del mapa va a 256 KB × 128 (tres viajes por tesela, no once)** | `el mapa cambia la caché de bloques de la librería a 256 KB × 128 antes de la primera tesela` |
