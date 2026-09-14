@@ -68,6 +68,74 @@ const TILES_PROXY   = (typeof location !== 'undefined')
 let TILES = TILES_DIRECTO;
 const RECUERDA_MS = 6 * 3600e3;
 
+/* ═══════════════════════════════════════════════════════════════════
+   LOS BLOQUES DEL .om, CON SU RANGO EN LA URL (14-09-2026)
+   ───────────────────────────────────────────────────────────────────
+   Suyo, esa noche: «los mapas van muy muy lentos», «tarda horrores en
+   cargar» (ECMWF 25 km, temperatura: «Cargando… 23 s»).
+
+   MEDIDO desde el portátil en la app publicada, capa ICON-EU recién
+   abierta, por el intermediario (que es el que gana la carrera):
+
+     · 37 peticiones para UNA capa: 9 catálogos, 5 HEAD y 24 trozos.
+     · cada trozo son 256 KB (BLOQUE_OM) y tarda 0,5-2,6 s.
+     · TODOS los trozos `x-vercel-cache: MISS`: el CDN no guarda un 206
+       y dos peticiones que solo se distinguen por la cabecera Range
+       son para él la misma. Cada trozo va SIEMPRE borde → S3 → borde.
+     · el mismo trozo al S3 directo, desde Bermeo: 5,2 s.
+     · 14,9 s hasta la última tesela. ICON-EU es el modelo «rápido».
+
+   Los trozos que pide la librería son siempre los mismos —bloques
+   alineados de 256 KB de un fichero que no cambia en su pasada (la
+   pasada va en la ruta)— así que son cacheables. Lo único que lo
+   impedía era pedirlos con cabecera. Esto envuelve `fetch` SOLO para
+   las URL del intermediario que acaban en .om:
+
+     HEAD fichero.om                 →  GET fichero.om?cabecera=1
+     GET  fichero.om  Range: a-b     →  GET fichero.om?rango=a-b
+
+   y el intermediario (api/omtiles.js) contesta con 200 y un día de
+   CDN. El HEAD se reconstruye aquí con el `x-content-length` que
+   manda el borde (el Content-Length de verdad Vercel nunca lo deja
+   pasar). La librería solo mira que el estado no sea 5xx y que
+   lleguen los bytes pedidos, así que un 200 le vale.
+
+   Qué NO toca: el camino directo a S3 (allí no hay CDN nuestro), el
+   HEAD de la carrera sobre latest.json, y cualquier otro fetch de la
+   app. Si no hay `window.fetch` (jsdom de abrir.cjs), no hace nada.
+   ═══════════════════════════════════════════════════════════════════ */
+const RANGO_BYTES = /^bytes=(\d+)-(\d+)$/;
+function instalarBloquesPorUrl() {
+  if (typeof window === 'undefined' || typeof window.fetch !== 'function' || window.fetch.bloquesPorUrl) return false;
+  const original = window.fetch.bind(window);
+  const envuelto = async function (entrada, init) {
+    const url = typeof entrada === 'string' ? entrada
+              : (entrada instanceof URL ? entrada.href : entrada && entrada.url);
+    if (!url || !url.startsWith(TILES_PROXY + '/') || !url.endsWith('.om')) return original(entrada, init);
+    const metodo = String((init && init.method) || (entrada && entrada.method) || 'GET').toUpperCase();
+    const señal = (init && init.signal) || (entrada && entrada.signal) || undefined;
+    if (metodo === 'HEAD') {
+      const r = await original(`${url}?cabecera=1`, { signal: señal });
+      const h = new Headers();
+      const n = r.headers.get('x-content-length');
+      if (n) { h.set('content-length', n); h.set('x-content-length', n); }
+      for (const k of ['etag', 'last-modified', 'accept-ranges', 'x-vercel-cache', 'x-origen']) {
+        const v = r.headers.get(k);
+        if (v) h.set(k, v);
+      }
+      return new Response(null, { status: r.status, statusText: r.statusText, headers: h });
+    }
+    const cab = new Headers((init && init.headers) || (entrada && entrada.headers) || undefined);
+    const m = metodo === 'GET' ? RANGO_BYTES.exec(cab.get('range') || '') : null;
+    if (m) return original(`${url}?rango=${m[1]}-${m[2]}`, { signal: señal });
+    return original(entrada, init);
+  };
+  envuelto.bloquesPorUrl = true;
+  window.fetch = envuelto;
+  return true;
+}
+instalarBloquesPorUrl();
+
 /** Decide de dónde se piden las teselas. Se llama antes de montar el mapa. */
 async function elegirOrigenTeselas() {
   const forzado = (typeof location !== 'undefined')

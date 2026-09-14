@@ -27,6 +27,67 @@ const BASE = 'https://openmeteo.s3.amazonaws.com/data_spatial';
 
 export const config = { runtime: 'edge' };
 
+/** Tope de un bloque pedido por URL: la librería pide 256 KB; 8 MB es
+ *  «alguien se ha equivocado», no un bloque. */
+const TOPE_BLOQUE = 8 * 1024 * 1024;
+
+/** Un bloque (`?rango=a-b`) o el tamaño del fichero (`?cabecera=1`),
+ *  contestados con 200 y caché de un día en el CDN. Ver la nota de
+ *  abajo, en el manejador. */
+async function bloquePorUrl(ruta, cola, rango, soloCabecera) {
+  const comun = { tipo: null, origen: 'open-meteo-tiles' };
+  const destino = `${BASE}/${ruta}${cola ? '?' + cola : ''}`;
+  const salida = new Headers();
+  salida.set('access-control-expose-headers',
+    'Content-Range, Content-Length, X-Content-Length, X-Rango, ETag, Accept-Ranges');
+  const pon = (h) => { for (const [k, v] of Object.entries(h)) salida.set(k, v); };
+  // Con error, no-store: un 5xx no se queda un día pegado en el CDN.
+  const fallo = (estado, texto) => {
+    pon(cabeceras(0, { ...comun, tipo: 'text/plain; charset=utf-8' }));
+    return new Response(texto, { status: estado, headers: salida });
+  };
+  try {
+    if (soloCabecera) {
+      const r = await fetch(destino, { method: 'HEAD', headers: { accept: '*/*' } });
+      const tam = r.headers.get('content-length');
+      if (!r.ok) return fallo(r.status === 404 ? 404 : 502, `Open-Meteo contesta ${r.status}`);
+      if (!tam) return fallo(502, 'Open-Meteo no dice el tamaño del fichero');
+      salida.set('x-content-length', tam);
+      for (const h of ['etag', 'last-modified', 'accept-ranges']) {
+        const v = r.headers.get(h);
+        if (v) salida.set(h, v);
+      }
+      pon(cabeceras(86400, { navegador: 86400, revalidar: 604800, ...comun, tipo: 'text/plain; charset=utf-8' }));
+      // El cuerpo es el tamaño en texto: así un `curl` lo enseña.
+      return new Response(tam, { status: 200, headers: salida });
+    }
+    const m = /^(\d+)-(\d+)$/.exec(rango || '');
+    if (!m) return fallo(400, 'rango no válido');
+    const a = Number(m[1]), b = Number(m[2]);
+    if (!(b >= a) || b - a + 1 > TOPE_BLOQUE) return fallo(400, 'rango no válido');
+    const r = await fetch(destino, { headers: { accept: '*/*', range: `bytes=${a}-${b}` } });
+    if (r.status !== 206) {
+      /* Un 200 aquí sería el fichero ENTERO (40 MB) guardado como si fuera
+         el bloque: ni se lee ni se guarda. */
+      return fallo(r.status === 404 || r.status === 416 ? r.status : 502,
+                   `Open-Meteo contesta ${r.status} al rango ${a}-${b}`);
+    }
+    const cuerpo = await r.arrayBuffer();
+    salida.set('content-length', String(cuerpo.byteLength));
+    salida.set('x-content-length', String(cuerpo.byteLength));
+    salida.set('x-rango', r.headers.get('content-range') || `bytes ${a}-${b}`);
+    for (const h of ['etag', 'last-modified']) {
+      const v = r.headers.get(h);
+      if (v) salida.set(h, v);
+    }
+    salida.set('content-type', 'application/octet-stream');
+    pon(cabeceras(86400, { navegador: 86400, revalidar: 604800, ...comun }));
+    return new Response(cuerpo, { status: 200, headers: salida });
+  } catch (e) {
+    return fallo(502, `no se ha podido llegar a Open-Meteo: ${e.message}`);
+  }
+}
+
 export default async (request) => {
   const url = new URL(request.url);
   const ruta = url.searchParams.get('ruta');
@@ -35,7 +96,33 @@ export default async (request) => {
   // Todo lo demás que venga en la consulta se reenvía a Open-Meteo.
   const resto = new URLSearchParams(url.search);
   resto.delete('ruta');
+  resto.delete('rango'); resto.delete('cabecera');   // son nuestros, no van a S3
   const cola = resto.toString();
+
+  /* ── EL BLOQUE CON SU RANGO EN LA URL, PARA QUE EL CDN LO GUARDE ────────
+     Medido el 14-09-2026 por la noche desde el portátil, en la app
+     publicada, capa ICON-EU: 37 peticiones para pintar UNA capa, 24 de
+     ellas trozos de 256 KB con `Range`, cada uno 0,5-2,6 s, y TODOS
+     `x-vercel-cache: MISS` (el CDN no guarda un 206 y no distingue dos
+     peticiones por su cabecera Range). Al S3 de Open-Meteo directo, desde
+     Bermeo, un trozo de 256 KB son 5,2 s. Y los ficheros son de 32 MB
+     (ICON-EU) y 44 MB (ECMWF 25 km) por hora: de ahí los «23 s cargando».
+
+     Los trozos que pide la librería son SIEMPRE los mismos: bloques
+     alineados de 256 KB (BLOQUE_OM) sobre un fichero que no cambia dentro
+     de su pasada (la pasada va en la ruta: `…/1500Z/…`). O sea, son
+     cacheables por naturaleza; lo único que lo impedía era pedirlos con
+     cabecera en vez de con URL. maps.js los pide ahora como
+     `…/fichero.om?rango=0-262143` y la cabecera del fichero (el HEAD que
+     abre cada .om) como `…/fichero.om?cabecera=1`. Aquí se traducen al
+     Range de S3, se contestan con 200 (un 206 el CDN no lo guarda) y con
+     un día de CDN. Primer usuario de cada hora: igual que antes. Todos los
+     demás toques a ese bloque, desde cualquier móvil: el CDN de París.
+     El camino de antes (Range de verdad, HEAD de verdad) se queda tal
+     cual para quien no pase por maps.js. */
+  const rango = url.searchParams.get('rango');
+  const soloCabecera = url.searchParams.get('cabecera') === '1';
+  if (rango !== null || soloCabecera) return bloquePorUrl(ruta, cola, rango, soloCabecera);
 
   const cab = { accept: '*/*' };
   const range = request.headers.get('range');

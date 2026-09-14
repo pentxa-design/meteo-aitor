@@ -71,6 +71,23 @@ import { readFileSync, readdirSync } from 'node:fs';
      conElViejo.length === 0, conElViejo.length ? `está en: ${conElViejo.join(', ')}` : '');
 }
 
+/* ── LOS BLOQUES CON SU RANGO EN LA URL (14-09-2026) ───────────────
+   Medido desde el portátil: 24 trozos de 256 KB por capa, todos MISS en
+   el CDN porque iban con cabecera Range. maps.js los pide ahora como
+   `?rango=a-b` (y el HEAD como `?cabecera=1`) y api/omtiles.js los
+   contesta con 200 y un día de CDN. Si alguien quita una de las dos
+   mitades, el mapa sigue funcionando… igual de lento que antes, y nadie
+   se entera. Esto lo mira. */
+{
+  const proxy = readFileSync('api/omtiles.js', 'utf8');
+  const mapa = readFileSync('maps.js', 'utf8');
+  ok('api/omtiles.js entiende el bloque por URL (?rango=a-b) y la cabecera (?cabecera=1)',
+     /searchParams\.get\('rango'\)/.test(proxy) && /searchParams\.get\('cabecera'\)/.test(proxy));
+  ok('… y los contesta con 200 y un día de CDN (cabeceras(86400', /cabeceras\(86400, \{ navegador: 86400/.test(proxy));
+  ok('maps.js envuelve fetch: HEAD .om → ?cabecera=1 y Range → ?rango=',
+     /\?cabecera=1/.test(mapa) && /\?rango=\$\{m\[1\]\}-\$\{m\[2\]\}/.test(mapa) && /instalarBloquesPorUrl\(\);/.test(mapa));
+}
+
 console.log('\n  El servidor de mapas de Open-Meteo\n');
 
 const raiz = await pide(`${TILES}/dwd_icon_eu/latest.json`);
