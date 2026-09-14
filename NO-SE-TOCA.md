@@ -145,3 +145,12 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **Si la fuente del mar cambia una unidad, se dice en pantalla** | `y si la fuente cambia una unidad del mar, se dice en pantalla en vez de imprimirla mal` |
 | **La tarjeta de 10 días dice de quién es cada cifra que no es del modelo cargado** | `y la tarjeta lo pinta: el modelo del día bajo la fecha y el de cada cifra al lado (75 % ECMWF · 0,0 mm)` |
 | **El chip de agua de 10 días dice lo que ven los demás, sin repetir el número de la tarjeta** | `el chip de agua dice lo que ven LOS DEMÁS y no repite el número de la tarjeta con otro redondeo` |
+| **El mapa se ve debajo del color: la costa va por encima de la capa** | `la línea de costa va por encima del color: se ve España aunque la capa lo tape todo` |
+| **Donde no pasa nada (ráfaga floja, CAPE bajo) se ve el mapa** | `en Ráfagas y CAPE, donde no pasa nada se ve el mapa: el primer color es transparente y sube con el valor hasta su listón` |
+| **La reflectividad va con degradado continuo** | `la reflectividad pide color_blend=true: degradado continuo, no bandas estrechas que dibujan la malla` |
+| **Agua precipitable va en Lluvia, con escala propia** | `Agua precipitable está en el grupo Lluvia y con escala propia (transparente donde el aire va seco)` |
+| **La presión va en bandas de 4 hPa (las isobaras de la librería no llegan)** | `la presión va en bandas de 4 hPa de 976 a 1044, que se leen como isobaras (las de la librería no llegan)` |
+| **ECMWF HRES solo de cerca (zoom ≥ 6); de lejos, ECMWF 25 km y se dice** | `ECMWF HRES solo de cerca: por debajo del zoom 6 se pinta con ECMWF 25 km y se dice; desde el 6, el de 9 km` |
+| **Las capas de barbas no pintan color de fondo** | `las capas de barbas no pintan color: el fondo es transparente y mandan las barbas y los números (viento real)` |
+| **Isocero de 0 a 5500 con el rojo abajo** | `el Isocero va de 0 a 5500 m con el rojo en lo bajo (hielo cerca de la torre) y lo alto pálido` |
+| **La tapa cero no se pinta** | `la tapa cero no se pinta: el color aparece solo donde hay tapa, y el pie lo dice` |

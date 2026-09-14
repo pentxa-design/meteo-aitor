@@ -4738,8 +4738,10 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
      (() => { const i = M.indexOf("id:'temp'"); const j = M.indexOf("id:'t850'");
               return i > 0 && j > i && (j - i) < 400; })(),
      'él la busca donde el aire, no en tormenta');
-  ok('y la capa de datos arranca al 95 %, no al 85',
-     /opacity:0\.95,/.test(M));
+  /* 14-09-2026: baja a 0,75. Con 0,95 las capas de campo entero tapaban
+     el fondo entero y él no veía ni la costa («no se ve nada ni el mapa»). */
+  ok('y la capa de datos arranca al 75 %: color de sobra y el fondo se ve debajo',
+     /opacity:0\.75,/.test(M));
 
   ok('los colores van a opacidad plena: sin alphas que laven el rojo a rosa',
      !/'#[0-9a-f]{6}',\.95\]/.test(M.slice(M.indexOf('const tpm'), M.indexOf('const humedad'))),
@@ -7401,6 +7403,92 @@ grupo('La tarjeta de 10 días dice de quién es cada cifra que no es del modelo 
      && X3 === null
      && /textoAguaNoVenTodos\(A, dueno, cuando\)/.test(src) && !/solo <b>\$\{esc\(A\.mojan\[0\]\.nom\)\}<\/b> ve agua/.test(src),
      JSON.stringify({ X1, X2, X3 }));
+}
+
+
+/* ═══ EL MAPA SE VE DEBAJO DEL COLOR (14-09-2026, 14:55-15:00) ═══════════
+   Siete pantallazos suyos seguidos: Ráfagas, Viento 10 m, CAPE, Inhibición,
+   Isocero, Temperatura («¿el mar amarillo?») y T850: «no se ve nada ni el
+   mapa», «todo pintado sin verse las ciudades, España». Las capas de campo
+   entero, a 0,95 de opacidad y sin costa por encima, tapan el fondo. Y en
+   Reflectividad las bandas estrechas de dBZ dibujaban la malla del modelo
+   («se ve pixelado lo verde»). */
+grupo('El mapa se ve debajo del color: costa por encima, opacidad 0,75 y el «no pasa nada» transparente (14-09-2026)');
+{
+  const M = mapsSrc;
+  ok('la línea de costa va por encima del color: se ve España aunque la capa lo tape todo',
+     /costaEncima\(\) \{/.test(M) && /id: 'costaLayer', type: 'line', source: 'carto', 'source-layer': 'water'/.test(M)
+     && (M.match(/this\.costaEncima\(\);/g) || []).length >= 1
+     && M.indexOf('this.costaEncima();') > M.indexOf("this.map.addLayer({\n        id:'omLayer'"),
+     'los nombres ya iban por encima; la costa no, y sin costa no se sabe dónde está uno');
+  ok('la capa por defecto deja ver el fondo: opacidad 0,75, no 0,95',
+     /opacity:0\.75,/.test(M) && !/opacity:0\.95,/.test(M));
+  const alfas = re => ((M.match(re) || [])[1] || '').match(/,\s*([0-9.]+)\]/g)?.map(s => Number(s.replace(/[^0-9.]/g, ''))) || [];
+  const rf = alfas(/const rfc = \[([\s\S]*?)\];/), cp = alfas(/const cpc = \[([\s\S]*?)\];/);
+  ok('en Ráfagas y CAPE, donde no pasa nada se ve el mapa: el primer color es transparente y sube con el valor hasta su listón',
+     rf.length >= 12 && rf[0] === 0 && rf[1] > 0 && rf[1] < rf[2] && rf[2] < rf[3] && rf[5] === 1
+     && cp.length >= 12 && cp[0] === 0 && cp[1] > 0 && cp[1] < cp[2] && cp[3] >= 0.9 && cp[4] === 1,
+     JSON.stringify({ rf, cp }));
+  ok('la reflectividad pide color_blend=true: degradado continuo, no bandas estrechas que dibujan la malla',
+     /if \(L_\?\.escala === 'dbz'\) q\.set\('color_blend', 'true'\);/.test(M),
+     'con bandas de 5 dBZ cada celda del modelo se veía como un cuadro');
+}
+
+
+/* ═══ AGUA PRECIPITABLE EN LLUVIA, PRESIÓN POR BANDAS, HRES SOLO DE CERCA ═══
+   Sus pantallazos del 14-09 (15:00-15:03): «esta capa debe de estar en
+   lluvia y no se distingue nada» (agua precipitable, azul plano); Presión
+   «no se distingue nada» (1018-1025 hPa en la misma pinta rosa, y las
+   isobaras de la librería no llegan: 0 trazos en isoLinea, medido);
+   ECMWF HRES «mucha espera» (15 s) y «que si falla la memoria mal» (OOM
+   con punto de rocío, como el 25-08): su rejilla gaussiana reducida de 6,6
+   millones de puntos a zoom bajo obliga a descodificar media Europa. */
+grupo('Agua precipitable en Lluvia, presión por bandas de 4 hPa y HRES solo de cerca (14-09-2026)');
+{
+  const M = mapsSrc;
+  ok('Agua precipitable está en el grupo Lluvia y con escala propia (transparente donde el aire va seco)',
+     /id:'tcwv', densa:true, g:'Lluvia', name:'Agua precipitable'[^\n]*escala:'agua'/.test(M)
+     && M.indexOf("id:'tcwv'") < M.indexOf("id:'refl'") && /const agua = \{/.test(M)
+     && /const agm = \[0, 10, 15, 20, 25, 30, 35, 40, 50, 60\];/.test(M) && /\['#e6f4ff',0\]/.test(M),
+     'era el azul oscuro plano de la librería, en el grupo Aire');
+  ok('la presión va en bandas de 4 hPa de 976 a 1044, que se leen como isobaras (las de la librería no llegan)',
+     /const hpa = \[976, 980, 984, 988, 992, 996, 1000, 1004, 1008, 1012, 1016, 1020, 1024, 1028, 1032, 1036, 1040, 1044\];/.test(M)
+     && /breakpoints: hpa,/.test(M) && /conv: v => \(v > 10000 \? v \/ 100 : v\)/.test(M),
+     'con la escala de fábrica (940-1060) todo el anticiclón salía del mismo rosa');
+  /* Sin `let` del mismo nombre: un `let` en el bloque tapaba la función que
+     declara el eval y la prueba salía en rojo con el código bien. */
+  const hl = (() => { try { eval(mapsSrc.slice(mapsSrc.indexOf('const HRES_ZOOM_MIN'), mapsSrc.indexOf('\n}', mapsSrc.indexOf('function hresDeLejos(')) + 2).replace('const HRES_ZOOM_MIN', 'globalThis.HRES_ZOOM_MIN')); return hresDeLejos; } catch (e) { console.log(`  (sin hresDeLejos: ${e.message})`); return null; } })();
+  ok('ECMWF HRES solo de cerca: por debajo del zoom 6 se pinta con ECMWF 25 km y se dice; desde el 6, el de 9 km',
+     typeof hl === 'function' && hl('ecmwf_ifs', 5.9) === true && hl('ecmwf_ifs', 6) === false
+     && hl('ecmwf_ifs025', 3) === false && hl('ecmwf_ifs', NaN) === false
+     && /sustituido: true, porZoom: true/.test(M) && /this\.avisoSustitucion\(R\.sustituido \? R\.modelo : null, R\.porZoom\)/.test(M)
+     && /solo de cerca/.test(M) && /reaplicarPorZoom\(\)/.test(M) && /on\('zoomend'[^\n]*reaplicarPorZoom/.test(M),
+     'a zoom bajo un píxel son 5 km: el de 25 km se ve igual, no tarda 15 s y no se queda sin memoria');
+}
+
+
+/* ═══ BARBAS SIN COLOR ENGAÑOSO, ISOCERO CON EL ROJO ABAJO, TAPA CERO SIN PINTAR ═══
+   Del guion del portátil «mapa-para-el-imac.txt» (14-09-2026) y de sus
+   pantallazos: el color de fondo de Viento 10 m era la componente
+   oeste-este —confunde y ningún modelo publica wind_speed_10m en las
+   teselas (medido: «Primary variable wind_speed_10m not found»)—; el
+   Isocero iba en -5200..5200 con el verano a 4500-4900, todo rojo; y la
+   tapa 0 pintaba Europa entera de rojo. */
+grupo('Barbas sin color de fondo, Isocero de 0 a 5500 con el rojo abajo, tapa cero transparente (14-09-2026)');
+{
+  const M = mapsSrc;
+  ok('las capas de barbas no pintan color: el fondo es transparente y mandan las barbas y los números (viento real)',
+     ['wind10', 'wind20', 'wind50', 'wind100'].every(id => new RegExp(`id:'${id}'[^\\n]*escala:'sinColor'`).test(M))
+     && /const sinColor = \{/.test(M) && /\['#000000',0\], \['#000000',0\]/.test(M)
+     && !/El COLOR de fondo es solo la componente oeste-este/.test(M),
+     'pintar la componente oeste-este como si fuera fuerza engañaba, y wind_speed no existe en las teselas');
+  ok('el Isocero va de 0 a 5500 m con el rojo en lo bajo (hielo cerca de la torre) y lo alto pálido',
+     /id:'frz'[^\n]*escala:'isocero'/.test(M) && /const izm = \[0, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500\];/.test(M)
+     && /const izc = \[\['#7a0020',1\], \['#e11400',1\]/.test(M) && /const isocero = \{/.test(M),
+     'con la escala de fábrica (-5200..5200) el verano salía todo rojo y sin matiz');
+  ok('la tapa cero no se pinta: el color aparece solo donde hay tapa, y el pie lo dice',
+     /const cnc = \[\['#e11400',0\], \['#f95c00',0\.5\]/.test(M) && /SIN COLOR es tapa CERO/.test(M) && !/ROJO es tapa CERO/.test(M),
+     'Inhibición 0 salía rojo en todo el continente');
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
