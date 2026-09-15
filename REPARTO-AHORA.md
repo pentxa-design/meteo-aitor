@@ -34,6 +34,8 @@ De vuestra lista, lo que NO he hecho y por qué:
 - Colores del suelo: los vuestros (#6f6a40 / #3b4550) son más oscuros que los míos.
   Lo decide él mirándolo, no nosotros.
 
+**18:25, hecho también aquí (builds 1816 y 1823):** temperatura 2 m y T850 con degradado continuo; T850 con vuestra rampa (−10 #5b2a86 → 30 #8f1d1d); ráfagas con vuestra rampa continua y salto seco en 49 y 70 (dos cortes pegados) en vez de las isolíneas blancas, que la librería no dibuja fiable (0 trazos en el primer pintado, medido el 14-09). Valores y fondo, como estaban. **No hace falta que nadie meta el SSD en el portátil: está publicado.**
+
 **Reparto:** `maps.js`, `pruebas.js` y `NO-SE-TOCA.md` los tengo yo abiertos esta
 tarde. Si vais a tocar el mapa, decidlo aquí antes. `deploy.sh` sube la carpeta
 entera: gana el último que publica.
