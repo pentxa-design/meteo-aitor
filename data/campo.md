@@ -4004,3 +4004,35 @@ de las 10:32, Horas): bien. AROME HD pone 87 % de altas a las 13 y 7 % a las
 14 —demasiado a las 13 para esta foto— y el **Automático** dice «cubierto»
 (87 % de nubes) a las 13:00 con este cielo: fallo gordo, el mismo que se le
 midió el 02-09 (33 % de fallos gordos de cielo). Un dato más para el marcador.
+
+## Bermeo, martes 15-09-2026, 12:05 · «cada vez vienen más nubes» · «creo que esta tarde viento y nubosidad»
+
+**Lo suyo:** desde Bermeo, hacia las 12:05, el cielo se va tapando y espera
+viento y nubes por la tarde. Sin medida de aparato.
+
+**El satélite (Meteosat visible, pasada de las 11:45 local, EUMETView):**
+una banda de nube BAJA que entra del noroeste por todo el Cantábrico, con el
+borde sur justo sobre la costa de Bizkaia: Bermeo debajo del borde, Santander
+ya debajo, Bilbao y Donostia todavía fuera. El infrarrojo, negro en toda la
+zona: nube baja y templada, nada alto ni frío. (Se le mandó la foto con la
+costa y Bermeo marcados.)
+
+**Lo que decía la app a esa hora (pedido por /om a las 12:08, Bermeo
+43,42 / -2,72, cell_selection=land). Nube baja, y entre paréntesis el total
+cuando no coincide:**
+
+| | 12 h | 13 h | 15 h | 17 h | 20 h | racha máx. de la tarde | dir | llovizna |
+|---|---|---|---|---|---|---|---|---|
+| AROME HD (el suyo) | 14 % | 42 % | 88 % | 91 % | 100 % | 56 km/h (13 h) | ONO | 0,2 mm a las 21 h (no publica código) |
+| ECMWF | 0 % (2) | 0 % (6) | 4 % (23, altas) | 14 % (48) | 15 % (53) | 50 km/h (18 h) | NO | código 51 a las 21-22 h |
+| ICON | 48 % | 50 % | 49 % | 29 % | 66 % | **63 km/h (14 h)** | ONO | no |
+| GFS | 0 % | 0 % | 0 % | 0 % | 9 % (31) | 34 km/h (19 h) | NO | código 51 desde las 20 h |
+| Automático | 7 % (14) | 25 % (37) | 97 % (92) | 77 % (95) | 100 % | 56 km/h (13 h) | ONO | código 51 a las 21 h |
+
+**Lectura:** a las 12:05 el satélite ya tiene el borde de la nube baja
+encima de Bermeo y él la ve llegar. AROME HD la pone entrando a las 13
+(42 %) y encima a las 15 (88 %); ICON la tiene ya a las 12 (48 %); ECMWF y
+GFS la dan rasa hasta media tarde: hoy los de 25 km van tarde con la nube
+baja, como en Calpe. Viento: los cuatro del NO/ONO; AROME 53-58 de racha
+toda la tarde, ICON cruza los 60 de 14 a 16 h, ECMWF llega a 50 a las 18 h,
+GFS se queda en 20-30. Contrastar por la tarde con lo que vea.
