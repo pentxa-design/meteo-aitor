@@ -4050,3 +4050,5 @@ pone 74-83 % de baja sobre Bermeo a las 13 y él la ve entrar; cuadra.
 Pidió una captura de la capa de nubes del mapa: el candado de la app (código de 6
 cifras) lo impide desde aquí —no se teclean códigos—; se le mandó en su lugar la
 rejilla de nube baja de AROME HD e ICON a las 13, 15 y 17 con los datos de /om.
+
+**20:24-20:50, Bermeo, contado por él al portátil (las fotos las tiene el portátil):** 20:24 cielo cerrado · 20:30 chispeo corto · 20:45 se abre · 20:50 «Ahora» con el chip de GFS. Modelos a las 21:09 (por /om): AROME HD nube baja 94 % a las 20 y **34 % a las 21** (se abre), 0,0 mm y sin código; ECMWF llovizna (51) 0,1 mm desde las 21; ICON chubasco (80) 0,4 mm a las 21; **GFS llovizna 0,1 desde las 20**. Almike a las 21:00: 0,0 mm, humedad 85 %. El chispeo lo tenía GFS (y ECMWF una hora después); el claro, AROME HD. Ver TRASPASO §17 (21:10).

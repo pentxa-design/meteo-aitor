@@ -536,3 +536,16 @@ Sus mensajes de las 19:50-19:58 con capturas de Windy y de Meteored (temp. 2 m, 
 5. **Trampa del linter:** `deploy.sh` pasa ESLint con `no-self-compare` y `no-undef`: la comprobación de NaN `u !== u` y `new Path2D()` a secas tumbaron la publicación 13; queda `Number.isNaN(suma)` y `new window.Path2D()`.
 
 Publicado desde el portátil (build abajo). Pendiente de mirar con él el lunes con viento de verdad: velocidad de las motas por zoom (`esc = 0,10 · 1,25^(z−6)`) y el número de motas en el iPhone (batería).
+
+**21:10, iMac (SSD de vuelta del portátil):** el repo del SSD ya trae los commits del portátil (HEAD 18dd247, árbol limpio, sello local = web = 2026.09.15-2010): no hay nada que «traerse», es la misma copia. `probar-avisos.sh` desde el iMac, con clave: los cuatro pasos en verde («los avisos al móvil llegan»). El almacén sigue con **6 aparatos** (los suyos son 3): los tres de más son los «prueba automática» que dejó el portátil sin clave; se dan de baja solos en el primer aviso real (410).
+
+**Sus fotos de Bermeo de esta tarde-noche (las tiene el portátil; aquí, lo que contó):** 20:24 cielo cerrado · 20:30 chispeo corto · 20:45 se abre; y a las 20:50 la captura de «Ahora» con el chip de GFS. Lo que decía la app a las 21:09 (por `/om`, Bermeo, tierra), horas 20-21-22:
+
+| | 20:00 | 21:00 | 22:00 |
+|---|---|---|---|
+| AROME HD (el suyo) | nube baja **94 %**, 0,0 mm, sin código | nube baja **34 %** (se abre), 0,0 mm | 100 %, 0,0 mm |
+| ECMWF | cubierto (59 %), 0,0 | **llovizna (51)**, 0,1 mm, 25 % | llovizna, 0,1 mm, 57 % |
+| ICON | cubierto, 84 % baja, 0,0 | **chubasco (80)**, 0,4 mm, 60 % | 68 %, 0,0 |
+| GFS | **llovizna (51)**, 0,1 mm | llovizna, 0,2 mm | llovizna, 0,2 mm, 100 % |
+
+Euskalmet Almike (Bermeo) a las 21:00: 0,0 mm, humedad 85 %, racha 29; Matxitxako humedad 100 % (dentro de la nube). **Lectura:** el chispeo corto de las 20:30 es lo que GFS ponía desde las 20 (llovizna 0,1) y ECMWF desde las 21; el pluviómetro no llegó a contarlo. Y «se abre» a las 20:45 lo tiene AROME HD clavado en su hora 21 (94 % → 34 %), sin código (no lo publica): el chip de GFS en «Ahora» hacía su trabajo de decir lo que otro modelo ve. Cuatro modelos, cuatro lecturas distintas de la misma hora, y él vio las cuatro por la ventana en veinte minutos.
