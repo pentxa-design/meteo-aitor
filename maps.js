@@ -350,7 +350,8 @@ const TLAYERS = [
   { id:'clouds_rain', g:'Cielo', name:'Nubes + lluvia', v:'cloud_cover', unit:'%', escala:'nubes',
     encima:'precipitation',
     desc:'Nubosidad en gris y, encima, dónde puede llover — sin taparse' },
-  { id:'clouds',      g:'Cielo', name:'Nubes total', v:'cloud_cover', unit:'%', escala:'nubes', desc:'Nubosidad total' },
+  { id:'clouds',      g:'Cielo', name:'Nubes total', v:'cloud_cover', unit:'%', escala:'nubes', encima:'precipitation', encimaEscala:'sombraLluvia',
+    desc:'Nubosidad total: blanca, y oscura tirando a verde donde llueve (como Windy)' },
   { id:'clouds_low',  g:'Cielo', name:'Nubes bajas', v:'cloud_cover_low', unit:'%', escala:'nubes',
     desc:'Las que te dejan sin ver la torre' },
   { id:'clouds_mid',  g:'Cielo', name:'Nubes medias', v:'cloud_cover_mid', unit:'%', escala:'nubes', desc:'Nubosidad media' },
@@ -454,7 +455,7 @@ const LENTOS = new Set(['ecmwf_ifs', 'ecmwf_ifs025', 'ncep_gfs013', 'ncep_gfs025
    (punto de rocío)—. A esa escala un píxel son 5 km y el ECMWF de 25 km,
    rejilla regular, se ve igual y va ligero. Regla: por debajo del zoom 6
    se pinta con ECMWF 25 km y SE DICE en el cartel; desde el 6, el de 9 km. */
-const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes']);
+const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'sombraLluvia']);
 
 const HRES_ZOOM_MIN = 6;
 function hresDeLejos(modelo, zoom) {
@@ -1212,6 +1213,22 @@ function escalasPropias() {
     eje: nbm, unidad: '%', pos: nbm.map((_, i) => i),
   };
 
+  /* ── LA SOMBRA DE LA LLUVIA SOBRE LA NUBE (15-09-2026, 17:52) ─────────
+     Suyo, con Windy al lado: «cuando esas nubes lleven agua o sean más
+     oscuras, ¿las pintará?» · «blancas, negras donde pinta agua» ·
+     «verde donde lloverá» · «así quiero». La nube es un porcentaje de
+     cielo tapado: no sabe si lleva agua. Lo sabe la precipitación, que
+     va ENCIMA de Nubes total con esta escala: gris oscuro en cuanto
+     cae algo, verde donde llueve de verdad, amarillo y rojo con los
+     chaparrones. Es la misma idea que la capa de nubes de Windy. */
+  const slm = [0, 0.05, 0.2, 0.5, 1, 2, 4, 8, 15, 40];
+  const slc = [['#5c636b',0], ['#5c636b',.42], ['#454c54',.6], ['#2f4a3a',.72], ['#2e7d3a',.8],
+               ['#3fa33f',.85], ['#b9c22c',.88], ['#e8a11c',.9], ['#d43a2a',.92], ['#7b2a8c',.95]];
+  const sombraLluvia = {
+    scale: { type:'breakpoint', unit:'mm/h', breakpoints: slm, colors: slc.map(([c,a]) => hexRGBA(c, a)) },
+    eje: slm, unidad: 'mm/h', pos: slm.map((_, i) => i),
+  };
+
   _escalas = {
     basecv, topecv, humedad,
     elevacion,
@@ -1220,7 +1237,7 @@ function escalasPropias() {
     // la misma cuenta de Marshall-Palmer con la que está hecha la escala.
     dbz: { scale: ESCALA_DBZ, eje: DBZ, unidad: 'dBZ',
            conv: v => v > 0 ? 10 * Math.log10(200 * Math.pow(v, 1.6)) : 0 },
-    presion, visibilidad, tempc, t850, rafagas, capeE, tapa, agua, isocero, sinColor, nubes,
+    presion, visibilidad, tempc, t850, rafagas, capeE, tapa, agua, isocero, sinColor, nubes, sombraLluvia,
   };
   return _escalas;
 }
@@ -2114,7 +2131,7 @@ const Maps = {
       }
 
       if (L_.encima) {
-        const u2 = this.omUrl(L_.encima, this.t, R.modelo, R.meta);
+        const u2 = this.omUrl(L_.encima, this.t, R.modelo, R.meta, L_.encimaEscala ? { escala: L_.encimaEscala } : null);
         if (u2) {
           this.map.addSource('omSrc2', {
             type:'raster', tiles:[`${u2}/{z}/{x}/{y}`], tileSize:256, maxzoom:12 });
@@ -4217,7 +4234,7 @@ const Maps = {
       // Las isobaras son del mismo fichero: se mueven con la hora.
       if (this.map.getSource('isoSrc')) this.map.getSource('isoSrc').setTiles([`${url}/{z}/{x}/{y}`]);
       if (L_.encima && this.map.getSource('omSrc2')) {
-        const u2 = this.omUrl(L_.encima, this.t, this.usando.modelo, this.usando.meta);
+        const u2 = this.omUrl(L_.encima, this.t, this.usando.modelo, this.usando.meta, L_.encimaEscala ? { escala: L_.encimaEscala } : null);
         if (u2) this.map.getSource('omSrc2').setTiles([`${u2}/{z}/{x}/{y}`]);
       }
       this.stamp();

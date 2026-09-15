@@ -156,3 +156,4 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **La tapa cero no se pinta** | `la tapa cero no se pinta: el color aparece solo donde hay tapa, y el pie lo dice` |
 | **Las nubes van blancas con cuerpo, con escala propia «nubes» (15-09-2026, «como en Windy»)** | `la escala «nubes» va de transparente (0 %) a blanca casi opaca (100 %), y es blanca de verdad, no azul` |
 | **Con una capa de nubes, el suelo se pone ocre y el mar azul acero en Claro y Color** | `con una capa de nubes, el suelo se pone en tono tierra y el mar en azul acero (Claro y Color); en Oscuro no hace falta` |
+| **Nubes total se oscurece donde llueve y va a verde donde llueve de verdad (15-09-2026, «como Windy»)** | `Nubes total lleva la lluvia encima con su propia sombra: la nube se oscurece donde llueve y va a verde donde llueve de verdad (como Windy)` |

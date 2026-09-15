@@ -7436,7 +7436,7 @@ grupo('El mapa se ve debajo del color: costa por encima, opacidad 0,75 y el «no
      && cp.length >= 12 && cp[0] === 0 && cp[1] > 0 && cp[1] < cp[2] && cp[3] >= 0.9 && cp[4] === 1,
      JSON.stringify({ rf, cp }));
   ok('la reflectividad pide color_blend=true: degradado continuo, no bandas estrechas que dibujan la malla',
-     /const ESCALAS_SUAVES = new Set\(\['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes'\]\);/.test(M)
+     /const ESCALAS_SUAVES = new Set\(\['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'sombraLluvia'\]\);/.test(M)
      && /if \(ESCALAS_SUAVES\.has\(L_\?\.escala\)\) q\.set\('color_blend', 'true'\);/.test(M),
      'con bandas de 5 dBZ cada celda del modelo se veía como un cuadro; ráfagas, CAPE y presión siguen a saltos (listones e isobaras)');
 }
@@ -7530,6 +7530,21 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
      && /const op = L_\.escala === 'nubes' \? Math\.max\(this\.opacity, 0\.92\) : this\.opacity;/.test(M)
      && /const CAPAS  = \['omLayer', 'omLayer2', 'radarLayer', 'satLayer', 'aemetLayer',\s*'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'\];/.test(M),
      'si se quedara puesto, la siguiente capa (temperatura, ráfagas) saldría sobre tierra ocre sin motivo');
+  /* 17:52, con Windy al lado otra vez: «blancas, negras donde pinta agua», «verde donde lloverá», «así quiero». */
+  const sl = ((M.match(/const slc = \[([\s\S]*?)\];/) || [])[1] || '').match(/\['#([0-9a-f]{6})',\s*([0-9.]+)\]/g) || [];
+  const slAlfa = sl.map(s => Number(s.match(/,\s*([0-9.]+)\]/)[1]));
+  const slHex = sl.map(s => s.match(/#([0-9a-f]{6})/)[1]);
+  const oscuro = h => [0, 2, 4].every(i => parseInt(h.slice(i, i + 2), 16) < 0x90);
+  const verde = h => parseInt(h.slice(2, 4), 16) > parseInt(h.slice(0, 2), 16) + 0x20 && parseInt(h.slice(2, 4), 16) > parseInt(h.slice(4, 6), 16) + 0x20;
+  ok('Nubes total lleva la lluvia encima con su propia sombra: la nube se oscurece donde llueve y va a verde donde llueve de verdad (como Windy)',
+     /id:'clouds',[^\n]*encima:'precipitation', encimaEscala:'sombraLluvia'/.test(M)
+     && /const sombraLluvia = \{/.test(M) && /sinColor, nubes, sombraLluvia,/.test(M)
+     && slAlfa.length >= 6 && slAlfa[0] === 0 && slAlfa[1] > 0 && slAlfa.every((a, i) => i === 0 || a >= slAlfa[i - 1])
+     && oscuro(slHex[1]) && oscuro(slHex[2]) && slHex.slice(3, 5).some(verde),
+     JSON.stringify({ slAlfa, slHex }));
+  ok('las dos peticiones de la capa de encima (al montar y al mover la hora) llevan la escala de la sombra, no la de Precipitación',
+     (M.match(/this\.omUrl\(L_\.encima, this\.t, [^,]+, [^,]+, L_\.encimaEscala \? \{ escala: L_\.encimaEscala \} : null\)/g) || []).length === 2,
+     'si una de las dos fuera sin escala, al mover la hora la sombra cambiaría a los colores de Precipitación');
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
