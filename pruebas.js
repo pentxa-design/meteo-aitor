@@ -7545,6 +7545,18 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
   ok('las dos peticiones de la capa de encima (al montar y al mover la hora) llevan la escala de la sombra, no la de Precipitación',
      (M.match(/this\.omUrl\(L_\.encima, this\.t, [^,]+, [^,]+, L_\.encimaEscala \? \{ escala: L_\.encimaEscala \} : null\)/g) || []).length === 2,
      'si una de las dos fuera sin escala, al mover la hora la sombra cambiaría a los colores de Precipitación');
+  /* 17:58, medido en su Chrome (build 1758, mié 16 06:00): el orden de capas era
+     sueloLayer, marLayer, costaLayer, omLayer2, omLayer — la sombra de lluvia y la
+     costa DEBAJO de la nube. firstLabelLayer() devuelve la capa que sigue al último
+     relleno, y esa es omLayer en cuanto está montada: todo lo que se pedía «encima»
+     se colaba debajo. Con la nube al 0,92 ya no se ve nada de lo de abajo. */
+  ok('la capa de encima (sombra de lluvia) se monta ENCIMA de la nube, no debajo: justo detrás de omLayer',
+     /encimaDe\(id\) \{/.test(M) && /id:'omLayer2', type:'raster', source:'omSrc2',[\s\S]{0,200}this\.encimaDe\('omLayer'\)\)/.test(M),
+     'con firstLabelLayer() la segunda capa quedaba debajo de la primera');
+  ok('la costa va por encima de TODAS las capas propias (nube, sombra, relieve), no solo del fondo',
+     /firstLabelLayer\(porEncimaDeLasPropias = false\) \{/.test(M)
+     && /costaLayer', this\.firstLabelLayer\(true\)\)/.test(M) && /paint \}, this\.firstLabelLayer\(true\)\);/.test(M),
+     'una nube blanca casi opaca tapaba la línea de costa');
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');

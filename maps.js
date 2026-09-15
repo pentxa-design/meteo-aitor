@@ -2135,9 +2135,13 @@ const Maps = {
         if (u2) {
           this.map.addSource('omSrc2', {
             type:'raster', tiles:[`${u2}/{z}/{x}/{y}`], tileSize:256, maxzoom:12 });
+          /* ENCIMA de verdad: firstLabelLayer() devuelve la capa que sigue al
+             último relleno, y en este punto esa capa es omLayer, así que la
+             segunda quedaba DEBAJO de la primera (medido el 15-09-2026 en su
+             Chrome: sombra de lluvia invisible bajo la nube blanca). */
           this.map.addLayer({ id:'omLayer2', type:'raster', source:'omSrc2',
             paint:{ 'raster-opacity':0.9, 'raster-resampling':'linear' } },
-            this.firstLabelLayer());
+            this.encimaDe('omLayer'));
         }
       }
 
@@ -2611,22 +2615,33 @@ const Maps = {
     try {
       if (this.map.getLayer('costaLayer')) {
         for (const k of Object.keys(paint)) this.map.setPaintProperty('costaLayer', k, paint[k]);
-        this.map.moveLayer('costaLayer', this.firstLabelLayer());
+        this.map.moveLayer('costaLayer', this.firstLabelLayer(true));
         return;
       }
       this.map.addLayer({ id: 'costaLayer', type: 'line', source: 'carto', 'source-layer': 'water',
-        paint }, this.firstLabelLayer());
+        paint }, this.firstLabelLayer(true));
     } catch (e) { console.warn('costa: no se ha podido poner encima', e); }
   },
 
-  firstLabelLayer() {
+  firstLabelLayer(porEncimaDeLasPropias = false) {
     const ls = this.map.getStyle()?.layers || [];
     const PROPIAS = /^(omLayer2?|satLayer|radarLayer|aemetLayer|hillLayer)$/;
     const RELLENO = new Set(['background', 'fill', 'fill-extrusion', 'raster']);
     let ultimo = -1;
     ls.forEach((x, i) => { if (!PROPIAS.test(x.id) && RELLENO.has(x.type)) ultimo = i; });
     // Detrás del último relleno. Si no hubiera nada más, arriba del todo.
-    return ls[ultimo + 1]?.id;
+    // Con `porEncimaDeLasPropias`, además se saltan las capas de datos ya
+    // montadas (nube, sombra, relieve): es lo que necesita la costa, que
+    // tiene que verse POR ENCIMA del color (15-09-2026).
+    if (!porEncimaDeLasPropias) return ls[ultimo + 1]?.id;
+    return ls.slice(ultimo + 1).find(x => !PROPIAS.test(x.id))?.id;
+  },
+
+  /** La capa que va justo detrás de `id`: para montar algo ENCIMA de ella. */
+  encimaDe(id) {
+    const ls = this.map.getStyle()?.layers || [];
+    const i = ls.findIndex(l => l.id === id);
+    return i >= 0 ? ls[i + 1]?.id : this.firstLabelLayer();
   },
 
   stamp() {
