@@ -4730,7 +4730,8 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
      color PLENO y la sombra del terreno dibujada ENCIMA, suave — el
      truco de Meteored. Ya no se elige entre relieve y color. */
   ok('el color va pleno y la sombra del terreno se dibuja encima, rebajada',
-     /const op = this\.opacity;/.test(M)
+     /* 15-09-2026: las capas de nubes suben a ≥ 0,92 (nube blanca lavada sobre el mar azul acero); el resto sigue al valor del deslizador, nunca por debajo. */
+     /const op = L_\.escala === 'nubes' \? Math\.max\(this\.opacity, 0\.92\) : this\.opacity;/.test(M)
      && /moveLayer\('hillLayer', this\.firstLabelLayer\(\)\)/.test(M)
      && /'raster-opacity', 0\.32/.test(M),
      'sus dos peticiones a la vez: relieve visible y mapa sin lavar');
@@ -7524,8 +7525,9 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
      'una nube blanca sobre tierra blanca (#fafaf8) no existe');
   const iApply = M.indexOf('async apply() {'), iOm = M.indexOf("id:'omLayer', type:'raster', source:'omSrc'", iApply);
   const iSuelo = M.indexOf("this.sueloParaNubes(L_.escala === 'nubes');", iApply);
-  ok('apply() pone el suelo ANTES de montar la capa y solo para la escala «nubes»; quitarCapasDeDatos() lo quita con las demás',
+  ok('apply() pone el suelo ANTES de montar la capa y solo para la escala «nubes», con la nube casi opaca (≥ 0,92); quitarCapasDeDatos() lo quita con las demás',
      iSuelo > iApply && iSuelo < iOm
+     && /const op = L_\.escala === 'nubes' \? Math\.max\(this\.opacity, 0\.92\) : this\.opacity;/.test(M)
      && /const CAPAS  = \['omLayer', 'omLayer2', 'radarLayer', 'satLayer', 'aemetLayer',\s*'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'\];/.test(M),
      'si se quedara puesto, la siguiente capa (temperatura, ráfagas) saldría sobre tierra ocre sin motivo');
 }

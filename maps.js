@@ -2091,7 +2091,10 @@ const Maps = {
          los mapas profesionales: el COLOR va pleno y la SOMBRA del
          terreno se dibuja ENCIMA, suave. Ya no hay que elegir. */
       this.sueloParaNubes(L_.escala === 'nubes');
-      const op = this.opacity;
+      /* La nube blanca a 0,75 sobre el mar azul acero salía lavada (visto
+         en su Chrome el 15-09 a las 13:20): las capas de nubes van casi
+         opacas. El deslizador CAPA solo puede subirla, no bajarla. */
+      const op = L_.escala === 'nubes' ? Math.max(this.opacity, 0.92) : this.opacity;
       this.map.addSource('omSrc', {
         type:'raster', tiles:[`${url}/{z}/{x}/{y}`], tileSize:256, maxzoom:12,
         attribution:'Datos de modelo: Open-Meteo',
@@ -2548,10 +2551,10 @@ const Maps = {
       const ls = this.map.getStyle()?.layers || [];
       const agua = ls.find(l => l.id === 'water') || ls.find(l => l.type === 'fill' && /water/.test(l.id));
       this.map.addLayer({ id:'sueloLayer', type:'background',
-        paint:{ 'background-color':'#c9b989', 'background-opacity':0.72 } }, agua?.id || this.firstLabelLayer());
+        paint:{ 'background-color':'#bfae74', 'background-opacity':0.8 } }, agua?.id || this.firstLabelLayer());
       if (agua && this.map.getSource('carto')) {
         this.map.addLayer({ id:'marLayer', type:'fill', source:'carto', 'source-layer':'water',
-          paint:{ 'fill-color':'#7e97ab', 'fill-opacity':0.78 } }, this.firstLabelLayer());
+          paint:{ 'fill-color':'#6f8aa0', 'fill-opacity':0.85 } }, this.firstLabelLayer());
       }
     } catch (e) { console.warn('suelo para nubes: no se ha podido poner', e); }
   },
