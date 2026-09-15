@@ -1025,9 +1025,24 @@ function escalasPropias() {
   const rfc = [['#2f4fb0',0], ['#3f6fd0',0.4], ['#5aa8e8',0.65], ['#8fcbf0',0.85],
                ['#b8e0f5',0.95], ['#f0a050',1], ['#ef7a30',1], ['#ea5a28',1],
                ['#d82020',1], ['#8f1d1d',1], ['#6a1b9a',1], ['#4a1070',1]];
+  /* ── LA TESELA DE RACHA VIENE EN m/s, NO EN km/h (15-09-2026, 19:55) ──
+     Cazado desde el portátil comparando con AguaceroWx: a las 16:00 de hoy
+     el mapa marcaba «7» en Madrid y «8» en Andorra y salía casi transparente,
+     mientras la propia app daba racha 63 km/h en Bermeo. MEDIDO contra la
+     API (ICON-EU, 14:00Z): Madrid 27,0 km/h = 7,5 m/s; Andorra 23,0 km/h =
+     6,4 m/s; Bermeo 60,5 km/h = 16,8 m/s. El fichero .om trae el viento en
+     m/s (como los u/v de las barbas, que ya se multiplican por 3,6), y la
+     escala de fábrica lo convertía (`esViento`), pero al poner la escala
+     propia `rafagas` (14-09) se perdió esa conversión: los cortes de 49 y
+     70 km/h se aplicaban a m/s (= 176 y 252 km/h) y el naranja no salía
+     nunca. En la capa que decide si sube alguien.
+     Regla, como en presión y visibilidad: los CORTES van en la unidad de
+     la tesela (m/s) y el número que se pinta y se lee pasa por `conv`, el
+     mismo conversor para color y texto. La barra sigue en km/h (`eje`). */
   const rafagas = {
-    scale: { type:'breakpoint', unit:'km/h', breakpoints: rfm,
+    scale: { type:'breakpoint', unit:'km/h', breakpoints: rfm.map(k => k / 3.6),   // m/s en la tesela
              colors: rfc.map(([c,a2]) => hexRGBA(c, a2)) },
+    conv: v => v * 3.6,                                                            // m/s → km/h en pantalla
     eje: rfm, unidad: 'km/h', pos: rfm.map((_, i) => i),
   };
 
@@ -1223,9 +1238,18 @@ function escalasPropias() {
      al 100 %. Y debajo, sueloParaNubes() pone la tierra en ocre y el mar
      en azul acero, como Windy, para que lo blanco resalte también en
      Claro y Color. */
+  /* ── GRIS CUANDO ESTÁ CERRADO (15-09-2026, 19:40, portátil) ─────────
+     Sus fotos de Bermeo a las 19:22: cielo tapado al 85-95 % de nube gris
+     con un claro azul, sin llover. La capa lo pintaba blanco, porque solo
+     se oscurecía donde el modelo pone agua. Suyo: «nubes grises, por eso
+     os decía lo de las nubes; ya no son blancas». Con un tercio de cielo
+     tapado la nube ES blanca (claros entre medias); con el cielo cerrado
+     es gris. Así que el gris va con la nubosidad total: blanca hasta el
+     55 %, gris claro al 70, gris al 85, gris oscuro al 100. Sin pedir una
+     variable más (la nube baja): es la total, que ya se pide. */
   const nbm = [0, 10, 25, 40, 55, 70, 85, 100];
-  const nbc = [['#ffffff',0], ['#f4f6f8',.10], ['#eef1f4',.28], ['#e9edf1',.46], ['#e6eaee',.62],
-               ['#e4e8ec',.78], ['#e2e6ea',.90], ['#e0e4e8',.97]];
+  const nbc = [['#ffffff',0], ['#f6f8fa',.10], ['#f1f4f7',.28], ['#eceff3',.46], ['#e6eaee',.62],
+               ['#d2d8de',.80], ['#b9c1cb',.92], ['#98a2ae',.97]];
   const nubes = {
     scale: { type:'breakpoint', unit:'%', breakpoints: nbm, colors: nbc.map(([c,a]) => hexRGBA(c, a)) },
     eje: nbm, unidad: '%', pos: nbm.map((_, i) => i),
@@ -3362,14 +3386,20 @@ const Maps = {
          deslizador tarda». Con los bloques ya guardados en el CDN (build
          2032), calentar más por delante es casi gratis: las DOS horas
          siguientes enteras, el centro de la tercera y, detrás, casi una. */
+      /* 15-09-2026, 19:20 (portátil), MEDIDO EN SU CHROME: con dos horas
+         enteras por delante más la línea de tiempo recorrida de seguido,
+         «Cargando Ráfagas… 34 s» y sin barbas — la precarga le robaba las
+         descargas a la capa que estaba mirando. Es la lección del 31-08
+         otra vez. Vuelve lo medido: la siguiente entera, el centro de la de
+         después, casi la de detrás. Lo demás lo hace calentarLinea(), pero
+         SOLO con la capa pintada y de una hora en una, con respiro. */
       if (en(d)  !== null) pedir(en(d),  visibles);          // la siguiente, entera
-      if (en(2*d) !== null) pedir(en(2*d), visibles);        // la de después, entera
-      if (en(3*d) !== null) pedir(en(3*d), [centro]);        // la tercera, el centro
       if (en(-d) !== null) pedir(en(-d), visibles.slice(0, 2)); // la de detrás, casi
+      if (en(2*d) !== null) pedir(en(2*d), [centro]);        // la de después, el centro
       if (this._pedidas.size > 400) this._pedidas = new Set();
       this.bombear();
-      /* Y con el mapa quieto 3 s, la línea de tiempo ENTERA de esta capa,
-         de una tesela (el centro) por hora: es lo que abre cada fichero. */
+      /* La línea de tiempo, solo con el mapa quieto 3 s y la capa pintada. */
+      if (this._lineaAC) { try { this._lineaAC.abort(); } catch {} this._lineaAC = null; }
       clearTimeout(this._lineaTimer);
       this._lineaTimer = setTimeout(() => this.calentarLinea(), 3000);
     }, 500);
@@ -3385,26 +3415,39 @@ const Maps = {
     if (this._lineaAC || !this.map || !this.usando) return;
     const L_ = TLAYERS.find(l => l.id === this.layer);
     if (!L_?.v) return;
+    /* Solo cuando lo que se ve está pintado del todo: si la capa sigue
+       cargando, esto espera y vuelve a mirar, en vez de competir con ella. */
+    const sc = this.map.style?.sourceCaches?.omSrc;
+    const t = sc ? Object.values(sc._tiles || {}) : [];
+    if (!t.length || !t.every(x => x.state === 'loaded' || x.state === 'errored')) {
+      clearTimeout(this._lineaTimer);
+      this._lineaTimer = setTimeout(() => this.calentarLinea(), 3000);
+      return;
+    }
     const R = this.usando;
     const z = Math.min(12, Math.max(0, Math.round(this.map.getZoom())));
     const centro = this.tilesVisibles(z)[0];
     if (!centro) return;
     const idx = this._idx ?? this.indices();
     const pos = this._pos ?? 0;
-    const orden = idx.slice(pos + 1).concat(idx.slice(0, pos).reverse());
+    /* Doce pasos por delante (con paso 3 h, día y medio) y seis por
+       detrás: lo que el dedo puede tocar en un rato, no las 93 horas. */
+    const orden = idx.slice(pos + 3, pos + 15).concat(idx.slice(Math.max(0, pos - 6), pos).reverse());
     const ac = this._lineaAC = new AbortController();
+    const respiro = ms => new Promise(r => setTimeout(r, ms));
     let n = 0;
     const t0 = Date.now();
     try {
-      for (const t of orden) {
-        if (ac.signal.aborted) return;
-        const u = this.omUrl(L_.v, t, R.modelo, R.meta);
+      for (const th of orden) {
+        if (ac.signal.aborted || document.hidden) return;
+        const u = this.omUrl(L_.v, th, R.modelo, R.meta);
         if (!u) continue;
         const k = `${u}/${z}/${centro[0]}/${centro[1]}`;
         if (this._pedidas?.has(k)) continue;
         this._pedidas?.add(k);
         try { await OMWeatherMapLayer.omProtocol({ url: k, type: 'image' }, ac); n++; }
         catch { /* una hora que falle no para las demás */ }
+        await respiro(500);
       }
       if (n) console.info(`línea de tiempo calentada: ${n} horas de ${L_.name} en ${Math.round((Date.now() - t0) / 100) / 10} s`);
     } finally {
@@ -3819,6 +3862,16 @@ const Maps = {
        desde siempre. Cuando alguien resuelva lo de la precarga por
        variable, se vuelve a poner: la dirección del golpe SÍ le importa
        (de costado a la torre o de frente al camino no es lo mismo). */
+    /* 15-09-2026, 19:30 (portátil): RESUELTO lo de arriba. El «State not
+       found» no era de la precarga por variable: era la MARCA. `omUrl()`
+       busca la capa por variable, y para wind_u_component_10m encuentra
+       «Viento 10 m · barbas» (escala sinColor), así que la URL salía con
+       `escala_propia=sinColor`; el manejador de maplibre la quita antes de
+       llamar a la librería, pero barbas() llama a omProtocol() DIRECTO con
+       la URL sucia, la librería la rechaza y luego getValueFromLatLong no
+       encuentra el fichero. Ahora barbas() limpia la marca (limpiarMarca) y
+       las ráfagas llevan dirección: la de 10 m, que es la que hay. */
+    if (L_?.id === 'gusts') return { u: 'wind_u_component_10m', v: 'wind_v_component_10m' };
     if (!L_?.v?.startsWith('wind_u_component_')) return null;
     return { u: L_.v, v: L_.v.replace('wind_u_component_', 'wind_v_component_') };
   },
@@ -3831,12 +3884,13 @@ const Maps = {
     if (!this.verBarbas || !C || !this.usando) { cont.innerHTML = ''; return; }
 
     const R = this.usando;
-    const uUrl = this.omUrl(C.u, this.t, R.modelo, R.meta);
-    const vUrl = this.omUrl(C.v, this.t, R.modelo, R.meta);
+    /* Sin la marca de escala: estas URL van DIRECTAS a la librería (ver componentes). */
+    const uUrl = limpiarMarca(this.omUrl(C.u, this.t, R.modelo, R.meta) || '');
+    const vUrl = limpiarMarca(this.omUrl(C.v, this.t, R.modelo, R.meta) || '');
     if (!uUrl || !vUrl) { cont.innerHTML = ''; return; }
     // Mismo turno que valores(): barbas de otra hora son un dato falso.
     const turnoB = (this._turnoBarb = (this._turnoBarb || 0) + 1);
-    const vigenteB = () => turnoB === this._turnoBarb && uUrl === this.omUrl(C.u, this.t, this.usando?.modelo, this.usando?.meta);
+    const vigenteB = () => turnoB === this._turnoBarb && uUrl === limpiarMarca(this.omUrl(C.u, this.t, this.usando?.modelo, this.usando?.meta) || '');
 
     // Rejilla regular sobre lo que se ve, con separación cómoda.
     //

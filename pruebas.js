@@ -4712,12 +4712,18 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
      caché de bloques en 32 MB, calentar más por delante ya no se autosabotea: las DOS
      siguientes enteras, el centro de la tercera y casi la de detrás; y con el mapa quieto,
      `calentarLinea()` recorre la línea de tiempo entera de una tesela por hora. */
-  ok('y también la de detrás por si vuelves, la segunda entera y el centro de la tercera',
+  /* 15-09-2026 19:20: medido en su Chrome que dos horas enteras + la línea entera de seguido
+     dejaban «Cargando Ráfagas… 34 s» y sin barbas. Vuelve lo medido (una entera, el centro de
+     la segunda) y la línea de tiempo va aparte: solo con la capa pintada, 12 pasos por
+     delante y 6 por detrás, una hora cada medio segundo, y se aborta al tocar. */
+  ok('y también la de detrás por si vuelves, y el centro de la de después; la línea de tiempo aparte, suave y abortable',
      /pedir\(en\(-d\), visibles\.slice\(0, 2\)\)/.test(M)
-     && /pedir\(en\(2\*d\), visibles\)/.test(M)
-     && /pedir\(en\(3\*d\), \[centro\]\)/.test(M)
+     && /pedir\(en\(2\*d\), \[centro\]\)/.test(M)
+     && !/pedir\(en\(2\*d\), visibles\)/.test(M)
      && /async calentarLinea\(\)/.test(M) && /this\._lineaTimer = setTimeout\(\(\) => this\.calentarLinea\(\), 3000\)/.test(M)
-     && /if \(this\._lineaAC\) \{ try \{ this\._lineaAC\.abort\(\); \} catch \{\} this\._lineaAC = null; \}/.test(M));
+     && /idx\.slice\(pos \+ 3, pos \+ 15\)/.test(M) && /await respiro\(500\);/.test(M)
+     && /x\.state === 'loaded' \|\| x\.state === 'errored'\)\) \{\n      clearTimeout\(this\._lineaTimer\);/.test(M)
+     && (M.match(/if \(this\._lineaAC\) \{ try \{ this\._lineaAC\.abort\(\); \} catch \{\} this\._lineaAC = null; \}/g) || []).length >= 2);
 
   /* «Pero tarda en cargar mucho» — el cambio de CAPA. En el Mac el
      puntero se posa en el botón un instante antes del clic: ahí ya se
@@ -4795,6 +4801,12 @@ grupo('RÁFAGAS: colores vivos y con SUS listones (01-09-2026)');
      'el color tiene que cambiar donde le cambia la decisión, no en un número de manual');
   ok('está registrada, si no la capa se queda sin color',
      /presion, visibilidad, tempc, t850, rafagas,/.test(M));
+  /* 15-09-2026 19:55 (portátil): la tesela trae la racha en m/s. Con la escala propia se
+     perdió la conversión y el mapa marcaba «7» en Madrid con 27 km/h en la API: los
+     cortes en m/s y el número por `conv`, como presión y visibilidad. */
+  ok('la tesela de racha viene en m/s: los cortes van en m/s (rfm/3,6) y el número en km/h (conv ×3,6)',
+     /breakpoints: rfm\.map\(k => k \/ 3\.6\)/.test(M) && /conv: v => v \* 3\.6,/.test(M),
+     'sin esto el naranja de 49 km/h solo saldría con 176 km/h: la capa que decide, siempre en calma');
   ok('la barra de la leyenda lleva TODOS los cortes (nada de recortar el último)',
      /eje: rfm, unidad: 'km\/h', pos: rfm\.map/.test(M),
      'con la temperatura se recortó el último y su color no salía en la barra');
@@ -5082,6 +5094,13 @@ grupo('Las barbas: 20 s → medio segundo, y en km/h (01-09-2026)');
   ok('las barbas se leen en tandas, no una detrás de otra',
      /const TANDA = \d+;/.test(fn) && /await Promise\.all\(puntos\.slice/.test(fn),
      '192 await encadenados costaban 20 s en la capa que decide');
+  /* 15-09-2026 19:30 (portátil): las ráfagas llevan barbas (dirección a 10 m). La causa del
+     «State not found» era la marca de escala en la URL que barbas() pasaba directa a la librería. */
+  ok('las ráfagas llevan barbas: componentes() da u/v de 10 m para gusts y barbas() limpia la marca de la URL',
+     /if \(L_\?\.id === 'gusts'\) return \{ u: 'wind_u_component_10m', v: 'wind_v_component_10m' \};/.test(M)
+     && /const uUrl = limpiarMarca\(this\.omUrl\(C\.u, this\.t, R\.modelo, R\.meta\) \|\| ''\);/.test(M)
+     && /const vUrl = limpiarMarca\(this\.omUrl\(C\.v, this\.t, R\.modelo, R\.meta\) \|\| ''\);/.test(M),
+     'sin la marca limpia la librería rechaza la URL y luego no encuentra el fichero: ni una barba');
   ok('y las dos componentes de cada barba, a la vez',
      /await Promise\.all\(\[\s*\n\s*OMWeatherMapLayer\.getValueFromLatLong/.test(fn));
   ok('sigue pudiendo abandonar si él cambia de capa o mueve el mapa',
@@ -7528,8 +7547,17 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
      'el azul de fábrica sobre el fondo Claro no se ve');
   const nb = ((M.match(/const nbc = \[([\s\S]*?)\];/) || [])[1] || '').match(/\['#([0-9a-f]{6})',\s*([0-9.]+)\]/g) || [];
   const alfa = nb.map(s => Number(s.match(/,\s*([0-9.]+)\]/)[1]));
-  const clara = nb.length > 0 && nb.every(s => { const h = s.match(/#([0-9a-f]{6})/)[1]; return [0, 2, 4].every(i => parseInt(h.slice(i, i + 2), 16) >= 0xd0); });
-  ok('la escala «nubes» va de transparente (0 %) a blanca casi opaca (100 %), y es blanca de verdad, no azul',
+  /* 15-09-2026 19:40 (portátil), con sus fotos del cielo cerrado y gris de Bermeo delante:
+     blanca hasta el 55 % (hay claros) y GRIS del 70 % en adelante (cielo cerrado), sin
+     que deje de ser neutra (nada de azul clarito). */
+  const hexDe = s => s.match(/#([0-9a-f]{6})/)[1];
+  const canales = h => [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16));
+  const neutra = h => { const c = canales(h); return Math.max(...c) - Math.min(...c) <= 0x18; };
+  const clara = nb.length >= 8
+    && nb.slice(0, 5).every(s => canales(hexDe(s)).every(v => v >= 0xd0))
+    && nb.slice(5).every(s => neutra(hexDe(s)))
+    && canales(hexDe(nb[7])).every(v => v < 0xb0) && canales(hexDe(nb[5])).every(v => v < 0xe0);
+  ok('la escala «nubes» va de transparente (0 %) a gris oscuro casi opaco (100 %): blanca con claros, gris con el cielo cerrado, y neutra, no azul',
      alfa.length >= 6 && alfa[0] === 0 && alfa[alfa.length - 1] >= 0.9 && alfa.every((a, i) => i === 0 || a >= alfa[i - 1]) && clara
      && /const nubes = \{/.test(M) && /presion, visibilidad, tempc, t850, rafagas, capeE, tapa, agua, isocero, sinColor, nubes,/.test(M),
      JSON.stringify({ alfa, clara }));
