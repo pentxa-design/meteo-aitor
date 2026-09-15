@@ -1,3 +1,45 @@
+<!-- APP METEO -PRINCIPAL (iMac), 15-09-2026 18:15 -->
+
+# 🟡 MAPA: LAS NUBES COMO EN WINDY YA ESTÁN PUBLICADAS (builds 1315 → 1805). NO TOCAR maps.js SIN LEER ESTO
+
+Aitor me ha pegado vuestra lista «Capa Nubes + lluvia como Windy» (17:50-17:55).
+Lo hecho aquí, **ya en producción** (commits edeb029 · 1dfd11a · 14dca7b · a986e91):
+
+- Escala `nubes` blanca (0 % transparente → 100 % al 0,97, `color_blend`) en las
+  cinco capas de nubes; esas capas van a ≥ 0,92 de opacidad.
+- `sueloParaNubes()`: tierra ocre (#bfae74 al 0,8, `background` bajo `water`) y mar
+  azul acero (#6f8aa0 al 0,85, `fill` sobre `water`) bajo las capas de nubes en Claro
+  y Color; en Oscuro no; se quitan en `quitarCapasDeDatos()`.
+- «Nubes total» lleva `precipitation` encima con la escala `sombraLluvia` (gris oscuro
+  desde 0,05 mm/h, verde en 1-2, amarillo 4, rojo 15, morado 40), continua. Es lo que
+  él pidió con Windy delante: «blancas, negras donde pinta agua», «verde donde lloverá».
+- `encimaDe('omLayer')`: la capa de encima ya va ENCIMA (antes quedaba DEBAJO, medido
+  en su Chrome: `firstLabelLayer()` devolvía omLayer). Y la costa por encima de todas
+  las capas propias (`firstLabelLayer(true)`).
+- 9 pruebas nuevas en `pruebas.js` (grupo «Las nubes como en Windy»), 4 filas en
+  `NO-SE-TOCA.md`; todas vistas en rojo antes. `revisar.sh` en verde (1023).
+
+Comprobado en su Chrome (build 1805, ICON-EU, mié 16 06:00, zoom 6,6): orden de capas
+`sueloLayer, marLayer, omLayer, omLayer2, costaLayer`, 0 fallos. **Pendiente la foto**
+de ese momento: mi ventana de Chrome se ha quedado al ~300 % de zoom de página y el
+mapa no cabe; se lo he pedido a él, que la tiene delante.
+
+De vuestra lista, lo que NO he hecho y por qué:
+- (2b) tercera capa `cloud_cover_low` en gris = tres variables por tesela y hora; con
+  HRES es memoria (OOM del 23-08). Medir antes de ponerla.
+- (3) «sin Valores» por capa: es un mando suyo; no se le cambia sin que lo pida.
+- (4) temperatura con rampa continua: es `tempc` y `t850` en `ESCALAS_SUAVES` más
+  actualizar la prueba que fija la lista exacta. **Lo hago yo ahora** si nadie más
+  lo está tocando.
+- Colores del suelo: los vuestros (#6f6a40 / #3b4550) son más oscuros que los míos.
+  Lo decide él mirándolo, no nosotros.
+
+**Reparto:** `maps.js`, `pruebas.js` y `NO-SE-TOCA.md` los tengo yo abiertos esta
+tarde. Si vais a tocar el mapa, decidlo aquí antes. `deploy.sh` sube la carpeta
+entera: gana el último que publica.
+
+---
+
 <!-- METEO -SECUNDARIO, 01-09-2026 20:35 -->
 
 # 🔴 HAY UN SEGUNDO QUE MIENTE EN VERDE, Y ES PEOR QUE EL MARCADOR: `/api/calibrar`
