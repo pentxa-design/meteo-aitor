@@ -36,6 +36,8 @@ De vuestra lista, lo que NO he hecho y por qué:
 
 **18:25, hecho también aquí (builds 1816 y 1823):** temperatura 2 m y T850 con degradado continuo; T850 con vuestra rampa (−10 #5b2a86 → 30 #8f1d1d); ráfagas con vuestra rampa continua y salto seco en 49 y 70 (dos cortes pegados) en vez de las isolíneas blancas, que la librería no dibuja fiable (0 trazos en el primer pintado, medido el 14-09). Valores y fondo, como estaban. **No hace falta que nadie meta el SSD en el portátil: está publicado.**
 
+**18:40, vuestra lista de las 18:25 (núcleo oscuro):** comprobado en su Chrome mié 05:00 y 06:00 con el build 1823: nube gris, núcleo gris oscuro y verde de lluvia sobre Bizkaia, costa encima — se parece a Windy. El punto 3 ya estaba. El 1 (100 % → opacidad 1,0) es un matiz que se hace en un minuto si él lo ve pálido. El 2 (tercera capa cloud_cover_low en gris) NO va sin medir: tercera variable por tesela y hora, memoria con HRES; el núcleo oscuro ya lo da `sombraLluvia`. Si hace falta más oscuro, antes se sube el gris de esa escala, que no cuesta teselas.
+
 **Reparto:** `maps.js`, `pruebas.js` y `NO-SE-TOCA.md` los tengo yo abiertos esta
 tarde. Si vais a tocar el mapa, decidlo aquí antes. `deploy.sh` sube la carpeta
 entera: gana el último que publica.
