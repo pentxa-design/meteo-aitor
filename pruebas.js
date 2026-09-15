@@ -4688,8 +4688,12 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
   /* «En la 850 quisiera ver los cambios de verde a rojo… en nuestro
      mapa no se nota nada, entonces esa capa no pinta nada». La capa de
      las masas de aire con la escala de las masas de aire. */
-  ok('la T850 tiene su propia escala de masas: verde→rojo entre −15 y 31',
-     /const t8m = \[-15, -10, -5, 0, 5, 10, 14, 18, 22, 25, 28, 31\]/.test(M)
+  /* 15-09-2026, con AguaceroWx al lado («y estas quiero como AguaceroWx»): la
+     misma rampa que ellos, −10 morado → azul → verde → amarillo → naranja → rojo
+     30, continua. */
+  ok('la T850 tiene su propia escala de masas, como la de AguaceroWx: morado −10 → rojo 30, continua',
+     /const t8m = \[-10, -6, -2, 2, 6, 10, 14, 18, 22, 26, 30\]/.test(M)
+     && /const t8c = \[\['#5b2a86',1\], \['#2b4fb5',1\]/.test(M) && /\['#d63a2a',1\], \['#8f1d1d',1\]\]/.test(M)
      && /escala:'t850'/.test(M),
      'la africana del viernes (26° a 850) tiene que salir roja, como en Meteored');
   ok('y el rojo empieza donde quema: 34 rojo, 38 granate, 42 morado',
@@ -4776,8 +4780,11 @@ grupo('RÁFAGAS: colores vivos y con SUS listones (01-09-2026)');
      'iba con la de fábrica siendo la capa con la que decide');
   ok('hay tantos colores como cortes (si no, el mapa pinta corrido)',
      nums.length === cols.length, `${nums.length} cortes · ${cols.length} colores`);
-  ok('y los cortes caen EXACTAMENTE en sus listones: 45 y 60',
-     nums.includes(45) && nums.includes(60),
+  /* 15-09-2026: rampa continua como AguaceroWx, pero con un salto seco en 49 y en 70
+     (dos cortes pegados: 48→49 y 69→70), que son los listones del perfil de hierro,
+     el que sale por defecto desde el 13-09; el 60 (torre) sigue siendo corte. */
+  ok('y los cortes caen EXACTAMENTE en sus listones: 49 y 70 con salto seco (48/49, 69/70), y 60',
+     nums.includes(48) && nums.includes(49) && nums.includes(69) && nums.includes(70) && nums.includes(60),
      'el color tiene que cambiar donde le cambia la decisión, no en un número de manual');
   ok('está registrada, si no la capa se queda sin color',
      /presion, visibilidad, tempc, t850, rafagas,/.test(M));
@@ -7436,7 +7443,7 @@ grupo('El mapa se ve debajo del color: costa por encima, opacidad 0,75 y el «no
      && cp.length >= 12 && cp[0] === 0 && cp[1] > 0 && cp[1] < cp[2] && cp[3] >= 0.9 && cp[4] === 1,
      JSON.stringify({ rf, cp }));
   ok('la reflectividad pide color_blend=true: degradado continuo, no bandas estrechas que dibujan la malla',
-     /const ESCALAS_SUAVES = new Set\(\['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'sombraLluvia', 'tempc', 't850'\]\);/.test(M)
+     /const ESCALAS_SUAVES = new Set\(\['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'sombraLluvia', 'tempc', 't850', 'rafagas'\]\);/.test(M)
      && /if \(ESCALAS_SUAVES\.has\(L_\?\.escala\)\) q\.set\('color_blend', 'true'\);/.test(M),
      'con bandas de 5 dBZ cada celda del modelo se veía como un cuadro; ráfagas, CAPE y presión siguen a saltos (listones e isobaras). 15-09: temperatura y T850 también en degradado, como Windy («mira capa temperatura 2m qué bien se ve»); sus cortes de 30/34/38 siguen en la escala, solo se funden entre sí');
 }

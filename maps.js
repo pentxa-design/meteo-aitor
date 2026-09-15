@@ -458,7 +458,7 @@ const LENTOS = new Set(['ecmwf_ifs', 'ecmwf_ifs025', 'ncep_gfs013', 'ncep_gfs025
 /* 15-09-2026, con Windy delante: «mira capa temperatura 2m qué bien se ve». Temperatura
    y T850 pasan a degradado continuo; los cortes (30 naranja, 34 rojo, 38 granate)
    siguen siendo los suyos, solo se funden entre sí en vez de verse a bandas. */
-const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'sombraLluvia', 'tempc', 't850']);
+const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'sombraLluvia', 'tempc', 't850', 'rafagas']);
 
 const HRES_ZOOM_MIN = 6;
 function hresDeLejos(modelo, zoom) {
@@ -997,22 +997,29 @@ function escalasPropias() {
      donde le cambia a él la decisión**. Ninguna app del mundo puede hacer
      esto, porque ninguna sabe cuáles son sus límites:
 
-         hasta 25 .... azules y verdes, ahí no pasa nada
-         25-45 ....... amarillos, se nota pero se trabaja
-         **45** ...... NARANJA FUERTE — su listón de aviso
-         **60** ...... ROJO — su tope: por encima, no se sube
-         75-100+ ..... granate y morado, temporal de verdad
+         hasta 40 .... azules y verdes, ahí no pasa nada (transparente de calma)
+         40-49 ....... verde-amarillo, se nota pero se trabaja
+         **49** ...... AMARILLO, salto seco — aviso del perfil de hierro (0,7 × 70)
+         60 .......... naranja — el tope de torre
+         **70** ...... ROJO, salto seco — el tope de hierro: por encima, no se sube
+         90-120 ...... granate y morado, temporal de verdad
+         (15-09-2026: rampa continua entre cortes, como AguaceroWx; antes 45/60 a bandas)
 
      Así, de un vistazo y sin leer un número, ve dónde se le pasa el
      límite. Los cortes de 45 y 60 salen de SUS umbrales, no de una escala
      de manual. */
-  const rfm = [0, 10, 20, 30, 40, 45, 52, 60, 70, 85, 100, 120];
+  /* 15-09-2026, con AguaceroWx al lado: rampa CONTINUA como la suya (azul →
+     verde → amarillo → naranja → rojo → morado), pero con un salto seco en
+     49 y en 70 (dos cortes pegados) — los listones del perfil de hierro, el
+     que sale por defecto desde el 13-09 — y el 60 (torre) como corte. Así
+     se ve suave y sigue cambiando donde le cambia la decisión. */
+  const rfm = [0, 20, 30, 40, 48, 49, 60, 69, 70, 90, 110, 120];
   /* El «no pasa nada» es transparente y el color sube con el valor hasta
      su listón (14-09-2026): con todo opaco, un día de calma dejaba el mapa
      azul de punta a punta y sin costa —«no se ve nada ni el mapa»—. */
-  const rfc = [['#1a3a6b',0], ['#1f6fd0',0.25], ['#20a8d8',0.5], ['#2fc9a0',0.75],
-               ['#8fd026',0.9], ['#ff9d00',1], ['#f95c00',1], ['#e11400',1],
-               ['#b0000f',1], ['#7a0020',1], ['#4f0033',1], ['#2b0040',1]];
+  const rfc = [['#2f4fb0',0], ['#3f9fd8',0.35], ['#4fc7b0',0.6], ['#7fd35a',0.85],
+               ['#b9d84a',0.95], ['#f2c62a',1], ['#f28a2a',1], ['#f2701f',1],
+               ['#e03a2a',1], ['#8f1d1d',1], ['#6a1b9a',1], ['#4a1070',1]];
   const rafagas = {
     scale: { type:'breakpoint', unit:'km/h', breakpoints: rfm,
              colors: rfc.map(([c,a2]) => hexRGBA(c, a2)) },
@@ -1095,10 +1102,13 @@ function escalasPropias() {
      −15 a +30; con la escala planetaria quedaba un amarillo plano.
      Cortes al uso de los mapas de masas: 18 naranja (cálida), 22 rojo
      (africana), 25+ granate (la ola del viernes daba 26). */
-  const t8m = [-15, -10, -5, 0, 5, 10, 14, 18, 22, 25, 28, 31];
-  const t8c = [['#4b1e8f',1], ['#2447d6',1], ['#1f8fe8',1], ['#2fc9b8',1],
-               ['#2fb84a',1], ['#8fd026',1], ['#f5d800',1], ['#ff9d00',1],
-               ['#f24e00',1], ['#d40b10',1], ['#8e0020',1], ['#4d0028',1]];
+  /* 15-09-2026, con AguaceroWx al lado: «y estas quiero como AguaceroWx,
+     compara la nuestra y la de ellos, la de ráfaga y la de temp 850». La
+     misma rampa que ellos, de −10 (morado) a 30 (rojo oscuro), continua
+     (t850 está en ESCALAS_SUAVES). */
+  const t8m = [-10, -6, -2, 2, 6, 10, 14, 18, 22, 26, 30];
+  const t8c = [['#5b2a86',1], ['#2b4fb5',1], ['#1f8fd0',1], ['#2cb5b0',1], ['#4fc46a',1], ['#a9d64a',1],
+               ['#f2e63a',1], ['#f8b62d',1], ['#f0762b',1], ['#d63a2a',1], ['#8f1d1d',1]];
   const t850 = {
     scale: { type:'breakpoint', unit:'°C', breakpoints: t8m,
              colors: t8c.map(([c,a]) => hexRGBA(c, a)) },
