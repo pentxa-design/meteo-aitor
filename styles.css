@@ -741,6 +741,10 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;
 }
 
 /* Números del modelo sobre el mapa */
+/* Lo que ven los otros modelos, hora a hora (16-09-2026) */
+.hcard__otros{display:flex;flex-direction:column;gap:.25rem;margin-top:.3rem}
+.hcard__otros .nd__ojo{display:block;text-align:center}
+
 .mvals{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
 canvas.mvals{width:100%;height:100%;display:block}
 .mval{position:absolute;transform:translate(-50%,-140%);font-size:0.875rem;font-weight:800;

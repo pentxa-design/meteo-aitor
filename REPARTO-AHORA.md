@@ -1982,3 +1982,4 @@ Aitor me ha pasado el SSD con este encargo, en este orden:
 3. **Deslizador**: `precargar()` a tres horas por delante; calentado de la línea de tiempo entera de la capa abierta con el mapa quieto; `calentar()` al abrir la app también Ráfagas y Temp. 850.
 Lo apunto en TRASPASO §16 con builds y medidas. `deploy.sh` desde el portátil: `probar-avisos.sh` no tiene aquí la clave y dejará otro aparato «prueba automática» en el almacén (se limpia en el primer aviso real).
 4. **(20:20)** Lluvia con paleta Windy + suelo oscuro + ciudades (build 1951); sombra de lluvia sobre Nubes en AZUL (Meteored); **partículas de viento** («Partículas», junto a Barbas). Todo en TRASPASO §17. Sigue sin push: commits locales en el SSD.
+5. **(00:05, 16-09)** Chip de Horas con la cantidad que ve el otro modelo (`mmQueVeElOtro`), literal, 0,0 incluido. TRASPASO §17 al final.

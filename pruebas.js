@@ -7604,6 +7604,37 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
      'una nube blanca casi opaca tapaba la línea de costa');
 }
 
+grupo('El chip de Horas dice cuánta agua ve el otro modelo (15-09-2026, 23:53)');
+{
+  /* Suyo: «cuando pones tal modelo ve lluvia, no pones cuánta ve». */
+  const cuerpo = sacar('function mmQueVeElOtro('), cHora = sacar('function horaEnComparativa(');
+  ok('mmQueVeElOtro() lee la lluvia del modelo que presta el código, en la comparativa de ESTE sitio y a esa misma hora',
+     /COMPARAR\.find\(x => x\.name === nom\)/.test(cuerpo)
+     && /const hc = horaEnComparativa\(h\);/.test(cuerpo) && /precipitation_\$\{m\.om\}/.test(cuerpo)
+     && /return has\(v\) \? v : null;/.test(cuerpo)
+     && /deEsteSitio\(S\.comparativa, h\?\.sitio \|\| null\)\?\.hourly/.test(cHora)
+     && /C\.time\.findIndex\(t => t\.slice\(0, 13\) === iso\)/.test(cHora) && /return i < 0 \? null : \{ C, i \};/.test(cHora),
+     'sin sello de sitio o sin esa hora, nada: nunca un número inventado');
+  ok('el chip «⚠ X ve llovizna» de Horas lleva el número al lado (mmQueVeTxt), tal cual lo publica ese modelo, 0,0 incluido',
+     /ve \$\{esLlovizna\(c\) \? 'llovizna' : 'lluvia'\}\$\{mmQueVeTxt\(mmQueVeElOtro\(h\)\)\}<\/span>/.test(src)
+     && /const mmQueVeTxt = mm => mm === null \? '' : ` · \$\{mmTxt\(mm\)\} mm`;/.test(src),
+     'suyo, 23:58: «no inventes nada, lo que dice el modelo»');
+  ok('y «Horas» se repinta cuando llega la comparativa, que es cuando el número existe',
+     /seguro\('horas', renderHours\);/.test(src));
+  /* 16-09-2026 00:10: «si alguno ve lluvia, CAPE, etc., que lo pongáis, y si se puede cuánto». */
+  const cLl = sacar('function lluviaQueVenOtrosHora('), cRa = sacar('function rachaQueNoVesTuHora('), cCh = sacar('function chipsOtrosHora(');
+  ok('cada hora dice qué otros modelos ven lluvia y cuánta (≥ 0,1 mm y más que el dueño), sin repetir al que presta el código',
+     /const dueno = nombreDeModelo\(duenoLluvia\(\)\);/.test(cLl) && /if \(m\.name === dueno \|\| m\.name === yaDicho\) continue;/.test(cLl)
+     && /v >= 0\.1 && v > mia/.test(cLl) && /const hc = horaEnComparativa\(h\);/.test(cLl));
+  ok('cada hora dice quién ve tormenta (CAPE ≥ 700 con tapa < 75, la regla de siempre) cuando el dueño no la ve, con sus dos números',
+     /tormentaQueNoVesTu\(h, h\.sitio \|\| null\)/.test(cCh) && /ve tormenta: CAPE \$\{Math\.round\(t\.cape\)\} · tapa \$\{Math\.round\(t\.cin\)\}/.test(cCh));
+  ok('cada hora dice quién da más racha a 10 m si cruza su listón o se va 20 km/h, con el número y el listón',
+     /const \{ warn, no \} = listonRafaga\(\);/.test(cRa) && /alto\.v - h\.gust10 >= 20/.test(cRa)
+     && /da \$\{wtxt\(r\.suya, true\)\} a 10 m/.test(cCh) && /tu listón es \$\{wtxt\(r\.limite, true\)\}/.test(cCh));
+  ok('y los tres chips van en la tarjeta de cada hora de «Horas», debajo del CAPE',
+     /\$\{lineaCapeHora\(h\)\}\$\{chipsOtrosHora\(h\)\}/.test(src));
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');

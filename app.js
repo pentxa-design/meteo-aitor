@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.15-2010';
+const BUILD = '2026.09.16-0012';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -984,6 +984,94 @@ function aguaPrestada(h) {
   if (!has(mm) || mm > 0) return null;
   const c = has(h.codeLluvia) ? h.codeLluvia : h.code;
   return has(c) && c >= HAY_AGUA ? c : null;
+}
+
+/* ── CUÁNTA AGUA VE EL OTRO (15-09-2026, 23:53, portátil) ───────────
+   Suyo, en Horas, con «⚠ ECMWF ve llovizna» en media docena de horas del
+   miércoles y 0,0 mm debajo de cada una: «cuando pones tal modelo ve
+   lluvia, no pones cuánta ve». Se busca en la comparativa de ESTE sitio
+   la serie de lluvia del modelo que presta el código, a esa misma hora,
+   y se dice al lado, tal cual la publica: «ve llovizna · 0,1 mm», y si
+   su propio número es 0,0 pues «· 0,0 mm» (llovizna con cero por
+   redondeo: es lo que manda ese modelo, y se enseña sin adornos). Suyo,
+   23:58: «no inventes nada, lo que dice el modelo» · «jamás quiero nada
+   inventado: lo que mandan los modelos siempre, en viento, CAPE, lluvia,
+   ráfagas». Si la comparativa no ha llegado o ese modelo no está en
+   ella, se queda sin número: nunca uno inventado. */
+/* La hora de `h` dentro de la comparativa de SU sitio (la misma cuenta
+   que tormentaQueNoVesTu y peorRacha): devuelve { C, i } o null. */
+function horaEnComparativa(h) {
+  const C = deEsteSitio(S.comparativa, h?.sitio || null)?.hourly;
+  if (!C?.time || !h?.date) return null;
+  const iso = new Date(h.date.getTime() - h.date.getTimezoneOffset() * 60000)
+    .toISOString().slice(0, 13);
+  const i = C.time.findIndex(t => t.slice(0, 13) === iso);
+  return i < 0 ? null : { C, i };
+}
+function mmQueVeElOtro(h) {
+  const nom = h?.cieloDe;
+  if (!nom) return null;
+  const m = COMPARAR.find(x => x.name === nom);
+  if (!m) return null;
+  const hc = horaEnComparativa(h);
+  if (!hc) return null;
+  const v = hc.C[`precipitation_${m.om}`]?.[hc.i];
+  return has(v) ? v : null;
+}
+const mmQueVeTxt = mm => mm === null ? '' : ` · ${mmTxt(mm)} mm`;
+
+/* ── LO QUE VE CUALQUIER OTRO, HORA A HORA (16-09-2026, 00:10) ────────
+   Suyo, 15-09 a las 23:58, con Horas delante: «si alguno ve lluvia, CAPE,
+   etc., que lo pongáis» · «y si se puede, cuánto» · «datos, datos y
+   datos» · «no quiero jugar con las vidas de los trabajadores». Hasta
+   hoy la tarjeta de cada hora solo avisaba del código prestado; las
+   franjas y «Ahora» sí decían lo que veían los demás. Ahora cada hora
+   dice, con el nombre y el número tal cual lo publica cada modelo:
+     · lluvia: los modelos que ven agua (≥ 0,1 mm) donde el dueño ve menos
+     · tormenta: el que ve CAPE ≥ 700 con tapa < 75 (tormentaQueNoVesTu)
+     · racha: el que da más de 10 m cruzando su listón o 20 km/h más
+   Sin comparativa del sitio, nada: no se inventa. */
+function lluviaQueVenOtrosHora(h) {
+  const hc = horaEnComparativa(h);
+  if (!hc) return [];
+  const dueno = nombreDeModelo(duenoLluvia());
+  const yaDicho = aguaPrestada(h) !== null ? h.cieloDe : null;   // ese ya lleva su número en el chip del código
+  const mia = has(h.prec) ? h.prec : 0;
+  const otros = [];
+  for (const m of COMPARAR) {
+    if (m.name === dueno || m.name === yaDicho) continue;
+    const v = hc.C[`precipitation_${m.om}`]?.[hc.i];
+    if (has(v) && v >= 0.1 && v > mia) otros.push({ quien: m.name, mm: v });
+  }
+  otros.sort((x, y) => y.mm - x.mm);
+  return otros;
+}
+function rachaQueNoVesTuHora(h) {
+  const hc = horaEnComparativa(h);
+  if (!hc || !has(h.gust10)) return null;
+  const cargado = modeloDato()?.name;
+  const otros = COMPARAR
+    .map(m => ({ n: m.name, v: hc.C[`wind_gusts_10m_${m.om}`]?.[hc.i] }))
+    .filter(x => has(x.v) && x.n !== cargado);
+  if (!otros.length) return null;
+  const alto = otros.reduce((p, q) => q.v > p.v ? q : p);
+  const { warn, no } = listonRafaga();
+  const cruzaNo   = h.gust10 < no   && alto.v >= no;
+  const cruzaWarn = h.gust10 < warn && alto.v >= warn;
+  const seSepara  = alto.v - h.gust10 >= 20;
+  if (!cruzaNo && !cruzaWarn && !seSepara) return null;
+  return { quien: alto.n, suya: alto.v, mia: h.gust10, limite: cruzaNo ? no : cruzaWarn ? warn : null };
+}
+function chipsOtrosHora(h) {
+  const out = [];
+  const ll = lluviaQueVenOtrosHora(h);
+  if (ll.length) out.push(`<span class="nd__ojo">⚠ ${esc(ll.map((x, i) => `${x.quien}${i ? '' : ' ve'} ${mmTxt(x.mm)} mm`).join(' · '))}</span>`);
+  const rompe = has(h.cape) && h.cape >= CAPE_COMBINACION && has(h.cin) && h.cin < 75;
+  const t = rompe ? null : tormentaQueNoVesTu(h, h.sitio || null);
+  if (t) out.push(`<span class="nd__ojo">⚠ ${esc(t.quien)} ve tormenta: CAPE ${Math.round(t.cape)} · tapa ${Math.round(t.cin)}</span>`);
+  const r = rachaQueNoVesTuHora(h);
+  if (r) out.push(`<span class="nd__ojo">⚠ ${esc(r.quien)} da ${wtxt(r.suya, true)} a 10 m${r.limite !== null ? ` — tu listón es ${wtxt(r.limite, true)}` : ` (tú ves ${wtxt(r.mia, true)})`}</span>`);
+  return out.length ? `<div class="hcard__otros">${out.join(' ')}</div>` : '';
 }
 
 function codigoQueSeVe(h, codigoDelCielo, thr = S.thr) {
@@ -12687,12 +12775,12 @@ function renderHours() {
       <div class="hcard__t">${has(h.temp) ? `${h.temp.toFixed(0)}°` : '—'}</div>
       <div class="hcard__r">
         <span>💧 ${has(h.pop) ? h.pop + '%' : '—'} · ${has(h.prec) ? mmTxt(h.prec) + ' mm' : 'sin dato'}${
-          (c => c !== null ? ` <span class="nd__ojo">⚠ ${esc(h.cieloDe || 'otro modelo')} ve ${esLlovizna(c) ? 'llovizna' : 'lluvia'}</span>` : '')(aguaPrestada(h))}</span>
+          (c => c !== null ? ` <span class="nd__ojo">⚠ ${esc(h.cieloDe || 'otro modelo')} ve ${esLlovizna(c) ? 'llovizna' : 'lluvia'}${mmQueVeTxt(mmQueVeElOtro(h))}</span>` : '')(aguaPrestada(h))}</span>
         <span>💨 ${has(h.wind) ? wtxt(h.wind, true) : '—'} · ${has(h.dir) ? 'del ' + rumboLargo(h.dir) : '—'}</span>
         <span class="faint">Rocío ${has(h.dew) ? h.dew.toFixed(0)+'°' : '—'} · HR ${has(h.hum) ? h.hum+'%' : '—'}</span>
       </div>
       <div class="hcard__g">Racha ${has(h.gust) ? wtxt(h.gust, true) : '—'}</div>
-      ${lineaCapeHora(h)}
+      ${lineaCapeHora(h)}${chipsOtrosHora(h)}
     </div>`).join('');
 }
 
