@@ -347,9 +347,10 @@ const TLAYERS = [
   { id:'gh500', densa:true, g:'Tormenta', name:'Geopotencial 500', v:'geopotential_height_500hPa', unit:'m', contours:true,
     desc:'Configuración sinóptica en altura' },
 
-  { id:'clouds_rain', g:'Cielo', name:'Nubes + lluvia', v:'cloud_cover', unit:'%', escala:'nubes',
-    encima:'precipitation',
-    desc:'Nubosidad en gris y, encima, dónde puede llover — sin taparse' },
+  /* «Nubes + lluvia» (clouds_rain) se quitó el 15-09-2026 a las 19:00: era
+     otra capa de nubes que no decía lo mismo que «Nubes total» (verde con
+     cualquier lluvia en una, solo desde 1-2 mm/h en la otra). Suyo: «sí,
+     quítala, es lo mismo». Queda UNA capa de nubes, la de Windy. */
   { id:'clouds',      g:'Cielo', name:'Nubes total', v:'cloud_cover', unit:'%', escala:'nubes', encima:'precipitation', encimaEscala:'sombraLluvia',
     desc:'Nubosidad total: blanca, y oscura tirando a verde donde llueve (como Windy)' },
   { id:'clouds_low',  g:'Cielo', name:'Nubes bajas', v:'cloud_cover_low', unit:'%', escala:'nubes',
@@ -1017,9 +1018,13 @@ function escalasPropias() {
   /* El «no pasa nada» es transparente y el color sube con el valor hasta
      su listón (14-09-2026): con todo opaco, un día de calma dejaba el mapa
      azul de punta a punta y sin costa —«no se ve nada ni el mapa»—. */
-  const rfc = [['#2f4fb0',0], ['#3f9fd8',0.35], ['#4fc7b0',0.6], ['#7fd35a',0.85],
-               ['#b9d84a',0.95], ['#f2c62a',1], ['#f28a2a',1], ['#f2701f',1],
-               ['#e03a2a',1], ['#8f1d1d',1], ['#6a1b9a',1], ['#4a1070',1]];
+  /* 15-09-2026, 19:00 (portátil): la paleta de AguaceroWx, que él quiere
+     igual: azules hasta 48, NARANJA desde 48-49 (justo su listón ámbar, que
+     allí también es el primer salto de color), rojo en 70, granate, morado.
+     El verde-amarillo del medio se va: en la suya no existe. */
+  const rfc = [['#2f4fb0',0], ['#3f6fd0',0.4], ['#5aa8e8',0.65], ['#8fcbf0',0.85],
+               ['#b8e0f5',0.95], ['#f0a050',1], ['#ef7a30',1], ['#ea5a28',1],
+               ['#d82020',1], ['#8f1d1d',1], ['#6a1b9a',1], ['#4a1070',1]];
   const rafagas = {
     scale: { type:'breakpoint', unit:'km/h', breakpoints: rfm,
              colors: rfc.map(([c,a2]) => hexRGBA(c, a2)) },
@@ -1234,9 +1239,14 @@ function escalasPropias() {
      va ENCIMA de Nubes total con esta escala: gris oscuro en cuanto
      cae algo, verde donde llueve de verdad, amarillo y rojo con los
      chaparrones. Es la misma idea que la capa de nubes de Windy. */
-  const slm = [0, 0.05, 0.2, 0.5, 1, 2, 4, 8, 15, 40];
-  const slc = [['#5c636b',0], ['#5c636b',.42], ['#454c54',.6], ['#2f4a3a',.72], ['#2e7d3a',.8],
-               ['#3fa33f',.85], ['#b9c22c',.88], ['#e8a11c',.9], ['#d43a2a',.92], ['#7b2a8c',.95]];
+  /* 15-09-2026, 19:00 (portátil), sus dos capturas de las 18:30 delante:
+     el verde entraba en 1-2 mm/h y la llovizna de la costa cantábrica
+     (0,1-0,3) se quedaba solo en gris; en la otra capa salía verde. Ahora
+     como Windy: gris oscuro solo con trazas (0,05-0,2) y verde desde 0,2,
+     y de ahí a azul y morado con lo fuerte. */
+  const slm = [0, 0.05, 0.15, 0.2, 1, 3, 8, 20, 40];
+  const slc = [['#5c636b',0], ['#4a515a',.35], ['#40474f',.5], ['#7fd27f',.78], ['#3fbf3f',.85],
+               ['#1f8f6f',.9], ['#2a63c9',.92], ['#8a2be2',.94], ['#d02a7c',.96]];
   const sombraLluvia = {
     scale: { type:'breakpoint', unit:'mm/h', breakpoints: slm, colors: slc.map(([c,a]) => hexRGBA(c, a)) },
     eje: slm, unidad: 'mm/h', pos: slm.map((_, i) => i),
@@ -1536,7 +1546,18 @@ const Maps = {
           vecinas++;
         } catch { /* igual: un extra */ }
       }
-      console.info(`mapa precalentado: ${bien} teselas de ${modelo} + ${vecinas} horas siguientes en ${Math.round((Date.now() - t0) / 100) / 10} s`);
+      /* Y las dos capas que más mira además de la guardada, solo la tesela
+         del sitio de la hora actual: Ráfagas y Temp. 850 (15-09-2026). */
+      let otras = 0;
+      for (const id of ['gusts', 't850']) {
+        const L2 = TLAYERS.find(l => l.id === id);
+        if (!L2?.v || L2.id === L_.id || ac.signal.aborted) continue;
+        const u3 = limpiarMarca(this.omUrl(L2.v, t, modelo, meta, L2) || '');
+        if (!u3) continue;
+        try { await OMWeatherMapLayer.omProtocol({ url: `${u3}/${z}/${tiles[0][0]}/${tiles[0][1]}`, type: 'image' }, ac); otras++; }
+        catch { /* extra */ }
+      }
+      console.info(`mapa precalentado: ${bien} teselas de ${modelo} + ${vecinas} horas siguientes + ${otras} capas en ${Math.round((Date.now() - t0) / 100) / 10} s`);
     } catch (e) {
       console.warn('precalentar mapa:', e?.message || e);
     } finally {
@@ -3267,6 +3288,8 @@ const Maps = {
    *  pedido para otras horas de la misma capa sigue sirviendo. */
   cancelarPrecarga() {
     if (this._ac) { try { this._ac.abort(); } catch {} this._ac = null; }
+    clearTimeout(this._lineaTimer);
+    if (this._lineaAC) { try { this._lineaAC.abort(); } catch {} this._lineaAC = null; }
     clearTimeout(this._pre);
     this._pedidas = new Set();
     this._enCurso = 0;
@@ -3335,12 +3358,58 @@ const Maps = {
         }
       };
       const en = off => { const t = idx[pos + off]; return (t === undefined || t < 0 || t >= total) ? null : t; };
+      /* 15-09-2026, 19:00 (portátil), suyo: «la de Temp. 850 al mover el
+         deslizador tarda». Con los bloques ya guardados en el CDN (build
+         2032), calentar más por delante es casi gratis: las DOS horas
+         siguientes enteras, el centro de la tercera y, detrás, casi una. */
       if (en(d)  !== null) pedir(en(d),  visibles);          // la siguiente, entera
+      if (en(2*d) !== null) pedir(en(2*d), visibles);        // la de después, entera
+      if (en(3*d) !== null) pedir(en(3*d), [centro]);        // la tercera, el centro
       if (en(-d) !== null) pedir(en(-d), visibles.slice(0, 2)); // la de detrás, casi
-      if (en(2*d) !== null) pedir(en(2*d), [centro]);        // la de después, el centro
       if (this._pedidas.size > 400) this._pedidas = new Set();
       this.bombear();
+      /* Y con el mapa quieto 3 s, la línea de tiempo ENTERA de esta capa,
+         de una tesela (el centro) por hora: es lo que abre cada fichero. */
+      clearTimeout(this._lineaTimer);
+      this._lineaTimer = setTimeout(() => this.calentarLinea(), 3000);
     }, 500);
+  },
+
+  /** Calienta la línea de tiempo entera de la capa abierta: el centro de
+   *  cada hora, de una en una, primero hacia delante y luego hacia atrás.
+   *  Se para sola al cambiar de capa o de modelo (cancelarPrecarga) y no
+   *  compite con lo que se está viendo: una petición a la vez y solo
+   *  cuando el mapa lleva 3 s quieto. Con los bloques por URL (build
+   *  2032) cada hora son 5-10 bloques y, calientes, milisegundos. */
+  async calentarLinea() {
+    if (this._lineaAC || !this.map || !this.usando) return;
+    const L_ = TLAYERS.find(l => l.id === this.layer);
+    if (!L_?.v) return;
+    const R = this.usando;
+    const z = Math.min(12, Math.max(0, Math.round(this.map.getZoom())));
+    const centro = this.tilesVisibles(z)[0];
+    if (!centro) return;
+    const idx = this._idx ?? this.indices();
+    const pos = this._pos ?? 0;
+    const orden = idx.slice(pos + 1).concat(idx.slice(0, pos).reverse());
+    const ac = this._lineaAC = new AbortController();
+    let n = 0;
+    const t0 = Date.now();
+    try {
+      for (const t of orden) {
+        if (ac.signal.aborted) return;
+        const u = this.omUrl(L_.v, t, R.modelo, R.meta);
+        if (!u) continue;
+        const k = `${u}/${z}/${centro[0]}/${centro[1]}`;
+        if (this._pedidas?.has(k)) continue;
+        this._pedidas?.add(k);
+        try { await OMWeatherMapLayer.omProtocol({ url: k, type: 'image' }, ac); n++; }
+        catch { /* una hora que falle no para las demás */ }
+      }
+      if (n) console.info(`línea de tiempo calentada: ${n} horas de ${L_.name} en ${Math.round((Date.now() - t0) / 100) / 10} s`);
+    } finally {
+      if (this._lineaAC === ac) this._lineaAC = null;
+    }
   },
 
   /* ── PRECALENTAR OTROS MODELOS: PROBADO Y RETIRADO (31-08-2026) ─────

@@ -1971,3 +1971,13 @@ A) precalentarModelos(): tras cargar la capa activa, pedir por la cola la
 B) meta bueno cacheado por modelo (LS tmetaOk.<id>): si la pasada nueva da
    404s, cartel específico «la pasada de las X aún no está entera en el
    servidor» + volver solo al meta anterior que funcionaba.
+
+<!-- Prueba iPhone y MacBook Pro (portátil, SSD enchufado aquí), 15-09-2026 18:55 -->
+
+# 🟡 PORTÁTIL TOCANDO maps.js Y pruebas.js AHORA (el SSD está en el MacBook; el iMac no puede escribir)
+
+Aitor me ha pasado el SSD con este encargo, en este orden:
+1. **Una sola capa de nubes**: se quita «Nubes + lluvia» (`clouds_rain`); «Nubes total» se queda con la nube como está y la sombra de lluvia pasa a los verdes de Windy desde 0,2 mm/h (gris oscuro solo entre 0,05 y 0,2). Motivo (sus dos capturas de las 18:30, ICON-EU 17:00): en «Nubes + lluvia» había verde en Cantabria y Aquitania y en «Nubes total» no, porque el verde de `sombraLluvia` entraba en 1-2 mm/h. Él: «sí, quítala, es lo mismo».
+2. **Ráfagas** con la paleta de AguaceroWx (azul → azul claro → naranja desde 48 → rojo → granate → morado), manteniendo los saltos secos en 49 y 70 y el corte en 60. Temp. 850 se queda (ya es la rampa de AguaceroWx; lo que él vio a las 18:14 era la copia vieja de las 00:48 de su Chrome «sin conexión»).
+3. **Deslizador**: `precargar()` a tres horas por delante; calentado de la línea de tiempo entera de la capa abierta con el mapa quieto; `calentar()` al abrir la app también Ráfagas y Temp. 850.
+Lo apunto en TRASPASO §16 con builds y medidas. `deploy.sh` desde el portátil: `probar-avisos.sh` no tiene aquí la clave y dejará otro aparato «prueba automática» en el almacén (se limpia en el primer aviso real).

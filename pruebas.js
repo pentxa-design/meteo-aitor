@@ -4708,9 +4708,16 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
      /pedir\(en\(d\),\s+visibles\)/.test(M)
      && !/\[d, 2\*d, 3\*d, 4\*d, 5\*d, 6\*d, 7\*d, 8\*d, -d\]/.test(M),
      'ocho medio-calientes no caben en la caché de 8 MB: se autosaboteaba');
-  ok('y también la de detrás por si vuelves, y el centro de la de después',
+  /* 15-09-2026 19:00 (portátil): con los bloques guardados en el CDN (build 2032) y la
+     caché de bloques en 32 MB, calentar más por delante ya no se autosabotea: las DOS
+     siguientes enteras, el centro de la tercera y casi la de detrás; y con el mapa quieto,
+     `calentarLinea()` recorre la línea de tiempo entera de una tesela por hora. */
+  ok('y también la de detrás por si vuelves, la segunda entera y el centro de la tercera',
      /pedir\(en\(-d\), visibles\.slice\(0, 2\)\)/.test(M)
-     && /pedir\(en\(2\*d\), \[centro\]\)/.test(M));
+     && /pedir\(en\(2\*d\), visibles\)/.test(M)
+     && /pedir\(en\(3\*d\), \[centro\]\)/.test(M)
+     && /async calentarLinea\(\)/.test(M) && /this\._lineaTimer = setTimeout\(\(\) => this\.calentarLinea\(\), 3000\)/.test(M)
+     && /if \(this\._lineaAC\) \{ try \{ this\._lineaAC\.abort\(\); \} catch \{\} this\._lineaAC = null; \}/.test(M));
 
   /* «Pero tarda en cargar mucho» — el cambio de CAPA. En el Mac el
      puntero se posa en el botón un instante antes del clic: ahí ya se
@@ -7514,8 +7521,10 @@ grupo('Barbas sin color de fondo, Isocero de 0 a 5500 con el rojo abajo, tapa ce
 grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra debajo (15-09-2026)');
 {
   const M = mapsSrc;
-  ok('las cinco capas de nubes llevan la escala propia «nubes», no el azul clarito de fábrica',
-     ['clouds_rain', 'clouds', 'clouds_low', 'clouds_mid', 'clouds_high'].every(id => new RegExp(`id:'${id}'[^\\n]*escala:'nubes'`).test(M)),
+  ok('las cuatro capas de nubes llevan la escala propia «nubes» (y «Nubes + lluvia» ya no existe)',
+     /* 15-09-2026 19:00: «Nubes + lluvia» (clouds_rain) se quitó; queda una sola capa de nubes con lluvia. */
+     ['clouds', 'clouds_low', 'clouds_mid', 'clouds_high'].every(id => new RegExp(`id:'${id}'[^\\n]*escala:'nubes'`).test(M))
+     && !/id:'clouds_rain'/.test(M),
      'el azul de fábrica sobre el fondo Claro no se ve');
   const nb = ((M.match(/const nbc = \[([\s\S]*?)\];/) || [])[1] || '').match(/\['#([0-9a-f]{6})',\s*([0-9.]+)\]/g) || [];
   const alfa = nb.map(s => Number(s.match(/,\s*([0-9.]+)\]/)[1]));
