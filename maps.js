@@ -729,6 +729,33 @@ function tilesAlrededor(lat, lon, z) {
   return out;
 }
 
+/* Capitales de provincia y ciudades de referencia para los valores del
+   mapa (ver valores()). Coordenadas redondeadas a dos decimales, sobran. */
+const CIUDADES_VALORES = [
+  { nom:'Bermeo', lat:43.42, lng:-2.72 }, { nom:'Bilbao', lat:43.26, lng:-2.93 }, { nom:'Donostia', lat:43.32, lng:-1.98 },
+  { nom:'Vitoria', lat:42.85, lng:-2.67 }, { nom:'Santander', lat:43.46, lng:-3.80 }, { nom:'Oviedo', lat:43.36, lng:-5.85 },
+  { nom:'Gijón', lat:43.54, lng:-5.66 }, { nom:'A Coruña', lat:43.37, lng:-8.40 }, { nom:'Lugo', lat:43.01, lng:-7.56 },
+  { nom:'Ourense', lat:42.34, lng:-7.86 }, { nom:'Pontevedra', lat:42.43, lng:-8.64 }, { nom:'Vigo', lat:42.24, lng:-8.72 },
+  { nom:'León', lat:42.60, lng:-5.57 }, { nom:'Burgos', lat:42.34, lng:-3.70 }, { nom:'Logroño', lat:42.47, lng:-2.45 },
+  { nom:'Pamplona', lat:42.82, lng:-1.64 }, { nom:'Huesca', lat:42.14, lng:-0.41 }, { nom:'Zaragoza', lat:41.65, lng:-0.88 },
+  { nom:'Lleida', lat:41.62, lng:0.63 }, { nom:'Girona', lat:41.98, lng:2.82 }, { nom:'Barcelona', lat:41.39, lng:2.17 },
+  { nom:'Tarragona', lat:41.12, lng:1.25 }, { nom:'Soria', lat:41.77, lng:-2.47 }, { nom:'Palencia', lat:42.01, lng:-4.53 },
+  { nom:'Valladolid', lat:41.65, lng:-4.72 }, { nom:'Zamora', lat:41.50, lng:-5.75 }, { nom:'Salamanca', lat:40.97, lng:-5.66 },
+  { nom:'Segovia', lat:40.95, lng:-4.12 }, { nom:'Ávila', lat:40.66, lng:-4.70 }, { nom:'Madrid', lat:40.42, lng:-3.70 },
+  { nom:'Guadalajara', lat:40.63, lng:-3.17 }, { nom:'Teruel', lat:40.34, lng:-1.11 }, { nom:'Castellón', lat:39.99, lng:-0.04 },
+  { nom:'Valencia', lat:39.47, lng:-0.38 }, { nom:'Cuenca', lat:40.07, lng:-2.13 }, { nom:'Toledo', lat:39.86, lng:-4.02 },
+  { nom:'Cáceres', lat:39.47, lng:-6.37 }, { nom:'Badajoz', lat:38.88, lng:-6.97 }, { nom:'Ciudad Real', lat:38.99, lng:-3.93 },
+  { nom:'Albacete', lat:38.99, lng:-1.86 }, { nom:'Alicante', lat:38.35, lng:-0.48 }, { nom:'Murcia', lat:37.98, lng:-1.13 },
+  { nom:'Almería', lat:36.83, lng:-2.46 }, { nom:'Granada', lat:37.18, lng:-3.60 }, { nom:'Jaén', lat:37.77, lng:-3.79 },
+  { nom:'Córdoba', lat:37.89, lng:-4.78 }, { nom:'Sevilla', lat:37.39, lng:-5.99 }, { nom:'Huelva', lat:37.26, lng:-6.94 },
+  { nom:'Cádiz', lat:36.53, lng:-6.29 }, { nom:'Málaga', lat:36.72, lng:-4.42 }, { nom:'Palma', lat:39.57, lng:2.65 },
+  { nom:'Lisboa', lat:38.72, lng:-9.14 }, { nom:'Oporto', lat:41.15, lng:-8.61 }, { nom:'Coímbra', lat:40.21, lng:-8.43 },
+  { nom:'Braga', lat:41.55, lng:-8.42 }, { nom:'Faro', lat:37.02, lng:-7.93 }, { nom:'Burdeos', lat:44.84, lng:-0.58 },
+  { nom:'Biarritz', lat:43.48, lng:-1.56 }, { nom:'Pau', lat:43.30, lng:-0.37 }, { nom:'Toulouse', lat:43.60, lng:1.44 },
+  { nom:'Montpellier', lat:43.61, lng:3.88 }, { nom:'Marsella', lat:43.30, lng:5.37 }, { nom:'Lyon', lat:45.76, lng:4.84 },
+  { nom:'Nantes', lat:47.22, lng:-1.55 }, { nom:'Andorra', lat:42.51, lng:1.52 }, { nom:'Calpe', lat:38.64, lng:0.04 },
+];
+
 const Peticiones = {
   /* CUÁNTAS TESELAS SE DESCODIFICAN A LA VEZ.
      Es lo que marca si el mapa va fluido o a tirones, y también lo que
@@ -1161,9 +1188,14 @@ function escalasPropias() {
   // el agua: en el mapa no se distingue si eso es un chubasco o es el
   // Cantábrico. Mismos cortes de intensidad, otros colores.
   const mm = [0, 0.1, 0.3, 0.6, 1, 2, 4, 7, 12, 20, 35, 60];
-  const cc = [['#a8e6a0',0], ['#a8e6a0',.55], ['#7ad46a',.75], ['#4cc23c',.9],
-              ['#22a83a',1], ['#12903a',1], ['#1a7a3a',1], ['#c8d13a',1],
-              ['#f2e12a',1], ['#f5a72a',1], ['#d4232f',1], ['#7b2a8c',1]];
+  /* 15-09-2026, 19:50 (portátil), su pantallazo de «Lluvia, truenos» de
+     Windy delante («se ven bien, eh; a ver si nos acercamos»): azul →
+     cian → verde → amarillo → rojo → morado, y el suelo gris oscuro
+     debajo mientras está esta capa (sueloParaLluvia), que es lo que hace
+     que el azul flojo no se confunda con el mar. Mismos cortes. */
+  const cc = [['#4a7fd8',0], ['#4a7fd8',.55], ['#3f9fe0',.75], ['#2fb8d8',.88],
+              ['#2fc9b0',1], ['#3fcf6a',1], ['#8fd83a',1], ['#e0e03a',1],
+              ['#f2a72a',1], ['#e04a2a',1], ['#b0308f',1], ['#6a1b9a',1]];
   const lluvia = {
     scale: { type:'breakpoint', unit:'mm/h', breakpoints: mm,
              colors: cc.map(([c,a]) => hexRGBA(c, a)) },
@@ -1268,9 +1300,18 @@ function escalasPropias() {
      (0,1-0,3) se quedaba solo en gris; en la otra capa salía verde. Ahora
      como Windy: gris oscuro solo con trazas (0,05-0,2) y verde desde 0,2,
      y de ahí a azul y morado con lo fuerte. */
+  /* 15-09-2026, 19:55 (portátil), con su captura de Meteored «Nubes,
+     precipitación y nieve» delante: «nubes: este marca agua en azul, que
+     sería lo suyo» · «si avecinan lluvia suelen ser más grises y si
+     llevan mucha agua y el cielo se pone oscuro pues nubes más negras» ·
+     «la realidad de lo que marcan los modelos, punto». Así queda: la
+     nube se pone gris en cuanto el modelo le ve agua (trazas), AZUL
+     claro donde llueve de verdad, azul más fuerte según cae más y azul
+     casi negro con los chaparrones. Todo del mm/h del modelo de cada
+     hora; nada fijo. */
   const slm = [0, 0.05, 0.15, 0.2, 1, 3, 8, 20, 40];
-  const slc = [['#5c636b',0], ['#4a515a',.35], ['#40474f',.5], ['#7fd27f',.78], ['#3fbf3f',.85],
-               ['#1f8f6f',.9], ['#2a63c9',.92], ['#8a2be2',.94], ['#d02a7c',.96]];
+  const slc = [['#5c636b',0], ['#4a515a',.35], ['#40474f',.5], ['#a9ecf6',.8], ['#5fd3f2',.88],
+               ['#2fa6e6',.92], ['#1f6fd0',.94], ['#173f9c',.96], ['#0d1f4f',.97]];
   const sombraLluvia = {
     scale: { type:'breakpoint', unit:'mm/h', breakpoints: slm, colors: slc.map(([c,a]) => hexRGBA(c, a)) },
     eje: slm, unidad: 'mm/h', pos: slm.map((_, i) => i),
@@ -1378,6 +1419,7 @@ const Maps = {
     this.pasoHoras = LS.get('tpaso', 3);
     this.verValores = LS.get('tvals', true);
     this.verBarbas  = LS.get('tbarbs', true);
+    this.verParticulas = LS.get('tpart', true);
     this.verRayos   = LS.get('trayos', true);
 
     const el = document.querySelector('#mapc');
@@ -2166,6 +2208,7 @@ const Maps = {
          los mapas profesionales: el COLOR va pleno y la SOMBRA del
          terreno se dibuja ENCIMA, suave. Ya no hay que elegir. */
       this.sueloParaNubes(L_.escala === 'nubes');
+      this.sueloParaLluvia(L_.escala === 'lluvia');
       /* La nube blanca a 0,75 sobre el mar azul acero salía lavada (visto
          en su Chrome el 15-09 a las 13:20): las capas de nubes van casi
          opacas. El deslizador CAPA solo puede subirla, no bajarla. */
@@ -2610,6 +2653,7 @@ const Maps = {
                     'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'];
     const FUENTES = ['omSrc', 'omSrc2', 'radarSrc', 'satSrc', 'aemetSrc', 'isoSrc'];
     CAPAS.forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
+    ['sueloLluviaLayer', 'marLluviaLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
     FUENTES.forEach(id => { if (this.map.getSource(id)) this.map.removeSource(id); });
   },
 
@@ -2636,6 +2680,29 @@ const Maps = {
           paint:{ 'fill-color':'#6f8aa0', 'fill-opacity':0.85 } }, this.firstLabelLayer());
       }
     } catch (e) { console.warn('suelo para nubes: no se ha podido poner', e); }
+  },
+
+  /* ── EL SUELO GRIS OSCURO BAJO LA LLUVIA (15-09-2026, 19:50) ─────────
+     Como en Windy: con la capa de lluvia, tierra gris oscuro y mar gris
+     azulado, para que el azul de la lluvia floja no se pierda en el mar
+     ni en la tierra clara. Mismo mecanismo que sueloParaNubes, con sus
+     propias capas (ids distintos) para que una no quite la otra. Solo en
+     Claro y Color; en Oscuro ya está oscuro. */
+  sueloParaLluvia(on) {
+    if (!this.map) return;
+    const quitar = () => ['sueloLluviaLayer', 'marLluviaLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
+    if (!on || this.base === 'oscuro') { quitar(); return; }
+    try {
+      quitar();
+      const ls = this.map.getStyle()?.layers || [];
+      const agua = ls.find(l => l.id === 'water') || ls.find(l => l.type === 'fill' && /water/.test(l.id));
+      this.map.addLayer({ id:'sueloLluviaLayer', type:'background',
+        paint:{ 'background-color':'#5a5f66', 'background-opacity':0.85 } }, agua?.id || this.firstLabelLayer());
+      if (agua && this.map.getSource('carto')) {
+        this.map.addLayer({ id:'marLluviaLayer', type:'fill', source:'carto', 'source-layer':'water',
+          paint:{ 'fill-color':'#46505c', 'fill-opacity':0.9 } }, this.firstLabelLayer());
+      }
+    } catch (e) { console.warn('suelo para lluvia: no se ha podido poner', e); }
   },
 
   /* Dónde insertar el dato meteorológico dentro del mapa base.
@@ -3547,6 +3614,25 @@ const Maps = {
       }
     } catch { puntos = []; }
 
+    /* ── MÁS CIUDADES CON SU VALOR, COMO WINDY (15-09-2026, 19:50) ──────
+       El mapa base etiqueta pocas ciudades de lejos (diez en toda la
+       península); Windy pone cuarenta. Se completan con las capitales de
+       provincia y ciudades de referencia que estén a la vista, sin
+       pisarse (60 px entre etiquetas) y hasta 48 en total. */
+    try {
+      const b = this.map.getBounds();
+      const vistos = new Set(puntos.map(p => p.nom));
+      const px = ll => this.map.project([ll.lng, ll.lat]);
+      const lejos = (a, q) => { const A = px(a), Q = px(q); return Math.hypot(A.x - Q.x, A.y - Q.y) >= 60; };
+      for (const c of CIUDADES_VALORES) {
+        if (puntos.length >= 48) break;
+        if (vistos.has(c.nom) || !b.contains([c.lng, c.lat])) continue;
+        if (!puntos.every(q => lejos(c, q))) continue;
+        vistos.add(c.nom);
+        puntos.push({ nom: c.nom, lng: c.lng, lat: c.lat });
+      }
+    } catch { /* sin mapa medible, se queda con lo que haya */ }
+
     // Si el mapa no da ciudades (poco zoom, estilo sin etiquetas…), se
     // reparten los valores en una rejilla regular sobre lo que se ve.
     if (puntos.length < 6) {
@@ -3877,6 +3963,7 @@ const Maps = {
   },
 
   async barbas() {
+    this.particulas();                                 // las motas van con las barbas (y se paran con ellas)
     const cont = document.querySelector('#mapBarbs');
     if (!cont) return;
     const L_ = TLAYERS.find(l => l.id === this.layer);
@@ -3973,7 +4060,145 @@ const Maps = {
     this.soltarMemoria();
   },
 
-  limpiarBarbas() { const c = document.querySelector('#mapBarbs'); if (c) c.innerHTML = ''; },
+  limpiarBarbas() { this.pararParticulas(); const c = document.querySelector('#mapBarbs'); if (c) c.innerHTML = ''; },
+
+  /* ── PARTÍCULAS DE VIENTO (15-09-2026, 20:00, portátil) ─────────────
+     Suyo, a las 19:22, con la bandera del puerto de Bermeo tiesa: «viento
+     movimiento bandera»; y sus capturas de Windy y de Meteored, las dos
+     con «Animación de partículas» encendida. Es la barba, pero viva: el
+     viento de 10 m (u, v) del modelo que pinta la capa, leído en una
+     rejilla de la pantalla (una muestra cada 40 px, tope 600) e
+     interpolado entre muestras, y unas motas que lo recorren dejando
+     estela. CERO peticiones nuevas: las mismas teselas que las barbas,
+     ya descodificadas. Se para al mover el mapa, al cambiar de capa o de
+     hora, con la pestaña oculta (el navegador congela el fotograma) y
+     con el botón. Va en las capas de viento: ráfagas y las de barbas. */
+  async particulas() {
+    const cv = document.querySelector('#mapParticulas');
+    if (!cv) return;
+    if (!this._partVis) {                             // al volver a la pestaña del navegador, arrancan solas
+      this._partVis = true;
+      document.addEventListener('visibilitychange', () => { if (!document.hidden && this.verParticulas && this.map) this.particulas(); });
+    }
+    const L_ = TLAYERS.find(l => l.id === this.layer);
+    const C = this.componentes(L_);
+    if (!this.verParticulas || !C || !this.usando || !this.map || document.hidden) { this.pararParticulas(); return; }
+    const R = this.usando;
+    const uUrl = limpiarMarca(this.omUrl(C.u, this.t, R.modelo, R.meta) || '');
+    const vUrl = limpiarMarca(this.omUrl(C.v, this.t, R.modelo, R.meta) || '');
+    if (!uUrl || !vUrl) { this.pararParticulas(); return; }
+    const turno = (this._turnoPart = (this._turnoPart || 0) + 1);
+    const vigente = () => turno === this._turnoPart;
+
+    const c = this.map.getCanvas();
+    const W = c.clientWidth, H = c.clientHeight;
+    if (!W || !H) return;
+
+    const z = Math.min(12, Math.max(0, Math.round(this.map.getZoom())));
+    const tiles = this.tilesVisibles(z).slice(0, 6);
+    await Promise.all([uUrl, vUrl].flatMap(u => tiles.map(([x, y]) =>
+      OMWeatherMapLayer.omProtocol({ url:`${u}/${z}/${x}/${y}`, type:'image' },
+        new AbortController()).catch(() => {}))));
+    if (!vigente()) return;
+
+    const PASO = 40;
+    let nx = Math.max(4, Math.ceil(W / PASO) + 1), ny = Math.max(4, Math.ceil(H / PASO) + 1);
+    while (nx * ny > 600) { if (nx >= ny) nx--; else ny--; }
+    const dx = W / (nx - 1), dy = H / (ny - 1);
+    const U = new Float32Array(nx * ny).fill(NaN), V = new Float32Array(nx * ny).fill(NaN);
+    const celdas = [];
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) celdas.push([i, j]);
+    const TANDA = 24;                                 // como las barbas: en tandas, sin despertar al OOM
+    for (let k = 0; k < celdas.length; k += TANDA) {
+      if (!vigente()) return;
+      await Promise.all(celdas.slice(k, k + TANDA).map(async ([i, j]) => {
+        const ll = this.map.unproject([i * dx, j * dy]);
+        try {
+          const [ru, rv] = await Promise.all([
+            OMWeatherMapLayer.getValueFromLatLong(ll.lat, ll.lng, uUrl),
+            OMWeatherMapLayer.getValueFromLatLong(ll.lat, ll.lng, vUrl),
+          ]);
+          if (has(ru?.value) && has(rv?.value)) { U[j * nx + i] = ru.value; V[j * nx + i] = rv.value; }
+        } catch { /* sin dato: la mota que caiga ahí renace en otro sitio */ }
+      }));
+    }
+    if (!vigente()) return;
+    this.soltarMemoria();
+    this.animarParticulas(cv, { W, H, nx, ny, dx, dy, U, V, z, turno });
+  },
+
+  animarParticulas(cv, G) {
+    if (this._partRAF) { cancelAnimationFrame(this._partRAF); this._partRAF = null; }
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(G.W * dpr); cv.height = Math.round(G.H * dpr);
+    const ctx = cv.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, G.W, G.H);
+    /* Cuántas: una por cada 350 px² (un iPhone ~700, un Mac grande ~3.000). */
+    const N = Math.round(Math.min(3500, Math.max(600, G.W * G.H / 350)));
+    const P = new Float32Array(N * 3);                // x, y, edad
+    const VIDA = 110;
+    const nacer = i => { P[i * 3] = Math.random() * G.W; P[i * 3 + 1] = Math.random() * G.H; P[i * 3 + 2] = Math.random() * VIDA; };
+    for (let i = 0; i < N; i++) nacer(i);
+    /* Píxeles por fotograma y m/s: con zoom 6 (Euskadi entera) 0,10; a
+       más zoom más deprisa, que el mismo viento recorre más pantalla. */
+    const esc = Math.min(0.4, Math.max(0.05, 0.10 * Math.pow(1.25, G.z - 6)));
+    const TOPE = 4;                                   // px por fotograma, que un huracán no teletransporte
+    const { nx, U, V, dx, dy } = G;
+    const viento = (x, y, out) => {
+      const fi = x / dx, fj = y / dy;
+      const i = Math.floor(fi), j = Math.floor(fj);
+      if (i < 0 || j < 0 || i >= nx - 1 || j >= G.ny - 1) return false;
+      const a = fi - i, b = fj - j, k = j * nx + i;
+      const u00 = U[k], u10 = U[k + 1], u01 = U[k + nx], u11 = U[k + nx + 1];
+      const v00 = V[k], v10 = V[k + 1], v01 = V[k + nx], v11 = V[k + nx + 1];
+      if (Number.isNaN(u00 + u10 + u01 + u11 + v00 + v10 + v01 + v11)) return false;   // alguna esquina sin dato
+      out[0] = (u00 * (1 - a) + u10 * a) * (1 - b) + (u01 * (1 - a) + u11 * a) * b;
+      out[1] = (v00 * (1 - a) + v10 * a) * (1 - b) + (v01 * (1 - a) + v11 * a) * b;
+      return true;
+    };
+    const w = [0, 0];
+    let ultimo = 0;
+    const paso = (tms) => {
+      this._partRAF = null;
+      if (this._turnoPart !== G.turno) return;        // ya hay otra ronda (o se paró)
+      if (cv.offsetParent === null) {                 // el mapa no está a la vista (otra pestaña de la app): sin gastar batería
+        setTimeout(() => { if (this._turnoPart === G.turno && !this._partRAF) this._partRAF = requestAnimationFrame(paso); }, 1000);
+        return;
+      }
+      if (tms - ultimo < 28) { this._partRAF = requestAnimationFrame(paso); return; }   // ~33 fps, de sobra
+      ultimo = tms;
+      ctx.globalCompositeOperation = 'destination-in';
+      ctx.fillStyle = 'rgba(0,0,0,0.93)';             // la estela se apaga poco a poco
+      ctx.fillRect(0, 0, G.W, G.H);
+      ctx.globalCompositeOperation = 'source-over';
+      const path = new window.Path2D();
+      for (let i = 0; i < N; i++) {
+        const o = i * 3;
+        const x = P[o], y = P[o + 1];
+        if (P[o + 2]++ > VIDA || !viento(x, y, w)) { nacer(i); continue; }
+        let vx = w[0] * esc, vy = -w[1] * esc;      // v positivo = hacia el norte = hacia arriba
+        const mod = Math.hypot(vx, vy);
+        if (mod > TOPE) { vx *= TOPE / mod; vy *= TOPE / mod; }
+        const x2 = x + vx, y2 = y + vy;
+        path.moveTo(x, y); path.lineTo(x2, y2);
+        P[o] = x2; P[o + 1] = y2;
+      }
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 2.6; ctx.strokeStyle = 'rgba(8,12,20,0.38)'; ctx.stroke(path);   // halo oscuro: se ve sobre el mapa claro
+      ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.stroke(path); // la mota, blanca: se ve sobre la capa
+      this._partRAF = requestAnimationFrame(paso);
+    };
+    this._partRAF = requestAnimationFrame(paso);
+  },
+
+  pararParticulas() {
+    this._turnoPart = (this._turnoPart || 0) + 1;     // invalida la ronda en marcha y la que esté leyendo
+    if (this._partRAF) { cancelAnimationFrame(this._partRAF); this._partRAF = null; }
+    const cv = document.querySelector('#mapParticulas');
+    if (cv && cv.width) { const ctx = cv.getContext('2d'); if (ctx) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); } }
+  },
 
   /* ── RAYOS ENCIMA DEL MAPA (09-09-2026) ─────────────────────────────
      Suyo, en Calpe con la tormenta subiendo por la costa, mirando Windy:
@@ -4057,6 +4282,11 @@ const Maps = {
     this.ui();
     this.verBarbas ? this.barbas() : this.limpiarBarbas();
   },
+  setParticulas(on) {
+    this.verParticulas = !!on; LS.set('tpart', this.verParticulas);
+    this.ui();
+    this.verParticulas ? this.particulas() : this.pararParticulas();
+  },
 
   /* ---------- Controles ---------- */
   ui() {
@@ -4112,6 +4342,7 @@ const Maps = {
       `<button class="mbtn${this.terrain ? ' is-on' : ''}" data-tr="1" title="Sombreado del terreno (Esri/USGS)">Relieve</button>` +
       `<button class="mbtn${this.verValores ? ' is-on' : ''}" data-tv="1" title="Números del modelo sobre las ciudades">Valores</button>` +
       `<button class="mbtn${this.verBarbas ? ' is-on' : ''}" data-tb2="1" title="Barbas de viento — media ≈ 9 km/h, entera ≈ 19, banderola ≈ 93 (el símbolo se dibuja en nudos por convenio)">Barbas</button>` +
+      `<button class="mbtn${this.verParticulas ? ' is-on' : ''}" data-tpart="1" title="Partículas de viento en movimiento (viento a 10 m del modelo), como Windy y Meteored">Partículas</button>` +
       `<button class="mbtn${this.verRayos ? ' is-on' : ''}" data-tl="1" title="Descargas detectadas por AEMET en las dos últimas horas publicadas, encima del mapa">⚡ Rayos</button>` +
       `<span class="msel__k" style="margin-left:12px">Paso</span>` +
       [1,3,6].map(h => `<button class="mbtn${h === this.pasoHoras ? ' is-on' : ''}" data-tp="${h}"

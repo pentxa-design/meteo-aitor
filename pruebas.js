@@ -7579,12 +7579,13 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
   const slAlfa = sl.map(s => Number(s.match(/,\s*([0-9.]+)\]/)[1]));
   const slHex = sl.map(s => s.match(/#([0-9a-f]{6})/)[1]);
   const oscuro = h => [0, 2, 4].every(i => parseInt(h.slice(i, i + 2), 16) < 0x90);
-  const verde = h => parseInt(h.slice(2, 4), 16) > parseInt(h.slice(0, 2), 16) + 0x20 && parseInt(h.slice(2, 4), 16) > parseInt(h.slice(4, 6), 16) + 0x20;
-  ok('Nubes total lleva la lluvia encima con su propia sombra: la nube se oscurece donde llueve y va a verde donde llueve de verdad (como Windy)',
+  /* 19:55, su captura de Meteored delante: «nubes: este marca agua en azul, que sería lo suyo». */
+  const azul = h => parseInt(h.slice(4, 6), 16) > parseInt(h.slice(0, 2), 16) + 0x30 && parseInt(h.slice(4, 6), 16) >= parseInt(h.slice(2, 4), 16);
+  ok('Nubes total lleva la lluvia encima con su propia sombra: la nube se oscurece donde llueve y va a azul donde llueve de verdad (como Meteored)',
      /id:'clouds',[^\n]*encima:'precipitation', encimaEscala:'sombraLluvia'/.test(M)
      && /const sombraLluvia = \{/.test(M) && /sinColor, nubes, sombraLluvia,/.test(M)
      && slAlfa.length >= 6 && slAlfa[0] === 0 && slAlfa[1] > 0 && slAlfa.every((a, i) => i === 0 || a >= slAlfa[i - 1])
-     && oscuro(slHex[1]) && oscuro(slHex[2]) && slHex.slice(3, 5).some(verde),
+     && oscuro(slHex[1]) && oscuro(slHex[2]) && slHex.slice(3, 5).every(azul) && oscuro(slHex[slHex.length - 1]),
      JSON.stringify({ slAlfa, slHex }));
   ok('las dos peticiones de la capa de encima (al montar y al mover la hora) llevan la escala de la sombra, no la de Precipitación',
      (M.match(/this\.omUrl\(L_\.encima, this\.t, [^,]+, [^,]+, L_\.encimaEscala \? \{ escala: L_\.encimaEscala \} : null\)/g) || []).length === 2,

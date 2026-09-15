@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.15-1936';
+const BUILD = '2026.09.15-2010';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -15685,6 +15685,7 @@ function bind() {
     if (b.dataset.tv) Maps.setValores(!Maps.verValores);
     if (b.dataset.tp) Maps.setPaso(+b.dataset.tp);
     if (b.dataset.tb2) Maps.setBarbas(!Maps.verBarbas);
+    if (b.dataset.tpart) Maps.setParticulas(!Maps.verParticulas);
     if (b.dataset.tl) Maps.setRayos(!Maps.verRayos);
   });
   // El botón de rayos de la barra del reloj (Mac y móvil)

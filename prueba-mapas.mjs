@@ -89,6 +89,16 @@ import { readFileSync, readdirSync } from 'node:fs';
      && /Maps\.calentar\(\)/.test(mapa));
   ok('maps.js envuelve fetch: HEAD .om → ?cabecera=1 y Range → ?rango=',
      /\?cabecera=1/.test(mapa) && /\?rango=\$\{m\[1\]\}-\$\{m\[2\]\}/.test(mapa) && /instalarBloquesPorUrl\(\);/.test(mapa));
+  /* 15-09-2026 20:00: «viento movimiento bandera» — las partículas van con las barbas,
+     se paran con ellas, y el lienzo y el botón existen de verdad. */
+  const indice = readFileSync('index.html', 'utf8'), app = readFileSync('app.js', 'utf8');
+  ok('las partículas de viento: lienzo en index.html, botón «Partículas» y su interruptor, y van y se paran con las barbas',
+     /<canvas class="mvals" id="mapParticulas"><\/canvas>/.test(indice)
+     && /async particulas\(\)/.test(mapa) && /animarParticulas\(cv, \{/.test(mapa) && /pararParticulas\(\) \{/.test(mapa)
+     && /async barbas\(\) \{\n    this\.particulas\(\);/.test(mapa)
+     && /limpiarBarbas\(\) \{ this\.pararParticulas\(\);/.test(mapa)
+     && /data-tpart="1"/.test(mapa) && /Maps\.setParticulas\(!Maps\.verParticulas\)/.test(app)
+     && /getValueFromLatLong\(ll\.lat, ll\.lng, uUrl\)/.test(mapa) && !/fetch\(/.test(mapa.slice(mapa.indexOf('async particulas()'), mapa.indexOf('pararParticulas() {'))));
 }
 
 console.log('\n  El servidor de mapas de Open-Meteo\n');
