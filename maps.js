@@ -455,7 +455,10 @@ const LENTOS = new Set(['ecmwf_ifs', 'ecmwf_ifs025', 'ncep_gfs013', 'ncep_gfs025
    (punto de rocío)—. A esa escala un píxel son 5 km y el ECMWF de 25 km,
    rejilla regular, se ve igual y va ligero. Regla: por debajo del zoom 6
    se pinta con ECMWF 25 km y SE DICE en el cartel; desde el 6, el de 9 km. */
-const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'sombraLluvia']);
+/* 15-09-2026, con Windy delante: «mira capa temperatura 2m qué bien se ve». Temperatura
+   y T850 pasan a degradado continuo; los cortes (30 naranja, 34 rojo, 38 granate)
+   siguen siendo los suyos, solo se funden entre sí en vez de verse a bandas. */
+const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'sombraLluvia', 'tempc', 't850']);
 
 const HRES_ZOOM_MIN = 6;
 function hresDeLejos(modelo, zoom) {
