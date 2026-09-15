@@ -4036,3 +4036,17 @@ GFS la dan rasa hasta media tarde: hoy los de 25 km van tarde con la nube
 baja, como en Calpe. Viento: los cuatro del NO/ONO; AROME 53-58 de racha
 toda la tarde, ICON cruza los 60 de 14 a 16 h, ECMWF llega a 50 a las 18 h,
 GFS se queda en 20-30. Contrastar por la tarde con lo que vea.
+
+**12:50, suyo: «ya van entrando nubes blancas cada vez más y ojo viento», «en el mismo pueblo».**
+Euskalmet a las 12:40 (por /api/euskalmet): **Almike (Bermeo), a 1,1 km, anemómetro a 18 m**:
+racha **48 km/h**, viento 24,6, del ONO (284°), 23,2 °C, humedad 74 %. **Matxitxako**
+(433 m, anemómetro a 65 m): racha 63,9, viento 51,7, del O, 18,9 °C y **humedad 100 %:
+el cabo está dentro de la nube baja**. AEMET (/estaciones) devolvió la lista VACÍA a
+las 12:50 (`"estaciones":[]`, sin `sinClave`): apuntado para mirar.
+Contra los modelos de las 12-13 h en Bermeo: viento medio AROME 25,8 contra 24,6 medido
+(clavado); racha AROME 56-58 contra 48 (unos 10 de más, en un anemómetro a 18 m en el
+pueblo); ICON 54-60; **ECMWF 29-35 y GFS 20-22, la mitad de lo medido**. Nube: AROME
+pone 74-83 % de baja sobre Bermeo a las 13 y él la ve entrar; cuadra.
+Pidió una captura de la capa de nubes del mapa: el candado de la app (código de 6
+cifras) lo impide desde aquí —no se teclean códigos—; se le mandó en su lugar la
+rejilla de nube baja de AROME HD e ICON a las 13, 15 y 17 con los datos de /om.
