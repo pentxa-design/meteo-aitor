@@ -347,14 +347,14 @@ const TLAYERS = [
   { id:'gh500', densa:true, g:'Tormenta', name:'Geopotencial 500', v:'geopotential_height_500hPa', unit:'m', contours:true,
     desc:'Configuración sinóptica en altura' },
 
-  { id:'clouds_rain', g:'Cielo', name:'Nubes + lluvia', v:'cloud_cover', unit:'%',
+  { id:'clouds_rain', g:'Cielo', name:'Nubes + lluvia', v:'cloud_cover', unit:'%', escala:'nubes',
     encima:'precipitation',
     desc:'Nubosidad en gris y, encima, dónde puede llover — sin taparse' },
-  { id:'clouds',      g:'Cielo', name:'Nubes total', v:'cloud_cover', unit:'%', desc:'Nubosidad total' },
-  { id:'clouds_low',  g:'Cielo', name:'Nubes bajas', v:'cloud_cover_low', unit:'%',
+  { id:'clouds',      g:'Cielo', name:'Nubes total', v:'cloud_cover', unit:'%', escala:'nubes', desc:'Nubosidad total' },
+  { id:'clouds_low',  g:'Cielo', name:'Nubes bajas', v:'cloud_cover_low', unit:'%', escala:'nubes',
     desc:'Las que te dejan sin ver la torre' },
-  { id:'clouds_mid',  g:'Cielo', name:'Nubes medias', v:'cloud_cover_mid', unit:'%', desc:'Nubosidad media' },
-  { id:'clouds_high', g:'Cielo', name:'Nubes altas', v:'cloud_cover_high', unit:'%', desc:'Nubosidad alta' },
+  { id:'clouds_mid',  g:'Cielo', name:'Nubes medias', v:'cloud_cover_mid', unit:'%', escala:'nubes', desc:'Nubosidad media' },
+  { id:'clouds_high', g:'Cielo', name:'Nubes altas', v:'cloud_cover_high', unit:'%', escala:'nubes', desc:'Nubosidad alta' },
   { id:'vis', g:'Cielo', name:'Visibilidad', v:'visibility', unit:'m', escala:'visibilidad',
     desc:'Visibilidad horizontal. Si no se ve la torre desde abajo, no se sube' },
   { id:'swr', densa:true, g:'Cielo', name:'Radiación solar', v:'shortwave_radiation', unit:'W/m²',
@@ -454,7 +454,7 @@ const LENTOS = new Set(['ecmwf_ifs', 'ecmwf_ifs025', 'ncep_gfs013', 'ncep_gfs025
    (punto de rocío)—. A esa escala un píxel son 5 km y el ECMWF de 25 km,
    rejilla regular, se ve igual y va ligero. Regla: por debajo del zoom 6
    se pinta con ECMWF 25 km y SE DICE en el cartel; desde el 6, el de 9 km. */
-const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero']);
+const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes']);
 
 const HRES_ZOOM_MIN = 6;
 function hresDeLejos(modelo, zoom) {
@@ -1191,6 +1191,27 @@ function escalasPropias() {
     eje: tc.slice(1), desde: 1, unidad: 'm', pos: tc.slice(1).map((_, i) => i),
   };
 
+  /* ── NUBES COMO EN WINDY (15-09-2026) ─────────────────────────────────
+     Suyo, con Windy al lado en su Chrome: «mira qué bien se ve en Windy,
+     ¿lo podrías poner en la nuestra? con esa claridad y resolución… me
+     encanta». La resolución YA estaba: Windy pinta ECMWF de 9 km, que es
+     el HRES que este mapa usa de cerca, y AROME HD es de 1,3 km. Lo que
+     no se veía era el color: la escala de fábrica de cloud_cover es un
+     azul clarito que sobre el fondo Claro desaparece («no se aprecia
+     bien», 13:05, Nubes bajas de AROME HD en su pantalla).
+
+     Nube blanca con cuerpo: transparente donde no hay, blanca casi opaca
+     al 100 %. Y debajo, sueloParaNubes() pone la tierra en ocre y el mar
+     en azul acero, como Windy, para que lo blanco resalte también en
+     Claro y Color. */
+  const nbm = [0, 10, 25, 40, 55, 70, 85, 100];
+  const nbc = [['#ffffff',0], ['#f4f6f8',.10], ['#eef1f4',.28], ['#e9edf1',.46], ['#e6eaee',.62],
+               ['#e4e8ec',.78], ['#e2e6ea',.90], ['#e0e4e8',.97]];
+  const nubes = {
+    scale: { type:'breakpoint', unit:'%', breakpoints: nbm, colors: nbc.map(([c,a]) => hexRGBA(c, a)) },
+    eje: nbm, unidad: '%', pos: nbm.map((_, i) => i),
+  };
+
   _escalas = {
     basecv, topecv, humedad,
     elevacion,
@@ -1199,7 +1220,7 @@ function escalasPropias() {
     // la misma cuenta de Marshall-Palmer con la que está hecha la escala.
     dbz: { scale: ESCALA_DBZ, eje: DBZ, unidad: 'dBZ',
            conv: v => v > 0 ? 10 * Math.log10(200 * Math.pow(v, 1.6)) : 0 },
-    presion, visibilidad, tempc, t850, rafagas, capeE, tapa, agua, isocero, sinColor,
+    presion, visibilidad, tempc, t850, rafagas, capeE, tapa, agua, isocero, sinColor, nubes,
   };
   return _escalas;
 }
@@ -2069,6 +2090,7 @@ const Maps = {
          contraste, mapas apagados») se sirven A LA VEZ con el truco de
          los mapas profesionales: el COLOR va pleno y la SOMBRA del
          terreno se dibuja ENCIMA, suave. Ya no hay que elegir. */
+      this.sueloParaNubes(L_.escala === 'nubes');
       const op = this.opacity;
       this.map.addSource('omSrc', {
         type:'raster', tiles:[`${url}/{z}/{x}/{y}`], tileSize:256, maxzoom:12,
@@ -2503,10 +2525,35 @@ const Maps = {
      una capa creyendo que es otra es peor que no tener mapa. */
   quitarCapasDeDatos() {
     const CAPAS  = ['omLayer', 'omLayer2', 'radarLayer', 'satLayer', 'aemetLayer',
-                    'isoLbl', 'isoLinea', 'isoBorde'];
+                    'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'];
     const FUENTES = ['omSrc', 'omSrc2', 'radarSrc', 'satSrc', 'aemetSrc', 'isoSrc'];
     CAPAS.forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
     FUENTES.forEach(id => { if (this.map.getSource(id)) this.map.removeSource(id); });
+  },
+
+  /* ── EL SUELO EN TONO TIERRA BAJO LAS NUBES (15-09-2026) ─────────────
+     Windy pinta la tierra ocre y el mar azul acero, y por eso su nube
+     blanca se ve a la primera. En nuestro fondo Claro la tierra es blanca
+     (#fafaf8): una nube blanca encima no existe. Solo con las capas de
+     nubes (escala «nubes») y solo en Claro y Color: un fondo ocre justo
+     debajo del agua del propio estilo (tapa los rellenos de suelo, deja
+     carreteras y nombres encima) y un azul acero sobre el agua. En
+     Oscuro no hace falta. Se quita con las demás capas propias. */
+  sueloParaNubes(on) {
+    if (!this.map) return;
+    const quitar = () => ['sueloLayer', 'marLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
+    if (!on || this.base === 'oscuro') { quitar(); return; }
+    try {
+      quitar();
+      const ls = this.map.getStyle()?.layers || [];
+      const agua = ls.find(l => l.id === 'water') || ls.find(l => l.type === 'fill' && /water/.test(l.id));
+      this.map.addLayer({ id:'sueloLayer', type:'background',
+        paint:{ 'background-color':'#c9b989', 'background-opacity':0.72 } }, agua?.id || this.firstLabelLayer());
+      if (agua && this.map.getSource('carto')) {
+        this.map.addLayer({ id:'marLayer', type:'fill', source:'carto', 'source-layer':'water',
+          paint:{ 'fill-color':'#7e97ab', 'fill-opacity':0.78 } }, this.firstLabelLayer());
+      }
+    } catch (e) { console.warn('suelo para nubes: no se ha podido poner', e); }
   },
 
   /* Dónde insertar el dato meteorológico dentro del mapa base.

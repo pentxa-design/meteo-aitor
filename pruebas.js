@@ -7435,7 +7435,7 @@ grupo('El mapa se ve debajo del color: costa por encima, opacidad 0,75 y el «no
      && cp.length >= 12 && cp[0] === 0 && cp[1] > 0 && cp[1] < cp[2] && cp[3] >= 0.9 && cp[4] === 1,
      JSON.stringify({ rf, cp }));
   ok('la reflectividad pide color_blend=true: degradado continuo, no bandas estrechas que dibujan la malla',
-     /const ESCALAS_SUAVES = new Set\(\['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero'\]\);/.test(M)
+     /const ESCALAS_SUAVES = new Set\(\['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes'\]\);/.test(M)
      && /if \(ESCALAS_SUAVES\.has\(L_\?\.escala\)\) q\.set\('color_blend', 'true'\);/.test(M),
      'con bandas de 5 dBZ cada celda del modelo se veía como un cuadro; ráfagas, CAPE y presión siguen a saltos (listones e isobaras)');
 }
@@ -7495,6 +7495,39 @@ grupo('Barbas sin color de fondo, Isocero de 0 a 5500 con el rojo abajo, tapa ce
   ok('la tapa cero no se pinta: el color aparece solo donde hay tapa, y el pie lo dice',
      /const cnc = \[\['#e11400',0\], \['#f95c00',0\.5\]/.test(M) && /SIN COLOR es tapa CERO/.test(M) && !/ROJO es tapa CERO/.test(M),
      'Inhibición 0 salía rojo en todo el continente');
+}
+
+/* ═══ LAS NUBES COMO EN WINDY (15-09-2026, 13:05) ═══════════════════════
+   Suyo, con Windy al lado en su Chrome: «mira qué bien se ve en Windy, ¿lo
+   podrías poner en la nuestra? con esa claridad y resolución… me encanta».
+   La resolución ya estaba (HRES 9 km de cerca, AROME HD 1,3 km). Lo que no
+   se veía era el color: «Nubes bajas» de AROME HD salía como un velo azul
+   clarito sobre el fondo Claro («no se aprecia bien», visto en su pantalla). */
+grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra debajo (15-09-2026)');
+{
+  const M = mapsSrc;
+  ok('las cinco capas de nubes llevan la escala propia «nubes», no el azul clarito de fábrica',
+     ['clouds_rain', 'clouds', 'clouds_low', 'clouds_mid', 'clouds_high'].every(id => new RegExp(`id:'${id}'[^\\n]*escala:'nubes'`).test(M)),
+     'el azul de fábrica sobre el fondo Claro no se ve');
+  const nb = ((M.match(/const nbc = \[([\s\S]*?)\];/) || [])[1] || '').match(/\['#([0-9a-f]{6})',\s*([0-9.]+)\]/g) || [];
+  const alfa = nb.map(s => Number(s.match(/,\s*([0-9.]+)\]/)[1]));
+  const clara = nb.length > 0 && nb.every(s => { const h = s.match(/#([0-9a-f]{6})/)[1]; return [0, 2, 4].every(i => parseInt(h.slice(i, i + 2), 16) >= 0xd0); });
+  ok('la escala «nubes» va de transparente (0 %) a blanca casi opaca (100 %), y es blanca de verdad, no azul',
+     alfa.length >= 6 && alfa[0] === 0 && alfa[alfa.length - 1] >= 0.9 && alfa.every((a, i) => i === 0 || a >= alfa[i - 1]) && clara
+     && /const nubes = \{/.test(M) && /presion, visibilidad, tempc, t850, rafagas, capeE, tapa, agua, isocero, sinColor, nubes,/.test(M),
+     JSON.stringify({ alfa, clara }));
+  ok('las nubes piden degradado continuo (color_blend), como la reflectividad',
+     /const ESCALAS_SUAVES = new Set\(\[[^\]]*'nubes'[^\]]*\]\);/.test(M));
+  ok('con una capa de nubes, el suelo se pone en tono tierra y el mar en azul acero (Claro y Color); en Oscuro no hace falta',
+     /sueloParaNubes\(on\) \{/.test(M) && /if \(!on \|\| this\.base === 'oscuro'\) \{ quitar\(\); return; \}/.test(M)
+     && /id:'sueloLayer', type:'background'/.test(M) && /id:'marLayer', type:'fill', source:'carto', 'source-layer':'water'/.test(M),
+     'una nube blanca sobre tierra blanca (#fafaf8) no existe');
+  const iApply = M.indexOf('async apply() {'), iOm = M.indexOf("id:'omLayer', type:'raster', source:'omSrc'", iApply);
+  const iSuelo = M.indexOf("this.sueloParaNubes(L_.escala === 'nubes');", iApply);
+  ok('apply() pone el suelo ANTES de montar la capa y solo para la escala «nubes»; quitarCapasDeDatos() lo quita con las demás',
+     iSuelo > iApply && iSuelo < iOm
+     && /const CAPAS  = \['omLayer', 'omLayer2', 'radarLayer', 'satLayer', 'aemetLayer',\s*'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'\];/.test(M),
+     'si se quedara puesto, la siguiente capa (temperatura, ráfagas) saldría sobre tierra ocre sin motivo');
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');

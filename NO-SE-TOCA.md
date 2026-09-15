@@ -154,3 +154,5 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **Las capas de barbas no pintan color de fondo** | `las capas de barbas no pintan color: el fondo es transparente y mandan las barbas y los números (viento real)` |
 | **Isocero de 0 a 5500 con el rojo abajo** | `el Isocero va de 0 a 5500 m con el rojo en lo bajo (hielo cerca de la torre) y lo alto pálido` |
 | **La tapa cero no se pinta** | `la tapa cero no se pinta: el color aparece solo donde hay tapa, y el pie lo dice` |
+| **Las nubes van blancas con cuerpo, con escala propia «nubes» (15-09-2026, «como en Windy»)** | `la escala «nubes» va de transparente (0 %) a blanca casi opaca (100 %), y es blanca de verdad, no azul` |
+| **Con una capa de nubes, el suelo se pone ocre y el mar azul acero en Claro y Color** | `con una capa de nubes, el suelo se pone en tono tierra y el mar en azul acero (Claro y Color); en Oscuro no hace falta` |
