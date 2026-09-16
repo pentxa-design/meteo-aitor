@@ -352,7 +352,7 @@ const TLAYERS = [
      cualquier lluvia en una, solo desde 1-2 mm/h en la otra). Suyo: «sí,
      quítala, es lo mismo». Queda UNA capa de nubes, la de Windy. */
   { id:'clouds',      g:'Cielo', name:'Nubes total', v:'cloud_cover', unit:'%', escala:'nubes', encima:'precipitation', encimaEscala:'sombraLluvia',
-    desc:'Nubosidad total: blanca, y oscura tirando a verde donde llueve (como Windy)' },
+    desc:'Nubosidad total: blanca con claros, gris con el cielo cerrado, y el agua del modelo en azul: claro con llovizna, casi negro con chaparrón (como Meteored)' },
   { id:'clouds_low',  g:'Cielo', name:'Nubes bajas', v:'cloud_cover_low', unit:'%', escala:'nubes',
     desc:'Las que te dejan sin ver la torre' },
   { id:'clouds_mid',  g:'Cielo', name:'Nubes medias', v:'cloud_cover_mid', unit:'%', escala:'nubes', desc:'Nubosidad media' },
@@ -1294,6 +1294,7 @@ function escalasPropias() {
      cielo tapado: no sabe si lleva agua. Lo sabe la precipitación, que
      va ENCIMA de Nubes total con esta escala: gris oscuro en cuanto
      cae algo, verde donde llueve de verdad, amarillo y rojo con los
+     (desde las 19:55 del 15-09 el agua va en AZUL, ver más abajo) —
      chaparrones. Es la misma idea que la capa de nubes de Windy. */
   /* 15-09-2026, 19:00 (portátil), sus dos capturas de las 18:30 delante:
      el verde entraba en 1-2 mm/h y la llovizna de la costa cantábrica
