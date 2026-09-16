@@ -6899,6 +6899,21 @@ console.log('\n  Revisión 04-09: AEMET caído no se lee como «ninguna estació
      !/\/estaciones\?lat=\$\{p\.lat\.toFixed\(4\)\}[^\n]*\n\s*\.then\(x => x\.json\(\)\)/.test(src));
   ok('la bandera se resetea en cada lectura, como la de Euskalmet',
      /S\.medidoSinEuskalmet = null; S\.medidoSinAemet = null;/.test(src));
+  /* 16-09-2026 12:40, MEDIDO en producción: 20 peticiones sueltas = 40 llamadas a AEMET en un
+     segundo y AEMET corta por límite de uso (11 de 20 sitios con 502). Un lote, una descarga. */
+  const fnEst = require('fs').readFileSync(require('path').join(__dirname, 'netlify', 'functions', 'estaciones.js'), 'utf8');
+  ok('la tabla de Mis estaciones pide AEMET en UN lote (?puntos=), no sitio a sitio',
+     /fetch\(`\/estaciones\?puntos=\$\{encodeURIComponent\(puntos\)\}&radio=40`\)/.test(src)
+     && !/fetch\(`\/estaciones\?lat=\$\{p\.lat\.toFixed\(4\)\}&lon=\$\{p\.lon\.toFixed\(4\)\}&radio=40`\)/.test(src)
+     && /return sitios\.map\(\(_, i\) => \(lista\[i\]\?\.estaciones \|\| \[\]\)/.test(src),
+     'veinte peticiones a la vez es lo que AEMET corta');
+  ok('y el servidor entiende el lote con UNA descarga de AEMET compartida entre las peticiones en curso, y sigue contestando sitio a sitio',
+     /const puntos = \(p\.get\('puntos'\) \|\| ''\)\.split\('\|'\)/.test(fnEst)
+     && /function descargarTodas\(clave\)/.test(fnEst) && /if \(memo\.promesa\) return memo\.promesa;/.test(fnEst)
+     && /promesa\.then\(soltar, soltar\);/.test(fnEst)
+     && /puntos: puntos\.map\(q => \(\{ lat: q\.lat, lon: q\.lon,/.test(fnEst)
+     && /return json\(\{ \.\.\.comun, estaciones: cercanas\(todas, lat, lon, radio, limite, historia, ahora\) \}, 200\);/.test(fnEst),
+     'la descarga se suelta al acabar: un 503 de AEMET tiene que verse como 503, no como el dato de antes');
   ok('y la cabecera de la tabla dice de QUIÉN es el hueco (cuatro estados)',
      /no he podido preguntar ni a Euskalmet ni a AEMET/.test(src)
      && /solo Euskalmet · no he podido preguntar a AEMET/.test(src)

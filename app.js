@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.16-0012';
+const BUILD = '2026.09.16-1237';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -6810,18 +6810,26 @@ async function medidasDeTodos(sitios) {
          bien desde el 01-09 (`S.medidoSinEuskalmet`); AEMET se quedó
          atrás. Ahora igual: la razón que manda el servidor se guarda y la
          cabecera la cuenta. */
-      Promise.all(sitios.map(p =>
-        fetch(`/estaciones?lat=${p.lat.toFixed(4)}&lon=${p.lon.toFixed(4)}&radio=40`)
-          .then(async x => {
-            const j = await x.json().catch(() => null);
-            if (!x.ok || j?.error) {
-              S.medidoSinAemet = `no he podido preguntar a AEMET${
-                j?.reason ? ` (${String(j.reason).slice(0, 80)})` : x.status ? ` (error ${x.status})` : ''}`;
-              return [];
-            }
-            return (j?.estaciones || []).map(e => ({ ...e, fuente: 'AEMET' }));
-          })
-          .catch(() => { S.medidoSinAemet = 'no he podido preguntar a AEMET (sin red)'; return []; }))),
+      /* 16-09-2026, 12:40 (portátil), MEDIDO en producción: veinte
+         peticiones a /estaciones a la vez eran cuarenta llamadas a AEMET
+         en un segundo, y AEMET corta («Se ha alcanzado uno de los límites
+         de uso»): 11 de 20 sitios volvían con 502 y la cabecera decía
+         «no he podido preguntar a AEMET». Ahora va en UN lote (`?puntos=`,
+         el mismo texto que ya se manda a Euskalmet): una descarga de
+         AEMET para los veinte. La respuesta trae `puntos[i].estaciones`
+         en el mismo orden que `sitios`. */
+      fetch(`/estaciones?puntos=${encodeURIComponent(puntos)}&radio=40`)
+        .then(async x => {
+          const j = await x.json().catch(() => null);
+          if (!x.ok || j?.error) {
+            S.medidoSinAemet = `no he podido preguntar a AEMET${
+              j?.reason ? ` (${String(j.reason).slice(0, 80)})` : x.status ? ` (error ${x.status})` : ''}`;
+            return sitios.map(() => []);
+          }
+          const lista = Array.isArray(j?.puntos) ? j.puntos : [];
+          return sitios.map((_, i) => (lista[i]?.estaciones || []).map(e => ({ ...e, fuente: 'AEMET' })));
+        })
+        .catch(() => { S.medidoSinAemet = 'no he podido preguntar a AEMET (sin red)'; return sitios.map(() => []); }),
     ]);
     const d = await r.json().catch(() => null);
     /* Si Euskalmet no contesta, AEMET sí sale y la tabla parece completa
