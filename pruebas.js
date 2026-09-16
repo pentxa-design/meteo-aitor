@@ -7646,8 +7646,10 @@ grupo('El chip de Horas dice cuánta agua ve el otro modelo (15-09-2026, 23:53)'
   ok('cada hora dice quién da más racha a 10 m si cruza su listón o se va 20 km/h, con el número y el listón',
      /const \{ warn, no \} = listonRafaga\(\);/.test(cRa) && /alto\.v - h\.gust10 >= 20/.test(cRa)
      && /da \$\{wtxt\(r\.suya, true\)\} a 10 m/.test(cCh) && /tu listón es \$\{wtxt\(r\.limite, true\)\}/.test(cCh));
-  ok('y los tres chips van en la tarjeta de cada hora de «Horas», debajo del CAPE',
-     /\$\{lineaCapeHora\(h\)\}\$\{chipsOtrosHora\(h\)\}/.test(src));
+  ok('y los tres chips van en la tarjeta de cada hora de «Horas», cada uno al lado de su número: lluvia junto a la gota, racha bajo la racha, tormenta bajo el CAPE',
+     /\(aguaPrestada\(h\)\)\}\$\{chipsOtrosHora\(h, 'lluvia'\)\}<\/span>/.test(src)
+     && /<\/div>\$\{chipsOtrosHora\(h, 'racha'\)\}/.test(src)
+     && /\$\{lineaCapeHora\(h\)\}\$\{chipsOtrosHora\(h, 'tormenta'\)\}/.test(src));
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');

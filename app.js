@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.16-1237';
+const BUILD = '2026.09.16-2340';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -1062,16 +1062,27 @@ function rachaQueNoVesTuHora(h) {
   if (!cruzaNo && !cruzaWarn && !seSepara) return null;
   return { quien: alto.n, suya: alto.v, mia: h.gust10, limite: cruzaNo ? no : cruzaWarn ? warn : null };
 }
-function chipsOtrosHora(h) {
+/* Cada chip va AL LADO de su número (16-09-2026, 23:40, sus capturas de
+   Horas: el «GFS ve 0,1 mm» salía debajo del CAPE, lejos de la línea de
+   lluvia): `parte` = 'lluvia' (junto a la gota), 'racha' (bajo la racha)
+   o 'tormenta' (bajo el CAPE). */
+function chipsOtrosHora(h, parte) {
   const out = [];
-  const ll = lluviaQueVenOtrosHora(h);
-  if (ll.length) out.push(`<span class="nd__ojo">⚠ ${esc(ll.map((x, i) => `${x.quien}${i ? '' : ' ve'} ${mmTxt(x.mm)} mm`).join(' · '))}</span>`);
-  const rompe = has(h.cape) && h.cape >= CAPE_COMBINACION && has(h.cin) && h.cin < 75;
-  const t = rompe ? null : tormentaQueNoVesTu(h, h.sitio || null);
-  if (t) out.push(`<span class="nd__ojo">⚠ ${esc(t.quien)} ve tormenta: CAPE ${Math.round(t.cape)} · tapa ${Math.round(t.cin)}</span>`);
-  const r = rachaQueNoVesTuHora(h);
-  if (r) out.push(`<span class="nd__ojo">⚠ ${esc(r.quien)} da ${wtxt(r.suya, true)} a 10 m${r.limite !== null ? ` — tu listón es ${wtxt(r.limite, true)}` : ` (tú ves ${wtxt(r.mia, true)})`}</span>`);
-  return out.length ? `<div class="hcard__otros">${out.join(' ')}</div>` : '';
+  if (parte === 'lluvia') {
+    const ll = lluviaQueVenOtrosHora(h);
+    if (ll.length) out.push(`<span class="nd__ojo">⚠ ${esc(ll.map((x, i) => `${x.quien}${i ? '' : ' ve'} ${mmTxt(x.mm)} mm`).join(' · '))}</span>`);
+  }
+  if (parte === 'tormenta') {
+    const rompe = has(h.cape) && h.cape >= CAPE_COMBINACION && has(h.cin) && h.cin < 75;
+    const t = rompe ? null : tormentaQueNoVesTu(h, h.sitio || null);
+    if (t) out.push(`<span class="nd__ojo">⚠ ${esc(t.quien)} ve tormenta: CAPE ${Math.round(t.cape)} · tapa ${Math.round(t.cin)}</span>`);
+  }
+  if (parte === 'racha') {
+    const r = rachaQueNoVesTuHora(h);
+    if (r) out.push(`<span class="nd__ojo">⚠ ${esc(r.quien)} da ${wtxt(r.suya, true)} a 10 m${r.limite !== null ? ` — tu listón es ${wtxt(r.limite, true)}` : ` (tú ves ${wtxt(r.mia, true)})`}</span>`);
+  }
+  if (!out.length) return '';
+  return parte === 'lluvia' ? ` ${out.join(' ')}` : `<div class="hcard__otros">${out.join(' ')}</div>`;
 }
 
 function codigoQueSeVe(h, codigoDelCielo, thr = S.thr) {
@@ -12783,12 +12794,12 @@ function renderHours() {
       <div class="hcard__t">${has(h.temp) ? `${h.temp.toFixed(0)}°` : '—'}</div>
       <div class="hcard__r">
         <span>💧 ${has(h.pop) ? h.pop + '%' : '—'} · ${has(h.prec) ? mmTxt(h.prec) + ' mm' : 'sin dato'}${
-          (c => c !== null ? ` <span class="nd__ojo">⚠ ${esc(h.cieloDe || 'otro modelo')} ve ${esLlovizna(c) ? 'llovizna' : 'lluvia'}${mmQueVeTxt(mmQueVeElOtro(h))}</span>` : '')(aguaPrestada(h))}</span>
+          (c => c !== null ? ` <span class="nd__ojo">⚠ ${esc(h.cieloDe || 'otro modelo')} ve ${esLlovizna(c) ? 'llovizna' : 'lluvia'}${mmQueVeTxt(mmQueVeElOtro(h))}</span>` : '')(aguaPrestada(h))}${chipsOtrosHora(h, 'lluvia')}</span>
         <span>💨 ${has(h.wind) ? wtxt(h.wind, true) : '—'} · ${has(h.dir) ? 'del ' + rumboLargo(h.dir) : '—'}</span>
         <span class="faint">Rocío ${has(h.dew) ? h.dew.toFixed(0)+'°' : '—'} · HR ${has(h.hum) ? h.hum+'%' : '—'}</span>
       </div>
-      <div class="hcard__g">Racha ${has(h.gust) ? wtxt(h.gust, true) : '—'}</div>
-      ${lineaCapeHora(h)}${chipsOtrosHora(h)}
+      <div class="hcard__g">Racha ${has(h.gust) ? wtxt(h.gust, true) : '—'}</div>${chipsOtrosHora(h, 'racha')}
+      ${lineaCapeHora(h)}${chipsOtrosHora(h, 'tormenta')}
     </div>`).join('');
 }
 
