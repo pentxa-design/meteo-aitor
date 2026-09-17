@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.17-1115';
+const BUILD = '2026.09.17-1123';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -5343,6 +5343,7 @@ function lluviaEnLaFranjaQueNoVesTu(desde, hasta, minimo = 0.1) {
   if (!otros.length) return null;
 
   otros.sort((x, y) => y.total - x.total);
+  const lista = otros.map(x => ({ nom: x.nom, mm: Math.round(x.total * 10) / 10 }));   // cada uno con su cifra (Génova, 17-09-2026)
   const deFuera = otros.filter(x => !enSelector.has(x.nom)).map(x => x.nom);
   /* Suyo, 09-09-2026: «¿a qué horario se refiere?». Las horas del que
      más agua ve, con la misma regla que las tormentas (rangoHoras). */
@@ -5353,6 +5354,7 @@ function lluviaEnLaFranjaQueNoVesTu(desde, hasta, minimo = 0.1) {
     mm: otros[0].total,
     cuantos: otros.length,
     cuando,
+    lista,
   };
 }
 
@@ -5470,7 +5472,7 @@ async function cargarDiariaMulti(place) {
   try {
     const d = await jget(API.fc, {
       latitude: place.lat, longitude: place.lon, timezone: 'auto', wind_speed_unit: 'kmh',
-      daily: 'temperature_2m_max,wind_gusts_10m_max,precipitation_sum',
+      daily: 'temperature_2m_max,temperature_2m_min,wind_gusts_10m_max,precipitation_sum',
       forecast_days: 10, cell_selection: 'land',
       models: MODELOS_TORMENTA.map(m => m.om).join(','),
     }, { timeout: 15000 });
@@ -5620,7 +5622,23 @@ function desacuerdoDelDia(fecha) {
   if (vals.length < 3) return null;          // con dos no hay «acuerdo» que valga
   vals.sort((a, b) => b.v - a.v);
   const alto = vals[0], bajo = vals[vals.length - 1];
-  return { alto, bajo, dif: alto.v - bajo.v, n: vals.length };
+  /* Y LA MÍNIMA (17-09-2026, 11:20). Suyo, con Windy al lado para el
+     sábado 19 en Bermeo: «las temperaturas no coinciden». Las máximas
+     iban de 21,4 a 25,5 (4°, no salta); las mínimas de 9,6 (ECMWF, en su
+     celda de monte) a 15,1 (ARPEGE), 5,5° de horquilla, y la tarjeta
+     callaba. La noche le importa (condensación, frío en la torre), así
+     que la mínima también se mira. Él: «si es para bien, sí». */
+  const mins = [];
+  for (const m of MODELOS_TORMENTA) {
+    const v = D[`temperature_2m_min_${m.om}`]?.[i];
+    if (has(v)) mins.push({ nom: m.nom, v });
+  }
+  let min = null;
+  if (mins.length >= 3) {
+    mins.sort((a, b) => b.v - a.v);
+    min = { alto: mins[0], bajo: mins[mins.length - 1], dif: mins[0].v - mins[mins.length - 1].v, n: mins.length };
+  }
+  return { alto, bajo, dif: alto.v - bajo.v, n: vals.length, min };
 }
 
 async function cargarComparativa(place) {
@@ -12123,7 +12141,9 @@ function renderNow() {
           const mojado = has(mm) && mm >= 0.1;
           const o = lluviaEnLaFranjaQueNoVesTu(sel[0].date, sel[sel.length - 1].date, mojado ? mm + 1 : 0.1);
           if (!o) return '';
-          if (mojado) return ` <span class="nd__ojo">⚠ ${esc(o.quien)} ${o.cuantos > 1 ? 'ven' : 've'} más lluvia${o.cuando ? ` ${o.cuando}` : ''} (${mmTxt(o.mm)} mm)</span>`;
+          /* Con el dueño mojado, cada modelo con su cifra: en Génova ECMWF veía 3,9 mm e ICON 110,8,
+             y ponerlos juntos con «(110,8 mm)» le colgaba a ECMWF lo que no decía. */
+          if (mojado) return ` <span class="nd__ojo">⚠ ${o.cuantos > 1 ? 'ven' : 've'} más lluvia${o.cuando ? ` ${o.cuando}` : ''}: ${esc(o.lista.map(x => `${x.nom} ${mmTxt(x.mm)} mm`).join(' · '))}</span>`;
           /* Suyo, 13-09-2026: «se pone despejado, pero GFS ve algo de lluvia
              de 10 a 12; eso es lo que quiero». Información al lado del dato. */
           const algo = o.mm < (S.thr?.rainWarn ?? 0.2) ? 'algo de lluvia' : 'lluvia';
@@ -13057,10 +13077,16 @@ function renderDays() {
            horas rayadas del 25-08—. Con 6° o más ya no es ruido: es que
            uno de los dos está equivocado y él tiene que saberlo. */
         const D = desacuerdoDelDia(t);
-        if (!D || D.dif < 6) return '';
-        return `<div class="dcard__x" title="${esc(D.alto.nom)} ${D.alto.v.toFixed(0)}° · `
+        if (!D) return '';
+        const maxTxt = D.dif < 6 ? '' : `<div class="dcard__x" title="${esc(D.alto.nom)} ${D.alto.v.toFixed(0)}° · `
              + `${esc(D.bajo.nom)} ${D.bajo.v.toFixed(0)}°">⚠ los ${D.n} modelos van de `
              + `<b>${D.bajo.v.toFixed(0)}°</b> a <b>${D.alto.v.toFixed(0)}°</b></div>`;
+        /* La mínima salta desde 5°: de noche una horquilla así es la
+           diferencia entre rocío sobre el metal y no (17-09-2026). */
+        const M = D.min;
+        const minTxt = !M || M.dif < 5 ? '' : `<div class="dcard__x" title="${esc(M.alto.nom)} ${M.alto.v.toFixed(0)}° · `
+             + `${esc(M.bajo.nom)} ${M.bajo.v.toFixed(0)}°">⚠ mínima: de <b>${M.bajo.v.toFixed(0)}°</b> a <b>${M.alto.v.toFixed(0)}°</b> según el modelo</div>`;
+        return maxTxt + minTxt;
       })()}
       ${(() => {
         /* Solo si la tarjeta enseña agua: sin agua no hay nada que matizar. */

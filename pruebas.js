@@ -4625,9 +4625,20 @@ grupo('El 41° que iba solo (31-08-2026, 17:24)');
   globalThis.S = { diariaMulti: null };
   ok('sin la comparación cargada, no se dice nada — un hueco no es un acuerdo',
      desacuerdoDelDia('2026-09-04') === null);
-  ok('la tarjeta pinta el aviso solo desde 6° de separación',
-     /if \(!D \|\| D\.dif < 6\) return '';/.test(src),
+  ok('la tarjeta pinta el aviso de la máxima solo desde 6° de separación',
+     /const maxTxt = D\.dif < 6 \? '' : /.test(src),
      'por debajo bailan siempre; una marca diaria no marca nada');
+  /* 17-09-2026 11:20, sábado en Bermeo: máximas a 4° (calla), mínimas de 9,6 a 15,1 y la tarjeta callaba. Él: «si es para bien, sí». */
+  globalThis.S = { place: AQUI, diariaMulti: { clave: SELLO, time: ['2026-09-19'],
+    'temperature_2m_max_ecmwf_ifs025': [23.7], 'temperature_2m_max_icon_seamless': [22.1], 'temperature_2m_max_gfs_seamless': [25.5], 'temperature_2m_max_best_match': [21.4],
+    'temperature_2m_min_ecmwf_ifs025': [9.6], 'temperature_2m_min_icon_seamless': [12.4], 'temperature_2m_min_gfs_seamless': [13.8], 'temperature_2m_min_best_match': [15.1] } };
+  const dm = desacuerdoDelDia('2026-09-19');
+  ok('la mínima también se mira: el sábado de Bermeo, de 9,6 (ECMWF) a 15,1 (Automático)',
+     dm && dm.min && Math.round(dm.min.dif * 10) / 10 === 5.5 && dm.min.bajo.nom === 'ECMWF' && dm.min.alto.nom === 'Automático' && dm.min.n === 4,
+     JSON.stringify(dm?.min));
+  ok('y la tarjeta pinta la mínima desde 5°, con su texto, y la petición diaria trae temperature_2m_min',
+     /const minTxt = !M \|\| M\.dif < 5 \? '' : /.test(src) && /⚠ mínima: de <b>/.test(src)
+     && /daily: 'temperature_2m_max,temperature_2m_min,wind_gusts_10m_max,precipitation_sum'/.test(src));
   ok('renderDays aguanta que la comparación llegue antes que los datos',
      /if \(!S\.data\?\.fc\?\.daily\) return;/.test(src),
      'sin el guard, el repintado tumbaba la pestaña entera');
@@ -7154,8 +7165,8 @@ grupo('Así con todo (13-09): al lado del dato, qué ve distinto otro modelo y c
   ok('el chip de lluvia de la franja sale también con el dueño mojado si otro modelo ve al menos 1 mm MÁS («ven más lluvia»)',
      /function lluviaEnLaFranjaQueNoVesTu\(desde, hasta, minimo = 0\.1\)/.test(cLF) && /if \(total >= minimo\) otros\.push/.test(cLF)
      && /lluviaEnLaFranjaQueNoVesTu\(sel\[0\]\.date, sel\[sel\.length - 1\]\.date, mojado \? mm \+ 1 : 0\.1\)/.test(src)
-     && /'ven' : 've'\} más lluvia/.test(src),
-     'Génova: AROME 0,1 mm, ICON-D2 y Automático 158 mm, y la franja sin decir nada');
+     && /más lluvia\$\{o\.cuando \? ` \$\{o\.cuando\}` : ''\}: \$\{esc\(o\.lista\.map\(x => `\$\{x\.nom\} \$\{mmTxt\(x\.mm\)\} mm`\)\.join\(' · '\)\)\}/.test(src),
+     'Génova: AROME 0,1 mm, ICON-D2 y Automático 158 mm, y la franja sin decir nada; y cada modelo con su cifra, no todos con la del más alto');
   ok('la racha de otro modelo va al lado de la de la franja, con sus horas',
      /function rachaEnLaFranjaQueNoVesTu\(sel\)/.test(src) && /da \$\{wtxt\(r\.max, true\)\} a 10 m/.test(src));
   /* 17-09-2026 10:45, Ciudad del Cabo: el Automático cruzaba el listón «no» (70) y la franja callaba. */
