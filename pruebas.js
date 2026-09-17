@@ -1054,12 +1054,18 @@ ok('la escala de dBZ arranca en 4,9 dBZ con alfa 0 y sigue con los 14 tramos de 
 ok('«Valores» no rotula por debajo de 5 dBZ (pero el pulsar el punto sigue dando el número)',
    /if \(e\?\.unidad === 'dBZ' && txt < DBZ_SIN_ECO\) continue;/.test(mapsSrc)
    && !/if \(e\?\.unidad === 'dBZ'[^\n]*\n[^\n]*pop\.setHTML/.test(mapsSrc));
-ok('bajo la reflectividad el suelo va negro (radar) y bajo los mm/h gris (lluvia)',
-   /sueloParaLluvia\(L_\.escala === 'lluvia' \? 'lluvia' : L_\.escala === 'dbz' \? 'radar' : false\)/.test(mapsSrc)
-   && /modo === 'radar'\s*\? \{ tierra: '#1b1d21'[^}]*mar: '#0b0c0f'/.test(mapsSrc)
-   && /: \{ tierra: '#5a5f66'[^}]*mar: '#46505c'/.test(mapsSrc));
+ok('bajo la lluvia, en mm/h y en dBZ, el suelo va negro como en AguaceroWx',
+   /sueloParaLluvia\(L_\.escala === 'lluvia' \|\| L_\.escala === 'dbz'\)/.test(mapsSrc)
+   && /const tono = \{ tierra: '#1b1d21'[^}]*mar: '#0b0c0f'/.test(mapsSrc)
+   && !/#5a5f66/.test(mapsSrc),
+   'suyo: «y si es de lluvia prefiero en mm»: misma pintada negra, leyendo milímetros');
 ok('y en el fondo Oscuro no se pone suelo encima (ya está oscuro)',
-   /sueloParaLluvia\(modo\) \{[\s\S]{0,400}if \(!on \|\| this\.base === 'oscuro'\) \{ quitar\(\); return; \}/.test(mapsSrc));
+   /sueloParaLluvia\(on\) \{[\s\S]{0,400}if \(!on \|\| this\.base === 'oscuro'\) \{ quitar\(\); return; \}/.test(mapsSrc));
+ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan un decimal',
+   /\['#4a7fd8',0\], \['#4a7fd8',\.75\]/.test(mapsSrc)
+   && /if \(e\?\.unidad === 'mm\/h' && txt < 0\.1\) continue;/.test(mapsSrc)
+   && /e\?\.unidad === 'mm\/h'\) \? 1 : 0;/.test(mapsSrc),
+   'un «0» encima de una mancha azul de 0,3 mm/h es un número que miente');
 const htmlSrc = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 
 grupo('La tapa de AguaceroWx: no hay regla (27-08-2026)');

@@ -1206,7 +1206,11 @@ function escalasPropias() {
      cian → verde → amarillo → rojo → morado, y el suelo gris oscuro
      debajo mientras está esta capa (sueloParaLluvia), que es lo que hace
      que el azul flojo no se confunda con el mar. Mismos cortes. */
-  const cc = [['#4a7fd8',0], ['#4a7fd8',.55], ['#3f9fe0',.75], ['#2fb8d8',.88],
+  /* 17-09-2026: sobre el suelo negro (como AguaceroWx) el primer azul
+     al 55 % se veía apagado; va al 75. Por debajo de 0,1 mm/h sigue sin
+     pintarse nada: ese es el corte seco que hace que el mapa no parezca
+     «irreal» con velo por todas partes. */
+  const cc = [['#4a7fd8',0], ['#4a7fd8',.75], ['#3f9fe0',.85], ['#2fb8d8',.92],
               ['#2fc9b0',1], ['#3fcf6a',1], ['#8fd83a',1], ['#e0e03a',1],
               ['#f2a72a',1], ['#e04a2a',1], ['#b0308f',1], ['#6a1b9a',1]];
   const lluvia = {
@@ -2229,7 +2233,7 @@ const Maps = {
          los mapas profesionales: el COLOR va pleno y la SOMBRA del
          terreno se dibuja ENCIMA, suave. Ya no hay que elegir. */
       this.sueloParaNubes(L_.escala === 'nubes');
-      this.sueloParaLluvia(L_.escala === 'lluvia' ? 'lluvia' : L_.escala === 'dbz' ? 'radar' : false);
+      this.sueloParaLluvia(L_.escala === 'lluvia' || L_.escala === 'dbz');
       /* La nube blanca a 0,75 sobre el mar azul acero salía lavada (visto
          en su Chrome el 15-09 a las 13:20): las capas de nubes van casi
          opacas. El deslizador CAPA solo puede subirla, no bajarla. */
@@ -2709,17 +2713,16 @@ const Maps = {
      ni en la tierra clara. Mismo mecanismo que sueloParaNubes, con sus
      propias capas (ids distintos) para que una no quite la otra. Solo en
      Claro y Color; en Oscuro ya está oscuro. */
-  /* `modo`: 'lluvia' (mm/h, gris Windy) · 'radar' (dBZ, negro como
-     AguaceroWx: tierra casi negra y mar negro, que es lo que hace que el
-     verde de 5 dBZ se lea como eco y no como velo) · false (quitar). */
-  sueloParaLluvia(modo) {
+  /* Negro como AguaceroWx bajo TODA la lluvia, en mm/h y en dBZ: tierra
+     casi negra y mar negro, que es lo que hace que el primer color se lea
+     como agua y no como velo. El gris de Windy del 15-09 se fue el 17-09
+     con su «y si es de lluvia prefiero en mm»: la misma pintada negra,
+     pero leyendo milímetros. `on`: true con capa de lluvia, false quita. */
+  sueloParaLluvia(on) {
     if (!this.map) return;
-    const on = !!modo;
     const quitar = () => ['sueloLluviaLayer', 'marLluviaLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
     if (!on || this.base === 'oscuro') { quitar(); return; }
-    const tono = modo === 'radar'
-      ? { tierra: '#1b1d21', tierraOp: 0.94, mar: '#0b0c0f', marOp: 0.96 }
-      : { tierra: '#5a5f66', tierraOp: 0.85, mar: '#46505c', marOp: 0.9 };
+    const tono = { tierra: '#1b1d21', tierraOp: 0.94, mar: '#0b0c0f', marOp: 0.96 };
     try {
       quitar();
       const ls = this.map.getStyle()?.layers || [];
@@ -3688,7 +3691,9 @@ const Maps = {
     // hPa, metros → km, mm/h → dBZ). Se convierte SIEMPRE con el mismo
     // conversor que usa la escala, para que el número y el color cuadren.
     const aTexto = v => e?.conv ? e.conv(v) : v * f;
-    const dec = (e?.unidad === 'm' || e?.unidad === 'mm') ? 1 : 0;
+    /* mm/h con UN decimal: con cero decimales, 0,3 mm/h salía como «0»
+       encima de una mancha azul, que es un número que miente. */
+    const dec = (e?.unidad === 'm' || e?.unidad === 'mm' || e?.unidad === 'mm/h') ? 1 : 0;
 
     const cap = document.querySelector('#mapVals');
     if (!cap) return;
@@ -3719,6 +3724,9 @@ const Maps = {
       /* Radar: por debajo de 5 dBZ no hay eco. Un «−9» encima del mar
          no es un dato que se lea, es ruido de conversión (ver DBZ_SIN_ECO). */
       if (e?.unidad === 'dBZ' && txt < DBZ_SIN_ECO) continue;
+      /* Y en mm/h, donde no se pinta (menos de 0,1) tampoco se rotula un
+         «0,0» en cada punto del mar. Al pulsar sigue saliendo el número. */
+      if (e?.unidad === 'mm/h' && txt < 0.1) continue;
       imposible ||= fueraDeRango(L_, txt);
       const d = Math.abs(txt) >= 100 ? 0 : dec;
       frag.push(`<span class="mval" style="left:${pt.x.toFixed(0)}px;top:${pt.y.toFixed(0)}px">${txt.toFixed(d)}${simbolo}</span>`);
