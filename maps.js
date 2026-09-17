@@ -253,6 +253,19 @@ const TLAYERS = [
      distingue nada». */
   { id:'tcwv', densa:true, g:'Lluvia', name:'Agua precipitable', v:'total_column_integrated_water_vapour', unit:'kg/m²', escala:'agua',
     desc:'Vapor de agua en toda la columna: cuánta lluvia puede caer si se dispara. Por encima de 30 kg/m² el aire va cargado' },
+  /* ── TIPO DE PRECIPITACIÓN, SEGÚN INTENSIDAD (17-09-2026, 14:12) ──
+     Suyo, con la capa «Reflectividad del tipo de precipitación» de
+     AguaceroWx: «mira cómo combina los colores» · «SEGÚN INTENSIDAD».
+     Verde la lluvia y azul la nieve, cada una con su rampa por mm/h.
+     Nada inventado: la lluvia es `precipitation` y la nieve
+     `snowfall_water_equivalent` (agua equivalente, mm/h), las dos del
+     mismo modelo, apiladas: la nieve va encima. ECMWF 25 km, ICON-EU e
+     ICON-D2 publican las dos; AROME solo la lluvia, y entonces se dice.
+     La lluvia helada y el granizo que AguaceroWx pinta en rosa y morado
+     no vienen en las teselas: no se pintan. */
+  { id:'tipo', g:'Lluvia', name:'Tipo de precipitación', v:'precipitation', unit:'mm/h', escala:'lluviaVerde',
+    encima:'snowfall_water_equivalent', encimaEscala:'nieveAzul',
+    desc:'Lluvia en verde y nieve en azul, cada una según su intensidad (mm/h de agua). Como AguaceroWx; lo que el modelo no publica (lluvia helada, granizo) no se pinta' },
   { id:'aemet', g:'Lluvia', name:'Radar AEMET', v:null, unit:'dBZ', aemet:true,
     desc:'Compuesto nacional de radar de AEMET — observación real, cada 10 minutos' },
   { id:'refl', g:'Lluvia', name:'Reflectividad', v:'precipitation', unit:'dBZ', dbz:true, escala:'dbz',
@@ -463,9 +476,9 @@ const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isoc
   /* 17-09-2026: la lluvia en mm/h también fundida entre cortes, como
      AguaceroWx («colores de interpolación» marcado). Sus cortes (0,1 ·
      0,3 · 1 · 4…) no son listones suyos, son la escala de intensidad. */
-  'lluvia']);
+  'lluvia', 'lluviaVerde', 'nieveAzul']);
 /* Capas que se interpolan con cúbica monótona entre nodos (ver omUrl). */
-const INTERPOLACION_SUAVE = new Set(['lluvia', 'dbz', 'sombraLluvia']);
+const INTERPOLACION_SUAVE = new Set(['lluvia', 'dbz', 'sombraLluvia', 'lluviaVerde', 'nieveAzul']);
 
 const HRES_ZOOM_MIN = 6;
 function hresDeLejos(modelo, zoom) {
@@ -1230,6 +1243,25 @@ function escalasPropias() {
     pos: mm.map((_, i) => i),
   };
 
+  /* Tipo de precipitación (17-09-2026): la LLUVIA en verdes por intensidad
+     y de 7 mm/h para arriba amarillo, naranja, rojo y morado, que es la
+     rampa de radar de AguaceroWx pasada a mm/h; la NIEVE en azules. Mismos
+     cortes que `mm`, y nada por debajo de 0,1. */
+  const lvc = [['#9be3a0',0], ['#9be3a0',.85], ['#6fd46a',.92], ['#46c04a',1],
+               ['#22a63a',1], ['#128a34',1], ['#0c6e2c',1], ['#d9dd2a',1],
+               ['#f2b12a',1], ['#ea6a2a',1], ['#d4232f',1], ['#b0308f',1]];
+  const lluviaVerde = {
+    scale: { type:'breakpoint', unit:'mm/h', breakpoints: mm, colors: lvc.map(([c,a]) => hexRGBA(c, a)) },
+    eje: mm, unidad: 'mm/h', pos: mm.map((_, i) => i),
+  };
+  const nvm = [0, 0.1, 0.3, 0.6, 1, 2, 4, 8, 15];
+  const nvc = [['#a9c8ff',0], ['#a9c8ff',.85], ['#7fa6ff',.92], ['#5a86ff',1],
+               ['#3f66f0',1], ['#2b49d0',1], ['#1c31a8',1], ['#121f7a',1], ['#0b1350',1]];
+  const nieveAzul = {
+    scale: { type:'breakpoint', unit:'mm/h', breakpoints: nvm, colors: nvc.map(([c,a]) => hexRGBA(c, a)) },
+    eje: nvm, unidad: 'mm/h', pos: nvm.map((_, i) => i),
+  };
+
   // Índice de elevación. La librería no conoce esta variable y le encaja
   // la escala de TEMPERATURA, de −80 a +50: con ese rango, toda la
   // península sale del mismo color y no se distingue un +7 (estable) de
@@ -1344,7 +1376,7 @@ function escalasPropias() {
   _escalas = {
     basecv, topecv, humedad,
     elevacion,
-    lluvia,
+    lluvia, lluviaVerde, nieveAzul,
     // La tesela trae mm/h; lo que se lee es dBZ, así que se convierte con
     // la misma cuenta de Marshall-Palmer con la que está hecha la escala.
     dbz: { scale: ESCALA_DBZ, eje: DBZ, unidad: 'dBZ',
@@ -2250,7 +2282,7 @@ const Maps = {
          los mapas profesionales: el COLOR va pleno y la SOMBRA del
          terreno se dibuja ENCIMA, suave. Ya no hay que elegir. */
       this.sueloParaNubes(L_.escala === 'nubes');
-      this.sueloParaLluvia(L_.escala === 'lluvia' || L_.escala === 'dbz');
+      this.sueloParaLluvia(['lluvia', 'lluviaVerde', 'dbz'].includes(L_.escala));
       /* La nube blanca a 0,75 sobre el mar azul acero salía lavada (visto
          en su Chrome el 15-09 a las 13:20): las capas de nubes van casi
          opacas. El deslizador CAPA solo puede subirla, no bajarla. */
@@ -2273,7 +2305,12 @@ const Maps = {
         } catch {}
       }
 
-      if (L_.encima) {
+      /* La de encima solo si ESTE modelo publica esa variable: AROME no
+         trae nieve en teselas, y pedirla era una capa de «trozos sin
+         cargar». Se dice abajo, en el sello, qué falta. */
+      const publicaEncima = !!L_.encima && (!R.meta?.variables || R.meta.variables.includes(L_.encima));
+      if (L_.encima && !publicaEncima) this.status(`${L_.name}: este modelo no publica ${L_.encima === 'snowfall_water_equivalent' ? 'la nieve' : L_.encima} — solo se pinta lo que publica`);
+      if (publicaEncima) {
         const u2 = this.omUrl(L_.encima, this.t, R.modelo, R.meta, L_.encimaEscala ? { escala: L_.encimaEscala } : null);
         if (u2) {
           this.map.addSource('omSrc2', {
