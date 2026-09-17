@@ -747,6 +747,13 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;
 .hcard__otros{display:flex;flex-direction:column;gap:.25rem;margin-top:.3rem}
 .hcard__otros .nd__ojo{display:block;text-align:center}
 
+/* Un día entero, hora a hora, al tocar una tarjeta de «10 días» (17-09-2026) */
+.dcard[data-dia]{cursor:pointer}
+.dcard.is-abierta{box-shadow:inset 0 0 0 2px var(--acc,#7bb3ff)}
+.ddet{margin-top:10px}
+.ddet__h{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:800;margin:2px 0 10px}
+.ddet__x{font-size:.85rem;padding:5px 10px}
+
 .mvals{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
 canvas.mvals{width:100%;height:100%;display:block}
 .mval{position:absolute;transform:translate(-50%,-140%);font-size:0.875rem;font-weight:800;

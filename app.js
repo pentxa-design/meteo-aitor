@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.17-1131';
+const BUILD = '2026.09.17-1145';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -12824,7 +12824,15 @@ function renderHours() {
   const av = $('#avisoAlcance');
   if (av) av.innerHTML = avisoAlcanceModelo(S.data?.fc);
   drawGraph($('#graph'), hrs);
-  $('#hlist').innerHTML = hrs.slice(0, 48).map(h => `
+  $('#hlist').innerHTML = hrs.slice(0, 48).map(tarjetaHora).join('');
+  renderDiaDetalle();
+}
+
+/* ── LA TARJETA DE UNA HORA (17-09-2026): la misma para «Horas» y para
+   el día entero que se abre desde «10 días». Una sola plantilla, para
+   que las dos pantallas no discrepen nunca. */
+function tarjetaHora(h) {
+  return `
     <div class="hcard" data-s="${h.st}">
       <div class="hcard__h">${String(h.date.getHours()).padStart(2,'0')}:00</div>
       <div class="hcard__d">${h.date.toLocaleDateString('es',{weekday:'short'})}</div>
@@ -12838,7 +12846,42 @@ function renderHours() {
       </div>
       <div class="hcard__g">Racha ${has(h.gust) ? wtxt(h.gust, true) : '—'}</div>${chipsOtrosHora(h, 'racha')}
       ${lineaCapeHora(h)}${chipsOtrosHora(h, 'tormenta')}
-    </div>`).join('');
+    </div>`;
+}
+
+/* ── UN DÍA ENTERO, HORA A HORA (17-09-2026, 11:50) ──────────────────
+   Suyo: «tocar en sábado y que le salga el tiempo entero del sábado al
+   pulsar… quieren saber el sábado qué día va a hacer entero, por horas»
+   · «me lo piden los de casa, lo prefieren; Apple en su app lo tiene
+   así» · «en la app también». Se toca una tarjeta de «10 días» y debajo
+   sale ese día completo con las mismas tarjetas de «Horas» (mismas
+   reglas, mismos chips). Se toca otra vez, o «Cerrar», y se cierra. */
+function renderDiaDetalle(desplazar = false) {
+  const dl = $('#dlist');
+  if (!dl) return;
+  let det = $('#diaDetalle');
+  if (!det) {
+    det = document.createElement('div');
+    det.id = 'diaDetalle'; det.className = 'card ddet'; det.hidden = true;
+    (dl.closest('.card') || dl).insertAdjacentElement('afterend', det);
+    dl.addEventListener('click', e => {
+      const li = e.target.closest('.dcard[data-dia]');
+      if (!li) return;
+      S.diaAbierto = S.diaAbierto === li.dataset.dia ? null : li.dataset.dia;
+      renderDiaDetalle(true);
+    });
+  }
+  const dia = S.diaAbierto || null;
+  dl.querySelectorAll('.dcard[data-dia]').forEach(li => li.classList.toggle('is-abierta', !!dia && li.dataset.dia === dia));
+  const hs = dia ? (S.data?.hours || []).filter(h => String(h.t).startsWith(dia)) : [];
+  if (!dia || !hs.length) { det.hidden = true; det.innerHTML = ''; return; }
+  const nombre = hs[0].date.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
+  det.innerHTML = `<div class="ddet__h"><span>${esc(nombre.charAt(0).toUpperCase() + nombre.slice(1))} · hora a hora</span>
+      <button type="button" class="btn ddet__x" data-cerrar="1">Cerrar</button></div>
+    <div class="hlist">${hs.map(tarjetaHora).join('')}</div>`;
+  det.hidden = false;
+  det.querySelector('[data-cerrar]').onclick = () => { S.diaAbierto = null; renderDiaDetalle(); };
+  if (desplazar) det.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ── CAPE Y TAPA, HORA A HORA ───────────────────────────────────────
@@ -13116,6 +13159,7 @@ function renderDays() {
       ${tormenta ? `<div class="dcard__s">⚡ Riesgo de tormenta${horaDeTormenta(t) ? ' · ' + horaDeTormenta(t) : ''}</div>` : ''}
     </li>`;
   }).join('');
+  renderDiaDetalle();
 }
 
 /* ---------- 11. Gráfico SVG ---------- */

@@ -7735,6 +7735,19 @@ grupo('Avisos oficiales de toda España, solo información (17-09-2026)');
      'si vuelve a entrar aquí, es porque él lo ha pedido de nuevo');
 }
 
+grupo('Tocar un día en «10 días» abre ese día entero, hora a hora (17-09-2026)');
+{
+  /* Suyo: «quieren saber el sábado qué día va a hacer entero, por horas; me lo piden los de casa, Apple lo tiene así». */
+  const A = require('fs').readFileSync(require('path').join(__dirname, 'app.js'), 'utf8');
+  ok('la tarjeta de la hora es UNA plantilla (tarjetaHora) y «Horas» la usa: las dos pantallas no pueden discrepar',
+     /function tarjetaHora\(h\)/.test(A) && /\$\('#hlist'\)\.innerHTML = hrs\.slice\(0, 48\)\.map\(tarjetaHora\)\.join\(''\);/.test(A)
+     && (A.match(/<div class="hcard" data-s="\$\{h\.st\}">/g) || []).length === 1);
+  ok('al tocar una tarjeta de «10 días» se abre debajo el día entero con esas mismas tarjetas, y se cierra al volver a tocar',
+     /function renderDiaDetalle\(desplazar = false\)/.test(A) && /S\.diaAbierto = S\.diaAbierto === li\.dataset\.dia \? null : li\.dataset\.dia;/.test(A)
+     && /filter\(h => String\(h\.t\)\.startsWith\(dia\)\)/.test(A) && /hs\.map\(tarjetaHora\)\.join\(''\)/.test(A)
+     && /\}\)\.join\(''\);\n  renderDiaDetalle\(\);\n\}/.test(A));
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');
