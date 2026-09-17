@@ -7744,7 +7744,8 @@ grupo('Tocar un día en «10 días» abre ese día entero, hora a hora (17-09-20
      && (A.match(/<div class="hcard" data-s="\$\{h\.st\}">/g) || []).length === 1);
   ok('al tocar una tarjeta de «10 días» se abre debajo el día entero con esas mismas tarjetas, y se cierra al volver a tocar',
      /function renderDiaDetalle\(desplazar = false\)/.test(A) && /S\.diaAbierto = S\.diaAbierto === li\.dataset\.dia \? null : li\.dataset\.dia;/.test(A)
-     && /filter\(h => String\(h\.t\)\.startsWith\(dia\)\)/.test(A) && /hs\.map\(tarjetaHora\)\.join\(''\)/.test(A)
+     && /const hs = dia && S\.data\?\.fc \? horasDelDia\(S\.data\.fc, dia\) : \[\];/.test(A) && /hs\.forEach\(h => Object\.assign\(h, assess\(h, S\.thr, S\.perfil, S\.place\)\)\);/.test(A)
+     && /hs\.map\(tarjetaHora\)\.join\(''\)/.test(A)
      && /\}\)\.join\(''\);\n  renderDiaDetalle\(\);\n\}/.test(A));
 }
 

@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.17-1145';
+const BUILD = '2026.09.17-1152';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -12873,7 +12873,11 @@ function renderDiaDetalle(desplazar = false) {
   }
   const dia = S.diaAbierto || null;
   dl.querySelectorAll('.dcard[data-dia]').forEach(li => li.classList.toggle('is-abierta', !!dia && li.dataset.dia === dia));
-  const hs = dia ? (S.data?.hours || []).filter(h => String(h.t).startsWith(dia)) : [];
+  /* Las horas del día salen del pronóstico entero (10 días), no de las 48
+     de «Horas»: probando el sábado, el detalle se cortaba a las 12:00 y
+     el domingo salía vacío. Mismo semáforo (assess) que «Horas». */
+  const hs = dia && S.data?.fc ? horasDelDia(S.data.fc, dia) : [];
+  hs.forEach(h => Object.assign(h, assess(h, S.thr, S.perfil, S.place)));
   if (!dia || !hs.length) { det.hidden = true; det.innerHTML = ''; return; }
   const nombre = hs[0].date.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
   det.innerHTML = `<div class="ddet__h"><span>${esc(nombre.charAt(0).toUpperCase() + nombre.slice(1))} · hora a hora</span>
