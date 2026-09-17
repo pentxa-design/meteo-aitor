@@ -40,6 +40,12 @@ const NOMBRES = ['AROME HD', 'AROME', 'ICON-D2', 'ICON-EU', 'ICON', 'ECMWF',
    inclusión, así que basta un cacho reconocible de la frase. Para añadir
    uno hay que venir aquí a propósito: no se cuela por descuido. */
 const BLANCA = [
+  /* La tabla NOMBRE_PRESTAMISTA que alimenta nombreDeModelo() (17-09-2026):
+     ahí el nombre va pegado a su id de Open-Meteo, es el dato mismo, no
+     una etiqueta de pantalla. Sin ella ARPEGE salía como «otro modelo». */
+  '_arpege_europe: ',
+  '_arome_france: ',
+  'gem_seamless: ',
   /* Explicaciones fijas: lo que ES cada modelo, no lo que sirve hoy. */
   'el más fino que cubre Euskadi',
   'DWD alemán',
