@@ -459,7 +459,13 @@ const LENTOS = new Set(['ecmwf_ifs', 'ecmwf_ifs025', 'ncep_gfs013', 'ncep_gfs025
 /* 15-09-2026, con Windy delante: «mira capa temperatura 2m qué bien se ve». Temperatura
    y T850 pasan a degradado continuo; los cortes (30 naranja, 34 rojo, 38 granate)
    siguen siendo los suyos, solo se funden entre sí en vez de verse a bandas. */
-const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'sombraLluvia', 'tempc', 't850', 'rafagas']);
+const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'sombraLluvia', 'tempc', 't850', 'rafagas',
+  /* 17-09-2026: la lluvia en mm/h también fundida entre cortes, como
+     AguaceroWx («colores de interpolación» marcado). Sus cortes (0,1 ·
+     0,3 · 1 · 4…) no son listones suyos, son la escala de intensidad. */
+  'lluvia']);
+/* Capas que se interpolan con cúbica monótona entre nodos (ver omUrl). */
+const INTERPOLACION_SUAVE = new Set(['lluvia', 'dbz', 'sombraLluvia']);
 
 const HRES_ZOOM_MIN = 6;
 function hresDeLejos(modelo, zoom) {
@@ -1846,12 +1852,23 @@ const Maps = {
     // MEDIDO: 'cubic' + tile_size 512 multiplicaba por 25 el tiempo de la
     // primera tesela de cada hora (9,4 s frente a 0,37 s). El suavizado
     // final lo hace MapLibre con raster-resampling, que es gratis.
-    const q = new URLSearchParams({ variable, interpolation: 'linear' });
     // Ojo: hay dos capas con la variable `precipitation` (Precipitación y
     // Reflectividad). Buscar por variable devolvía siempre la primera, así
     // que Reflectividad nunca llegaba a usar el protocolo de dBZ.
     const L_ = capa || TLAYERS.find(l => l.id === this.layer && l.v === variable)
             || TLAYERS.find(l => l.v === variable);
+    /* ── LA LLUVIA, SIN CUADRADOS (17-09-2026, 14:15, portátil) ────────
+       Suyo, con AguaceroWx al lado: «más fino» · «no en cuadrados» · «si
+       puedes». La librería admite nearest, linear, cubic y monotone. Con
+       `linear` la malla de 25 km del ECMWF se ve a cuadrados redondeados;
+       `monotone` (cúbica monótona) redondea entre nodos SIN pasarse por
+       encima ni por debajo de lo que dan los nodos —la cúbica normal sí
+       rebasa, y eso sería pintar más agua de la que hay—. MEDIDO en
+       producción con los datos ya en caché, 4 teselas z5 del ECMWF 25 km:
+       linear 194 ms · monotone 260 ms. Nada que ver con la medición vieja
+       de 'cubic' + tile_size 512 (×25), que era la tesela doble. Solo en
+       las capas de lluvia por ahora, que es lo que pidió. */
+    const q = new URLSearchParams({ variable, interpolation: INTERPOLACION_SUAVE.has(L_?.escala) ? 'monotone' : 'linear' });
     if (L_?.arrows)   q.set('arrows', 'true');     // barbas de viento
     if (L_?.contours) q.set('contours', 'true');   // isobaras / isohipsas
     /* Degradado continuo entre cortes en las escalas cuyos cortes NO son

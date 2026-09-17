@@ -1066,6 +1066,18 @@ ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan 
    && /if \(e\?\.unidad === 'mm\/h' && txt < 0\.1\) continue;/.test(mapsSrc)
    && /e\?\.unidad === 'mm\/h'\) \? 1 : 0;/.test(mapsSrc),
    'un «0» encima de una mancha azul de 0,3 mm/h es un número que miente');
+
+/* ── SIN CUADRADOS (17-09-2026) ──────────────────────────────────────
+   Suyo: «más fino» · «no en cuadrados» · «si puedes». Las capas de
+   lluvia se interpolan con cúbica MONÓTONA (no rebasa los nodos) y se
+   funden entre cortes; el resto sigue en lineal hasta que se mida. */
+ok('las capas de lluvia piden interpolación monótona y el resto lineal',
+   /const INTERPOLACION_SUAVE = new Set\(\['lluvia', 'dbz', 'sombraLluvia'\]\);/.test(mapsSrc)
+   && /interpolation: INTERPOLACION_SUAVE\.has\(L_\?\.escala\) \? 'monotone' : 'linear'/.test(mapsSrc)
+   && !/interpolation: 'cubic'/.test(mapsSrc),
+   'cúbica monótona: redondea sin pintar más agua de la que dan los nodos');
+ok('y la lluvia en mm/h va fundida entre cortes (color_blend), como la reflectividad',
+   /const ESCALAS_SUAVES = new Set\(\[[^\]]*'lluvia'\]\);/.test(mapsSrc));
 const htmlSrc = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 
 grupo('La tapa de AguaceroWx: no hay regla (27-08-2026)');
@@ -7565,7 +7577,7 @@ grupo('El mapa se ve debajo del color: costa por encima, opacidad 0,75 y el «no
      && cp.length >= 12 && cp[0] === 0 && cp[1] > 0 && cp[1] < cp[2] && cp[3] >= 0.9 && cp[4] === 1,
      JSON.stringify({ rf, cp }));
   ok('la reflectividad pide color_blend=true: degradado continuo, no bandas estrechas que dibujan la malla',
-     /const ESCALAS_SUAVES = new Set\(\['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'sombraLluvia', 'tempc', 't850', 'rafagas'\]\);/.test(M)
+     /const ESCALAS_SUAVES = new Set\(\['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'sombraLluvia', 'tempc', 't850', 'rafagas',[\s\S]{0,400}?'lluvia'\]\);/.test(M)
      && /if \(ESCALAS_SUAVES\.has\(L_\?\.escala\)\) q\.set\('color_blend', 'true'\);/.test(M),
      'con bandas de 5 dBZ cada celda del modelo se veía como un cuadro; ráfagas, CAPE y presión siguen a saltos (listones e isobaras). 15-09: temperatura y T850 también en degradado, como Windy («mira capa temperatura 2m qué bien se ve»); sus cortes de 30/34/38 siguen en la escala, solo se funden entre sí');
 }
