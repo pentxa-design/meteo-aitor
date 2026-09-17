@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.16-2340';
+const BUILD = '2026.09.17-0954';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -13927,6 +13927,55 @@ function renderAlerts() {
         <span class="al__t">Ninguna hora supera tus umbrales en 48 h</span></div>
       <div class="al__w">Cálculo propio sobre datos de modelo. No sustituye a los avisos oficiales.</div>
     </div>`);
+  /* ── RESTO DE ESPAÑA, SOLO INFORMACIÓN (17-09-2026) ─────────────────
+     Suyo, la mañana después de las trombas de Valencia (51 mm en una
+     hora en Valencia centro, garajes inundados, riadas): «cuando pase
+     algo como lo de ayer en Valencia me gustaría saber» · «me gusta
+     saber si va a llover un montón en algún punto» · «es solo info» ·
+     «España». Los avisos naranjas y rojos oficiales de AEMET de todo el
+     país, tal como los publica Meteoalarm (/api/alertas-espana). Llega
+     después de pintar lo demás; si no se puede leer, se dice. */
+  const esp = document.createElement('div');
+  esp.id = 'alertasEspana';
+  esp.innerHTML = `<div class="al" style="--vc:var(--faint)"><div class="al__h"><span class="al__lvl">ESPAÑA</span>
+    <span class="al__t">Leyendo los avisos oficiales de AEMET…</span></div></div>`;
+  el.appendChild(esp);
+  pintarAlertasEspana(esp);
+}
+
+async function pintarAlertasEspana(cont) {
+  let d = null, fallo = null;
+  try {
+    const r = await fetch('/api/alertas-espana');
+    d = await r.json().catch(() => null);
+    if (!r.ok || d?.error) { fallo = d?.reason || `error ${r.status}`; d = null; }
+  } catch { fallo = 'sin red'; }
+  if (!cont.isConnected) return;
+  if (!d) {
+    cont.innerHTML = `<div class="al" style="--vc:var(--warn)">
+      <div class="al__h"><span class="al__lvl">ESPAÑA</span><span class="al__t">No he podido leer los avisos oficiales</span></div>
+      <p>${esc(String(fallo || ''))}. No quiere decir que no haya: míralos en AEMET, abajo.</p></div>`;
+    return;
+  }
+  const f = s => (s ? new Date(s).toLocaleString('es', { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '?');
+  const fila = a => `<li><b>${esc(a.zona || '')}</b> · ${esc(a.fenomeno || '')} <span class="faint">· ${f(a.desde)} → ${f(a.hasta)}</span></li>`;
+  const rojos = d.rojos || [], naranjas = d.naranjas || [];
+  const n = (k, s, p) => `${k} ${k === 1 ? s : p}`;
+  const partes = [];
+  if (rojos.length) partes.push(n(rojos.length, 'aviso ROJO', 'avisos ROJOS'));
+  if (naranjas.length) partes.push(n(naranjas.length, 'naranja', 'naranjas'));
+  const titulo = partes.length ? partes.join(' y ') : 'Sin avisos naranjas ni rojos';
+  const color = rojos.length ? 'var(--no)' : naranjas.length ? 'var(--warn)' : 'var(--go)';
+  cont.innerHTML = `<div class="al" style="--vc:${color}">
+    <div class="al__h"><span class="al__lvl">ESPAÑA</span>
+      <span class="al__t">${titulo}${d.amarillos ? ` · ${n(d.amarillos, 'amarillo', 'amarillos')}` : ''}</span></div>
+    ${rojos.length ? `<p><b>Rojo</b></p><ul class="al__lista">${rojos.map(fila).join('')}</ul>` : ''}
+    ${naranjas.length ? `<p><b>Naranja</b></p><ul class="al__lista">${naranjas.slice(0, 40).map(fila).join('')}</ul>${
+      naranjas.length > 40 ? `<p class="faint">y ${naranjas.length - 40} más</p>` : ''}` : ''}
+    <div class="al__w">Avisos oficiales de AEMET tal como los publica Meteoalarm${
+      d.actualizado ? ` · actualizado a las ${new Date(d.actualizado).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}` : ''}.
+      Solo información: no es tu zona ni tus listones.</div>
+  </div>`;
 }
 
 /* ---------- 14. Radar (Leaflet en carga diferida) ---------- */

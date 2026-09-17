@@ -4225,8 +4225,20 @@ const Maps = {
     clearTimeout(this._rayosDeb);
     this._rayosDeb = setTimeout(() => this.rayos(), 700);
   },
+  /* ── LOS RAYOS SOLO DONDE PINTAN ALGO (17-09-2026, 09:45) ─────────
+     Suyo, con la capa de viento a 10 m llena de puntos rojos de las
+     tormentas de Murcia: «aunque ponga capa de viento siempre salen
+     esos puntos rojos, no debería ser así, ¿no?». No: las descargas van
+     con la lluvia, el radar, el satélite y la tormenta (CAPE, tapa…);
+     sobre viento, temperatura o nubes solo estorban. El botón se queda
+     como está, pero solo actúa en esos grupos. */
+  rayosProceden() {
+    const L_ = TLAYERS.find(l => l.id === this.layer);
+    return !L_ || ['Lluvia', 'Tormenta', 'Satélite'].includes(L_.g);
+  },
   async rayos() {
     if (!this.map || !this.verRayos || typeof Rayos === 'undefined') return;
+    if (!this.rayosProceden()) { this.limpiarRayos(); return; }
     clearTimeout(this._rayosTimer);
     this._rayosTimer = setTimeout(() => this.rayos(), 5 * 60e3);
     const pedido = ++this._rayosN;
@@ -4344,7 +4356,7 @@ const Maps = {
       `<button class="mbtn${this.verValores ? ' is-on' : ''}" data-tv="1" title="Números del modelo sobre las ciudades">Valores</button>` +
       `<button class="mbtn${this.verBarbas ? ' is-on' : ''}" data-tb2="1" title="Barbas de viento — media ≈ 9 km/h, entera ≈ 19, banderola ≈ 93 (el símbolo se dibuja en nudos por convenio)">Barbas</button>` +
       `<button class="mbtn${this.verParticulas ? ' is-on' : ''}" data-tpart="1" title="Partículas de viento en movimiento (viento a 10 m del modelo), como Windy y Meteored">Partículas</button>` +
-      `<button class="mbtn${this.verRayos ? ' is-on' : ''}" data-tl="1" title="Descargas detectadas por AEMET en las dos últimas horas publicadas, encima del mapa">⚡ Rayos</button>` +
+      `<button class="mbtn${this.verRayos && this.rayosProceden() ? ' is-on' : ''}" data-tl="1" title="Descargas detectadas por AEMET en las dos últimas horas publicadas, encima del mapa. Solo en las capas de lluvia, radar, satélite y tormenta">⚡ Rayos</button>` +
       `<span class="msel__k" style="margin-left:12px">Paso</span>` +
       [1,3,6].map(h => `<button class="mbtn${h === this.pasoHoras ? ' is-on' : ''}" data-tp="${h}"
          title="${h === 3 ? 'Como Windy y Ventusky: fluido' : h === 1 ? 'Máximo detalle, más lento' : 'Muy fluido, menos detalle'}">${h} h</button>`).join('');
@@ -4361,7 +4373,7 @@ const Maps = {
     if (typeof ajustarAltoMapa === 'function') requestAnimationFrame(ajustarAltoMapa);
 
     const bR = document.querySelector('#mapRayosBtn');
-    if (bR) bR.classList.toggle('is-on', !!this.verRayos);
+    if (bR) bR.classList.toggle('is-on', !!this.verRayos && this.rayosProceden());
     const L_ = TLAYERS.find(l => l.id === this.layer);
     document.querySelector('#mapDesc').textContent =
       L_ ? `${L_.name}${L_.unit ? ` · ${L_.unit}` : ''} — ${L_.desc}` : '';

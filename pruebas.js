@@ -7652,6 +7652,59 @@ grupo('El chip de Horas dice cuánta agua ve el otro modelo (15-09-2026, 23:53)'
      && /\$\{lineaCapeHora\(h\)\}\$\{chipsOtrosHora\(h, 'tormenta'\)\}/.test(src));
 }
 
+grupo('Los rayos del mapa solo en las capas donde pintan algo (17-09-2026)');
+{
+  /* Suyo, 09:45, con Viento 10 m lleno de puntos rojos: «no debería ser así, ¿no?» */
+  const M2 = require('fs').readFileSync(require('path').join(__dirname, 'maps.js'), 'utf8');
+  ok('rayos() se limpia y no pinta fuera de Lluvia, Tormenta y Satélite, aunque el botón esté encendido',
+     /rayosProceden\(\) \{\n    const L_ = TLAYERS\.find\(l => l\.id === this\.layer\);\n    return !L_ \|\| \['Lluvia', 'Tormenta', 'Satélite'\]\.includes\(L_\.g\);/.test(M2)
+     && /if \(!this\.rayosProceden\(\)\) \{ this\.limpiarRayos\(\); return; \}/.test(M2)
+     && /this\.verRayos && this\.rayosProceden\(\) \? ' is-on' : ''/.test(M2));
+}
+
+grupo('Avisos oficiales de toda España, solo información (17-09-2026)');
+{
+  /* Suyo, con las trombas de Valencia del 16-09: «cuando pase algo como lo de ayer en Valencia me
+     gustaría saber» · «me gusta saber si va a llover un montón en algún punto» · «es solo info» ·
+     «España». Fuente: los avisos de AEMET tal como los publica Meteoalarm; nada se interpreta. */
+  const fs2 = require('fs'), path2 = require('path');
+  const fn = fs2.readFileSync(path2.join(__dirname, 'api', 'alertas-espana.js'), 'utf8');
+  const vig = fs2.readFileSync(path2.join(__dirname, 'api', 'vigilante.mjs'), 'utf8');
+  const appSrc = fs2.readFileSync(path2.join(__dirname, 'app.js'), 'utf8');
+  const feed = `<?xml version="1.0"?><feed><updated>2026-09-17T07:35:08Z</updated>
+    <entry><cap:areaDesc>Litoral sur de Valencia</cap:areaDesc><cap:onset>2026-09-16T17:00:00+00:00</cap:onset><cap:expires>2099-09-16T23:59:59+00:00</cap:expires><cap:identifier>a1</cap:identifier><cap:severity>Extreme</cap:severity><title>Red Rain Warning issued for Spain - Litoral sur de Valencia</title></entry>
+    <entry><cap:areaDesc>Campo de Cartagena y Mazarrón</cap:areaDesc><cap:onset>2026-09-17T01:00:00+00:00</cap:onset><cap:expires>2099-09-17T09:59:59+00:00</cap:expires><cap:identifier>b2</cap:identifier><cap:severity>Severe</cap:severity><title>Orange Thunderstorm Warning issued for Spain - Campo de Cartagena y Mazarrón</title></entry>
+    <entry><cap:areaDesc>Campo de Cartagena y Mazarrón</cap:areaDesc><cap:onset>2026-09-17T01:00:00+00:00</cap:onset><cap:expires>2099-09-17T09:59:59+00:00</cap:expires><cap:identifier>b2</cap:identifier><cap:severity>Severe</cap:severity><title>Orange Thunderstorm Warning issued for Spain - Campo de Cartagena y Mazarrón</title></entry>
+    <entry><cap:areaDesc>Sierras de Alcudia</cap:areaDesc><cap:onset>2026-09-17T10:00:00+00:00</cap:onset><cap:expires>2099-09-17T17:59:59+00:00</cap:expires><cap:identifier>c3</cap:identifier><cap:severity>Moderate</cap:severity><title>Yellow Rain Warning issued for Spain - Sierras de Alcudia</title></entry>
+    <entry><cap:areaDesc>Caducado</cap:areaDesc><cap:onset>2026-09-10T10:00:00+00:00</cap:onset><cap:expires>2026-09-10T17:59:59+00:00</cap:expires><cap:identifier>d4</cap:identifier><cap:severity>Extreme</cap:severity><title>Red Rain Warning issued for Spain - Caducado</title></entry>
+    </feed>`;
+  /* leerFeed es una función exportada de un módulo ES: se saca el cuerpo y se evalúa aquí. */
+  const cuerpoLeer = fn.slice(fn.indexOf('const NIVEL'), fn.indexOf('export default'))
+    .replace('export function leerFeed', 'function leerFeed');
+  let d = null, err = null;
+  try { d = new Function(cuerpoLeer + '\nreturn leerFeed(arguments[0]);')(feed); } catch (e) { err = e; }
+  ok('leerFeed() saca nivel, fenómeno, zona y horas tal cual, en español, y quita repetidos y caducados',
+     !err && d && d.rojos.length === 1 && d.naranjas.length === 1 && d.amarillos === 1 && d.total === 3
+     && d.rojos[0].zona === 'Litoral sur de Valencia' && d.rojos[0].fenomeno === 'lluvia' && d.rojos[0].nivel === 'rojo'
+     && d.naranjas[0].fenomeno === 'tormentas' && d.actualizado === '2026-09-17T07:35:08Z',
+     err ? String(err) : JSON.stringify(d).slice(0, 200));
+  ok('el intermediario va con las cabeceras de la casa: 10 min de CDN si va bien, no-store si falla, y tiempo tope de 8 s',
+     /import \{ cabeceras \} from '\.\.\/lib\/cabeceras\.mjs'/.test(fn) && /cabeceras\(ok \? 600 : 0, \{ navegador: 300, revalidar: 1800, origen: 'meteoalarm' \}\)/.test(fn)
+     && /setTimeout\(\(\) => ac\.abort\(\), 8000\)/.test(fn) && /runtime: 'edge'/.test(fn));
+  ok('la pestaña Avisos pinta el apartado ESPAÑA después de lo demás, y si no puede leerlo lo dice (no lo deja vacío)',
+     /esp\.id = 'alertasEspana';/.test(appSrc) && /pintarAlertasEspana\(esp\);/.test(appSrc)
+     && /fetch\('\/api\/alertas-espana'\)/.test(appSrc) && /No he podido leer los avisos oficiales/.test(appSrc)
+     && /Solo información: no es tu zona ni tus listones\./.test(appSrc));
+  ok('el vigilante avisa al móvil de un naranja o rojo NUEVO, como no importante, al final de la pasada y con el fallo tragado',
+     /async function avisarEspana\(puedeEnviar\)/.test(vig)
+     && /if \(puedeEnviar\) envio = await empujar\(titulo, cuerpo, 'espana', false, '\.\/'\);/.test(vig)
+     && /if \(!antes\) \{\n    await guardarJSON\(ESPANA, \{ avisadas: graves\.map\(clave\), cuando: new Date\(\)\.toISOString\(\) \}\);\n    return \{ leido: true, primera: true, graves: graves\.length \};/.test(vig)
+     && /try \{ espana = await avisarEspana\(process\.env\.VIGILANTE_ENVIA === '1'\); \}\n  catch \(e\) \{ espana = \{ error: String\(e\?\.message \|\| e\)\.slice\(0, 80\) \}; \}/.test(vig)
+     && vig.indexOf('let espana = null;') > vig.indexOf('let marcador = null;')
+     && /marcador, espana,/.test(vig),
+     'la primera pasada solo apunta lo que hay: el estreno no pueden ser 60 zonas de golpe');
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');
