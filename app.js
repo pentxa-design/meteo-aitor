@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.17-1344';
+const BUILD = '2026.09.17-1441';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -14691,6 +14691,46 @@ function pintarEstadoMonte() {
 
 /* ---------- 16. Carga y pintado ---------- */
 
+/* ── SEGUIRLE SIN QUE TOQUE NADA (18-09-2026, 00:20, portátil) ─────────
+   Suyo, desde el iPhone: «¿por qué tengo que darle a ubicación cada vez
+   que me muevo de sitio?». Hasta hoy la ubicación solo se leía al pulsar
+   el botón de la mira, y el sitio se quedaba clavado donde la pidió por
+   última vez: se iba de Bermeo a Barakaldo y la app seguía en Bermeo.
+
+   La regla:
+     · el botón sigue igual (con su «Localizando…» y sus avisos);
+     · si el sitio que hay puesto SALIÓ del GPS (`gps: true`, que `go()`
+       guarda con el sitio), al abrir la app y cada vez que vuelve a
+       pantalla se vuelve a leer la ubicación, sin decir nada, y si se ha
+       movido más de KM_PARA_MOVERSE se cambia al sitio nuevo con un toast:
+       «Te has movido: ahora en Barakaldo»;
+     · si el sitio lo eligió él por nombre (una torre, un pueblo), NO se
+       toca nunca: seguirle ahí sería quitarle de la pantalla justo el
+       emplazamiento que está mirando.
+   Sin permiso o sin señal, en silencio no se dice nada: ya lo dirá el
+   botón cuando lo pulse. */
+const KM_PARA_MOVERSE = 1;
+function irAMiUbicacion({ silencioso = false } = {}) {
+  if (!navigator.geolocation) { if (!silencioso) toast('Este navegador no permite geolocalización'); return; }
+  if (!silencioso) toast('Localizando…');
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const { latitude: lat, longitude: lon } = pos.coords;
+    if (silencioso && S.place?.gps && kmEntre(S.place, { lat, lon }) < KM_PARA_MOVERSE) return;   // sigue donde estaba
+    let name = `${lat.toFixed(4)}, ${lon.toFixed(4)}`, admin1 = 'Mi ubicación', country = '';
+    try {
+      const r = await jget(API.rev, { latitude: lat, longitude: lon, localityLanguage: 'es' }, { timeout: 5000 });
+      if (r.city || r.locality) { name = r.city || r.locality; admin1 = r.principalSubdivision ?? ''; country = r.countryName ?? ''; }
+    } catch {}
+    if (silencioso) toast(`Te has movido: ahora en ${name}`, 3800);
+    go({ name, admin1, country, lat, lon, gps: true }, { silent: silencioso });
+  }, err => { if (!silencioso) toast('No se ha podido obtener la ubicación: ' + err.message, 3800); },
+    { enableHighAccuracy: !silencioso, timeout: silencioso ? 8000 : 10000, maximumAge: silencioso ? 120000 : 60000 });
+}
+/* Solo si el sitio puesto salió del GPS. Un sitio elegido por nombre no se toca. */
+function seguirSiEsMiUbicacion() {
+  if (S.place?.gps) irAMiUbicacion({ silencioso: true });
+}
+
 async function go(place, { silent = false } = {}) {
   S.place = place;
   LS.set('place', place);
@@ -15700,20 +15740,7 @@ function bind() {
   }
 
   // Geolocalización
-  $('#btnGeo').addEventListener('click', () => {
-    if (!navigator.geolocation) return toast('Este navegador no permite geolocalización');
-    toast('Localizando…');
-    navigator.geolocation.getCurrentPosition(async pos => {
-      const { latitude: lat, longitude: lon } = pos.coords;
-      let name = `${lat.toFixed(4)}, ${lon.toFixed(4)}`, admin1 = 'Mi ubicación', country = '';
-      try {
-        const r = await jget(API.rev, { latitude: lat, longitude: lon, localityLanguage: 'es' }, { timeout: 5000 });
-        if (r.city || r.locality) { name = r.city || r.locality; admin1 = r.principalSubdivision ?? ''; country = r.countryName ?? ''; }
-      } catch {}
-      go({ name, admin1, country, lat, lon });
-    }, err => toast('No se ha podido obtener la ubicación: ' + err.message, 3800),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
-  });
+  $('#btnGeo').addEventListener('click', () => irAMiUbicacion());
 
   // Recargar
   $('#btnReload').addEventListener('click', async () => {
@@ -16045,6 +16072,7 @@ function bind() {
   // Refresco al volver a primer plano si los datos están caducados
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && S.data && Date.now() - S.data.at > 20 * 60e3 && S.place) go(S.place, { silent: true });
+    if (!document.hidden) seguirSiEsMiUbicacion();   // sacar el móvil del bolsillo en otro sitio
   });
 }
 
@@ -16298,6 +16326,7 @@ async function init() {
       }
     } catch (e) { console.error('[arranque] copia guardada:', e); }
     go(p, { silent: true });
+    seguirSiEsMiUbicacion();          // si el sitio salió del GPS, mirar si se ha movido
   } else {
     // Sin nada guardado: Bermeo como punto de partida
     go({ name: 'Bermeo', admin1: 'Bizkaia', country: 'España', lat: 43.4209, lon: -2.7215 });

@@ -2821,6 +2821,28 @@ ok('y el rebote se calcula con lo medido, no escrito a mano',
    `catch` no saltaba. La ficha salía en «—» con AROME de dueño y solo
    los chips de los otros tenían números. Un 200 sin una sola
    temperatura en diez días es «no cubre el punto» y rebota igual. */
+/* ── SEGUIRLE SIN QUE TOQUE NADA (18-09-2026) ───────────────────────
+   Suyo, desde el iPhone: «¿por qué tengo que darle a ubicación cada vez
+   que me muevo de sitio?». Si el sitio puesto salió del GPS, al abrir y
+   al volver a pantalla se vuelve a mirar dónde está y, si se ha movido
+   más de un kilómetro, se cambia con un toast. Un sitio elegido por
+   nombre no se toca nunca. */
+grupo('La ubicación le sigue sola cuando el sitio salió del GPS (18-09-2026)');
+ok('el botón de la mira y el seguimiento usan la MISMA función, y el sitio del GPS va marcado',
+   /\$\('#btnGeo'\)\.addEventListener\('click', \(\) => irAMiUbicacion\(\)\);/.test(src)
+   && /go\(\{ name, admin1, country, lat, lon, gps: true \}, \{ silent: silencioso \}\);/.test(src));
+ok('en silencio solo se mueve si el sitio salió del GPS y se ha alejado más de un kilómetro',
+   /const KM_PARA_MOVERSE = 1;/.test(src)
+   && /if \(silencioso && S\.place\?\.gps && kmEntre\(S\.place, \{ lat, lon \}\) < KM_PARA_MOVERSE\) return;/.test(src)
+   && /function seguirSiEsMiUbicacion\(\) \{\s*if \(S\.place\?\.gps\) irAMiUbicacion\(\{ silencioso: true \}\);\s*\}/.test(src),
+   'un sitio elegido por nombre (torre, pueblo) no se toca: seguirle ahí sería quitarle lo que mira');
+ok('se mira al arrancar y al volver a pantalla, y avisa con «Te has movido»',
+   /go\(p, \{ silent: true \}\);\s*seguirSiEsMiUbicacion\(\);/.test(src)
+   && /if \(!document\.hidden\) seguirSiEsMiUbicacion\(\);/.test(src)
+   && /if \(silencioso\) toast\(`Te has movido: ahora en \$\{name\}`, 3800\);/.test(src));
+ok('sin permiso o sin señal, en silencio no se dice nada (ya lo dirá el botón)',
+   /err => \{ if \(!silencioso\) toast\('No se ha podido obtener la ubicación: ' \+ err\.message, 3800\); \}/.test(src));
+
 ok('un dueño que contesta sin una temperatura rebota como si no cubriera',
    /const cubreElPunto = d => Array\.isArray\(d\?\.hourly\?\.temperature_2m\)\s*&& d\.hourly\.temperature_2m\.some\(v => v !== null && v !== undefined\)/.test(src)
    && /models: M\.om,\s*\}\)\.then\(d => \{\s*if \(!cubreElPunto\(d\)\) throw new Error\(`\$\{M\.name\} no cubre este punto: contestó sin datos`\);\s*return d;\s*\}\)\.catch\(async e => \{/.test(src),
