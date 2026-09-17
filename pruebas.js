@@ -7688,9 +7688,15 @@ grupo('Avisos oficiales de toda España, solo información (17-09-2026)');
      && d.rojos[0].zona === 'Litoral sur de Valencia' && d.rojos[0].fenomeno === 'lluvia' && d.rojos[0].nivel === 'rojo'
      && d.naranjas[0].fenomeno === 'tormentas' && d.actualizado === '2026-09-17T07:35:08Z',
      err ? String(err) : JSON.stringify(d).slice(0, 200));
-  ok('el intermediario va con las cabeceras de la casa: 10 min de CDN si va bien, no-store si falla, y tiempo tope de 8 s',
-     /import \{ cabeceras \} from '\.\.\/lib\/cabeceras\.mjs'/.test(fn) && /cabeceras\(ok \? 600 : 0, \{ navegador: 300, revalidar: 1800, origen: 'meteoalarm' \}\)/.test(fn)
+  ok('el intermediario va con las cabeceras de la casa: 30 min de CDN si va bien, no-store si falla, y tiempo tope de 8 s',
+     /import \{ cabeceras \} from '\.\.\/lib\/cabeceras\.mjs'/.test(fn) && /cabeceras\(ok \? 1800 : 0, \{ navegador: 600, revalidar: 3600, origen: 'meteoalarm' \}\)/.test(fn)
      && /setTimeout\(\(\) => ac\.abort\(\), 8000\)/.test(fn) && /runtime: 'edge'/.test(fn));
+  /* 10:15, suyo: «si me va a gastar créditos en Vercel no me interesa». Una mirada por hora. */
+  ok('el vigilante mira España UNA vez por hora (55 min), leyendo antes lo apuntado para saltar sin pedir nada',
+     /const CADA_MS = 55 \* 60e3;/.test(vig)
+     && /if \(antes\?\.miradoEn && Date\.now\(\) - new Date\(antes\.miradoEn\)\.getTime\(\) < CADA_MS\) \{/.test(vig)
+     && vig.indexOf('const antes = (await leerJSON(ESPANA, null)).dato;') < vig.indexOf('const r = await fetch(`${APP}/api/alertas-espana`'),
+     'cada 15 min eran 144 lecturas al día; por hora son 24');
   ok('la pestaña Avisos pinta el apartado ESPAÑA después de lo demás, y si no puede leerlo lo dice (no lo deja vacío)',
      /esp\.id = 'alertasEspana';/.test(appSrc) && /pintarAlertasEspana\(esp\);/.test(appSrc)
      && /fetch\('\/api\/alertas-espana'\)/.test(appSrc) && /No he podido leer los avisos oficiales/.test(appSrc)
@@ -7698,7 +7704,7 @@ grupo('Avisos oficiales de toda España, solo información (17-09-2026)');
   ok('el vigilante avisa al móvil de un naranja o rojo NUEVO, como no importante, al final de la pasada y con el fallo tragado',
      /async function avisarEspana\(puedeEnviar\)/.test(vig)
      && /if \(puedeEnviar\) envio = await empujar\(titulo, cuerpo, 'espana', false, '\.\/'\);/.test(vig)
-     && /if \(!antes\) \{\n    await guardarJSON\(ESPANA, \{ avisadas: graves\.map\(clave\), cuando: new Date\(\)\.toISOString\(\) \}\);\n    return \{ leido: true, primera: true, graves: graves\.length \};/.test(vig)
+     && /if \(!antes\) \{\n    await guardarJSON\(ESPANA, \{ avisadas: graves\.map\(clave\), cuando: miradoEn, miradoEn \}\);\n    return \{ leido: true, primera: true, graves: graves\.length \};/.test(vig)
      && /try \{ espana = await avisarEspana\(process\.env\.VIGILANTE_ENVIA === '1'\); \}\n  catch \(e\) \{ espana = \{ error: String\(e\?\.message \|\| e\)\.slice\(0, 80\) \}; \}/.test(vig)
      && vig.indexOf('let espana = null;') > vig.indexOf('let marcador = null;')
      && /marcador, espana,/.test(vig),

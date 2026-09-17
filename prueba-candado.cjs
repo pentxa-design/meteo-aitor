@@ -54,7 +54,7 @@ const guionCandado = (iIni > 0 && iFin > iIni && HTML.slice(iIni, iFin).includes
 if (!guionCandado) { console.log('    ✗ no encuentro el guion del candado en index.html'); process.exit(1); }
 const GUION = guionCandado[0].replace(/^<script>|<\/script>$/g, '');
 
-async function correr({ conCrypto = true, hasta = null, almacenRoto = false } = {}) {
+async function correr({ conCrypto = true, hasta = null, almacenRoto = false, probar = true } = {}) {
   const dom = new JSDOM(HTML.replace(GUION, ''), { runScripts: 'outside-only', url: 'https://x.test/' });
   const w = dom.window;
   const guardado = {};
@@ -74,6 +74,7 @@ async function correr({ conCrypto = true, hasta = null, almacenRoto = false } = 
     Object.defineProperty(w, 'isSecureContext', { value: false, configurable: true });
   }
   w.TextEncoder = TextEncoder;
+  if (probar) w.__probarCandado = true;     // el interruptor está apagado hasta nueva orden; aquí se enciende para probarlo
   w.eval(GUION);
   w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
   await new Promise(r => setTimeout(r, 30));
@@ -135,6 +136,16 @@ console.log('\n  El número no está escrito en la página\n');
   ok('el código NO aparece en claro en el HTML', !HTML.includes(CODIGO),
      'quien abra el fuente lo leería de un vistazo');
   ok('lo que va es el hash', /[0-9a-f]{64}/.test(HTML));
+}
+
+console.log('\n  Apagado hasta nueva orden (17-09-2026)\n');
+{
+  /* Suyo: «quítale el código hasta que tengamos rematada la app» · «hasta nueva orden». */
+  const off = await correr({ probar: false });
+  ok('con el interruptor apagado (como está ahora) la app abre sin pedir código',
+     !off.bloqueado() && !!off.w.document.getElementById('candado').hidden);
+  ok('y el interruptor está apagado en index.html de verdad', /var APAGADO = true;/.test(HTML),
+     'cuando él diga, APAGADO = false y vuelve el candado');
 }
 
 console.log(`\n  ${bien} bien, ${mal} mal\n`);

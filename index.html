@@ -139,6 +139,14 @@ html[data-bloqueado]{overflow:hidden}
   var SAL = 'aitor-meteo:';
   var LLAVE = 'candado.hasta';
   var DIA = 24 * 3600 * 1000;
+  /* APAGADO HASTA NUEVA ORDEN (17-09-2026, 10:05). Suyo, en mayúsculas:
+     «QUÍTALE LOS CÓDIGOS HASTA QUE TENGAMOS REMATADA LA APP» · «QUÍTALE
+     EL CÓDIGO HASTA NUEVA ORDEN». Con APAGADO = true la app abre sin
+     pedir nada. Todo lo demás del candado se queda tal cual, y la prueba
+     (prueba-candado.cjs) lo enciende con window.__probarCandado para
+     seguir vigilándolo. Para volver a ponerlo: APAGADO = false. */
+  var APAGADO = true;
+  if (APAGADO && !window.__probarCandado) return;
 
   function abrir() {
     try {

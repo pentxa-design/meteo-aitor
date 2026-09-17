@@ -406,7 +406,18 @@ const guardarEstado = e => guardarJSON(ESTADO, e);
    el almacén (`avisos/espana.json`). Un fallo aquí no toca la pasada:
    va al final, con el error tragado y contado. */
 const ESPANA = 'avisos/espana.json';
+/* Una mirada por hora, no por pasada (17-09-2026, 10:15). Suyo: «si me va a
+   gastar créditos en Vercel no me interesa, que luego me quedo sin avisos
+   como pasó hace un mes» (Netlify, agosto). AEMET renueva los avisos por
+   horas; con esto son 24 lecturas al día, y el CDN guarda cada respuesta
+   media hora. La lista de lo ya avisado se lee antes, para saltar sin
+   pedir nada. */
+const CADA_MS = 55 * 60e3;
 async function avisarEspana(puedeEnviar) {
+  const antes = (await leerJSON(ESPANA, null)).dato;
+  if (antes?.miradoEn && Date.now() - new Date(antes.miradoEn).getTime() < CADA_MS) {
+    return { saltado: true, haceMin: Math.round((Date.now() - new Date(antes.miradoEn).getTime()) / 60000) };
+  }
   const ac = new AbortController();
   const reloj = setTimeout(() => ac.abort(), 8000);
   let d;
@@ -417,14 +428,17 @@ async function avisarEspana(puedeEnviar) {
   } finally { clearTimeout(reloj); }
   const graves = [...(d.rojos || []), ...(d.naranjas || [])];
   const clave = a => `${a.nivel}|${a.zona}|${a.fenomeno}|${String(a.desde || '').slice(0, 13)}`;
-  const antes = (await leerJSON(ESPANA, null)).dato;
+  const miradoEn = new Date().toISOString();
   if (!antes) {
-    await guardarJSON(ESPANA, { avisadas: graves.map(clave), cuando: new Date().toISOString() });
+    await guardarJSON(ESPANA, { avisadas: graves.map(clave), cuando: miradoEn, miradoEn });
     return { leido: true, primera: true, graves: graves.length };
   }
   const ya = new Set(antes.avisadas || []);
   const nuevas = graves.filter(a => !ya.has(clave(a)));
-  if (!nuevas.length) return { leido: true, graves: graves.length, nuevas: 0 };
+  if (!nuevas.length) {
+    try { await guardarJSON(ESPANA, { ...antes, miradoEn }); } catch { /* si no se apunta, se vuelve a mirar en la siguiente: no pasa nada */ }
+    return { leido: true, graves: graves.length, nuevas: 0 };
+  }
   const rojos = nuevas.filter(a => a.nivel === 'rojo');
   const titulo = rojos.length ? 'AEMET: aviso ROJO en España' : 'AEMET: aviso naranja en España';
   const lista = [...rojos, ...nuevas.filter(a => a.nivel === 'naranja')].slice(0, 4)
@@ -433,7 +447,7 @@ async function avisarEspana(puedeEnviar) {
   let envio = { enviados: 0, nota: 'VIGILANTE_ENVIA apagado' };
   if (puedeEnviar) envio = await empujar(titulo, cuerpo, 'espana', false, './');
   const avisadas = [...ya, ...nuevas.map(clave)].slice(-400);
-  try { await guardarJSON(ESPANA, { avisadas, cuando: new Date().toISOString() }); }
+  try { await guardarJSON(ESPANA, { avisadas, cuando: miradoEn, miradoEn }); }
   catch (e) { envio.noSeGuardo = String(e?.message || e).slice(0, 60); }
   return { leido: true, graves: graves.length, nuevas: nuevas.length, ...envio };
 }

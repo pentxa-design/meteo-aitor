@@ -95,7 +95,7 @@ function json(cuerpo, status) {
   const ok = status === 200;
   return new Response(JSON.stringify(cuerpo), {
     status,
-    headers: cabeceras(ok ? 600 : 0, { navegador: 300, revalidar: 1800, origen: 'meteoalarm' }),
+    headers: cabeceras(ok ? 1800 : 0, { navegador: 600, revalidar: 3600, origen: 'meteoalarm' }),
   });
 }
 
