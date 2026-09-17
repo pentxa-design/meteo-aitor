@@ -7691,24 +7691,18 @@ grupo('Avisos oficiales de toda España, solo información (17-09-2026)');
   ok('el intermediario va con las cabeceras de la casa: 30 min de CDN si va bien, no-store si falla, y tiempo tope de 8 s',
      /import \{ cabeceras \} from '\.\.\/lib\/cabeceras\.mjs'/.test(fn) && /cabeceras\(ok \? 1800 : 0, \{ navegador: 600, revalidar: 3600, origen: 'meteoalarm' \}\)/.test(fn)
      && /setTimeout\(\(\) => ac\.abort\(\), 8000\)/.test(fn) && /runtime: 'edge'/.test(fn));
-  /* 10:15, suyo: «si me va a gastar créditos en Vercel no me interesa». Una mirada por hora. */
-  ok('el vigilante mira España UNA vez por hora (55 min), leyendo antes lo apuntado para saltar sin pedir nada',
-     /const CADA_MS = 55 \* 60e3;/.test(vig)
-     && /if \(antes\?\.miradoEn && Date\.now\(\) - new Date\(antes\.miradoEn\)\.getTime\(\) < CADA_MS\) \{/.test(vig)
-     && vig.indexOf('const antes = (await leerJSON(ESPANA, null)).dato;') < vig.indexOf('const r = await fetch(`${APP}/api/alertas-espana`'),
-     'cada 15 min eran 144 lecturas al día; por hora son 24');
+  ok('la pestaña Avisos solo pide España cuando él la abre, y una sola vez por pintado',
+     (appSrc.match(/fetch\('\/api\/alertas-espana'\)/g) || []).length === 1);
   ok('la pestaña Avisos pinta el apartado ESPAÑA después de lo demás, y si no puede leerlo lo dice (no lo deja vacío)',
      /esp\.id = 'alertasEspana';/.test(appSrc) && /pintarAlertasEspana\(esp\);/.test(appSrc)
      && /fetch\('\/api\/alertas-espana'\)/.test(appSrc) && /No he podido leer los avisos oficiales/.test(appSrc)
      && /Solo información: no es tu zona ni tus listones\./.test(appSrc));
-  ok('el vigilante avisa al móvil de un naranja o rojo NUEVO, como no importante, al final de la pasada y con el fallo tragado',
-     /async function avisarEspana\(puedeEnviar\)/.test(vig)
-     && /if \(puedeEnviar\) envio = await empujar\(titulo, cuerpo, 'espana', false, '\.\/'\);/.test(vig)
-     && /if \(!antes\) \{\n    await guardarJSON\(ESPANA, \{ avisadas: graves\.map\(clave\), cuando: miradoEn, miradoEn \}\);\n    return \{ leido: true, primera: true, graves: graves\.length \};/.test(vig)
-     && /try \{ espana = await avisarEspana\(process\.env\.VIGILANTE_ENVIA === '1'\); \}\n  catch \(e\) \{ espana = \{ error: String\(e\?\.message \|\| e\)\.slice\(0, 80\) \}; \}/.test(vig)
-     && vig.indexOf('let espana = null;') > vig.indexOf('let marcador = null;')
-     && /marcador, espana,/.test(vig),
-     'la primera pasada solo apunta lo que hay: el estreno no pueden ser 60 zonas de golpe');
+  /* 10:35, suyo: «prefiero los datos actualizados en mis sitios que no me gaste créditos por
+     España entera, que al final solo era para info» · «no me la juego» · «prefiero para mis
+     avisos». El vigilante NO lee España: cero coste de fondo. Solo la pestaña, al abrirla. */
+  ok('el vigilante NO consulta los avisos de España (decisión suya: los créditos son para sus avisos)',
+     !/alertas-espana/.test(vig) && !/avisarEspana\(/.test(vig) && !/avisos\/espana\.json/.test(vig),
+     'si vuelve a entrar aquí, es porque él lo ha pedido de nuevo');
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');

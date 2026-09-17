@@ -394,63 +394,17 @@ async function leerEstado() {
 }
 const guardarEstado = e => guardarJSON(ESTADO, e);
 
-/* ── AVISOS DE TODA ESPAÑA, SOLO INFORMACIÓN (17-09-2026) ───────────
-   Suyo, con las trombas de Valencia del 16-09 en la tele (51 mm en una
-   hora en Valencia centro, garajes inundados, riadas): «cuando pase algo
-   como lo de ayer en Valencia me gustaría saber» · «es solo info» ·
-   «España». Cada pasada lee /api/alertas-espana (los avisos CAP de
-   AEMET vía Meteoalarm) y, si hay un naranja o rojo que aún no se ha
-   contado, manda UN aviso con las zonas y el fenómeno, marcado como no
-   importante. La primera vez solo se apunta lo que hay, sin avisar (si
-   no, el estreno serían 60 zonas de golpe). Lo ya avisado se guarda en
-   el almacén (`avisos/espana.json`). Un fallo aquí no toca la pasada:
-   va al final, con el error tragado y contado. */
-const ESPANA = 'avisos/espana.json';
-/* Una mirada por hora, no por pasada (17-09-2026, 10:15). Suyo: «si me va a
-   gastar créditos en Vercel no me interesa, que luego me quedo sin avisos
-   como pasó hace un mes» (Netlify, agosto). AEMET renueva los avisos por
-   horas; con esto son 24 lecturas al día, y el CDN guarda cada respuesta
-   media hora. La lista de lo ya avisado se lee antes, para saltar sin
-   pedir nada. */
-const CADA_MS = 55 * 60e3;
-async function avisarEspana(puedeEnviar) {
-  const antes = (await leerJSON(ESPANA, null)).dato;
-  if (antes?.miradoEn && Date.now() - new Date(antes.miradoEn).getTime() < CADA_MS) {
-    return { saltado: true, haceMin: Math.round((Date.now() - new Date(antes.miradoEn).getTime()) / 60000) };
-  }
-  const ac = new AbortController();
-  const reloj = setTimeout(() => ac.abort(), 8000);
-  let d;
-  try {
-    const r = await fetch(`${APP}/api/alertas-espana`, { signal: ac.signal });
-    d = await r.json().catch(() => null);
-    if (!r.ok || !d || d.error) return { leido: false, nota: String(d?.reason || `error ${r.status}`).slice(0, 80) };
-  } finally { clearTimeout(reloj); }
-  const graves = [...(d.rojos || []), ...(d.naranjas || [])];
-  const clave = a => `${a.nivel}|${a.zona}|${a.fenomeno}|${String(a.desde || '').slice(0, 13)}`;
-  const miradoEn = new Date().toISOString();
-  if (!antes) {
-    await guardarJSON(ESPANA, { avisadas: graves.map(clave), cuando: miradoEn, miradoEn });
-    return { leido: true, primera: true, graves: graves.length };
-  }
-  const ya = new Set(antes.avisadas || []);
-  const nuevas = graves.filter(a => !ya.has(clave(a)));
-  if (!nuevas.length) {
-    try { await guardarJSON(ESPANA, { ...antes, miradoEn }); } catch { /* si no se apunta, se vuelve a mirar en la siguiente: no pasa nada */ }
-    return { leido: true, graves: graves.length, nuevas: 0 };
-  }
-  const rojos = nuevas.filter(a => a.nivel === 'rojo');
-  const titulo = rojos.length ? 'AEMET: aviso ROJO en España' : 'AEMET: aviso naranja en España';
-  const lista = [...rojos, ...nuevas.filter(a => a.nivel === 'naranja')].slice(0, 4)
-    .map(a => `${a.zona}: ${a.fenomeno} (${a.nivel})`).join(' · ');
-  const cuerpo = `${lista}${nuevas.length > 4 ? ` y ${nuevas.length - 4} más` : ''}. Solo información: no es tu zona.`;
-  let envio = { enviados: 0, nota: 'VIGILANTE_ENVIA apagado' };
-  if (puedeEnviar) envio = await empujar(titulo, cuerpo, 'espana', false, './');
-  const avisadas = [...ya, ...nuevas.map(clave)].slice(-400);
-  try { await guardarJSON(ESPANA, { avisadas, cuando: miradoEn, miradoEn }); }
-  catch (e) { envio.noSeGuardo = String(e?.message || e).slice(0, 60); }
-  return { leido: true, graves: graves.length, nuevas: nuevas.length, ...envio };
-}
+/* AVISOS DE TODA ESPAÑA: FUERA DEL VIGILANTE (17-09-2026, 10:35). Se
+   montó a las 09:50 (aviso al móvil de los naranjas y rojos de AEMET de
+   todo el país, solo información) y él lo quitó una hora después, en
+   sus palabras: «si me va a gastar créditos en Vercel no me interesa, que
+   luego me quedo sin avisos como pasó hace un mes» · «prefiero los datos
+   actualizados en mis sitios que no me gaste créditos por España entera,
+   que al final solo era para info» · «no me la juego» · «prefiero para
+   mis avisos». Eran 24 lecturas al día (0,1 % del plan gratuito), pero
+   la decisión es suya y es la buena: esto está hecho para su trabajo,
+   no para hobby. Queda solo el apartado de la pestaña Avisos, que se lee
+   ÚNICAMENTE cuando él abre la pestaña. El vigilante no toca España. */
 
 async function empujar(titulo, cuerpo, tag, importante, url) {
   const { VAPID_PUBLICA, VAPID_PRIVADA, VAPID_CONTACTO } = process.env;
@@ -1330,10 +1284,6 @@ export default async function handler(req, res) {
   let marcador = null;
   try { marcador = await apuntarEnElMarcador(sitios); }
   catch (e) { marcador = { error: String(e?.message || e).slice(0, 80) }; }
-  /* Y los avisos de toda España, solo información, con el fallo tragado. */
-  let espana = null;
-  try { espana = await avisarEspana(process.env.VIGILANTE_ENVIA === '1'); }
-  catch (e) { espana = { error: String(e?.message || e).slice(0, 80) }; }
 
   /* Lo que no se pudo leer o guardar se DICE: hasta el 13-09-2026 eran dos
      banderas que se calculaban y nadie leía (las cazó ESLint el 05-09). */
@@ -1341,7 +1291,7 @@ export default async function handler(req, res) {
   if (noPudeLeerElEstado) console.error('vigilante: no se pudo leer el estado:', noPudeLeerElEstado);
   return res.status(200).json({
     ok: true, hora: hh(h0), nivel, mirados: buenos.length, fallos: fallos.map(f => f.n),
-    marcador, espana,
+    marcador,
     noSeGuardo: noSeGuardo || undefined, noPudeLeerElEstado: noPudeLeerElEstado || undefined,
     /* De dónde salió la lista. Si es la de respaldo, el vigilante está
        mirando emplazamientos viejos y eso NO puede pasar en silencio: es
