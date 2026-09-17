@@ -4625,8 +4625,8 @@ grupo('El 41° que iba solo (31-08-2026, 17:24)');
   globalThis.S = { diariaMulti: null };
   ok('sin la comparación cargada, no se dice nada — un hueco no es un acuerdo',
      desacuerdoDelDia('2026-09-04') === null);
-  ok('la tarjeta pinta el aviso de la máxima solo desde 6° de separación',
-     /const maxTxt = D\.dif < 6 \? '' : /.test(src),
+  ok('la tarjeta pinta el aviso de la máxima desde 4° de separación (17-09-2026, antes 6°)',
+     /const maxTxt = D\.dif < 4 \? '' : /.test(src),
      'por debajo bailan siempre; una marca diaria no marca nada');
   /* 17-09-2026 11:20, sábado en Bermeo: máximas a 4° (calla), mínimas de 9,6 a 15,1 y la tarjeta callaba. Él: «si es para bien, sí». */
   globalThis.S = { place: AQUI, diariaMulti: { clave: SELLO, time: ['2026-09-19'],

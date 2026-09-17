@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.17-1123';
+const BUILD = '2026.09.17-1131';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -13078,7 +13078,11 @@ function renderDays() {
            uno de los dos está equivocado y él tiene que saberlo. */
         const D = desacuerdoDelDia(t);
         if (!D) return '';
-        const maxTxt = D.dif < 6 ? '' : `<div class="dcard__x" title="${esc(D.alto.nom)} ${D.alto.v.toFixed(0)}° · `
+        /* 4° desde el 17-09-2026 (antes 6°): en la costa los modelos van
+           3-4° separados por la celda de monte de ECMWF y el chip no
+           saltaba nunca (sábado 19 en Bermeo: 21,4 a 25,5). Él: «¿qué me
+           recomiendas?» → 4°. */
+        const maxTxt = D.dif < 4 ? '' : `<div class="dcard__x" title="${esc(D.alto.nom)} ${D.alto.v.toFixed(0)}° · `
              + `${esc(D.bajo.nom)} ${D.bajo.v.toFixed(0)}°">⚠ los ${D.n} modelos van de `
              + `<b>${D.bajo.v.toFixed(0)}°</b> a <b>${D.alto.v.toFixed(0)}°</b></div>`;
         /* La mínima salta desde 5°: de noche una horquilla así es la
