@@ -1092,7 +1092,8 @@ ok('la lluvia va en verdes por intensidad y la nieve en azules, y nada por debaj
    && /lluvia, lluviaVerde, nieveAzul,/.test(mapsSrc));
 ok('la capa de encima solo se pide si ESE modelo publica la variable, y si no, se dice',
    /const publicaEncima = !!L_\.encima && \(!R\.meta\?\.variables \|\| R\.meta\.variables\.includes\(L_\.encima\)\);/.test(mapsSrc)
-   && /if \(L_\.encima && !publicaEncima\) this\.status\(/.test(mapsSrc)
+   && /this\._sinEncima = \(L_\.encima && !publicaEncima\) \? L_\.encima : null;/.test(mapsSrc)
+   && /this\._sinEncima \? ` · SIN \$\{this\._sinEncima === 'snowfall_water_equivalent' \? 'NIEVE'/.test(mapsSrc)
    && /if \(publicaEncima\) \{\s*const u2 = this\.omUrl\(L_\.encima/.test(mapsSrc),
    'AROME no trae nieve en teselas: pedirla era una capa de «trozos sin cargar»');
 const htmlSrc = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');

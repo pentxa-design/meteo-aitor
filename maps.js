@@ -2309,7 +2309,10 @@ const Maps = {
          trae nieve en teselas, y pedirla era una capa de «trozos sin
          cargar». Se dice abajo, en el sello, qué falta. */
       const publicaEncima = !!L_.encima && (!R.meta?.variables || R.meta.variables.includes(L_.encima));
-      if (L_.encima && !publicaEncima) this.status(`${L_.name}: este modelo no publica ${L_.encima === 'snowfall_water_equivalent' ? 'la nieve' : L_.encima} — solo se pinta lo que publica`);
+      /* Se guarda para el sello (stamp), que es lo que se lee: un status
+         suelto aquí lo pisaba el sello un instante después (visto en
+         producción con AROME, build 1432). */
+      this._sinEncima = (L_.encima && !publicaEncima) ? L_.encima : null;
       if (publicaEncima) {
         const u2 = this.omUrl(L_.encima, this.t, R.modelo, R.meta, L_.encimaEscala ? { escala: L_.encimaEscala } : null);
         if (u2) {
@@ -2875,7 +2878,8 @@ const Maps = {
       : '—';
     const dias = (T.length && new Date(T[T.length-1]) - new Date(T[0])) / 864e5;
     this.status(`${M.name} · ${M.res} · pasada de las ${ref} · ${T.length} pasos (${dias.toFixed(0)} días)`
-      + (this.usando?.sustituido ? ' · CAPA SUSTITUIDA' : ''));
+      + (this.usando?.sustituido ? ' · CAPA SUSTITUIDA' : '')
+      + (this._sinEncima ? ` · SIN ${this._sinEncima === 'snowfall_water_equivalent' ? 'NIEVE' : this._sinEncima.toUpperCase()}: este modelo no la publica, solo se pinta la lluvia` : ''));
   },
 
   /* ---------- El modelo no llega hasta donde él trabaja ──────────────
