@@ -664,3 +664,18 @@ Sin apuntar en la app pero en el barrido: Las Palmas (Gando ya 63 km/h a las 11 
 **Ojo con la hora:** las tarjetas van en hora LOCAL del sitio (Tenerife −1, Tokio +7). Para el contraste, Madrid 22:00 = Canarias 21:00 = Tokio 05:00 del viernes.
 
 **Contraste a las 22:00:** `scratchpad/contraste-22h.mjs` (historia de 12 h de AEMET en las cuatro estaciones apostadas vía `/estaciones?puntos=…&historia=12` y METAR de 12 h de GCXO, GCLP, LEIB, FACT, LIPQ, LIMJ, EIDW, ENBR, PGUM, PGSN). Probado a las 13:55: Ibiza lleva tormenta (TS, CB) desde las 09:30 UTC y Es Codolá aún 0,0 mm (tormenta seca de momento); Ciudad del Cabo ya 37 kt = 69 km/h de racha a las 11:25 UTC (ECMWF decía 67; el Automático 90 es lo que hay que ver); Los Rodeos 53,6 y Gando 63 a las 11 UTC; Génova con tormenta a las 08-09 UTC (ICON daba la lluvia a las 16 h).
+
+### §22 · 17-09-2026, 13:55-14:20, portátil: la reflectividad como en AguaceroWx
+
+Suyo, con AguaceroWx (GFS 06z, «Composite Reflectivity» y «Precipitation Type Reflectivity») al lado de nuestra capa Precipitación en ECMWF 25 km: *«me gusta más su pintada, ¿lo podrías igualar? el nuestro parece más irreal»* · *«se ven más profesional, ¿verdad?»* · *«a ver si lo igualas, que tú sé que puedes»*.
+
+Lo que hace que la suya se vea «profesional»: el mapa es NEGRO donde no hay eco, el color arranca en 5 dBZ a corte seco y la escala es la de radar (verde → amarillo → rojo → morado). Lo nuestro ya tenía la capa **Reflectividad** (mm/h del modelo → dBZ por Marshall-Palmer, ESTIMADA) con casi los mismos colores, pero: (1) la escala se fundía desde 0 dBZ, así que 0,01 mm/h salía como velo verdoso sobre medio Atlántico; (2) «Valores» rotulaba «−9» sobre el mar; (3) sobre fondo Claro o Color el verde flojo se perdía. Cambios en `maps.js`:
+
+- `DBZ_SIN_ECO = 4.9`: la escala de dBZ arranca ahí con alfa 0 (quince tramos, como antes, para que la barra cuadre). Por debajo de 5 dBZ no se pinta. **No se toca el dato:** al pulsar el punto sale el número exacto.
+- «Valores» no rotula por debajo de 5 dBZ (convenio del radar: sin eco).
+- `sueloParaLluvia(modo)`: con la capa de dBZ (Reflectividad y Radar + previsión) el suelo va casi negro (`#1b1d21`) y el mar negro (`#0b0c0f`), como AguaceroWx; con mm/h sigue el gris de Windy; en fondo Oscuro no se pone nada encima.
+- Cuatro pruebas nuevas en `pruebas.js` (1061 ✓).
+
+Lo que NO se ha igualado (apuntado por si lo pide): las isobaras (líneas de presión) que AguaceroWx dibuja encima, y su «tipo de precipitación» (verde lluvia, azul nieve, rosa hielo): eso es otro campo del modelo, no sale de los mm/h.
+
+Sus dos preguntas (14:15): «¿dBZ qué es?» → decibelios de reflectividad, la unidad en que el radar mide la fuerza del eco: 5 dBZ apenas llovizna, 20 ≈ 0,6 mm/h, 35 ≈ 5-6 mm/h (chaparrón), 45 ≈ 20 mm/h (tormenta), 55+ granizo probable. «¿Valores?» → el botón del mapa que imprime los números del modelo encima de la capa.

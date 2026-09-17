@@ -256,7 +256,7 @@ const TLAYERS = [
   { id:'aemet', g:'Lluvia', name:'Radar AEMET', v:null, unit:'dBZ', aemet:true,
     desc:'Compuesto nacional de radar de AEMET — observación real, cada 10 minutos' },
   { id:'refl', g:'Lluvia', name:'Reflectividad', v:'precipitation', unit:'dBZ', dbz:true, escala:'dbz',
-    desc:'Lluvia del modelo convertida a dBZ (Marshall-Palmer) — ESTIMADA, no es eco de radar' },
+    desc:'Lluvia del modelo convertida a dBZ (Marshall-Palmer) — ESTIMADA, no es eco de radar. Como en AguaceroWx: negro donde no hay eco, color desde 5 dBZ' },
   { id:'radar', g:'Lluvia', name:'Radar observado', v:null, unit:'',
     desc:'Lo que YA está cayendo (RainViewer) — observación, no previsión' },
   /* ── RADAR + PREVISIÓN EN UNA TIRA (09-09-2026) ──────────────────────
@@ -490,10 +490,23 @@ function fueraDeRango(L_, valor) {
 }
 const marcaDe = u => u.match(new RegExp(`${MARCA}=([A-Za-z0-9_]+)`))?.[1] ?? null;
 
+/* ── NADA POR DEBAJO DE 5 dBZ (17-09-2026, 13:55, portátil) ──────────
+   Suyo, con AguaceroWx al lado: «me gusta más su pintada, el nuestro
+   parece más irreal» · «se ven más profesional, ¿verdad? a ver si lo
+   igualas». Allí el mapa está NEGRO donde no hay eco y el color arranca
+   en 5 dBZ, a corte seco. Aquí la escala era continua de 0 a 5 y el
+   verde clarito se fundía desde cero: 0,01 mm/h del modelo salía como
+   un velo verdoso sobre medio Atlántico, y «Valores» ponía −9 dBZ.
+
+   Es el convenio del radar: por debajo de 5 dBZ no hay eco y no se
+   pinta ni se rotula. NO se toca el dato: al pulsar el punto sigue
+   saliendo el número exacto, sea −9 o 3. Solo cambia dónde empieza el
+   color. Quince tramos, como antes, para que la barra siga cuadrando. */
+const DBZ_SIN_ECO = 4.9;
 const ESCALA_DBZ = {
   type: 'breakpoint',
   unit: 'dBZ',
-  breakpoints: DBZ.map(mmDeDbz),
+  breakpoints: [mmDeDbz(DBZ_SIN_ECO), ...DBZ.slice(1).map(mmDeDbz)],
   colors: DBZ_COLORES.map((c, i) => hexRGBA(c, i === 0 ? 0 : 1)),
 };
 
@@ -2216,7 +2229,7 @@ const Maps = {
          los mapas profesionales: el COLOR va pleno y la SOMBRA del
          terreno se dibuja ENCIMA, suave. Ya no hay que elegir. */
       this.sueloParaNubes(L_.escala === 'nubes');
-      this.sueloParaLluvia(L_.escala === 'lluvia');
+      this.sueloParaLluvia(L_.escala === 'lluvia' ? 'lluvia' : L_.escala === 'dbz' ? 'radar' : false);
       /* La nube blanca a 0,75 sobre el mar azul acero salía lavada (visto
          en su Chrome el 15-09 a las 13:20): las capas de nubes van casi
          opacas. El deslizador CAPA solo puede subirla, no bajarla. */
@@ -2696,19 +2709,26 @@ const Maps = {
      ni en la tierra clara. Mismo mecanismo que sueloParaNubes, con sus
      propias capas (ids distintos) para que una no quite la otra. Solo en
      Claro y Color; en Oscuro ya está oscuro. */
-  sueloParaLluvia(on) {
+  /* `modo`: 'lluvia' (mm/h, gris Windy) · 'radar' (dBZ, negro como
+     AguaceroWx: tierra casi negra y mar negro, que es lo que hace que el
+     verde de 5 dBZ se lea como eco y no como velo) · false (quitar). */
+  sueloParaLluvia(modo) {
     if (!this.map) return;
+    const on = !!modo;
     const quitar = () => ['sueloLluviaLayer', 'marLluviaLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
     if (!on || this.base === 'oscuro') { quitar(); return; }
+    const tono = modo === 'radar'
+      ? { tierra: '#1b1d21', tierraOp: 0.94, mar: '#0b0c0f', marOp: 0.96 }
+      : { tierra: '#5a5f66', tierraOp: 0.85, mar: '#46505c', marOp: 0.9 };
     try {
       quitar();
       const ls = this.map.getStyle()?.layers || [];
       const agua = ls.find(l => l.id === 'water') || ls.find(l => l.type === 'fill' && /water/.test(l.id));
       this.map.addLayer({ id:'sueloLluviaLayer', type:'background',
-        paint:{ 'background-color':'#5a5f66', 'background-opacity':0.85 } }, agua?.id || this.firstLabelLayer());
+        paint:{ 'background-color':tono.tierra, 'background-opacity':tono.tierraOp } }, agua?.id || this.firstLabelLayer());
       if (agua && this.map.getSource('carto')) {
         this.map.addLayer({ id:'marLluviaLayer', type:'fill', source:'carto', 'source-layer':'water',
-          paint:{ 'fill-color':'#46505c', 'fill-opacity':0.9 } }, this.firstLabelLayer());
+          paint:{ 'fill-color':tono.mar, 'fill-opacity':tono.marOp } }, this.firstLabelLayer());
       }
     } catch (e) { console.warn('suelo para lluvia: no se ha podido poner', e); }
   },
@@ -3696,6 +3716,9 @@ const Maps = {
       const pt = this.map.project([p.lng, p.lat]);
       const simbolo = e?.unidad === '°C' ? '°' : '';
       const txt = aTexto(v);
+      /* Radar: por debajo de 5 dBZ no hay eco. Un «−9» encima del mar
+         no es un dato que se lea, es ruido de conversión (ver DBZ_SIN_ECO). */
+      if (e?.unidad === 'dBZ' && txt < DBZ_SIN_ECO) continue;
       imposible ||= fueraDeRango(L_, txt);
       const d = Math.abs(txt) >= 100 ? 0 : dec;
       frag.push(`<span class="mval" style="left:${pt.x.toFixed(0)}px;top:${pt.y.toFixed(0)}px">${txt.toFixed(d)}${simbolo}</span>`);
