@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.17-1152';
+const BUILD = '2026.09.17-1213';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -1071,6 +1071,14 @@ function chipsOtrosHora(h, parte) {
   if (parte === 'lluvia') {
     const ll = lluviaQueVenOtrosHora(h);
     if (ll.length) out.push(`<span class="nd__ojo">⚠ ${esc(ll.map((x, i) => `${x.quien}${i ? '' : ' ve'} ${mmTxt(x.mm)} mm`).join(' · '))}</span>`);
+  }
+  if (parte === 'nubes') {
+    /* «si alguno ve nube» (suyo, 17-09-2026): la misma regla que la franja
+       (nubesEnLaFranjaQueNoVesTu), para esta hora sola, cuando lo que se
+       pinta es raso o velo. */
+    const v = cieloVisto(h);
+    const nb = nubesEnLaFranjaQueNoVesTu([h], v.code);
+    if (nb) out.push(nb.trim());
   }
   if (parte === 'tormenta') {
     const rompe = has(h.cape) && h.cape >= CAPE_COMBINACION && has(h.cin) && h.cin < 75;
@@ -5677,7 +5685,12 @@ async function cargarComparativa(place) {
                Los cuatro campos, siete modelos, 48 h: **8 KB**. Nada. */
             + 'dew_point_2m,relative_humidity_2m,visibility',
       models: COMPARAR.map(m => m.om).join(','),
-      forecast_days: 2, past_hours: 1,
+      /* 10 días desde el 17-09-2026 (antes 2): al abrir un día de «10 días»
+         hora a hora, él quiere ver también «si alguno ve nube o agua»; con
+         dos días, del sábado en adelante no había chips. Son cinco modelos
+         por diez días en UNA petición (~150 KB); se sigue pidiendo una vez
+         por sitio. */
+      forecast_days: 10, past_hours: 1,
     }, { timeout: 15000 });
     /* Aquí salió el −10 de ECMWF: las columnas por modelo también se
        limpian, que es donde él lo vio. */
@@ -12836,7 +12849,7 @@ function tarjetaHora(h) {
     <div class="hcard" data-s="${h.st}">
       <div class="hcard__h">${String(h.date.getHours()).padStart(2,'0')}:00</div>
       <div class="hcard__d">${h.date.toLocaleDateString('es',{weekday:'short'})}</div>
-      <div class="hcard__i">${(v => icon(v.code, v.dia))(cieloVisto(h))}</div>
+      <div class="hcard__i">${(v => icon(v.code, v.dia))(cieloVisto(h))}</div>${chipsOtrosHora(h, 'nubes')}
       <div class="hcard__t">${has(h.temp) ? `${h.temp.toFixed(0)}°` : '—'}</div>
       <div class="hcard__r">
         <span>💧 ${has(h.pop) ? h.pop + '%' : '—'} · ${has(h.prec) ? mmTxt(h.prec) + ' mm' : 'sin dato'}${

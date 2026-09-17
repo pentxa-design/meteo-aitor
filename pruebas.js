@@ -7672,6 +7672,13 @@ grupo('El chip de Horas dice cuánta agua ve el otro modelo (15-09-2026, 23:53)'
   ok('cada hora dice quién da más racha a 10 m si cruza su listón o se va 20 km/h, con el número y el listón',
      /const \{ warn, no \} = listonRafaga\(\);/.test(cRa) && /alto\.v - h\.gust10 >= 20/.test(cRa)
      && /da \$\{wtxt\(r\.suya, true\)\} a 10 m/.test(cCh) && /tu listón es \$\{wtxt\(r\.limite, true\)\}/.test(cCh));
+  /* 17-09-2026 12:40, suyo: al abrir un día, «que ponga también si alguno ve nube o agua». */
+  const cCmp = sacar('async function cargarComparativa(place) {');
+  ok('la comparación entre modelos se pide a 10 días (antes 2): el día abierto lleva sus chips también del sábado en adelante',
+     /forecast_days: 10, past_hours: 1,/.test(cCmp) && !/forecast_days: 2, past_hours: 1,/.test(cCmp));
+  ok('y cada hora dice si otro modelo fino ve nubes cuando lo pintado es raso o velo (misma regla que la franja), bajo el dibujo',
+     /if \(parte === 'nubes'\) \{/.test(cCh) && /nubesEnLaFranjaQueNoVesTu\(\[h\], v\.code\)/.test(cCh)
+     && /<\/div>\$\{chipsOtrosHora\(h, 'nubes'\)\}/.test(src));
   ok('y los tres chips van en la tarjeta de cada hora de «Horas», cada uno al lado de su número: lluvia junto a la gota, racha bajo la racha, tormenta bajo el CAPE',
      /\(aguaPrestada\(h\)\)\}\$\{chipsOtrosHora\(h, 'lluvia'\)\}<\/span>/.test(src)
      && /<\/div>\$\{chipsOtrosHora\(h, 'racha'\)\}/.test(src)
