@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.17-1025';
+const BUILD = '2026.09.17-1057';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -5278,10 +5278,17 @@ function rachaEnLaFranjaQueNoVesTu(sel) {
   const mia = Math.max(...mias);
   H.__porHora ??= new Map(H.time.map((x, i) => [String(x).slice(0, 13), i]));
   const cargado = modeloDato().name;
-  const { warn } = listonRafaga();
+  /* 17-09-2026, 10:45, probando la app en Ciudad del Cabo con 90 km/h de
+     racha: ECMWF (el cargado) daba 61-68, ICON 59-72 y el Automático
+     77-85 —el único que cruzaba su listón «no» de 70— y la franja no
+     decía nada: esta regla dejaba fuera al Automático y solo miraba el
+     listón de aviso (49). «Ahora» (rachaQueNoVesTu) sí cuenta con los
+     dos listones y con el Automático. Igualado: los dos listones y todos
+     los modelos. Información, no veredicto: el número no cambia. */
+  const { warn, no } = listonRafaga();
   const otros = [];
   for (const m of COMPARAR) {
-    if (m.om === 'best_match' || m.name === cargado) continue;
+    if (m.name === cargado) continue;
     const serie = H[`wind_gusts_10m_${m.om}`];
     if (!serie) continue;
     let max = null; const horas = [];
@@ -5292,13 +5299,15 @@ function rachaEnLaFranjaQueNoVesTu(sel) {
       if (serie[i] > mia) horas.push({ date: h.date });
     }
     if (max === null) continue;
-    const cruza = wRed(max) >= wRed(warn) && wRed(mia) < wRed(warn);
-    if (cruza || wRed(max) >= wRed(mia) + 10) otros.push({ nom: m.name, max, horas, cruza });
+    const cruzaNo   = wRed(max) >= wRed(no)   && wRed(mia) < wRed(no);
+    const cruzaWarn = wRed(max) >= wRed(warn) && wRed(mia) < wRed(warn);
+    const cruza = cruzaNo || cruzaWarn;
+    if (cruza || wRed(max) >= wRed(mia) + 10) otros.push({ nom: m.name, max, horas, cruza, limite: cruzaNo ? no : cruzaWarn ? warn : null });
   }
   if (!otros.length) return null;
   otros.sort((a, b) => b.max - a.max);
   const o = otros[0];
-  return { quien: o.nom, max: o.max, mia, cruza: o.cruza, cuando: o.horas.length ? rangoDeHoras(o.horas) : '' };
+  return { quien: o.nom, max: o.max, mia, cruza: o.cruza, limite: o.limite, cuando: o.horas.length ? rangoDeHoras(o.horas) : '' };
 }
 
 function lluviaEnLaFranjaQueNoVesTu(desde, hasta) {
@@ -12127,7 +12136,7 @@ function renderNow() {
          10 m o qué significa?»*. Aquí faltaba. */
       }${vTxt ? `<br>Viento ${vTxt}<small> a ${S.hgt} m</small>` : ''}${gm > 0 ? `<br>Racha máx ${wtxt(gm, true)}<small> a ${S.hgt} m${gmCuando}</small>` : ''}${(() => {
           const r = rachaEnLaFranjaQueNoVesTu(sel);
-          return r ? ` <span class="nd__ojo">⚠ ${esc(r.quien)} da ${wtxt(r.max, true)} a 10 m${r.cuando ? ` ${r.cuando}` : ''}${r.cruza ? ` — tu listón es ${wtxt(listonRafaga().warn, true)}` : ''}</span>` : '';
+          return r ? ` <span class="nd__ojo">⚠ ${esc(r.quien)} da ${wtxt(r.max, true)} a 10 m${r.cuando ? ` ${r.cuando}` : ''}${r.cruza && has(r.limite) ? ` — tu listón es ${wtxt(r.limite, true)}` : ''}</span>` : '';
         })()}${
         avisoTormentaFranja(sel)}</div></div>`;
   }).join('');

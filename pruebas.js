@@ -7151,6 +7151,14 @@ grupo('Así con todo (13-09): al lado del dato, qué ve distinto otro modelo y c
      /const hsAgua = horasDelDia\(S\.data\?\.fc, t\)/.test(src) && /'de noche'/.test(src));
   ok('la racha de otro modelo va al lado de la de la franja, con sus horas',
      /function rachaEnLaFranjaQueNoVesTu\(sel\)/.test(src) && /da \$\{wtxt\(r\.max, true\)\} a 10 m/.test(src));
+  /* 17-09-2026 10:45, Ciudad del Cabo: el Automático cruzaba el listón «no» (70) y la franja callaba. */
+  const cRF = sacar('function rachaEnLaFranjaQueNoVesTu(');
+  ok('el chip de racha de la franja mira los DOS listones (aviso y no) y cuenta con todos los modelos, el Automático incluido, como «Ahora»',
+     /const \{ warn, no \} = listonRafaga\(\);/.test(cRF) && /const cruzaNo   = wRed\(max\) >= wRed\(no\)/.test(cRF)
+     && !/m\.om === 'best_match' \|\| m\.name === cargado/.test(cRF)
+     && /limite: cruzaNo \? no : cruzaWarn \? warn : null/.test(cRF)
+     && /tu listón es \$\{wtxt\(r\.limite, true\)\}/.test(src),
+     'ECMWF 61-68, ICON 59-72, Automático 77-85 y la franja sin decir nada');
   ok('las nubes que ve otro modelo llevan sus horas',
      /nubes\$\{cuando\} \(baja y media hasta el/.test(src));
   ok('la sensación compara lo que se imprime: 23° con aire a 22° dice «1° más que el aire»',
@@ -7660,6 +7668,10 @@ grupo('Los rayos del mapa solo en las capas donde pintan algo (17-09-2026)');
      /rayosProceden\(\) \{\n    const L_ = TLAYERS\.find\(l => l\.id === this\.layer\);\n    return !L_ \|\| \['Lluvia', 'Tormenta', 'Satélite'\]\.includes\(L_\.g\);/.test(M2)
      && /if \(!this\.rayosProceden\(\)\) \{ this\.limpiarRayos\(\); return; \}/.test(M2)
      && /this\.verRayos && this\.rayosProceden\(\) \? ' is-on' : ''/.test(M2));
+  /* 10:50, suyo: «solo en rayos, del resto no; si no, no se leen los de AEMET». */
+  ok('los rayos del mapa van APAGADOS de serie (clave nueva trayos2): solo si él pulsa el botón',
+     /this\.verRayos   = LS\.get\('trayos2', false\);/.test(M2) && /LS\.set\('trayos2', this\.verRayos\)/.test(M2)
+     && !/LS\.get\('trayos', true\)/.test(M2));
 }
 
 grupo('Avisos oficiales de toda España, solo información (17-09-2026)');

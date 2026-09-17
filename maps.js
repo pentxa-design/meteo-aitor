@@ -1421,7 +1421,14 @@ const Maps = {
     this.verValores = LS.get('tvals', true);
     this.verBarbas  = LS.get('tbarbs', true);
     this.verParticulas = LS.get('tpart', true);
-    this.verRayos   = LS.get('trayos', true);
+    /* 17-09-2026, 10:50, suyo con el radar, el satélite y la
+       reflectividad llenos de puntos rojos de las tormentas de Murcia:
+       «en radar AEMET etc. no deberían salir, si no es un lío» · «solo
+       en rayos, del resto no» · «si no, no se leen los de AEMET». Los
+       rayos del mapa van APAGADOS de serie: solo si él pulsa «⚡ Rayos»
+       (y sigue la regla de las capas donde pintan algo). Clave nueva
+       para que su «encendido» guardado de antes no mande. */
+    this.verRayos   = LS.get('trayos2', false);
 
     const el = document.querySelector('#mapc');
     el.innerHTML = `<div class="radar__ph">Cargando cartografía…</div>`;
@@ -4211,7 +4218,7 @@ const Maps = {
      cualquier capa. AEMET publica por horas y con retraso: el pie del
      mapa dice hasta qué hora hay dato, que no es «ahora». */
   setRayos(on) {
-    this.verRayos = !!on; LS.set('trayos', this.verRayos);
+    this.verRayos = !!on; LS.set('trayos2', this.verRayos);
     this.ui(); this.verRayos ? this.rayos() : this.limpiarRayos();
   },
   limpiarRayos() {
