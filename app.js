@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.17-1213';
+const BUILD = '2026.09.17-1344';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -2375,9 +2375,30 @@ async function loadAll(p) {
      enseñaría cifras de otro. */
   let modeloUsado = M.id;
 
+  /* ── DENTRO DE LA CAJA PERO FUERA DE LA MALLA ─────────────────────
+     Cazado el 17-09-2026 en Trieste, probando la app por el mundo. AROME
+     HD tiene una caja (lon −12…16, lat 37,5…55) y Trieste cae dentro,
+     así que Open-Meteo contesta 200… con la temperatura, la lluvia, la
+     racha y el CAPE **todos nulos**, porque la malla de verdad no llega
+     ahí. El `catch` de abajo solo salta con un error, no con un 200
+     vacío, y la ficha se quedaba en «—», «sin dato» y «Racha —» con
+     AROME de dueño. Los chips de los otros sí salían (ECMWF 6,6 mm), y
+     `completar()` solo presta los complementos, no lo principal.
+
+     Un modelo que no trae NI UNA temperatura en diez días no cubre el
+     punto, diga lo que diga su caja: se trata igual que un error y se
+     rebota al global de abajo, con su aviso. No se mira más que la
+     temperatura porque es lo que publica todo modelo: si falta entera,
+     falta todo. */
+  const cubreElPunto = d => Array.isArray(d?.hourly?.temperature_2m)
+    && d.hourly.temperature_2m.some(v => v !== null && v !== undefined);
+
   const fc = jget(API.fc, {
     ...base, current: CURRENT, hourly: HOURLY, daily: DAILY,
     forecast_days: 10, past_hours: 1, models: M.om,
+  }).then(d => {
+    if (!cubreElPunto(d)) throw new Error(`${M.name} no cubre este punto: contestó sin datos`);
+    return d;
   }).catch(async e => {
     // Un modelo de área limitada (AROME) puede no cubrir el punto.
     // No se inventa nada: se avisa y se cae al modelo automático.
@@ -12800,9 +12821,21 @@ function hastaDondeLlega(fc) {
 
 /* El nombre bonito de un modelo a partir de su id de Open-Meteo. Estaba
    escrito a mano en la nota del alcance; ahora lo usan dos sitios. */
+/* ── LOS PRESTAMISTAS SIN FICHA TAMBIÉN TIENEN NOMBRE (17-09-2026) ──
+   Cazado en Ibiza probando la app por el mundo: el código del cielo lo
+   prestaba `meteofrance_arpege_europe` (va tercero en ORDEN_FIABLE) y
+   como ARPEGE no está ni en MODELS ni en COMPARAR, la hora decía
+   «⚠ otro modelo ve llovizna». Su norma: el modelo, siempre con nombre.
+   Aquí van los que pueden prestar y no tienen ficha propia. */
+const NOMBRE_PRESTAMISTA = {
+  meteofrance_arpege_europe: 'ARPEGE', meteofrance_arpege_world: 'ARPEGE',
+  meteofrance_arome_france: 'AROME', knmi_harmonie_arome_europe: 'HARMONIE',
+  gem_seamless: 'GEM', ukmo_seamless: 'UKMO', jma_seamless: 'JMA',
+};
 function nombreDeModelo(om) {
   return COMPARAR.find(m => m.om === om)?.name
-      || MODELS.find(m => m.om === om)?.name || 'otro modelo';
+      || MODELS.find(m => m.om === om)?.name
+      || NOMBRE_PRESTAMISTA[om] || 'otro modelo';
 }
 
 function avisoAlcanceModelo(fc) {

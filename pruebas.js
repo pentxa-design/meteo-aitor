@@ -2758,6 +2758,35 @@ ok('el toast dice que es solo aquí, no para siempre',
    /enseñando \$\{nRebote\} solo aquí/.test(src));
 ok('y el rebote se calcula con lo medido, no escrito a mano',
    /ORDEN_FIABLE\.find\(om => om !== M\.om && GLOBALES\.includes\(om\)\)/.test(src));
+
+/* ── DENTRO DE LA CAJA PERO FUERA DE LA MALLA (17-09-2026) ─────────
+   Trieste: AROME HD contesta 200 con la temperatura, la lluvia, la
+   racha y el CAPE todos nulos —la caja lo incluye, la malla no— y el
+   `catch` no saltaba. La ficha salía en «—» con AROME de dueño y solo
+   los chips de los otros tenían números. Un 200 sin una sola
+   temperatura en diez días es «no cubre el punto» y rebota igual. */
+ok('un dueño que contesta sin una temperatura rebota como si no cubriera',
+   /const cubreElPunto = d => Array\.isArray\(d\?\.hourly\?\.temperature_2m\)\s*&& d\.hourly\.temperature_2m\.some\(v => v !== null && v !== undefined\)/.test(src)
+   && /models: M\.om,\s*\}\)\.then\(d => \{\s*if \(!cubreElPunto\(d\)\) throw new Error\(`\$\{M\.name\} no cubre este punto: contestó sin datos`\);\s*return d;\s*\}\)\.catch\(async e => \{/.test(src),
+   'el then va ANTES del catch: el 200 vacío se convierte en error y cae al global');
+
+/* ── EL PRESTAMISTA SIN FICHA TAMBIÉN VA CON NOMBRE (17-09-2026) ───
+   Ibiza, 16:00: el código del cielo lo prestaba ARPEGE y la hora decía
+   «⚠ otro modelo ve llovizna». Su norma: el modelo siempre con nombre. */
+ok('ARPEGE, HARMONIE y GEM tienen nombre aunque no estén en MODELS ni COMPARAR',
+   /const NOMBRE_PRESTAMISTA = \{[\s\S]*?meteofrance_arpege_europe: 'ARPEGE'[\s\S]*?knmi_harmonie_arome_europe: 'HARMONIE'[\s\S]*?gem_seamless: 'GEM'[\s\S]*?\};/.test(src)
+   && /\|\| NOMBRE_PRESTAMISTA\[om\] \|\| 'otro modelo';/.test(src),
+   'nombreDeModelo() mira la tabla antes de rendirse con «otro modelo»');
+ok('y todos los de ORDEN_FIABLE que no tienen ficha están en la tabla',
+   (() => {
+     const orden = /const ORDEN_FIABLE = \[([\s\S]*?)\];/.exec(src)?.[1] || '';
+     const ids = [...orden.matchAll(/'([a-z0-9_]+)'/g)].map(m => m[1]);
+     const tabla = /const NOMBRE_PRESTAMISTA = \{([\s\S]*?)\};/.exec(src)?.[1] || '';
+     const conFicha = /const MODELS = \[([\s\S]*?)\n\];/.exec(src)?.[1] || '';
+     const comparar = /const COMPARAR = \[([\s\S]*?)\n\];/.exec(src)?.[1] || '';
+     return ids.length >= 5 && ids.every(id => tabla.includes(id + ':') || conFicha.includes(`'${id}'`) || comparar.includes(`'${id}'`));
+   })(),
+   'si un día entra uno nuevo en ORDEN_FIABLE sin nombre, esto lo canta');
 ok('y NO es GFS, que en el marcador se queda corto 11 de 22 veces',
    RELLENO_LARGO !== 'gfs_seamless');
 /* Y los DÍAS, no solo las horas: la pestaña «10 días» usa `daily`, y con
