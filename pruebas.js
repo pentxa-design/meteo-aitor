@@ -2827,6 +2827,21 @@ ok('y el rebote se calcula con lo medido, no escrito a mano',
    al volver a pantalla se vuelve a mirar dónde está y, si se ha movido
    más de un kilómetro, se cambia con un toast. Un sitio elegido por
    nombre no se toca nunca. */
+/* ── LAS HORAS EN EL MÓVIL, SIN COLUMNAS VACÍAS (18-09-2026, 01:51) ──
+   Suyo, desde el iPhone: «se ve raro en Horas, vertical, fino» · «¿en
+   agenda mejor?». Tarjetas de 150 px en pantalla estrecha, cada una con
+   su altura, y la racha en una línea. */
+grupo('Las horas en el móvil: tarjetas de 150 px, cada una con su altura');
+{
+  const cssSrc = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+  ok('la fila de horas no estira las tarjetas a la altura de la más alta',
+     /\.hlist\{[^}]*align-items:flex-start\}/.test(cssSrc));
+  ok('en pantalla estrecha la tarjeta mide 150 px, no 118, y la racha no se parte',
+     /@media\(max-width:560px\)\{[\s\S]{0,400}?\.hcard\{width:150px\}/.test(cssSrc)
+     && !/\.hcard\{width:118px\}/.test(cssSrc)
+     && /\.hcard__g\{[^}]*white-space:nowrap/.test(cssSrc));
+}
+
 grupo('La ubicación le sigue sola cuando el sitio salió del GPS (18-09-2026)');
 ok('el botón de la mira y el seguimiento usan la MISMA función, y el sitio del GPS va marcado',
    /\$\('#btnGeo'\)\.addEventListener\('click', \(\) => irAMiUbicacion\(\)\);/.test(src)
