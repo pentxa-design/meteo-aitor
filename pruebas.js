@@ -7145,10 +7145,17 @@ grupo('Vuelta de Calpe · la horquilla de viento no repite el número');
 grupo('Así con todo (13-09): al lado del dato, qué ve distinto otro modelo y cuándo');
 {
   ok('la franja dice «GFS ve algo de lluvia de 10:00 a 12:00» aunque no llegue al listón',
-     /if \(total >= 0\.1\) otros\.push/.test(src) && /'algo de lluvia' : 'lluvia'/.test(src)
+     /if \(total >= minimo\) otros\.push/.test(src) && /'algo de lluvia' : 'lluvia'/.test(src)
      && !/⚠ \$\{esc\(o\.quien\)\} sí \(/.test(src));
   ok('en 10 días el agua que solo ve un modelo dice a qué horas cae, y «de noche» si cae fuera del día',
      /const hsAgua = horasDelDia\(S\.data\?\.fc, t\)/.test(src) && /'de noche'/.test(src));
+  /* 17-09-2026 11:05, Génova: el dueño con 0,1 mm y otro modelo con 158 mm en la franja, y el chip callado. */
+  const cLF = sacar('function lluviaEnLaFranjaQueNoVesTu(');
+  ok('el chip de lluvia de la franja sale también con el dueño mojado si otro modelo ve al menos 1 mm MÁS («ven más lluvia»)',
+     /function lluviaEnLaFranjaQueNoVesTu\(desde, hasta, minimo = 0\.1\)/.test(cLF) && /if \(total >= minimo\) otros\.push/.test(cLF)
+     && /lluviaEnLaFranjaQueNoVesTu\(sel\[0\]\.date, sel\[sel\.length - 1\]\.date, mojado \? mm \+ 1 : 0\.1\)/.test(src)
+     && /'ven' : 've'\} más lluvia/.test(src),
+     'Génova: AROME 0,1 mm, ICON-D2 y Automático 158 mm, y la franja sin decir nada');
   ok('la racha de otro modelo va al lado de la de la franja, con sus horas',
      /function rachaEnLaFranjaQueNoVesTu\(sel\)/.test(src) && /da \$\{wtxt\(r\.max, true\)\} a 10 m/.test(src));
   /* 17-09-2026 10:45, Ciudad del Cabo: el Automático cruzaba el listón «no» (70) y la franja callaba. */

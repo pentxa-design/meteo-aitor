@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.17-1057';
+const BUILD = '2026.09.17-1115';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -5310,8 +5310,16 @@ function rachaEnLaFranjaQueNoVesTu(sel) {
   return { quien: o.nom, max: o.max, mia, cruza: o.cruza, limite: o.limite, cuando: o.horas.length ? rangoDeHoras(o.horas) : '' };
 }
 
-function lluviaEnLaFranjaQueNoVesTu(desde, hasta) {
-  const H = deEsteSitio(S.comparativa)?.hourly;   // la de ESTE sitio, no la del anterior
+/* 17-09-2026, 11:05, Génova (probando la app en sitios extremos): AROME
+   HD, el dueño allí, veía 0,1 mm en la franja; ECMWF y GFS 1 mm/h; e
+   ICON-D2 y el Automático 23 + 87 + 48 mm entre las 12 y las 14, con el
+   METAR del aeropuerto ya en tormenta. El chip no salía porque solo se
+   pintaba con el dueño a 0,0. Ahora `minimo`: con el dueño seco, 0,1 mm
+   (como siempre); con el dueño viendo algo, solo quien vea al menos
+   1 mm MÁS que él, y se dice «ven más lluvia». Suyo: «si alguno ve
+   lluvia, que lo pongáis, y si se puede, cuánto». */
+function lluviaEnLaFranjaQueNoVesTu(desde, hasta, minimo = 0.1) {
+  const H = deEsteSitio(S.comparativa)?.hourly;   // la de ESTE sitio, no el del anterior
   if (!H?.time || !desde || !hasta) return null;
 
   const a = desde.getTime(), b = hasta.getTime();
@@ -5330,7 +5338,7 @@ function lluviaEnLaFranjaQueNoVesTu(desde, hasta) {
       if (t < a || t > b) continue;
       if (has(serie[i])) { total += serie[i]; if (serie[i] > 0) horas.push({ date: new Date(H.time[i]) }); }
     }
-    if (total >= 0.1) otros.push({ nom: m.name, total, horas });   // «algo de lluvia» también se dice (suyo, 13-09-2026)
+    if (total >= minimo) otros.push({ nom: m.name, total, horas });   // «algo de lluvia» también se dice (suyo, 13-09-2026); con el dueño mojado, solo quien vea 1 mm más
   }
   if (!otros.length) return null;
 
@@ -12112,9 +12120,10 @@ function renderNow() {
            nubes en este mismo renglón. En «Torre» esto ya estaba; aquí
            faltaba. */
         (() => {
-          if (has(mm) && mm >= 0.1) return '';
-          const o = lluviaEnLaFranjaQueNoVesTu(sel[0].date, sel[sel.length - 1].date);
+          const mojado = has(mm) && mm >= 0.1;
+          const o = lluviaEnLaFranjaQueNoVesTu(sel[0].date, sel[sel.length - 1].date, mojado ? mm + 1 : 0.1);
           if (!o) return '';
+          if (mojado) return ` <span class="nd__ojo">⚠ ${esc(o.quien)} ${o.cuantos > 1 ? 'ven' : 've'} más lluvia${o.cuando ? ` ${o.cuando}` : ''} (${mmTxt(o.mm)} mm)</span>`;
           /* Suyo, 13-09-2026: «se pone despejado, pero GFS ve algo de lluvia
              de 10 a 12; eso es lo que quiero». Información al lado del dato. */
           const algo = o.mm < (S.thr?.rainWarn ?? 0.2) ? 'algo de lluvia' : 'lluvia';
