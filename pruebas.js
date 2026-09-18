@@ -2831,6 +2831,26 @@ ok('y el rebote se calcula con lo medido, no escrito a mano',
    Suyo, desde el iPhone: «se ve raro en Horas, vertical, fino» · «¿en
    agenda mejor?». Tarjetas de 150 px en pantalla estrecha, cada una con
    su altura, y la racha en una línea. */
+/* ── NINGÚN TEXTO DENTRO DE UN SVG ESTIRADO (18-09-2026, 01:57) ──────
+   Suyo, desde el iPhone: «en Mar ya no sale el tiempo» · «ni en Horas».
+   Las horas del eje, el «ahora» y las P/B de las mareas iban dentro del
+   SVG con preserveAspectRatio="none" y salían aplastadas. Van en HTML. */
+grupo('Los rótulos de las gráficas van en HTML, no dentro del SVG estirado');
+{
+  const cssSrc = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+  ok('en las gráficas de Horas y Mar no queda ningún <text> dentro del SVG',
+     !/<text x="\$\{X\(i\)\}"/.test(src) && !/>ahora<\/text>/.test(src) && !/'P' : 'B'\}<\/text>/.test(src));
+  ok('las horas del eje, el «ahora» y las P/B van en .grot, colocadas por porcentaje',
+     /class="grot__h" style="left:\$\{\(X\(i\) \/ W \* 100\)\.toFixed\(2\)\}%"/.test(src)
+     && /class="grot__h grot__ahora" style="left:\$\{\(X\(nowI\) \/ W \* 100\)\.toFixed\(2\)\}%">ahora<\/span>/.test(src)
+     && /function rotulosMarea\(X, T, n, W\)/.test(src)
+     && /class="grot__pb" style="left:\$\{\(X\(i\) \/ W \* 100\)\.toFixed\(2\)\}%/.test(src));
+  ok('y el CSS coloca la capa encima del dibujo sin estorbar al dedo',
+     /\.gcaja\{position:relative;height:100%\}/.test(cssSrc)
+     && /\.grot\{position:absolute;inset:0;pointer-events:none\}/.test(cssSrc)
+     && /\.grot__h\{position:absolute;bottom:3px;transform:translateX\(-50%\)/.test(cssSrc));
+}
+
 grupo('Las horas en el móvil: tarjetas de 150 px, cada una con su altura');
 {
   const cssSrc = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');

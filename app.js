@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.17-1441';
+const BUILD = '2026.09.18-0157';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -13237,10 +13237,17 @@ function drawGraph(el, hrs) {
   }).join('');
 
   const ticks = pts.map((p, i) => (p.date.getHours() % 6 === 0)
-    ? `<text x="${X(i)}" y="${H - 8}" fill="#63708d" font-size="11" text-anchor="middle">${String(p.date.getHours()).padStart(2, '0')}</text>
-       <line x1="${X(i)}" y1="${P.t}" x2="${X(i)}" y2="${H - P.b}" stroke="rgba(150,175,225,.1)"/>` : '').join('');
+    ? `<line x1="${X(i)}" y1="${P.t}" x2="${X(i)}" y2="${H - P.b}" stroke="rgba(150,175,225,.1)"/>` : '').join('');
+  /* ── LAS HORAS DEL EJE, FUERA DEL SVG (18-09-2026, 01:57) ──────────
+     Misma lección que la leyenda (24-08) y el oleaje (29-08): el SVG va
+     con preserveAspectRatio="none" y en el iPhone aplasta el texto de
+     dentro. Las horas «06 · 12 · 18 · 00» salían estrechas y altas, y
+     él: «ni en Horas» sale el tiempo. Van en HTML encima del dibujo,
+     colocadas por porcentaje, que no se estira. */
+  const horasEje = pts.map((p, i) => (p.date.getHours() % 6 === 0)
+    ? `<span class="grot__h" style="left:${(X(i) / W * 100).toFixed(2)}%">${String(p.date.getHours()).padStart(2, '0')}</span>` : '').join('');
 
-  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:100%">
+  el.innerHTML = `<div class="gcaja"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:100%">
     <defs><linearGradient id="gt" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#ffb02e" stop-opacity=".28"/>
       <stop offset="1" stop-color="#ffb02e" stop-opacity="0"/></linearGradient></defs>
@@ -13249,7 +13256,7 @@ function drawGraph(el, hrs) {
     <path d="${line(Yg, 'gust')}" stroke="#ff4d5e" stroke-width="2" fill="none" stroke-dasharray="4 3" opacity=".85" vector-effect="non-scaling-stroke"/>
     <path d="${line(Yg, 'wind')}" stroke="#4d9dff" stroke-width="2.2" fill="none" vector-effect="non-scaling-stroke"/>
     <path d="${line(Yt, 'temp')}" stroke="#ffb02e" stroke-width="2.4" fill="none" vector-effect="non-scaling-stroke"/>
-    </svg>` + leyendaGrafico();
+    </svg><div class="grot">${horasEje}</div></div>` + leyendaGrafico();
 }
 
 /* ---------- «¿A qué hora salgo?» ───────────────────────────────────
@@ -13765,9 +13772,22 @@ function marcasMarea(X, T, n, H) {
     const alto = e.tipo === 'high';
     const col = alto ? '#4d9dff' : '#8b7bff';
     return `<line x1="${x}" y1="13" x2="${x}" y2="${H - 22}" stroke="${col}"
-        stroke-width="1.6" opacity=".8"/>
-      <text x="${x}" y="10" fill="${col}" font-size="10" font-weight="800"
-        text-anchor="middle">${alto ? 'P' : 'B'}</text>`;
+        stroke-width="1.6" opacity=".8"/>`;
+  }).join('');
+}
+
+/* Las letras P/B de cada marea, en HTML encima del dibujo (18-09-2026):
+   dentro del SVG estirado salían como manchas en el iPhone, y con ellas
+   el «ahora». Misma posición que las rayas de marcasMarea, en porcentaje. */
+function rotulosMarea(X, T, n, W) {
+  const ex = proximasMareas(6);
+  if (!ex.length || !T?.length) return '';
+  const t0 = new Date(T[0]).getTime();
+  return ex.map(e => {
+    const i = (e.cuando.getTime() - t0) / 3600e3;
+    if (!(i >= 0 && i <= n - 1)) return '';
+    const alto = e.tipo === 'high';
+    return `<span class="grot__pb" style="left:${(X(i) / W * 100).toFixed(2)}%;color:${alto ? '#4d9dff' : '#8b7bff'}">${alto ? 'P' : 'B'}</span>`;
   }).join('');
 }
 
@@ -13818,15 +13838,15 @@ function renderSea() {
     const Y = v => 14 + (1 - (v - mn) / sp) * (H - 42);
     const path = L.slice(0, n).map((v, i) => has(v) ? `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(v).toFixed(1)}` : '').join(' ');
     const nowI = T.slice(0, n).findIndex(t => new Date(t).getTime() >= Date.now());
-    $('#tide').innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:100%">
+    $('#tide').innerHTML = `<div class="gcaja"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:100%">
       <defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="#4d9dff" stop-opacity=".45"/>
         <stop offset="1" stop-color="#4d9dff" stop-opacity="0"/></linearGradient></defs>
       <path d="${path} L${X(n - 1)} ${H - 22} L${X(0)} ${H - 22} Z" fill="url(#tg)" stroke="none"/>
       <path d="${path}" stroke="#6fb4ff" stroke-width="2.4" fill="none"/>
-      ${nowI >= 0 ? `<line x1="${X(nowI)}" y1="8" x2="${X(nowI)}" y2="${H - 22}" stroke="#fff" stroke-width="1.5" stroke-dasharray="4 4" opacity=".7"/>
-        <text x="${X(nowI)}" y="${H - 6}" fill="#fff" font-size="11" text-anchor="middle" opacity=".8">ahora</text>` : ''}
-      ${marcasMarea(X, T, n, H)}</svg>`;
+      ${nowI >= 0 ? `<line x1="${X(nowI)}" y1="8" x2="${X(nowI)}" y2="${H - 22}" stroke="#fff" stroke-width="1.5" stroke-dasharray="4 4" opacity=".7"/>` : ''}
+      ${marcasMarea(X, T, n, H)}</svg><div class="grot">${nowI >= 0
+        ? `<span class="grot__h grot__ahora" style="left:${(X(nowI) / W * 100).toFixed(2)}%">ahora</span>` : ''}${rotulosMarea(X, T, n, W)}</div></div>`;
   }
 
   const C = M.current || {};

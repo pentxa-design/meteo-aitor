@@ -486,6 +486,14 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;
 
 /* ---------- Mareas ---------- */
 .tide{height:190px;margin-bottom:13px}
+/* Rótulos de las gráficas en HTML, encima del SVG estirado (18-09-2026):
+   las horas del eje, el «ahora» y las P/B de las mareas. El dibujo se
+   puede estirar; las letras no. */
+.gcaja{position:relative;height:100%}
+.grot{position:absolute;inset:0;pointer-events:none}
+.grot__h{position:absolute;bottom:3px;transform:translateX(-50%);font-size:11px;line-height:1;color:#63708d;white-space:nowrap}
+.grot__ahora{color:#fff;opacity:.8}
+.grot__pb{position:absolute;top:0;transform:translateX(-50%);font-size:10px;font-weight:800;line-height:1}
 .tidelist{display:grid;gap:9px;grid-template-columns:repeat(auto-fit,minmax(128px,1fr))}
 .td{background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:13px;padding:11px}
 .td__k{font-size:0.8125rem;letter-spacing:.05em;text-transform:uppercase;font-weight:700}
