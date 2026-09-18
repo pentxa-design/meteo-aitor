@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.18-1438';
+const BUILD = '2026.09.18-1503';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11778,6 +11778,8 @@ async function pintarMedidoCerca(p) {
   if (!e) { el.textContent = ''; return; }
   const hm = e.medidoEn ? (d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`)(new Date(e.medidoEn)) : '';
   el.innerHTML = `Medido de verdad · <b>AEMET ${esc(e.nombre)}</b> (${kmTxt(e.km)} km): <b>${e.temperatura.toFixed(1).replace('.', ',')}°</b>`
+    + (has(e.viento) ? ` · viento <b>${wtxt(e.viento, true)}</b>${has(e.direccion) ? ` del ${esc(rumboLargo(e.direccion))}` : ''}` : '')
+    + (has(e.racha) ? ` · racha <b>${wtxt(e.racha, true)}</b>` : '')
     + (has(e.humedad) ? ` · HR ${Math.round(e.humedad)} %` : '')
     + (has(e.lluvia) ? ` · ${mmTxt(e.lluvia)} mm en la hora` : '')
     + (hm ? ` · a las ${hm}` : '');
@@ -11839,6 +11841,19 @@ function renderNow() {
       : `<b>${aire.toFixed(0)}°</b> de temperatura del aire`;
   })();
 
+  /* ── EL VIENTO Y DE DÓNDE LLEGA, ARRIBA (18-09-2026, 20:37, Baquio) ──
+     Suyo: «falta dirección de viento poner» · «sé que pone ahí más abajo,
+     pero lo quiero arriba también» · «si no tengo que desplazarme hasta
+     abajo para ver la dirección del viento» · «de dónde llega». Viento a
+     10 m, rumbo largo y racha, del `current` del modelo, en la portada. */
+  (() => {
+    const el = $('#nowViento');
+    if (!el) return;
+    const v = C?.wind_speed_10m, d = C?.wind_direction_10m, g = C?.wind_gusts_10m;
+    if (!has(v)) { el.textContent = ''; return; }
+    el.innerHTML = `Viento <b>${wtxt(v, true)}</b>${has(d) ? ` del <b>${esc(rumboLargo(d))}</b> (${Math.round(d)}°)` : ''}`
+      + (has(g) ? ` · racha <b>${wtxt(g, true)}</b>` : '') + '<small> a 10 m</small>';
+  })();
   /* Se dice a qué momento corresponden estas cifras. `current.time` es
      la hora de validez que da la fuente; `current.interval` los segundos
      que tarda en refrescarse (900 = 15 min). No se redondea ni se
@@ -12070,6 +12085,11 @@ function renderNow() {
     const vTxt = vs.length ? (wtxt(vLo) === wtxt(vHi)
                    ? wtxt(vHi, true)
                    : `${wtxt(vLo)}–${wtxt(vHi, true)}`) : null;
+    /* De dónde llega (18-09-2026): el rumbo de la hora de MÁS viento de la
+       franja, tal cual lo da el modelo. No una media de rumbos, que sería
+       un número que no ha publicado nadie. */
+    const hMax = vs.length ? sel.find(h => h.wind === vHi) : null;
+    const dTxt = has(hMax?.dir) ? ` del ${rumboLargo(hMax.dir)}` : '';
     // Los milímetros ESCRITOS. Con solo el icono no se distingue una
     // llovizna de un chaparrón, y el número no admite interpretación.
     const mm = sel.map(h => h.prec).filter(has).reduce((a, b) => a + b, 0);
@@ -12237,7 +12257,7 @@ function renderNow() {
          Es el mismo motivo por el que la tabla de «Mis torres» lleva
          escrito «a 10 m» en la cabecera desde que él preguntó *«¿es a
          10 m o qué significa?»*. Aquí faltaba. */
-      }${vTxt ? `<br>Viento ${vTxt}<small> a ${S.hgt} m</small>` : ''}${gm > 0 ? `<br>Racha máx ${wtxt(gm, true)}<small> a ${S.hgt} m${gmCuando}</small>` : ''}${(() => {
+      }${vTxt ? `<br>Viento ${vTxt}${dTxt}<small> a ${S.hgt} m</small>` : ''}${gm > 0 ? `<br>Racha máx ${wtxt(gm, true)}<small> a ${S.hgt} m${gmCuando}</small>` : ''}${(() => {
           const r = rachaEnLaFranjaQueNoVesTu(sel);
           return r ? ` <span class="nd__ojo">⚠ ${esc(r.quien)} da ${wtxt(r.max, true)} a 10 m${r.cuando ? ` ${r.cuando}` : ''}${r.cruza && has(r.limite) ? ` — tu listón es ${wtxt(r.limite, true)}` : ''}</span>` : '';
         })()}${

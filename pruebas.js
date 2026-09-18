@@ -2864,6 +2864,26 @@ ok('y el rebote se calcula con lo medido, no escrito a mano',
    Suyo: «16 grados de media en Bermeo y Bilbao» con la app en 19. El 19
    era el `current` del modelo y ponía «Medido». Ahora dice de qué modelo
    es, y debajo va la estación AEMET más cercana, medida de verdad. */
+/* ── DE DÓNDE LLEGA EL VIENTO, ARRIBA (18-09-2026, 20:37) ───────────
+   Suyo, en Baquio: «falta dirección de viento poner» · «lo quiero arriba
+   también» · «si no tengo que desplazarme hasta abajo». */
+grupo('El viento y su rumbo salen arriba: portada, franjas y lo medido por AEMET');
+{
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  ok('la portada lleva viento a 10 m, rumbo largo y racha del current del modelo',
+     /id="nowViento"/.test(html)
+     && /const el = \$\('#nowViento'\);/.test(src)
+     && /Viento <b>\$\{wtxt\(v, true\)\}<\/b>\$\{has\(d\) \? ` del <b>\$\{esc\(rumboLargo\(d\)\)\}<\/b> \(\$\{Math\.round\(d\)\}°\)` : ''\}/.test(src));
+  ok('cada franja dice de dónde llega el viento: el rumbo de la hora de más viento, literal del modelo',
+     /const hMax = vs\.length \? sel\.find\(h => h\.wind === vHi\) : null;/.test(src)
+     && /const dTxt = has\(hMax\?\.dir\) \? ` del \$\{rumboLargo\(hMax\.dir\)\}` : '';/.test(src)
+     && /<br>Viento \$\{vTxt\}\$\{dTxt\}<small> a \$\{S\.hgt\} m<\/small>/.test(src),
+     'no una media de rumbos: eso sería un número que no ha publicado nadie');
+  ok('y la estación AEMET dice su viento, su rumbo y su racha medidos',
+     /viento <b>\$\{wtxt\(e\.viento, true\)\}<\/b>\$\{has\(e\.direccion\) \? ` del \$\{esc\(rumboLargo\(e\.direccion\)\)\}` : ''\}/.test(src)
+     && /racha <b>\$\{wtxt\(e\.racha, true\)\}<\/b>/.test(src));
+}
+
 grupo('El «ahora» dice de qué modelo es, y lo medido de verdad va debajo con su estación');
 {
   const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
