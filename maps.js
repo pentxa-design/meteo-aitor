@@ -427,7 +427,7 @@ const BASEMAPS = [
    Referencia:  verde 5-30 · verde-amarillo 35 · amarillo 40
                 naranja 45-50 · rojo 55 · granate y morado 60+          */
 const DBZ = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 75];
-const DBZ_COLORES = ['#a8e6a0','#a8e6a0','#7ad46a','#4cc23c','#22a83a','#12903a',
+const DBZ_COLORES = ['#a8e6a0','#a8e6a0','#5fd65f','#3fc43f','#22a83a','#12903a',
                      '#1a7a3a','#c8d13a','#f2e12a','#f5a72a','#ea5a2a','#d4232f',
                      '#a01a52','#7b2a8c','#b06fd0'];
 
@@ -479,6 +479,9 @@ const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isoc
   'lluvia', 'lluviaVerde', 'nieveAzul']);
 /* Capas que se interpolan con cúbica monótona entre nodos (ver omUrl). */
 const INTERPOLACION_SUAVE = new Set(['lluvia', 'dbz', 'sombraLluvia', 'lluviaVerde', 'nieveAzul']);
+/* Capas de lluvia que van sobre suelo negro (como AguaceroWx) y sin la
+   sombra del relieve encima (18-09-2026: al 32 % dejaba la tierra gris). */
+const CON_SUELO_NEGRO = new Set(['lluvia', 'lluviaVerde', 'dbz']);
 
 const HRES_ZOOM_MIN = 6;
 function hresDeLejos(modelo, zoom) {
@@ -521,12 +524,23 @@ const marcaDe = u => u.match(new RegExp(`${MARCA}=([A-Za-z0-9_]+)`))?.[1] ?? nul
    pinta ni se rotula. NO se toca el dato: al pulsar el punto sigue
    saliendo el número exacto, sea −9 o 3. Solo cambia dónde empieza el
    color. Quince tramos, como antes, para que la barra siga cuadrando. */
-const DBZ_SIN_ECO = 4.9;
+/* 18-09-2026, 14:15, sus dos capturas de las 17:00 (la nuestra con ECMWF
+   25 km y AguaceroWx con GFS): «esos dibujos verdes no me gustan mucho»
+   · «formas raras» · «veo rojos también, el nuestro no marca». Lo que
+   pintaba medio Atlántico de verde pálido era el tramo de 5 a 10 dBZ:
+   0,07-0,15 mm/h de llovizna del modelo global, que un radar de verdad
+   apenas ve. El corte sube a 10 dBZ (0,15 mm/h) SOLO en esta capa: en
+   Precipitación (mm/h) sigue saliendo todo desde 0,1. Y los rojos:
+   nuestra reflectividad sale de la lluvia MEDIA de una hora en una
+   celda de 25 km, y eso nunca llega a 50 dBZ; la de AguaceroWx es la
+   reflectividad simulada del propio modelo, instantánea. Con AROME HD
+   o ICON-D2 (1-2 km) aquí sí se ven naranjas y rojos en las tormentas. */
+const DBZ_SIN_ECO = 9.9;
 const ESCALA_DBZ = {
   type: 'breakpoint',
   unit: 'dBZ',
-  breakpoints: [mmDeDbz(DBZ_SIN_ECO), ...DBZ.slice(1).map(mmDeDbz)],
-  colors: DBZ_COLORES.map((c, i) => hexRGBA(c, i === 0 ? 0 : 1)),
+  breakpoints: [0, mmDeDbz(DBZ_SIN_ECO), ...DBZ.slice(2).map(mmDeDbz)],   // 15 tramos, como la barra
+  colors: DBZ_COLORES.map((c, i) => hexRGBA(c, i <= 1 ? 0 : 1)),
 };
 
 
@@ -1229,7 +1243,12 @@ function escalasPropias() {
      al 55 % se veía apagado; va al 75. Por debajo de 0,1 mm/h sigue sin
      pintarse nada: ese es el corte seco que hace que el mapa no parezca
      «irreal» con velo por todas partes. */
-  const cc = [['#4a7fd8',0], ['#4a7fd8',.75], ['#3f9fe0',.85], ['#2fb8d8',.92],
+  /* 18-09-2026, 14:18, su captura de Precipitación en ECMWF 25 km («afina
+     esta capa, esas pintadas son algo raras»): el tramo 0,1-0,3 iba al
+     75 % y cada celda de 25 km con 0,1 salía como un cuadro azul macizo.
+     Ahora la llovizna entra como un velo (40 %) y va subiendo: la celda
+     sigue ahí —es lo que da el modelo— pero no se lee como un mosaico. */
+  const cc = [['#4a7fd8',0], ['#4a7fd8',.4], ['#3f9fe0',.7], ['#2fb8d8',.85],
               ['#2fc9b0',1], ['#3fcf6a',1], ['#8fd83a',1], ['#e0e03a',1],
               ['#f2a72a',1], ['#e04a2a',1], ['#b0308f',1], ['#6a1b9a',1]];
   const lluvia = {
@@ -2282,7 +2301,7 @@ const Maps = {
          los mapas profesionales: el COLOR va pleno y la SOMBRA del
          terreno se dibuja ENCIMA, suave. Ya no hay que elegir. */
       this.sueloParaNubes(L_.escala === 'nubes');
-      this.sueloParaLluvia(['lluvia', 'lluviaVerde', 'dbz'].includes(L_.escala));
+      this.sueloParaLluvia(CON_SUELO_NEGRO.has(L_.escala));
       /* La nube blanca a 0,75 sobre el mar azul acero salía lavada (visto
          en su Chrome el 15-09 a las 13:20): las capas de nubes van casi
          opacas. El deslizador CAPA solo puede subirla, no bajarla. */
@@ -2301,7 +2320,11 @@ const Maps = {
       if (this.terrain && this.map.getLayer('hillLayer')) {
         try {
           this.map.moveLayer('hillLayer', this.firstLabelLayer());
-          this.map.setPaintProperty('hillLayer', 'raster-opacity', 0.32);
+          /* Bajo las capas de lluvia la sombra se apaga: sobre el suelo
+             negro dejaba la tierra gris y el verde flojo se leía como
+             musgo (sus capturas del 18-09 a las 17:00). El botón Relieve
+             no cambia, y en las demás capas la sombra sigue al 32 %. */
+          this.map.setPaintProperty('hillLayer', 'raster-opacity', CON_SUELO_NEGRO.has(L_.escala) ? 0 : 0.32);
         } catch {}
       }
 

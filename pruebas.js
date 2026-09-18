@@ -1046,23 +1046,25 @@ const mapsSrc = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
    ven más profesional, ¿verdad? a ver si lo igualas». Negro donde no
    hay eco, color desde 5 dBZ, y sin «−9» rotulados sobre el mar. */
 grupo('El mapa de reflectividad: negro sin eco, color desde 5 dBZ');
-ok('la escala de dBZ arranca en 4,9 dBZ con alfa 0 y sigue con los 14 tramos de siempre',
-   /const DBZ_SIN_ECO = 4\.9;/.test(mapsSrc)
-   && /breakpoints: \[mmDeDbz\(DBZ_SIN_ECO\), \.\.\.DBZ\.slice\(1\)\.map\(mmDeDbz\)\]/.test(mapsSrc)
-   && /colors: DBZ_COLORES\.map\(\(c, i\) => hexRGBA\(c, i === 0 \? 0 : 1\)\)/.test(mapsSrc),
-   'quince tramos para que la barra cuadre; por debajo de 5 dBZ no se pinta');
+ok('la escala de dBZ no pinta nada hasta 10 dBZ (0,15 mm/h) y mantiene los 15 tramos de la barra',
+   /const DBZ_SIN_ECO = 9\.9;/.test(mapsSrc)
+   && /breakpoints: \[0, mmDeDbz\(DBZ_SIN_ECO\), \.\.\.DBZ\.slice\(2\)\.map\(mmDeDbz\)\]/.test(mapsSrc)
+   && /colors: DBZ_COLORES\.map\(\(c, i\) => hexRGBA\(c, i <= 1 \? 0 : 1\)\)/.test(mapsSrc),
+   'suyo, 18-09 con AguaceroWx al lado: «esos dibujos verdes no me gustan» — el velo era el tramo 5-10 dBZ; en mm/h sigue saliendo todo');
 ok('«Valores» no rotula por debajo de 5 dBZ (pero el pulsar el punto sigue dando el número)',
    /if \(e\?\.unidad === 'dBZ' && txt < DBZ_SIN_ECO\) continue;/.test(mapsSrc)
    && !/if \(e\?\.unidad === 'dBZ'[^\n]*\n[^\n]*pop\.setHTML/.test(mapsSrc));
 ok('bajo la lluvia, en mm/h y en dBZ, el suelo va negro como en AguaceroWx',
-   /sueloParaLluvia\(\['lluvia', 'lluviaVerde', 'dbz'\]\.includes\(L_\.escala\)\)/.test(mapsSrc)
+   /const CON_SUELO_NEGRO = new Set\(\['lluvia', 'lluviaVerde', 'dbz'\]\);/.test(mapsSrc)
+   && /sueloParaLluvia\(CON_SUELO_NEGRO\.has\(L_\.escala\)\)/.test(mapsSrc)
+   && /setPaintProperty\('hillLayer', 'raster-opacity', CON_SUELO_NEGRO\.has\(L_\.escala\) \? 0 : 0\.32\)/.test(mapsSrc)
    && /const tono = \{ tierra: '#1b1d21'[^}]*mar: '#0b0c0f'/.test(mapsSrc)
    && !/#5a5f66/.test(mapsSrc),
    'suyo: «y si es de lluvia prefiero en mm»: misma pintada negra, leyendo milímetros');
 ok('y en el fondo Oscuro no se pone suelo encima (ya está oscuro)',
    /sueloParaLluvia\(on\) \{[\s\S]{0,400}if \(!on \|\| this\.base === 'oscuro'\) \{ quitar\(\); return; \}/.test(mapsSrc));
 ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan un decimal',
-   /\['#4a7fd8',0\], \['#4a7fd8',\.75\]/.test(mapsSrc)
+   /\['#4a7fd8',0\], \['#4a7fd8',\.4\], \['#3f9fe0',\.7\]/.test(mapsSrc)
    && /if \(e\?\.unidad === 'mm\/h' && txt < 0\.1\) continue;/.test(mapsSrc)
    && /e\?\.unidad === 'mm\/h'\) \? 1 : 0;/.test(mapsSrc),
    'un «0» encima de una mancha azul de 0,3 mm/h es un número que miente');
@@ -4934,8 +4936,8 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
      /* 15-09-2026: las capas de nubes suben a ≥ 0,92 (nube blanca lavada sobre el mar azul acero); el resto sigue al valor del deslizador, nunca por debajo. */
      /const op = L_\.escala === 'nubes' \? Math\.max\(this\.opacity, 0\.92\) : this\.opacity;/.test(M)
      && /moveLayer\('hillLayer', this\.firstLabelLayer\(\)\)/.test(M)
-     && /'raster-opacity', 0\.32/.test(M),
-     'sus dos peticiones a la vez: relieve visible y mapa sin lavar');
+     && /'raster-opacity', CON_SUELO_NEGRO\.has\(L_\.escala\) \? 0 : 0\.32/.test(M),
+     'sus dos peticiones a la vez: relieve visible y mapa sin lavar (y bajo la lluvia, sombra apagada: 18-09-2026)');
   ok('la T850 vive en el grupo AIRE, al lado de Temperatura 2 m',
      (() => { const i = M.indexOf("id:'temp'"); const j = M.indexOf("id:'t850'");
               return i > 0 && j > i && (j - i) < 400; })(),
