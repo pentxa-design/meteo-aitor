@@ -1248,12 +1248,25 @@ function escalasPropias() {
      75 % y cada celda de 25 km con 0,1 salía como un cuadro azul macizo.
      Ahora la llovizna entra como un velo (40 %) y va subiendo: la celda
      sigue ahí —es lo que da el modelo— pero no se lee como un mosaico. */
-  const cc = [['#4a7fd8',0], ['#4a7fd8',.4], ['#3f9fe0',.7], ['#2fb8d8',.85],
+  const cc = [['#4a7fd8',0], ['#4a7fd8',.55], ['#3f9fe0',.8], ['#2fb8d8',.92],
               ['#2fc9b0',1], ['#3fcf6a',1], ['#8fd83a',1], ['#e0e03a',1],
               ['#f2a72a',1], ['#e04a2a',1], ['#b0308f',1], ['#6a1b9a',1]];
+  /* ── CORTE SECO EN 0,1 (18-09-2026, 14:24, su captura de Tipo de
+     precipitación a las 14:00 del sábado: «se satura bien a lo primero y
+     se desatura después»). Al pasar estas escalas a color_blend, el
+     tramo de 0 a 0,1 se fundía de alfa 0 a alfa 0,4-0,85, y 0,02 mm/h de
+     traza —que el global pone casi en todo el mar— salía como un velo
+     verdoso sobre TODO el mapa: mancha lechosa, colores lavados. Con un
+     corte a 0,099 en alfa 0, de 0 a 0,099 no se pinta nada y en 0,1
+     entra el primer color de golpe. La barra sigue con sus tramos
+     (`desde: 1` deja fuera el corte). */
+  const corteSeco = (bp, cols) => ({
+    breakpoints: [bp[0], bp[1] - 1e-3, ...bp.slice(1)],
+    colors: [cols[0], cols[0], ...cols.slice(1)],
+  });
   const lluvia = {
-    scale: { type:'breakpoint', unit:'mm/h', breakpoints: mm,
-             colors: cc.map(([c,a]) => hexRGBA(c, a)) },
+    scale: { type:'breakpoint', unit:'mm/h', ...corteSeco(mm, cc.map(([c,a]) => hexRGBA(c, a))) },
+    desde: 1,
     eje: mm, unidad: 'mm/h',
     // Los saltos de lluvia no son regulares (0,1 · 0,3 · 1 · 4 · 20 · 60).
     // Repartidos en milímetros lineales, media barra se la comen los 60 mm
@@ -1270,14 +1283,16 @@ function escalasPropias() {
                ['#22a63a',1], ['#128a34',1], ['#0c6e2c',1], ['#d9dd2a',1],
                ['#f2b12a',1], ['#ea6a2a',1], ['#d4232f',1], ['#b0308f',1]];
   const lluviaVerde = {
-    scale: { type:'breakpoint', unit:'mm/h', breakpoints: mm, colors: lvc.map(([c,a]) => hexRGBA(c, a)) },
+    scale: { type:'breakpoint', unit:'mm/h', ...corteSeco(mm, lvc.map(([c,a]) => hexRGBA(c, a))) },
+    desde: 1,
     eje: mm, unidad: 'mm/h', pos: mm.map((_, i) => i),
   };
   const nvm = [0, 0.1, 0.3, 0.6, 1, 2, 4, 8, 15];
   const nvc = [['#a9c8ff',0], ['#a9c8ff',.85], ['#7fa6ff',.92], ['#5a86ff',1],
                ['#3f66f0',1], ['#2b49d0',1], ['#1c31a8',1], ['#121f7a',1], ['#0b1350',1]];
   const nieveAzul = {
-    scale: { type:'breakpoint', unit:'mm/h', breakpoints: nvm, colors: nvc.map(([c,a]) => hexRGBA(c, a)) },
+    scale: { type:'breakpoint', unit:'mm/h', ...corteSeco(nvm, nvc.map(([c,a]) => hexRGBA(c, a))) },
+    desde: 1,
     eje: nvm, unidad: 'mm/h', pos: nvm.map((_, i) => i),
   };
 
@@ -2305,7 +2320,14 @@ const Maps = {
       /* La nube blanca a 0,75 sobre el mar azul acero salía lavada (visto
          en su Chrome el 15-09 a las 13:20): las capas de nubes van casi
          opacas. El deslizador CAPA solo puede subirla, no bajarla. */
-      const op = L_.escala === 'nubes' ? Math.max(this.opacity, 0.92) : this.opacity;
+      /* Y las capas de lluvia sobre el suelo negro van casi opacas (≥ 0,95):
+         al 75 % del deslizador el color se lavaba con el fondo y se leía
+         sin contraste (suyo, 18-09-2026 14:30, con AguaceroWx al lado:
+         «y no el fondo, el contraste en general»). El deslizador CAPA
+         solo puede subirla, como en las nubes. */
+      const op = L_.escala === 'nubes' ? Math.max(this.opacity, 0.92)
+               : CON_SUELO_NEGRO.has(L_.escala) ? Math.max(this.opacity, 0.95)
+               : this.opacity;
       this.map.addSource('omSrc', {
         type:'raster', tiles:[`${url}/{z}/{x}/{y}`], tileSize:256, maxzoom:12,
         attribution:'Datos de modelo: Open-Meteo',

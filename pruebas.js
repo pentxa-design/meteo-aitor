@@ -1064,7 +1064,7 @@ ok('bajo la lluvia, en mm/h y en dBZ, el suelo va negro como en AguaceroWx',
 ok('y en el fondo Oscuro no se pone suelo encima (ya está oscuro)',
    /sueloParaLluvia\(on\) \{[\s\S]{0,400}if \(!on \|\| this\.base === 'oscuro'\) \{ quitar\(\); return; \}/.test(mapsSrc));
 ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan un decimal',
-   /\['#4a7fd8',0\], \['#4a7fd8',\.4\], \['#3f9fe0',\.7\]/.test(mapsSrc)
+   /\['#4a7fd8',0\], \['#4a7fd8',\.55\], \['#3f9fe0',\.8\]/.test(mapsSrc)
    && /if \(e\?\.unidad === 'mm\/h' && txt < 0\.1\) continue;/.test(mapsSrc)
    && /e\?\.unidad === 'mm\/h'\) \? 1 : 0;/.test(mapsSrc),
    'un «0» encima de una mancha azul de 0,3 mm/h es un número que miente');
@@ -1078,6 +1078,11 @@ ok('las capas de lluvia piden interpolación monótona y el resto lineal',
    && /interpolation: INTERPOLACION_SUAVE\.has\(L_\?\.escala\) \? 'monotone' : 'linear'/.test(mapsSrc)
    && !/interpolation: 'cubic'/.test(mapsSrc),
    'cúbica monótona: redondea sin pintar más agua de la que dan los nodos');
+ok('las escalas fundidas de lluvia y nieve llevan corte seco en 0,1: de 0 a 0,099 no se pinta nada',
+   /const corteSeco = \(bp, cols\) => \(\{\s*breakpoints: \[bp\[0\], bp\[1\] - 1e-3, \.\.\.bp\.slice\(1\)\],\s*colors: \[cols\[0\], cols\[0\], \.\.\.cols\.slice\(1\)\],\s*\}\);/.test(mapsSrc)
+   && (mapsSrc.match(/\.\.\.corteSeco\((mm|nvm), /g) || []).length === 3
+   && (mapsSrc.match(/\n    desde: 1,\n/g) || []).length === 3,
+   'suyo, 18-09 14:24: «se satura bien a lo primero y se desatura después» — el velo era el fundido de 0 a 0,1 sobre las trazas del global');
 ok('y la lluvia en mm/h va fundida entre cortes (color_blend), como la reflectividad',
    /const ESCALAS_SUAVES = new Set\(\[[^\]]*'lluvia', 'lluviaVerde', 'nieveAzul'\]\);/.test(mapsSrc));
 
@@ -4934,7 +4939,7 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
      truco de Meteored. Ya no se elige entre relieve y color. */
   ok('el color va pleno y la sombra del terreno se dibuja encima, rebajada',
      /* 15-09-2026: las capas de nubes suben a ≥ 0,92 (nube blanca lavada sobre el mar azul acero); el resto sigue al valor del deslizador, nunca por debajo. */
-     /const op = L_\.escala === 'nubes' \? Math\.max\(this\.opacity, 0\.92\) : this\.opacity;/.test(M)
+     /const op = L_\.escala === 'nubes' \? Math\.max\(this\.opacity, 0\.92\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? Math\.max\(this\.opacity, 0\.95\)\s*: this\.opacity;/.test(M)
      && /moveLayer\('hillLayer', this\.firstLabelLayer\(\)\)/.test(M)
      && /'raster-opacity', CON_SUELO_NEGRO\.has\(L_\.escala\) \? 0 : 0\.32/.test(M),
      'sus dos peticiones a la vez: relieve visible y mapa sin lavar (y bajo la lluvia, sombra apagada: 18-09-2026)');
@@ -7787,7 +7792,7 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
   const iSuelo = M.indexOf("this.sueloParaNubes(L_.escala === 'nubes');", iApply);
   ok('apply() pone el suelo ANTES de montar la capa y solo para la escala «nubes», con la nube casi opaca (≥ 0,92); quitarCapasDeDatos() lo quita con las demás',
      iSuelo > iApply && iSuelo < iOm
-     && /const op = L_\.escala === 'nubes' \? Math\.max\(this\.opacity, 0\.92\) : this\.opacity;/.test(M)
+     && /const op = L_\.escala === 'nubes' \? Math\.max\(this\.opacity, 0\.92\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? Math\.max\(this\.opacity, 0\.95\)\s*: this\.opacity;/.test(M)
      && /const CAPAS  = \['omLayer', 'omLayer2', 'radarLayer', 'satLayer', 'aemetLayer',\s*'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'\];/.test(M),
      'si se quedara puesto, la siguiente capa (temperatura, ráfagas) saldría sobre tierra ocre sin motivo');
   /* 17:52, con Windy al lado otra vez: «blancas, negras donde pinta agua», «verde donde lloverá», «así quiero». */

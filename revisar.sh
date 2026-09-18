@@ -128,7 +128,10 @@ node prueba-candado.cjs || exit 1
 # Esto AVISA pero no bloquea: la cartografía la sirve Open-Meteo, y que
 # su servidor esté caído no puede dejarle sin poder publicar arreglos de
 # otras cosas. Lo que no puede pasar es que nadie lo mire.
-node prueba-mapas.mjs || exit 1
+# 18-09-2026: tres publicaciones seguidas paradas por el catálogo de ECMWF
+# HRES de Open-Meteo contestando «{}». Lo de arriba lo decía y la línea lo
+# contradecía. Avisa a gritos y sigue; lo que sí bloquea es el código.
+node prueba-mapas.mjs || echo "  ⚠ EL SERVIDOR DE MAPAS DE OPEN-METEO HA FALLADO EN ALGO (mira arriba). No es nuestro código: se publica igual."
 
 # Lo mismo pero con la RED rota, para las que leen de Open-Meteo, AEMET y
 # Euskalmet — que son las que le dicen si hay rayos. Suyo, 01-09-2026:
