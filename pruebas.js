@@ -1045,6 +1045,21 @@ const mapsSrc = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
    Suyo: «me gusta más su pintada, el nuestro parece más irreal» · «se
    ven más profesional, ¿verdad? a ver si lo igualas». Negro donde no
    hay eco, color desde 5 dBZ, y sin «−9» rotulados sobre el mar. */
+/* ── WEBGL BLOQUEADO (18-09-2026, 14:46) ─────────────────────────────
+   Su captura: «No se ha podido cargar el mapa ({"requestedAttributes"…
+   "Failed to initialize WebGL"})». Chrome corta WebGL tras varias
+   pérdidas de contexto; se cura recargando. La app recarga sola una vez
+   y, si no, lo dice en cristiano con botón. */
+grupo('Si el navegador bloquea WebGL, el mapa se recarga solo una vez y luego lo dice en cristiano');
+ok('el catch reconoce el fallo de WebGL, recarga una vez con marca en sessionStorage y no entra en bucle',
+   /const sinWebGL = \/WebGL\|context\/i\.test\(String\(e\?\.message \|\| e\)\);/.test(mapsSrc)
+   && /sessionStorage\.setItem\(marca, '1'\)/.test(mapsSrc)
+   && /setTimeout\(\(\) => location\.reload\(\), 800\);/.test(mapsSrc)
+   && /sessionStorage\.removeItem\('mapaSinWebGL'\)/.test(mapsSrc));
+ok('y a la segunda lo dice con botón, no con el JSON del navegador',
+   /El navegador ha bloqueado el dibujo del mapa \(WebGL\)<\/b>/.test(mapsSrc)
+   && /onclick="location\.reload\(\)">Recargar<\/button>/.test(mapsSrc));
+
 grupo('El mapa de reflectividad: negro sin eco, color desde 5 dBZ');
 ok('la escala de dBZ no pinta nada hasta 10 dBZ (0,15 mm/h) y mantiene los 15 tramos de la barra',
    /const DBZ_SIN_ECO = 9\.9;/.test(mapsSrc)

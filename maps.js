@@ -1597,11 +1597,34 @@ const Maps = {
       this.map.on('zoomend', () => { this._pedidas = new Set(); this.precargar(this._dir ?? 1); this.reaplicarPorZoom(); });
       this.map.on('click', e => this.consultar(e.lngLat));
       this.map.getCanvas().style.cursor = 'crosshair';
+      try { sessionStorage.removeItem('mapaSinWebGL'); } catch {}   // ha cargado: la marca de «ya recargué» se borra
       this.ui();
       await elegirOrigenTeselas();
       await this.loadMeta();
     } catch (e) {
-      el.innerHTML = `<div class="radar__ph">No se ha podido cargar el mapa (${esc(e.message)}).</div>`;
+      /* ── WEBGL BLOQUEADO POR EL NAVEGADOR (18-09-2026, 14:46, su captura) ──
+         Chrome, tras varias pérdidas de contexto en la misma página, deja
+         de dar WebGL: «Web page caused context loss and was blocked ·
+         Failed to initialize WebGL». Se cura RECARGANDO la página, así
+         que se recarga sola UNA vez (marca en sessionStorage para no
+         entrar en bucle); si vuelve a fallar, se dice en cristiano y con
+         botón, no con el JSON del navegador. */
+      const sinWebGL = /WebGL|context/i.test(String(e?.message || e));
+      const marca = 'mapaSinWebGL';
+      let yaRecargado = false;
+      try { yaRecargado = sessionStorage.getItem(marca) === '1'; } catch {}
+      if (sinWebGL && !yaRecargado) {
+        try { sessionStorage.setItem(marca, '1'); } catch {}
+        el.innerHTML = `<div class="radar__ph">El navegador ha cortado el dibujo del mapa (WebGL). Recargando…</div>`;
+        setTimeout(() => location.reload(), 800);
+        return;
+      }
+      el.innerHTML = sinWebGL
+        ? `<div class="radar__ph"><b>El navegador ha bloqueado el dibujo del mapa (WebGL)</b> y no se ha arreglado recargando.
+             Cierra otras pestañas o reinicia el navegador y vuelve a entrar.
+             <button type="button" class="mbtn" onclick="location.reload()">Recargar</button>
+             <small>${esc(String(e?.message || e).slice(0, 140))}</small></div>`
+        : `<div class="radar__ph">No se ha podido cargar el mapa (${esc(e.message)}).</div>`;
     }
   },
 
