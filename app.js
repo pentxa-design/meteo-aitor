@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.18-0157';
+const BUILD = '2026.09.18-0941';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11748,6 +11748,41 @@ function tituloFranja(sel, code, desde = '') {
   return `${txtCielo}, con ${base.toLowerCase()}${desde}`;
 }
 
+/* ── LO MEDIDO DE VERDAD, AL LADO DEL «AHORA» DEL MODELO (18-09-2026) ──
+   Suyo, a las 11:40, con sirimiri a ratos: «16 grados de media en Bermeo
+   y Bilbao». La app ponía 19° y «Medido a las 09:30»: era el `current`
+   de Open-Meteo, modelo a 15 min, 3° caliente. AEMET a esa hora: Forua
+   16,0 · Bilbao aeropuerto 15,9. Su norma de siempre: lo medido y lo
+   calculado NO se mezclan. Aquí va la estación AEMET más cercana con su
+   temperatura, humedad y hora, medidas de verdad y con su nombre. Una
+   llamada por sitio, guardada 10 min; si no hay estación a 15 km o AEMET
+   no contesta, no se pone nada (ni se inventa). */
+const MEDIDO_CERCA = new Map();
+async function pintarMedidoCerca(p) {
+  const el = $('#nowAemet');
+  if (!el || !p || !has(p.lat) || !has(p.lon)) return;
+  const k = `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`;
+  const c = MEDIDO_CERCA.get(k);
+  let e = c && Date.now() - c.t < 10 * 60e3 ? c.e : undefined;
+  if (e === undefined) {
+    el.textContent = '';
+    try {
+      const r = await fetch(`/estaciones?puntos=${encodeURIComponent(k)}&radio=15`);
+      const d = r.ok ? await r.json() : null;
+      e = d?.puntos?.[0]?.estaciones?.find(x => has(x.temperatura)) || null;
+    } catch { e = null; }
+    MEDIDO_CERCA.set(k, { t: Date.now(), e });
+  }
+  const sigue = S.place && `${S.place.lat.toFixed(3)},${S.place.lon.toFixed(3)}` === k;
+  if (!sigue) return;                                   // ya está mirando otro sitio
+  if (!e) { el.textContent = ''; return; }
+  const hm = e.medidoEn ? (d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`)(new Date(e.medidoEn)) : '';
+  el.innerHTML = `Medido de verdad · <b>AEMET ${esc(e.nombre)}</b> (${kmTxt(e.km)} km): <b>${e.temperatura.toFixed(1).replace('.', ',')}°</b>`
+    + (has(e.humedad) ? ` · HR ${Math.round(e.humedad)} %` : '')
+    + (has(e.lluvia) ? ` · ${mmTxt(e.lluvia)} mm en la hora` : '')
+    + (hm ? ` · a las ${hm}` : '');
+}
+
 function renderNow() {
   const { fc } = S.data, C = fc.current, hrs = S.data.hours, c = hrs[0];
 
@@ -11826,11 +11861,16 @@ function renderNow() {
        (suyo, 15:32). Es el reloj que hay que mirar antes de comparar dos
        capturas. */
     const pedida = S.data?.at ? (d => ` · <b class="cover__pedida">previsión pedida a las ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}</b>`)(new Date(S.data.at)) : '';
-    el.innerHTML = `Medido a las <b>${hm}</b>${diaSiNoEsHoy(t)}`
+    /* «Medido a las» era mentira a medias (18-09-2026, 11:45): `current`
+       es el modelo a 15 min, no una estación. Suyo esa mañana: «16 grados
+       de media en Bermeo y Bilbao» con la app en 19. Se dice de quién es
+       el número, y lo medido de verdad va debajo (pintarMedidoCerca). */
+    el.innerHTML = `${esc(modeloDato().name)} a las <b>${hm}</b>${diaSiNoEsHoy(t)}`
       + (viejo ? ` — <b>hace ${Math.floor(min / 60)} h ${min % 60} min</b>, pulsa recargar`
                : min >= 1 ? ` — hace ${min} min` : '')
       + cada + pedida;
   })();
+  pintarMedidoCerca(S.place);
 
   const d0 = fc.daily;
   /* ── LA MÁXIMA Y LA MÍNIMA, CON SU HORA ───────────────────────────

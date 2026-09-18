@@ -2794,3 +2794,7 @@ body.sin-scroll{overflow:hidden}
 .salir__ir:hover{background:color-mix(in srgb,var(--warn) 18%,transparent)}
 /* La franja dice si su cielo ha cambiado respecto a lo pintado antes (13-09-2026). */
 .part__cambio{color:var(--warn);opacity:.9}
+
+/* Lo medido de verdad (AEMET más cercana) bajo el «ahora» del modelo (18-09-2026). */
+.cover__aemet{margin-top:4px}
+.cover__aemet:empty{display:none}

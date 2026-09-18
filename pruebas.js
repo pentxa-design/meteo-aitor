@@ -2838,6 +2838,27 @@ ok('y el rebote se calcula con lo medido, no escrito a mano',
 /* ── LA PORTADA TAMBIÉN EN HORAS, 10 DÍAS Y MAR EN EL MÓVIL (18-09-2026) ──
    Suyo: «en Mar ya no sale el tiempo» · «ni en Horas» · «sigo sin ver en
    10 días el mapa arriba» · «en el Mac lo veo». */
+/* ── LO MEDIDO Y LO CALCULADO NO SE MEZCLAN (18-09-2026, 11:45) ──────
+   Suyo: «16 grados de media en Bermeo y Bilbao» con la app en 19. El 19
+   era el `current` del modelo y ponía «Medido». Ahora dice de qué modelo
+   es, y debajo va la estación AEMET más cercana, medida de verdad. */
+grupo('El «ahora» dice de qué modelo es, y lo medido de verdad va debajo con su estación');
+{
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  ok('la hora del «ahora» ya no se llama «Medido»: lleva el nombre del modelo que lo da',
+     /el\.innerHTML = `\$\{esc\(modeloDato\(\)\.name\)\} a las <b>\$\{hm\}<\/b>\$\{diaSiNoEsHoy\(t\)\}`/.test(src)
+     && !/`Medido a las <b>/.test(src));
+  ok('debajo va la estación AEMET más cercana (15 km), con nombre, temperatura, humedad y hora',
+     /async function pintarMedidoCerca\(p\)/.test(src)
+     && /fetch\(`\/estaciones\?puntos=\$\{encodeURIComponent\(k\)\}&radio=15`\)/.test(src)
+     && /Medido de verdad · <b>AEMET \$\{esc\(e\.nombre\)\}<\/b>/.test(src)
+     && /pintarMedidoCerca\(S\.place\);/.test(src)
+     && /id="nowAemet"/.test(html));
+  ok('si no hay estación cerca o AEMET no contesta, no se pone nada (ni se inventa)',
+     /if \(!e\) \{ el\.textContent = ''; return; \}/.test(src)
+     && /\} catch \{ e = null; \}/.test(src));
+}
+
 grupo('En el móvil la portada sale en Ahora, Horas, 10 días y Mar, como en el Mac');
 {
   const cssSrc = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
