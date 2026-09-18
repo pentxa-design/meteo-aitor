@@ -1137,9 +1137,18 @@ canvas.mvals{width:100%;height:100%;display:block}
 .cover-fijo{padding:0 13px;margin-bottom:14px}
 .cover-fijo .cover{margin:0}
 
+/* 18-09-2026, 09:36, suyo desde el iPhone: «en Mar ya no sale el tiempo» ·
+   «ni en Horas» · «sigo sin ver en 10 días el mapa arriba» · «en el Mac
+   lo veo». Lo de «solo en Ahora para no comerse la pantalla» era mío, no
+   suyo: él quiere la portada (sitio, temperatura y franjas) también en
+   Horas, 10 días y Mar, como en el Mac. Fuera queda en las pestañas que
+   no son del sitio (mapa, radar, rayos, cámaras, torres, guía, avisos). */
 @media (max-width:900px){
   .cover-fijo{display:none}
-  body[data-view="now"] .cover-fijo{display:block}
+  body[data-view="now"] .cover-fijo,
+  body[data-view="hours"] .cover-fijo,
+  body[data-view="days"] .cover-fijo,
+  body[data-view="sea"] .cover-fijo{display:block}
 }
 
 /* LA PORTADA YA NO SE QUEDA PEGADA. Suyo, 28-08-2026, en Mis torres:

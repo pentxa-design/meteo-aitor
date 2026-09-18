@@ -2835,6 +2835,16 @@ ok('y el rebote se calcula con lo medido, no escrito a mano',
    Suyo, desde el iPhone: «en Mar ya no sale el tiempo» · «ni en Horas».
    Las horas del eje, el «ahora» y las P/B de las mareas iban dentro del
    SVG con preserveAspectRatio="none" y salían aplastadas. Van en HTML. */
+/* ── LA PORTADA TAMBIÉN EN HORAS, 10 DÍAS Y MAR EN EL MÓVIL (18-09-2026) ──
+   Suyo: «en Mar ya no sale el tiempo» · «ni en Horas» · «sigo sin ver en
+   10 días el mapa arriba» · «en el Mac lo veo». */
+grupo('En el móvil la portada sale en Ahora, Horas, 10 días y Mar, como en el Mac');
+{
+  const cssSrc = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+  ok('la regla de pantalla estrecha enseña la portada en las cuatro pestañas del sitio',
+     /@media \(max-width:900px\)\{\s*\.cover-fijo\{display:none\}\s*body\[data-view="now"\] \.cover-fijo,\s*body\[data-view="hours"\] \.cover-fijo,\s*body\[data-view="days"\] \.cover-fijo,\s*body\[data-view="sea"\] \.cover-fijo\{display:block\}/.test(cssSrc));
+}
+
 grupo('Los rótulos de las gráficas van en HTML, no dentro del SVG estirado');
 {
   const cssSrc = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
