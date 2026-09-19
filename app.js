@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.19-1608';
+const BUILD = '2026.09.19-1615';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -613,15 +613,16 @@ async function pintarBoyaMar(p) {
   const k = `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`;
   // Una petición en marcha por sitio: renderSea se llama dos veces seguidas
   // al cargar, y sin esto cada boya se pedía dos veces (medido en local).
+  // Y TODAS A LA VEZ, no en fila: en producción (16:12) la de Sopelana,
+  // que lleva parada desde mayo y es la más cercana a Bermeo, tardó 25 s
+  // en fallar y la línea no salía hasta entonces. Se piden a la vez y se
+  // queda la más cercana que haya contestado con ola.
   let c = BOYA_CACHE.get(k);
   if (!c || Date.now() - c.t > 10 * 60e3) {
     c = { t: Date.now(), p: (async () => {
-      for (const x of cerca) {
-        let d = null;
-        try { d = await leerBoya(x.b); } catch { d = null; }
-        if (d && has(d.ola)) return { ...d, nombre: x.b.nombre, km: x.km };
-      }
-      return null;
+      const lecturas = await Promise.all(cerca.map(async x => { try { return await leerBoya(x.b); } catch { return null; } }));
+      const i = lecturas.findIndex(d => d && has(d.ola));
+      return i < 0 ? null : { ...lecturas[i], nombre: cerca[i].b.nombre, km: cerca[i].km };
     })() };
     BOYA_CACHE.set(k, c);
   }
