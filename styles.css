@@ -2799,5 +2799,9 @@ body.sin-scroll{overflow:hidden}
 .cover__aemet{margin-top:4px}
 .cover__aemet:empty{display:none}
 
+/* La boya de EuskOOS en Mar (19-09-2026): lo medido, en el color del texto, no apagado. */
+.note--boya{color:inherit}
+.note--boya:empty{display:none}
+
 /* Oleaje por horas (19-09-2026): la racha en la tarjeta del mar no es un semáforo. */
 .hcard--mar .hcard__g{white-space:normal}

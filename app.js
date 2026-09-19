@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.19-1559';
+const BUILD = '2026.09.19-1608';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -546,6 +546,98 @@ function avisoUnidadesMar(M) {
 function notaUnidadesMar(M) {
   const av = avisoUnidadesMar(M);
   return av ? `<p class="note note--avisa">${esc(av)}</p>` : '';
+}
+
+/* ── LA BOYA: LO MEDIDO DE VERDAD EN EL MAR (19-09-2026, portátil) ────
+   Suyo, el sábado de las regatas: «hay 1 boya en el golfo de Bizkaia que
+   mide todo eso, del Gobierno Vasco; igual buscas acceso». Encontrado:
+   EuskOOS (Euskalmet + AZTI) publica sus boyas y plataformas en un
+   ERDDAP público, sin clave y con CORS abierto, así que se lee desde el
+   navegador, como la línea de AEMET en Ahora, y no cuesta nada en
+   Vercel. Las posiciones salen de su propio platforms.geojson, no de
+   memoria. La API de Euskalmet con nuestra clave NO lista boyas.
+   Medido ese día: la de Sopelana lleva parada desde mayo de 2026 y la
+   plataforma de Bilbao daba error 500. Por eso la lectura se pide SOLO
+   de las últimas 6 h: si la boya no ha hablado, no sale nada. Nunca un
+   dato viejo como si fuera de ahora. Se enseña la más cercana que
+   conteste, hasta 80 km. */
+const BOYAS_EUSKOOS = [
+  { id: 'boyaDonostia_NRT_hourly_data', nombre: 'Boya de Donostia', lat: 43.563, lon: -2.0225,
+    c: { ola: 'hm0', max: 'hmax', periodo: 'tp', dir: 'wave_dir', agua: 'a_60_TEMP000' } },
+  { id: 'mutriku_50_wave', nombre: 'Boya de Mutriku', lat: 43.3161, lon: -2.3677,
+    c: { ola: 'hm0', max: 'hmax', periodo: 'tp', dir: 'dirtp' } },
+  { id: 'sopelana_59_wave', nombre: 'Boya de Sopelana', lat: 43.4001, lon: -3.02851,
+    c: { ola: 'hm0', max: 'hmax', periodo: 'tp', dir: 'dirtp' } },
+  { id: 'Pasaia_Station', nombre: 'Plataforma de Pasaia', lat: 43.3382, lon: -1.928,
+    c: { ola: 'altura_ola', max: 'altura_max_ola', periodo: 'periodo_ola', dir: 'wave_dir', agua: 'temp_agua' } },
+  { id: 'Bilbao_Station', nombre: 'Plataforma de Bilbao', lat: 43.3775, lon: -3.0847,
+    c: { ola: 'altura_ola', max: 'altura_max_ola', periodo: 'periodo_ola', agua: 'temp_agua' } },
+];
+const BOYA_RADIO_KM = 80;
+const BOYA_CACHE = new Map();
+
+/** Última lectura de una boya en las últimas 6 h, o null si no ha hablado. */
+async function leerBoya(b) {
+  const cols = ['time', ...Object.values(b.c)];
+  const u = `https://www.euskoos.eus/erddap/tabledap/${b.id}.json?${cols.join(',')}&time>=now-6hours&orderByMax("time")`;
+  const ac = new AbortController();
+  const reloj = setTimeout(() => ac.abort(), 12000);
+  let t = null;
+  try {
+    const r = await fetch(u, { signal: ac.signal });
+    if (!r.ok) return null;                      // 404 en ERDDAP = sin filas en 6 h
+    t = (await r.json())?.table;
+  } finally { clearTimeout(reloj); }
+  const fila = t?.rows?.[0];
+  if (!fila) return null;
+  const v = {}; t.columnNames.forEach((n, i) => { v[n] = fila[i]; });
+  /* -9999 es «sin dato» en estas plataformas (visto en la de Bilbao el
+     19-09: agua -9999,0°). Un centinela pintado como medida es peor que
+     nada, así que cada campo pasa por su rango de lo posible. */
+  const num = (k, min, max) => {
+    const x = k ? v[k] : null;
+    return Number.isFinite(x) && x >= min && x <= max ? x : null;
+  };
+  return { hora: new Date(v.time), ola: num(b.c.ola, 0, 30), max: num(b.c.max, 0, 40), periodo: num(b.c.periodo, 0, 30),
+           dir: num(b.c.dir, 0, 360), agua: num(b.c.agua, -3, 40) };
+}
+
+async function pintarBoyaMar(p) {
+  const el = $('#marBoya');
+  if (!el) return;
+  const apagar = () => { el.hidden = true; el.innerHTML = ''; };
+  if (!p || !has(p.lat) || !has(p.lon)) { apagar(); return; }
+  const cerca = BOYAS_EUSKOOS.map(b => ({ b, km: kmEntre(p, b) }))
+    .filter(x => x.km <= BOYA_RADIO_KM).sort((a, c) => a.km - c.km);
+  if (!cerca.length) { apagar(); return; }
+  const k = `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`;
+  // Una petición en marcha por sitio: renderSea se llama dos veces seguidas
+  // al cargar, y sin esto cada boya se pedía dos veces (medido en local).
+  let c = BOYA_CACHE.get(k);
+  if (!c || Date.now() - c.t > 10 * 60e3) {
+    c = { t: Date.now(), p: (async () => {
+      for (const x of cerca) {
+        let d = null;
+        try { d = await leerBoya(x.b); } catch { d = null; }
+        if (d && has(d.ola)) return { ...d, nombre: x.b.nombre, km: x.km };
+      }
+      return null;
+    })() };
+    BOYA_CACHE.set(k, c);
+  }
+  const r = await c.p;
+  const sigue = S.place && `${S.place.lat.toFixed(3)},${S.place.lon.toFixed(3)}` === k;
+  if (!sigue) return;                            // ya está mirando otro sitio
+  if (!r) { apagar(); return; }
+  const hm = `${String(r.hora.getHours()).padStart(2, '0')}:${String(r.hora.getMinutes()).padStart(2, '0')}`;
+  const m1 = v => v.toFixed(1).replace('.', ',');
+  el.hidden = false;
+  el.innerHTML = `Medido de verdad · <b>${esc(r.nombre)}</b> (EuskOOS, ${Math.round(r.km)} km): ola <b>${m1(r.ola)} m</b>`
+    + (has(r.max) ? ` · máxima <b>${m1(r.max)} m</b>` : '')
+    + (has(r.periodo) ? ` · periodo <b>${m1(r.periodo)} s</b>` : '')
+    + (has(r.dir) && rumboLargo(r.dir) ? ` · del <b>${esc(rumboLargo(r.dir))}</b> (${Math.round(r.dir)}°)` : '')
+    + (has(r.agua) ? ` · agua ${m1(r.agua)}°` : '')
+    + ` · a las ${hm}`;
 }
 
 /** Dónde lee de verdad el modelo de olas (19-09-2026, el sábado de las
@@ -13908,6 +14000,7 @@ function renderSea() {
     }
     dentro.forEach(e => { if (e) e.hidden = true; });
     $('#seaDet').innerHTML = ''; $('#waveGraph').innerHTML = ''; if ($('#waveHours')) $('#waveHours').innerHTML = '';
+    if ($('#marBoya')) { $('#marBoya').hidden = true; $('#marBoya').innerHTML = ''; }
     return;
   }
   if (nota) { nota.hidden = true; nota.innerHTML = ''; }
@@ -13955,6 +14048,7 @@ function renderSea() {
     dt('Corriente', show(C.ocean_current_velocity, unidadMar(M, 'ocean_current_velocity'), 1),
        has(C.ocean_current_velocity) ? 'Del agua, no del viento' : ''),
   ].join('') + notaUnidadesMar(M) + notaCeldaMar(M);
+  pintarBoyaMar(S.place);
 
   /* ── OLEAJE 48 H ──────────────────────────────────────────────────
      Suyo, 29-08-2026 a las 18:25, con una foto del móvil: *«se ve mal

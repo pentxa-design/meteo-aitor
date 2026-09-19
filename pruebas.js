@@ -8073,6 +8073,35 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 }
 
 
+/* ── LA BOYA DE EUSKOOS EN LA PESTAÑA MAR (19-09-2026, portátil) ───────
+   Suyo: «hay 1 boya en el golfo de Bizkaia que mide todo eso, del
+   Gobierno Vasco; igual buscas acceso». ERDDAP público de EuskOOS, sin
+   clave, CORS abierto, leído desde el navegador. */
+{
+  const A = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  const H = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  ok('la pestaña Mar tiene la línea «Medido de verdad» de la boya de EuskOOS, con posiciones de su propio geojson',
+     /const BOYAS_EUSKOOS = \[/.test(A)
+     && /id: 'boyaDonostia_NRT_hourly_data', nombre: 'Boya de Donostia', lat: 43\.563, lon: -2\.0225/.test(A)
+     && /id: 'mutriku_50_wave', nombre: 'Boya de Mutriku', lat: 43\.3161, lon: -2\.3677/.test(A)
+     && /<p class="note note--boya" id="marBoya" hidden><\/p>/.test(H)
+     && /^async function pintarBoyaMar\(p\) \{/m.test(A)
+     && (A.match(/pintarBoyaMar\(S\.place\);/g) || []).length === 1
+     && /if \(\$\('#marBoya'\)\) \{ \$\('#marBoya'\)\.hidden = true;/.test(A),
+     'la más cercana que conteste, hasta 80 km; tierra adentro se apaga');
+  ok('la boya se pide solo de las últimas 6 h (nunca un dato viejo como si fuera de ahora), sin clave y sin pasar por Vercel',
+     /time>=now-6hours&orderByMax\("time"\)/.test(A)
+     && /https:\/\/www\.euskoos\.eus\/erddap\/tabledap\//.test(A)
+     && /if \(!r\.ok\) return null;/.test(A)
+     && !/euskoos/i.test(fs.readFileSync(path.join(__dirname, 'vercel.json'), 'utf8'))
+     && !fs.existsSync(path.join(__dirname, 'api', 'boya.mjs')));
+  ok('y no inventa rumbo, máxima ni agua: cada trozo sale solo si la boya lo trae',
+     /has\(r\.max\) \? ` · máxima/.test(A) && /has\(r\.dir\) && rumboLargo\(r\.dir\) \? ` · del/.test(A)
+     && /has\(r\.agua\) \? ` · agua/.test(A)
+     && /Medido de verdad · <b>\$\{esc\(r\.nombre\)\}<\/b> \(EuskOOS, /.test(A));
+}
+
+
 /* ═══════════════════════════════════════════════════════════════════
    EL RECUENTO VA EL ÚLTIMO. SIEMPRE.
    ───────────────────────────────────────────────────────────────────

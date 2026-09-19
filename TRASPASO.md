@@ -786,3 +786,16 @@ tp, dirtp; cada 30 min). La de Sopelana lleva parada desde mayo de 2026.
 `Bilbao_Station` da error 500 en el servidor. Es el «medido de verdad»
 del mar para la pestaña Mar, como la línea de AEMET en Ahora. La API de
 Euskalmet con nuestra clave NO lista boyas (153 estaciones, ninguna).
+
+**HECHO en la publicación siguiente (19-09-2026, 16:15):** la boya ya está
+en la pestaña Mar. `BOYAS_EUSKOOS` en `app.js` (Donostia, Mutriku,
+Sopelana, plataformas de Pasaia y Bilbao, posiciones del
+`platforms.geojson` de EuskOOS), `leerBoya()` pide SOLO las últimas 6 h
+(`time>=now-6hours&orderByMax("time")`, 404 = no ha hablado → no sale) y
+`pintarBoyaMar()` enseña la más cercana que conteste hasta 80 km, con
+caché de 10 min y una sola petición en marcha por sitio. Cada campo pasa
+por su rango (la plataforma de Bilbao manda -9999 en el agua: centinela,
+no medida). Sin clave, sin Vercel: va por CORS desde el navegador.
+Medido en local a las 16:05: «Medido de verdad · Plataforma de Bilbao
+(EuskOOS, 30 km): ola 2,0 m · máxima 3,5 m · periodo 14,3 s · a las
+15:40», con el modelo al lado diciendo 2,0 m · 12,2 s. Cuadran.
