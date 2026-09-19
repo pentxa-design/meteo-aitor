@@ -799,3 +799,14 @@ no medida). Sin clave, sin Vercel: va por CORS desde el navegador.
 Medido en local a las 16:05: «Medido de verdad · Plataforma de Bilbao
 (EuskOOS, 30 km): ola 2,0 m · máxima 3,5 m · periodo 14,3 s · a las
 15:40», con el modelo al lado diciendo 2,0 m · 12,2 s. Cuadran.
+
+**Dato de campo, 19-09-2026 19:21, Bermeo, campo de regatas (sus fotos desde
+el espigón):** cielo despejado sin una nube; mar casi llana dentro del
+campo, al abrigo del espigón, sin marejadilla de viento; el fondo del NO
+rompía en blanco en las rocas de la punta y bajo Izaro. A esa hora:
+modelo (celda 13 km N) 1,8 m · 320° · 11,7 s · mar de viento 0,1 m;
+plataforma de Bilbao 17:00Z 1,8 m · máx 2,5 · 12,5 s · viento 5,9 del
+ENE; boya de Donostia 17:00Z 2,3 m · máx 4,5 · 13,3 s · 340°. Todo
+cuadra con la foto: fondo largo del NO que se ve en las rocas, y dentro
+del campo, mucho menos. La nota «pegada a la costa, la ola puede ser
+otra» es exactamente esto.
