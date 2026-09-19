@@ -276,7 +276,12 @@ ok('irAPosicion, previewT, ahora y capaSat se encuentran en maps.js',
    ['irAPosicion', 'previewT', 'ahora', 'capaSat'].every(n => metodos.find(x => x[0] === n)[1]),
    metodos.filter(x => !x[1]).map(x => x[0]).join(', ') + ' no encontrados');
 
-const M = eval(`${TLAYERS_SRC}\n({\n${metodos.filter(x => x[1]).map(x => x[1]).join(',\n')}\n})`);
+/* 19-09-2026: las capas de mar llevan \`modelos: MODELOS_OLAS\`, una constante
+   declarada justo antes de TLAYERS. Sin ella el eval reventaba
+   (ReferenceError) y tumbaba la publicación del grupo Mar. */
+const iOlas = srcMaps.indexOf('const MODELOS_OLAS = [');
+const MODELOS_OLAS_SRC = iOlas >= 0 ? srcMaps.slice(iOlas, srcMaps.indexOf('\n', iOlas) + 1) : '';
+const M = eval(`${MODELOS_OLAS_SRC}${TLAYERS_SRC}\n({\n${metodos.filter(x => x[1]).map(x => x[1]).join(',\n')}\n})`);
 
 // El DOM de mentira: solo lo que tocan estas tres funciones
 const mapTime = { value: '0', max: 0 };

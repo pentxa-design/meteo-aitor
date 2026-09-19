@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.18-2329';
+const BUILD = '2026.09.19-1559';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -546,6 +546,24 @@ function avisoUnidadesMar(M) {
 function notaUnidadesMar(M) {
   const av = avisoUnidadesMar(M);
   return av ? `<p class="note note--avisa">${esc(av)}</p>` : '';
+}
+
+/** Dónde lee de verdad el modelo de olas (19-09-2026, el sábado de las
+ *  regatas de Bermeo). La malla marina no tiene celda pegada al puerto:
+ *  para Bermeo la API devuelve la de 43,54 N · 2,71 O, 13 km al norte,
+ *  en mar abierto. Eso hay que verlo en la pestaña, no saberlo de
+ *  memoria: él quería la ola del campo de regatas, a 1,5 km del espigón,
+ *  y ahí ningún modelo tiene celda. Se calcula con la celda que devuelve
+ *  la propia respuesta (latitude/longitude), nunca a ojo. */
+function notaCeldaMar(M) {
+  const p = S.place;
+  if (!has(M?.latitude) || !has(M?.longitude) || !has(p?.lat) || !has(p?.lon)) return '';
+  const c = { lat: M.latitude, lon: M.longitude };
+  const km = kmEntre(p, c);
+  if (!(km >= 1)) return '';
+  const rumbo = rumboLargo(acimut(p, c)) || '';
+  const g = v => v.toFixed(2).replace('.', ',');
+  return `<p class="note">Leído en la celda del modelo de olas: mar abierto a <b>${Math.round(km)} km</b> al ${esc(rumbo)} de ${esc(p.name || 'aquí')} (${g(c.lat)}, ${g(c.lon)}). Pegada a la costa, la ola puede ser otra.</p>`;
 }
 
 function show(v, unit = '', d = 0) {
@@ -11143,6 +11161,15 @@ function kmEntre(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
+/** Rumbo (0-360, desde el norte) de a hacia b. Para decir «a 13 km al norte». */
+function acimut(a, b) {
+  const r = Math.PI / 180;
+  const dLon = (b.lon - a.lon) * r, la1 = a.lat * r, la2 = b.lat * r;
+  const y = Math.sin(dLon) * Math.cos(la2);
+  const x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dLon);
+  return ((Math.atan2(y, x) / r) + 360) % 360;
+}
+
 /* ══════════════════════════════════════════════════════════
    La línea del oeste
    Los frentes entran por el Cantábrico de oeste a este. Mirando
@@ -13927,7 +13954,7 @@ function renderSea() {
          : ''),
     dt('Corriente', show(C.ocean_current_velocity, unidadMar(M, 'ocean_current_velocity'), 1),
        has(C.ocean_current_velocity) ? 'Del agua, no del viento' : ''),
-  ].join('') + notaUnidadesMar(M);
+  ].join('') + notaUnidadesMar(M) + notaCeldaMar(M);
 
   /* ── OLEAJE 48 H ──────────────────────────────────────────────────
      Suyo, 29-08-2026 a las 18:25, con una foto del móvil: *«se ve mal

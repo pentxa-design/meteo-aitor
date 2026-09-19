@@ -731,3 +731,58 @@ Lectura para el marcador: en viento, ECMWF va bien en Canarias y Ciudad del Cabo
 **Sus ocho capturas de las 12:26 («revisa esto luego»)**, revisadas: Ahora, Horas, 10 días y Mar consistentes entre sí (misma racha 30 a las 12:00 en portada, franja, Horas y 10 días; CAPE 50 del tramo 12-13 contra 60 de la franja porque la franja lleva el máximo a las 13:00; «Mín 16°» sin hora porque ninguna hora del hourly se acerca a menos de un grado al mínimo del daily, regla del 08-09). Dos cosas que sí mejoran: (1) la lectura AEMET de Matxitxako era de las 10:00 a las 12:26 —el feed de AEMET va con retraso para esa estación— y la línea no decía cuánto de vieja: PENDIENTE poner «hace 2 h» cuando pase de 60 min; (2) el «Ha cambiado a las 12:26: antes sol velado» junto a «Sol velado · despejado desde las 17:00» se lee redundante (compara el texto entero); menor, se deja.
 
 **«Si quiero saber qué oleaje va a haber en Bermeo sobre las 18 h, ¿dónde miro? Hay regatas» · «en Mar solo pone lo de ahora, ¿no?».** Tenía razón: estado de la mar (ahora) y gráfica de 48 h con el máximo, pero ni un número por hora. Nueva tarjeta «Oleaje por horas» bajo la gráfica (`#waveHours`, `pintarOleajeHoras()`): una tarjeta por hora desde la hora en curso, 48 h, con ola y de dónde viene, periodo, mar de fondo (altura y periodo), mar de viento, y el viento a 10 m de esa misma hora con rumbo y racha del modelo de tiempo. Al modelo marino se le piden además `wave_direction` y `wind_wave_height` por horas. Sin semáforo: para la mar no tiene listones. Tierra adentro la tira se vacía. Cuatro pruebas nuevas (1090 ✓).
+
+## §25 · MAR EN EL MAPA Y LA CELDA DE LA PESTAÑA MAR (19-09-2026, 15:00-17:00, portátil)
+
+**Lo que pidió**, el sábado de las regatas de Bermeo (4 largos, 5.556 m,
+campo del espigón hacia Izaro), con Windy y Ventusky delante: *«en mapas
+no tengo mar, ¿lo pones? sería lo suyo ponerlo»* y, sobre la nota de la
+celda, *«sí»*.
+
+**Lo hecho**
+- `maps.js`: grupo **Mar** al final de la lista de capas: Altura de ola,
+  Periodo, Mar de fondo, Periodo del fondo, Mar de viento (m y s, tal cual
+  el modelo). Escalas de color de la leyenda Mar de Ventusky (sus capturas
+  de las 15:23), fundidas (`color_blend`) pero en interpolación LINEAL.
+- Modelos de olas con `mar:true` en `TMODELS` (no salen en la fila de
+  botones) y lista `MODELOS_OLAS` = EWAM (DWD, 0,05°, Europa, cada hora)
+  → ECMWF WAM 0,25° → GFS Wave 0,16°. `resolverModelo()` busca SOLO ahí,
+  en orden estricto, y marca `mar:true` (no «sustituido»): el cartel dice
+  «Mar: olas de EWAM…».
+- El clic lee también la dirección (`direccion` de la capa, misma pasada
+  y hora, tesela descargada si hace falta): «1,9 m · del norte (2°)».
+  Si el modelo no publica esa dirección, no se inventa.
+- `app.js`, pestaña Mar: `notaCeldaMar()` → «Leído en la celda del
+  modelo de olas: mar abierto a 13 km al norte de Bermeo (43,54, -2,71).
+  Pegada a la costa, la ola puede ser otra.» Con `acimut()` nuevo.
+- Sin asterisco en las capas de mar (`propia()` las da por propias).
+
+**MEDIDO en local antes de publicar (servidor estático, Chrome del
+portátil)** — esto es lo que decide el orden de modelos:
+- `meteofrance_wave` (MFWAM 0,08°, el que lee la pestaña Mar): 26 MB por
+  paso, 9,2 M de puntos. Primera tesela 14 s; después `Aborted(OOM)` tres
+  veces, dos recargas solas del guardia de memoria y el mapa muerto. FUERA
+  del mapa (sigue en la pestaña Mar por la API de puntos, que es otra cosa).
+- `dwd_ewam`: 36-59 MB de memoria, pinta en ~10 s, fondo y mar de viento.
+- `ecmwf_wam025`: 41 MB, bien, pero sin dato a <20 km de la costa y sin
+  fondo/viento. `ncep_gfswave016`: 48 MB, hueco grande junto a la costa.
+- `ecmwf_wam` (9 km, el de Windy) está en el bucket y NO se ha probado.
+- Ningún modelo tiene celda en los primeros 5-15 km de costa: el campo de
+  regatas (1,5 km) no lo cubre nadie. Se deja vacío, no se rellena.
+- Interpolación monótona en el mar: polígonos de lados rectos donde las
+  celdas de tierra no tienen dato. Lineal se ve como Ventusky.
+
+**Contraste del día (nada inventado):** organización de la regata: NNW,
+1,5 m, 13 s. Modelos a 13 km: 1,9-2,1 m, 319°, 12 s. Boya de Donostia
+(EuskOOS, 13:00Z): 2,4 m, hmax 3,5, 343°, tp 12,5 s. Boya de Mutriku
+(09:00Z): 2,5 m, tp 13,3 s, del N.
+
+**PENDIENTE (encontrado hoy, sin hacer):** EuskOOS publica las boyas en
+un ERDDAP público, sin clave y con CORS abierto:
+`https://www.euskoos.eus/erddap/tabledap/boyaDonostia_NRT_hourly_data.json?time,hm0,hmax,tp,tm02,wave_dir&orderByMax("time")`
+(43,566 N · 2,012 O; hm0 = altura significativa, hmax, tp = periodo de
+pico, tm02, wave_dir = de dónde viene) y `mutriku_50_wave` (hm0, hmax,
+tp, dirtp; cada 30 min). La de Sopelana lleva parada desde mayo de 2026.
+`Bilbao_Station` da error 500 en el servidor. Es el «medido de verdad»
+del mar para la pestaña Mar, como la línea de AEMET en Ahora. La API de
+Euskalmet con nuestra clave NO lista boyas (153 estaciones, ninguna).

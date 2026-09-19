@@ -231,18 +231,51 @@ const TMODELS = [
     desc:'NOAA global con todos los niveles de presión' },
   { id:'dwd_icon', name:'ICON global', res:'0,125°',
     desc:'DWD global con niveles de presión' },
+  /* ── MODELOS DE OLAS (19-09-2026, portátil) ──────────────────────────
+     Suyo, el sábado de las regatas de Bermeo, con Windy y Ventusky al
+     lado: «en mapas no tengo mar, ¿lo pones? sería lo suyo ponerlo».
+     Llevan `mar:true` y NO salen en la fila de botones: un modelo de
+     olas no publica ráfagas ni CAPE, así que «elegirlo» no tendría
+     sentido. Los usan solas las capas del grupo Mar, por su lista
+     `modelos` (ver MODELOS_OLAS y resolverModelo).
+
+     MEDIDO ese día en el portátil, en local, antes de publicar:
+       · meteofrance_wave (MFWAM 0,08°, el que lee la pestaña Mar): cada
+         paso es un fichero de 26 MB con 9,2 millones de puntos. Una
+         tesela tardó 14 s y a la siguiente, Aborted(OOM): tres veces, dos
+         recargas solas y el mapa muerto. Como ECMWF HRES pero peor. FUERA.
+       · dwd_ewam (EWAM 0,05°, Europa, cada hora): 59 MB de memoria,
+         pinta en 10 s y trae fondo y mar de viento. PRIMERO.
+       · ecmwf_wam025 (0,25°, global, cada 3 h): 41 MB, pinta bien pero
+         no tiene dato a menos de ~20 km de la costa y no publica fondo
+         ni mar de viento. Segundo, para cuando EWAM no llega (fuera de
+         Europa, o más allá de sus 3 días).
+       · ncep_gfswave016 (0,16°, global, cada hora, 16 días): 48 MB,
+         aguanta, pero deja un hueco grande pegado a la costa. Último.
+       · ecmwf_wam (9 km, el de Windy): está en el bucket, SIN PROBAR;
+         por tamaño (rejilla del HRES) huele a OOM. No se mete a ciegas.
+     Ningún modelo de olas tiene celda en los primeros 5-15 km de costa:
+     ahí la capa queda vacía a propósito, no se rellena. */
+  { id:'dwd_ewam', mar:true, name:'EWAM', res:'0,05°',
+    desc:'DWD alemán · olas · Europa · cada hora' },
+  { id:'ecmwf_wam025', mar:true, name:'ECMWF WAM', res:'0,25°',
+    desc:'Centro Europeo · olas · cada 3 h · solo ola total y periodo' },
+  { id:'ncep_gfswave016', mar:true, name:'GFS Wave', res:'0,16°',
+    desc:'NOAA · global · olas · cada hora · 16 días' },
 ];
+/** Orden en que las capas de mar buscan modelo: el fino de Europa primero. */
+const MODELOS_OLAS = ['dwd_ewam', 'ecmwf_wam025', 'ncep_gfswave016'];
 
 
 /* `v` es el nombre EXACTO de la variable en el servicio de teselas.
    Si el modelo elegido no la publica, la capa no aparece.
 
-   NOTA — capas marinas retiradas (21-08-2026): los modelos de oleaje
-   pintaban color sobre tierra firme, donde no tienen dato, y la
-   consulta puntual fallaba en ellos. Hasta poder enmascarar la tierra
-   correctamente NO se publican: es preferible no tener la capa que
-   tenerla mintiendo. Los datos de mar siguen en la pestaña «Mar»,
-   que usa la API de puntos y sí está verificada. */
+   NOTA — capas marinas: se retiraron el 21-08-2026 porque los modelos
+   de oleaje pintaban color sobre tierra firme y la consulta puntual
+   fallaba en ellos. Vuelven el 19-09-2026 (grupo «Mar», al final de la
+   lista) PROBADAS en pantalla antes de publicar: tierra sin pintar y
+   clic con valor. Si algún día vuelven a pintar tierra, se quitan otra
+   vez: es preferible no tener la capa que tenerla mintiendo. */
 const TLAYERS = [
   { id:'precipitation', g:'Lluvia', name:'Precipitación', v:'precipitation', unit:'mm/h', escala:'lluvia',
     desc:'Intensidad de lluvia prevista' },
@@ -391,6 +424,34 @@ const TLAYERS = [
   { id:'surft', densa:true, temp:true, g:'Aire', name:'Temp. del suelo', v:'surface_temperature', unit:'°C',
     desc:'Temperatura del suelo y del mar' },
 
+  /* ── MAR (19-09-2026, portátil) ──────────────────────────────────────
+     Suyo, el día de las regatas de Bermeo: «en mapas no tengo mar, ¿lo
+     pones?», con las capas Mar de Ventusky en pantalla (altura total,
+     altura del fondo, periodo, olas de viento). Ningún modelo de aire
+     publica olas, así que estas capas llevan su lista `modelos` y se
+     pintan siempre con uno de ahí, diciéndolo en el cartel. Tierra
+     adentro el modelo no tiene dato y el fondo se ve tal cual.
+     Unidades tal cual las publica el modelo: metros y segundos. La
+     dirección no se pinta (la librería solo dibuja flechas con
+     componentes u/v de viento): se lee en el clic, de la variable
+     hermana `direccion` del mismo modelo y hora.
+     Marea y corriente NO van aquí a propósito: la marea de esta app
+     sale de la tabla oficial de Euskalmet, nunca de un modelo, y la
+     corriente solo viene como componentes u/v, sin velocidad.
+     Y OJO: ningún modelo de olas tiene celda en los primeros 5-15 km de
+     costa (para Bermeo, la más cercana queda 13 km al norte). Esa franja
+     se deja vacía; lo que pasa dentro lo dice la boya, no el modelo. */
+  { id:'ola', g:'Mar', name:'Altura de ola', v:'wave_height', unit:'m', escala:'ola', modelos: MODELOS_OLAS, direccion:'wave_direction',
+    desc:'Altura significativa de la ola total (fondo + viento), en metros' },
+  { id:'periodo', g:'Mar', name:'Periodo', v:'wave_period', unit:'s', escala:'periodo', modelos: MODELOS_OLAS, direccion:'wave_direction',
+    desc:'Segundos entre olas: por debajo de 6, mar de viento; de 8 para arriba, mar de fondo' },
+  { id:'fondo', g:'Mar', name:'Mar de fondo', v:'swell_wave_height', unit:'m', escala:'ola', modelos: MODELOS_OLAS, direccion:'swell_wave_direction',
+    desc:'Altura del mar de fondo: la ola larga que viene de lejos' },
+  { id:'periodofondo', g:'Mar', name:'Periodo del fondo', v:'swell_wave_period', unit:'s', escala:'periodo', modelos: MODELOS_OLAS, direccion:'swell_wave_direction',
+    desc:'Segundos entre olas del mar de fondo' },
+  { id:'marviento', g:'Mar', name:'Mar de viento', v:'wind_wave_height', unit:'m', escala:'ola', modelos: MODELOS_OLAS, direccion:'wind_wave_direction',
+    desc:'Altura del mar de viento: la ola corta que levanta el viento de aquí' },
+
 ];
 
 const BASEMAPS = [
@@ -473,6 +534,9 @@ const LENTOS = new Set(['ecmwf_ifs', 'ecmwf_ifs025', 'ncep_gfs013', 'ncep_gfs025
    y T850 pasan a degradado continuo; los cortes (30 naranja, 34 rojo, 38 granate)
    siguen siendo los suyos, solo se funden entre sí en vez de verse a bandas. */
 const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'sombraLluvia', 'tempc', 't850', 'rafagas',
+  /* 19-09-2026: olas y periodo fundidos, como Ventusky (pero en lineal:
+     la monótona hacía polígonos junto a la costa; ver TMODELS). */
+  'ola', 'periodo',
   /* 17-09-2026: la lluvia en mm/h también fundida entre cortes, como
      AguaceroWx («colores de interpolación» marcado). Sus cortes (0,1 ·
      0,3 · 1 · 4…) no son listones suyos, son la escala de intensidad. */
@@ -500,6 +564,11 @@ const RANGOS = {
   rh:    [0, 100, '%'],
   vis:   [0, 100, 'km'],
   gusts: [0, 400, 'km/h'],
+  ola:   [0, 30, 'm'],     // la ola más alta medida en el mundo ronda los 30 m
+  fondo: [0, 30, 'm'],
+  marviento: [0, 30, 'm'],
+  periodo: [0, 30, 's'],
+  periodofondo: [0, 30, 's'],
 };
 /** Devuelve el aviso para la barra de estado, o null si el número es creíble. */
 function fueraDeRango(L_, valor) {
@@ -1407,6 +1476,32 @@ function escalasPropias() {
     eje: slm, unidad: 'mm/h', pos: slm.map((_, i) => i),
   };
 
+  /* ── OLAS EN METROS Y PERIODO EN SEGUNDOS (19-09-2026) ─────────────
+     Los cortes y colores son los de la leyenda Mar de Ventusky, que él
+     puso en pantalla ese día (sus capturas de las 15:23): azul marino en
+     calma, azul a 1 m, cian a 2, verde a 2,5, amarillo a 3, naranja a 4,
+     rojo a 5, magenta a 6 y morados de 8 para arriba. Como en visibilidad,
+     la barra se reparte por tramos: en el Cantábrico casi todo pasa entre
+     0,5 y 3 m y ahí es donde hace falta distinguir. */
+  const om_ = [0, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 14];
+  const oc_ = ['#2b2d6b', '#3a4fb0', '#3c73d6', '#4aa6e0', '#42c9d0', '#5fcf5a', '#e8e23a',
+               '#f3a63a', '#e8503a', '#d0308a', '#8a2fa0', '#5e2380', '#3f1a5e', '#2a1140'];
+  const ola = {
+    scale: { type:'breakpoint', unit:'m', breakpoints: om_, colors: oc_.map(c => hexRGBA(c, 1)) },
+    eje: om_, unidad: 'm', pos: om_.map((_, i) => i),
+  };
+  /* Periodo, también de Ventusky: azul corto (mar de viento, picada),
+     verde a 6, amarillo a 8, naranja a 10-12, rojo a 14, morado de 18
+     para arriba. El corte de 8 s es el mismo que usa la pestaña Mar
+     para decir «mar de fondo». */
+  const pm_ = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
+  const pc_ = ['#2b2d6b', '#3c73d6', '#42c9b0', '#5fcf5a', '#e8e23a', '#f3a63a',
+               '#e8703a', '#e8503a', '#df3f60', '#d0308a', '#8a2fa0', '#3f1a5e'];
+  const periodo = {
+    scale: { type:'breakpoint', unit:'s', breakpoints: pm_, colors: pc_.map(c => hexRGBA(c, 1)) },
+    eje: pm_, unidad: 's', pos: pm_.map((_, i) => i),
+  };
+
   _escalas = {
     basecv, topecv, humedad,
     elevacion,
@@ -1416,6 +1511,7 @@ function escalasPropias() {
     dbz: { scale: ESCALA_DBZ, eje: DBZ, unidad: 'dBZ',
            conv: v => v > 0 ? 10 * Math.log10(200 * Math.pow(v, 1.6)) : 0 },
     presion, visibilidad, tempc, t850, rafagas, capeE, tapa, agua, isocero, sinColor, nubes, sombraLluvia,
+    ola, periodo,
   };
   return _escalas;
 }
@@ -1908,7 +2004,8 @@ const Maps = {
 
   /** ¿Esta capa la publica el modelo elegido? */
   propia(l) {
-    return l.id === 'radar' || l.id === 'aemet' || !!l.sat
+    // Las capas de mar tienen sus propios modelos: no son «de otro modelo».
+    return l.id === 'radar' || l.id === 'aemet' || !!l.sat || !!l.modelos
         || (this.meta?.variables ?? []).includes(l.v);
   },
 
@@ -2052,7 +2149,7 @@ const Maps = {
   precargarMetas() {
     if (this._metasPedidas) return;
     this._metasPedidas = true;
-    Promise.allSettled(this.alternativas().map(m => this.metaDe(m))).then(() => this.ui());
+    Promise.allSettled([...this.alternativas(), ...MODELOS_OLAS].map(m => this.metaDe(m))).then(() => this.ui());
   },
 
   /** Cuántos días de previsión publica un modelo. MEDIDO: va de 2 días
@@ -2070,7 +2167,7 @@ const Maps = {
   /** Al cruzar el zoom 6 con ECMWF HRES cargado se vuelve a pintar: de
    *  lejos con el de 25 km, de cerca con el de 9 km (misma capa, misma hora). */
   reaplicarPorZoom() {
-    if (!this.map || this.model !== 'ecmwf_ifs' || !this.usando) return;
+    if (!this.map || this.model !== 'ecmwf_ifs' || !this.usando || this.usando.mar) return;
     const lejos = hresDeLejos(this.model, this.map.getZoom());
     if (!!this.usando.porZoom === lejos) return;
     this.horaPedida = this.horaMirada();
@@ -2081,6 +2178,25 @@ const Maps = {
 
   async resolverModelo(L_) {
     if (!L_?.v) return null;
+    /* ── CAPAS DE MAR (19-09-2026) ───────────────────────────────────
+       Su lista de modelos es otra: ningún modelo de aire publica olas y
+       ningún modelo de olas publica ráfagas. Se busca SOLO en la lista
+       de la capa, primero lo que ya esté en caché, y se marca `mar`
+       para que el cartel diga con qué modelo de olas se pinta. No es
+       una «sustitución» (no hay nada que sustituir), así que
+       `sustituido` va en falso y la barra no grita CAPA SUSTITUIDA. */
+    if (L_.modelos) {
+      /* En ORDEN, no «lo que esté en caché primero»: medido en local el
+         19-09, con el segundo en caché y el primero sin pedir, salía el
+         segundo. Las fichas van precargadas (precargarMetas), así que
+         esperar la del primero no cuesta nada. */
+      for (const alt of L_.modelos) {
+        let m = this.metaCache[alt];
+        if (!m) { try { m = await this.metaDe(alt); } catch { continue; } }
+        if (m?.variables?.includes(L_.v)) return { modelo: alt, meta: m, sustituido: false, mar: true };
+      }
+      return null;
+    }
     /* HRES solo de cerca (ver hresDeLejos): de lejos, el de 25 km. */
     if (hresDeLejos(this.model, this.map?.getZoom?.())) {
       let m = this.metaCache['ecmwf_ifs025'];
@@ -2309,7 +2425,7 @@ const Maps = {
       }
       this.ajustarSlider();
     }
-    this.avisoSustitucion(R.sustituido ? R.modelo : null, R.porZoom);
+    this.avisoSustitucion(R.sustituido || R.mar ? R.modelo : null, R.porZoom, !!R.mar);
 
     this.ajustarSlider();
 
@@ -3122,7 +3238,7 @@ const Maps = {
     this.apply();
   },
 
-  avisoSustitucion(modeloAlt, porZoom = false) {
+  avisoSustitucion(modeloAlt, porZoom = false, mar = false) {
     const el = document.querySelector('#mapSust');
     if (!el) return;
     if (!modeloAlt) {
@@ -3134,6 +3250,12 @@ const Maps = {
     const alt = TMODELS.find(m => m.id === modeloAlt);
     const sel = TMODELS.find(m => m.id === this.model);
     el.hidden = false; el.dataset.k = 'sust';
+    if (mar) {
+      // Capa de mar: no es una sustitución, es que las olas tienen sus modelos.
+      el.innerHTML = `<b>Mar:</b> olas de <b>${esc(alt?.name || modeloAlt)}</b>${alt?.res ? ` · ${alt.res}` : ''}${alt?.desc ? ` · ${esc(alt.desc)}` : ''}.
+        Los modelos de aire (<b>${esc(sel?.name || this.model)}</b>) no publican olas; en tierra no hay dato.`;
+      return;
+    }
     if (porZoom) {
       el.innerHTML = `<b>${esc(sel?.name || this.model)}</b> (9 km) solo de cerca: a esta escala se pinta con
         <b>${esc(alt?.name || modeloAlt)}</b>, que se ve igual y no tarda 15 s ni se queda sin memoria.
@@ -4075,7 +4197,33 @@ const Maps = {
       // que el aviso de «esto no puede ser» va también aquí. Un número
       // imposible dado sin más se lee como un dato bueno.
       const imposible = fueraDeRango(L_, val);
-      pop.setHTML(`<b>${val.toFixed(Math.abs(val) < 10 ? 1 : 0)} ${esc(u)}</b>
+      /* Capas de mar (19-09-2026): la ola también se lee de DÓNDE viene.
+         La librería no pinta flechas sin componentes u/v, así que la
+         dirección se lee aquí, en el clic, de la variable hermana
+         (`direccion` en la capa) del MISMO modelo y hora. Si ese modelo
+         no la publica, no se pone nada: no se inventa un rumbo. */
+      let deDonde = '';
+      if (L_.direccion && R.meta?.variables?.includes(L_.direccion)) {
+        try {
+          const uD = limpiarMarca(this.omUrl(L_.direccion, this.t, R.modelo, R.meta) || '');
+          const leerD = async () => (await OMWeatherMapLayer.getValueFromLatLong(lngLat.lat, lngLat.lng, uD))?.value;
+          let d = null;
+          try { d = await leerD(); } catch {}
+          if (uD && !Number.isFinite(d)) {
+            const z = Math.min(12, Math.max(0, Math.round(this.map.getZoom())));
+            const n = 2 ** z;
+            const x = Math.floor((lngLat.lng + 180) / 360 * n);
+            const y = Math.floor((1 - Math.asinh(Math.tan(lngLat.lat * Math.PI/180)) / Math.PI) / 2 * n);
+            await OMWeatherMapLayer.omProtocol({ url: `${uD}/${z}/${x}/${y}`, type: 'image' }, new AbortController());
+            d = await leerD();
+          }
+          if (Number.isFinite(d)) {
+            const r = typeof rumboLargo === 'function' ? rumboLargo(d) : null;
+            deDonde = ` · del ${r ? esc(r) + ' ' : ''}(${Math.round(d)}°)`;
+          }
+        } catch { /* sin dirección: se enseña la altura sola */ }
+      }
+      pop.setHTML(`<b>${val.toFixed(Math.abs(val) < 10 ? 1 : 0)} ${esc(u)}</b>${deDonde}
          ${imposible ? `<small style="color:var(--no);font-weight:700">${esc(imposible)}</small>` : ''}
          <br><small>${esc(L_.name)} · ${esc(hora)}
          <br>${lngLat.lat.toFixed(3)}, ${lngLat.lng.toFixed(3)}
@@ -4496,6 +4644,8 @@ const Maps = {
       const b = e.target.closest('.ovb'); if (!b || b.classList.contains('is-on')) return;
       const L_ = TLAYERS.find(l => l.id === b.dataset.l);
       if (!L_?.v || L_.sat || L_.id === 'radar' || L_.id === 'aemet' || !this.usando) return;
+      // Una capa de mar no está en un modelo de aire, ni al revés: no se pide en vano.
+      if (!!L_.modelos !== !!this.usando.mar) return;
       const u = this.omUrl(L_.v, this.t, this.usando.modelo, this.usando.meta);
       if (!u || !this.map) return;
       const z = Math.min(12, Math.max(0, Math.round(this.map.getZoom())));
@@ -4508,7 +4658,7 @@ const Maps = {
 
     document.querySelector('#mapModels').innerHTML =
       `<span class="msel__k">Modelo</span>` +
-      TMODELS.map(m => {
+      TMODELS.filter(m => !m.mar).map(m => {
         const d = this.diasDe(m.id);
         return `<button class="mbtn${m.id === this.model ? ' is-on' : ''}" data-tm="${m.id}"
           title="${esc(m.desc)} · ${m.res}${d ? ` · llega a ${d} días` : ''}">${m.name}${
@@ -4559,7 +4709,7 @@ const Maps = {
     let cuerpo;
     if (tipo === 'modelo') {
       cuerpo = `<div class="hoja__g"><span class="hoja__k">Modelo</span>` +
-        TMODELS.map(m => {
+        TMODELS.filter(m => !m.mar).map(m => {
           const d = this.diasDe(m.id);
           return `<button class="hoja__i${m.id === this.model ? ' is-on' : ''}" data-tm="${m.id}">
             <b>${esc(m.name)}</b><small>${esc(m.res || '')}${

@@ -7664,7 +7664,7 @@ grupo('El mar se imprime con las unidades que da la fuente (14-09-2026)');
        const T = JSON.parse(JSON.stringify(M)); T.current_units.ocean_current_velocity = 'm/s';
        const a = avisoUnidadesMar(T);
        return typeof a === 'string' && /ocean_current_velocity en m\/s/.test(a) && /km\/h/.test(a) && unidadMar(T, 'ocean_current_velocity') === 'm/s';
-     })() && (src.match(/\]\.join\(''\) \+ notaUnidadesMar\(M\);/g) || []).length === 2,
+     })() && (src.match(/\]\.join\(''\) \+ notaUnidadesMar\(M\)( \+ notaCeldaMar\(M\))?;/g) || []).length === 2,
      'como la presión en hPa del mapa: la unidad rara se canta, no se disimula');
 }
 
@@ -7780,7 +7780,7 @@ grupo('Agua precipitable en Lluvia, presión por bandas de 4 hPa y HRES solo de 
   ok('ECMWF HRES solo de cerca: por debajo del zoom 6 se pinta con ECMWF 25 km y se dice; desde el 6, el de 9 km',
      typeof hl === 'function' && hl('ecmwf_ifs', 5.9) === true && hl('ecmwf_ifs', 6) === false
      && hl('ecmwf_ifs025', 3) === false && hl('ecmwf_ifs', NaN) === false
-     && /sustituido: true, porZoom: true/.test(M) && /this\.avisoSustitucion\(R\.sustituido \? R\.modelo : null, R\.porZoom\)/.test(M)
+     && /sustituido: true, porZoom: true/.test(M) && /this\.avisoSustitucion\(R\.sustituido \|\| R\.mar \? R\.modelo : null, R\.porZoom, !!R\.mar\)/.test(M)
      && /solo de cerca/.test(M) && /reaplicarPorZoom\(\)/.test(M) && /on\('zoomend'[^\n]*reaplicarPorZoom/.test(M),
      'a zoom bajo un píxel son 5 km: el de 25 km se ve igual, no tarda 15 s y no se queda sin memoria');
 }
@@ -8021,6 +8021,57 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      faltan.length === 0,
      faltan.length ? `SIN PRUEBA: ${faltan.join(' · ')}` : '');
 }
+
+/* ── MAR EN EL MAPA (19-09-2026, portátil) ───────────────────────────
+   Suyo, el sábado de las regatas de Bermeo: «en mapas no tengo mar, ¿lo
+   pones? sería lo suyo ponerlo», con las capas Mar de Ventusky en
+   pantalla. Las capas marinas se habían retirado el 21-08 por pintar
+   tierra; vuelven con su propia lista de modelos de olas, probadas en
+   pantalla (tierra sin pintar, clic con valor y rumbo). */
+{
+  const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const A = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  ok('el mapa tiene grupo Mar: ola, periodo, fondo, periodo del fondo y mar de viento, en metros y segundos',
+     /id:'ola', g:'Mar', name:'Altura de ola', v:'wave_height', unit:'m', escala:'ola', modelos: MODELOS_OLAS, direccion:'wave_direction'/.test(M)
+     && /id:'periodo', g:'Mar', name:'Periodo', v:'wave_period', unit:'s', escala:'periodo', modelos: MODELOS_OLAS, direccion:'wave_direction'/.test(M)
+     && /id:'fondo', g:'Mar', name:'Mar de fondo', v:'swell_wave_height', unit:'m', escala:'ola', modelos: MODELOS_OLAS, direccion:'swell_wave_direction'/.test(M)
+     && /id:'periodofondo', g:'Mar', name:'Periodo del fondo', v:'swell_wave_period', unit:'s', escala:'periodo', modelos: MODELOS_OLAS/.test(M)
+     && /id:'marviento', g:'Mar', name:'Mar de viento', v:'wind_wave_height', unit:'m', escala:'ola', modelos: MODELOS_OLAS, direccion:'wind_wave_direction'/.test(M));
+  ok('los modelos de olas están en TMODELS con mar:true, NO salen en la fila de botones y el MFWAM que tumba el mapa está fuera',
+     /id:'dwd_ewam', mar:true, name:/.test(M) && /id:'ecmwf_wam025', mar:true, name:/.test(M) && /id:'ncep_gfswave016', mar:true, name:/.test(M)
+     && !/id:'meteofrance_wave'/.test(M)
+     && /const MODELOS_OLAS = \['dwd_ewam', 'ecmwf_wam025', 'ncep_gfswave016'\];/.test(M)
+     && /!!l\.sat \|\| !!l\.modelos/.test(M)
+     && (M.match(/TMODELS\.filter\(m => !m\.mar\)\.map\(m => \{/g) || []).length === 2
+     && !/TMODELS\.map\(m => \{/.test(M),
+     'un modelo de olas no publica ráfagas: elegirlo a mano dejaría el mapa en blanco');
+  ok('una capa de mar busca modelo SOLO en su lista y el cartel dice con qué modelo de olas se pinta',
+     /if \(L_\.modelos\) \{[\s\S]{0,900}?for \(const alt of L_\.modelos\) \{\s*let m = this\.metaCache\[alt\];\s*if \(!m\) \{ try \{ m = await this\.metaDe\(alt\); \} catch \{ continue; \} \}\s*if \(m\?\.variables\?\.includes\(L_\.v\)\) return \{ modelo: alt, meta: m, sustituido: false, mar: true \};\s*\}\s*return null;\s*\}/.test(M)
+     && /this\.avisoSustitucion\(R\.sustituido \|\| R\.mar \? R\.modelo : null, R\.porZoom, !!R\.mar\);/.test(M)
+     && /avisoSustitucion\(modeloAlt, porZoom = false, mar = false\)/.test(M)
+     && /no publican olas; en tierra no hay dato/.test(M)
+     && /Promise\.allSettled\(\[\.\.\.this\.alternativas\(\), \.\.\.MODELOS_OLAS\]\.map/.test(M));
+  ok('las escalas de ola (m) y periodo (s) existen, van fundidas pero en lineal (la monótona hacía polígonos en la costa), y tienen rango de cordura',
+     /const ola = \{\s*scale: \{ type:'breakpoint', unit:'m', breakpoints: om_/.test(M)
+     && /const periodo = \{\s*scale: \{ type:'breakpoint', unit:'s', breakpoints: pm_/.test(M)
+     && /nubes, sombraLluvia,\s*ola, periodo,\s*\};/.test(M)
+     && /const ESCALAS_SUAVES = new Set\(\[[^\]]*'ola', 'periodo',[^\]]*\]\);/.test(M)
+     && !/const INTERPOLACION_SUAVE = new Set\(\[[^\]]*'ola'/.test(M)
+     && /ola:\s+\[0, 30, 'm'\]/.test(M) && /periodo: \[0, 30, 's'\]/.test(M));
+  ok('el clic en una capa de mar lee también de dónde viene la ola, del mismo modelo y hora, y no inventa rumbo si falta',
+     /if \(L_\.direccion && R\.meta\?\.variables\?\.includes\(L_\.direccion\)\)/.test(M)
+     && /deDonde = ` · del \$\{r \? esc\(r\) \+ ' ' : ''\}\(\$\{Math\.round\(d\)\}°\)`;/.test(M)
+     && /if \(!!L_\.modelos !== !!this\.usando\.mar\) return;/.test(M)
+     && /this\.model !== 'ecmwf_ifs' \|\| !this\.usando \|\| this\.usando\.mar\) return;/.test(M));
+  ok('la pestaña Mar dice en qué celda lee el modelo de olas y a cuántos km queda (Bermeo: 13 km al norte)',
+     /^function acimut\(a, b\) \{/m.test(A)
+     && /^function notaCeldaMar\(M\) \{/m.test(A)
+     && /Leído en la celda del modelo de olas: mar abierto a <b>/.test(A)
+     && /notaUnidadesMar\(M\) \+ notaCeldaMar\(M\);/.test(A)
+     && (A.match(/ \+ notaCeldaMar\(M\);/g) || []).length === 1,
+     'solo en la pestaña Mar: la tarjeta de Ahora no la lleva');
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════
    EL RECUENTO VA EL ÚLTIMO. SIEMPRE.
