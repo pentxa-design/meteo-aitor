@@ -2867,6 +2867,29 @@ ok('y el rebote se calcula con lo medido, no escrito a mano',
 /* ── DE DÓNDE LLEGA EL VIENTO, ARRIBA (18-09-2026, 20:37) ───────────
    Suyo, en Baquio: «falta dirección de viento poner» · «lo quiero arriba
    también» · «si no tengo que desplazarme hasta abajo». */
+/* ── OLEAJE POR HORAS (19-09-2026) ───────────────────────────────────
+   Suyo, con regatas a las 18:00: «¿dónde miro qué oleaje va a haber en
+   Bermeo sobre las 18 h? en Mar solo pone lo de ahora, ¿no?». */
+grupo('Mar: una tarjeta por hora con ola, rumbo, periodo, mar de fondo, mar de viento y viento a 10 m');
+{
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  ok('se piden al modelo marino el rumbo de la ola y el mar de viento por horas',
+     /hourly: 'sea_level_height_msl,wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,wind_wave_height'/.test(src));
+  ok('la tira #waveHours existe y se pinta desde la hora en curso con los números tal cual',
+     /id="waveHours"/.test(html)
+     && /function pintarOleajeHoras\(M, iAhora\)/.test(src)
+     && /pintarOleajeHoras\(M, iAhora\);/.test(src)
+     && /<span>🌊 \$\{has\(dirO\) \? 'del ' \+ esc\(rumboLargo\(dirO\)\) : 'rumbo sin dato'\}<\/span>/.test(src)
+     && /periodo \$\{has\(per\) \? mTxt\(per\) \+ ' s' : '—'\}/.test(src)
+     && /mar de viento \$\{has\(mv\) \? mTxt\(mv\) \+ ' m' : '—'\}/.test(src));
+  ok('el viento de cada hora sale del modelo de tiempo a 10 m, con rumbo y racha, y sin semáforo',
+     /wtxt\(h\.w10 \?\? h\.wind, true\)\}\$\{has\(h\.dir\) \? ' del ' \+ esc\(rumboLargo\(h\.dir\)\) : ''\}/.test(src)
+     && /Racha \$\{wtxt\(h\.gust10 \?\? h\.gust, true\)\}<small> a 10 m<\/small>/.test(src)
+     && !/hcard hcard--mar" data-s=/.test(src));
+  ok('tierra adentro la tira se vacía, no se queda con el mar de otro sitio',
+     /\$\('#waveGraph'\)\.innerHTML = ''; if \(\$\('#waveHours'\)\) \$\('#waveHours'\)\.innerHTML = '';/.test(src));
+}
+
 grupo('El viento y su rumbo salen arriba: portada, franjas y lo medido por AEMET');
 {
   const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');

@@ -2798,3 +2798,6 @@ body.sin-scroll{overflow:hidden}
 /* Lo medido de verdad (AEMET más cercana) bajo el «ahora» del modelo (18-09-2026). */
 .cover__aemet{margin-top:4px}
 .cover__aemet:empty{display:none}
+
+/* Oleaje por horas (19-09-2026): la racha en la tarjeta del mar no es un semáforo. */
+.hcard--mar .hcard__g{white-space:normal}

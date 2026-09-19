@@ -2473,7 +2473,7 @@ async function loadAll(p) {
     ...baseMar, forecast_days: 3,
     current: 'wave_height,wave_period,wave_direction,sea_surface_temperature,'
            + 'swell_wave_height,swell_wave_period,wind_wave_height,ocean_current_velocity',
-    hourly: 'sea_level_height_msl,wave_height,wave_period,swell_wave_height,swell_wave_period',
+    hourly: 'sea_level_height_msl,wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,wind_wave_height',
   }).catch(e => {
     /* Tierra adentro el modelo marino contesta 4xx: no hay pestaña Mar y
        punto. Pero un 5xx, un corte o un tiempo agotado NO es «no hay mar»:
@@ -13880,7 +13880,7 @@ function renderSea() {
         así que no hay datos de marea ni oleaje. No se muestra nada estimado.`;
     }
     dentro.forEach(e => { if (e) e.hidden = true; });
-    $('#seaDet').innerHTML = ''; $('#waveGraph').innerHTML = '';
+    $('#seaDet').innerHTML = ''; $('#waveGraph').innerHTML = ''; if ($('#waveHours')) $('#waveHours').innerHTML = '';
     return;
   }
   if (nota) { nota.hidden = true; nota.innerHTML = ''; }
@@ -14004,7 +14004,47 @@ function renderSea() {
         <path d="${p}" stroke="#a89bff" stroke-width="2.4" fill="none"/>
       </svg>
       <div class="ola__horas">${marcas}</div>`;
+    pintarOleajeHoras(M, iAhora);
+  } else if ($('#waveHours')) $('#waveHours').innerHTML = '';
+}
+
+/* ── OLEAJE POR HORAS (19-09-2026, 12:30, sábado de regatas) ─────────
+   Suyo: «si quiero saber qué oleaje va a haber en Bermeo sobre las 18 h,
+   ¿dónde miro? hay regatas» · «en Mar solo pone lo de ahora, ¿no?». La
+   gráfica de 48 h daba la forma y el máximo, pero ni un número por hora.
+   Aquí va una tarjeta por hora, como en Horas: ola y de dónde viene,
+   periodo, mar de fondo, mar de viento, y el viento a 10 m de ESA hora
+   con su rumbo y su racha. Todo tal cual lo publican el modelo marino y
+   el de tiempo; sin semáforo, porque para la mar él no tiene listones. */
+function pintarOleajeHoras(M, iAhora) {
+  const el = $('#waveHours');
+  if (!el) return;
+  const H = M?.hourly || {}, T = H.time || [];
+  const hs = S.data?.hours || [];
+  const hoy = new Date().toDateString();
+  const out = [];
+  for (let i = iAhora; i < Math.min(T.length, iAhora + 48); i++) {
+    const t = new Date(T[i]);
+    if (Number.isNaN(t.getTime()) || !has(H.wave_height?.[i])) continue;
+    const h = hs.find(x => x.date && Math.abs(x.date.getTime() - t.getTime()) < 30 * 60e3);
+    const dia = t.toDateString() === hoy ? 'hoy' : t.toLocaleDateString('es', { weekday: 'short' }).replace('.', '');
+    const ola = H.wave_height[i], per = H.wave_period?.[i], dirO = H.wave_direction?.[i];
+    const fondo = H.swell_wave_height?.[i], perF = H.swell_wave_period?.[i], mv = H.wind_wave_height?.[i];
+    out.push(`<div class="hcard hcard--mar">
+      <div class="hcard__h">${String(t.getHours()).padStart(2, '0')}:00</div>
+      <div class="hcard__d">${esc(dia)}</div>
+      <div class="hcard__t">${mTxt(ola)}<small> m</small></div>
+      <div class="hcard__r">
+        <span>🌊 ${has(dirO) ? 'del ' + esc(rumboLargo(dirO)) : 'rumbo sin dato'}</span>
+        <span>periodo ${has(per) ? mTxt(per) + ' s' : '—'}</span>
+        <span class="faint">fondo ${has(fondo) ? mTxt(fondo) + ' m' : '—'}${has(perF) ? ' · ' + mTxt(perF) + ' s' : ''}</span>
+        <span class="faint">mar de viento ${has(mv) ? mTxt(mv) + ' m' : '—'}</span>
+      </div>
+      <div class="hcard__g">${h && has(h.w10 ?? h.wind) ? `💨 ${wtxt(h.w10 ?? h.wind, true)}${has(h.dir) ? ' del ' + esc(rumboLargo(h.dir)) : ''}` : '💨 —'}</div>
+      ${h && has(h.gust10 ?? h.gust) ? `<div class="hcard__c">Racha ${wtxt(h.gust10 ?? h.gust, true)}<small> a 10 m</small></div>` : ''}
+    </div>`);
   }
+  el.innerHTML = out.join('') || '<p class="note">Sin oleaje por horas para este punto.</p>';
 }
 
 /* ---------- 13. Avisos oficiales ---------- */
