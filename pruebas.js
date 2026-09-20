@@ -8113,8 +8113,9 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /const ESCALAS_SUAVES = new Set\(\[[^\]]*'ola', 'periodo',[^\]]*\]\);/.test(M)
      && !/const INTERPOLACION_SUAVE = new Set\(\[[^\]]*'ola'/.test(M)
      && /ola:\s+\[0, 30, 'm'\]/.test(M) && /periodo: \[0, 30, 's'\]/.test(M));
-  ok('el clic en una capa de mar lee también de dónde viene la ola, del mismo modelo y hora, y no inventa rumbo si falta',
-     /if \(L_\.direccion && R\.meta\?\.variables\?\.includes\(L_\.direccion\)\)/.test(M)
+  /* 20-09-2026: la lectura sigue escrita pero detrás de RUMBO_EN_CLIC_MAR (false): medido «del norte (2°)» donde la API daba 318°. Ver el grupo «El rumbo del clic de Mar está apagado». */
+  ok('el clic en una capa de mar tiene escrita la lectura de dónde viene la ola (mismo modelo y hora, sin inventar si falta), hoy apagada por el interruptor',
+     /if \(RUMBO_EN_CLIC_MAR && L_\.direccion && R\.meta\?\.variables\?\.includes\(L_\.direccion\)\)/.test(M)
      && /deDonde = ` · del \$\{r \? esc\(r\) \+ ' ' : ''\}\(\$\{Math\.round\(d\)\}°\)`;/.test(M)
      && /if \(!!L_\.modelos !== !!this\.usando\.mar\) return;/.test(M)
      && /this\.model !== 'ecmwf_ifs' \|\| !this\.usando \|\| this\.usando\.mar\) return;/.test(M));
