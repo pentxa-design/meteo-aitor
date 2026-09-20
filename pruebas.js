@@ -4162,9 +4162,12 @@ grupo('«Me pasan a las 2 de la mañana: Arbaiza» — el viaje entra en la resp
   ok('la fila de cifras empieza por la lluvia, el CAPE y la tapa',
      orden.slice(0, 3).join(',') === 'prec,cape,cin',
      `salió: ${orden.slice(0, 4).join(', ')} — para él la lluvia es lo primero`);
-  ok('y la racha a SU altura va antes que la de 10 m',
-     orden.indexOf('gust') >= 0 && orden.indexOf('gust') < orden.indexOf('gust10'),
-     'la de 10 m es contexto: él trabaja a la altura que tenga puesta');
+  /* 20-09-2026: a pie de caseta. La racha es UNA, la de 10 m, y va la
+     cuarta; la estimada a su altura de trabajo ya no se pinta («de torre
+     no quiero ver nada»). */
+  ok('y la racha va la cuarta, y es la de 10 m: a pie de caseta, sin estimada a otra altura',
+     orden.slice(0, 9).join(',') === 'prec,cape,cin,gust10,w10,temp,frz,li,vis',
+     `salió: ${orden.join(', ')}`);
 
   ok('el parte también: primero la lluvia, luego el rayo, luego la racha',
      /const cuerpo = `\$\{lineaLluvia\(k\)\}\s*\n\s*<div class="pt__d">\$\{porQue\}<\/div>\s*\n\s*\$\{lineaRacha\(k\)\}/.test(src),
@@ -5168,10 +5171,13 @@ grupo('POR DEFECTO LA CASETA, NO LA TORRE (01-09-2026, suyo)');
      a vivir en «Ajustar», por emplazamiento. Lo que se sigue exigiendo es
      que ALLÍ se diga que 10 es la caseta: es el malentendido que le costó
      leer «36 m» como altura de trabajo cuando era la altitud. */
-  ok('y el botón de 10 m dice que es la caseta',
-     /Altura de trabajo <small>10 = a pie de caseta<\/small>/.test(src)
-     && !/class="hbtn/.test(src),
-     'la altura vive en Ajustar, y allí tiene que decir qué es el 10');
+  /* 20-09-2026: la altura de trabajo ya no se pide en Ajustar; Mis
+     estaciones va siempre a pie de caseta y lo dice en el pie. */
+  ok('la altura de trabajo ya no se pide en Ajustar: Mis estaciones va a pie de caseta y lo dice',
+     !/Altura de trabajo <small>10 = a pie de caseta<\/small>/.test(src)
+     && !/class="hbtn/.test(src)
+     && /A pie de caseta · a \$\{ALTURA_CASETA\} m/.test(src),
+     'suyo: «eso de trabajo a 40 metros fuera, solo a pie de caseta, resto sobra»');
   ok('las alturas de arriba siguen estando, que subir es decisión suya',
      /const HEIGHTS = \[10, 20, 30, 40/.test(src),
      'no se le quita la herramienta: se le quita el valor por defecto equivocado');
@@ -5227,7 +5233,7 @@ grupo('CADA EMPLAZAMIENTO CON SUS DATOS, NO CON LOS DEL DE AL LADO (01-09)');
 
   /* Y que el parte evalúe cada fila con SU sitio. */
   ok('el parte construye las horas de cada emplazamiento con SU sitio',
-     /buildHours\(fc, cfg\.alt, p\)/.test(src)
+     /buildHours\(fc, ALTURA_CASETA, p\)/.test(src)
      && /assess\(h, S\.thr, S\.perfil, place \?\? S\.place\)/.test(src),
      'con veinte sitios, evaluar todos con el abierto es mandar con el color de otro');
   ok('y la comparativa lleva grabado de qué sitio es',
@@ -6388,11 +6394,14 @@ grupo('Lo que dice la pantalla cuadra con lo que enseña (02-09-2026)');
      y debajo «se pasó 3 km/h». */
   ok('el veredicto resta el número que se ENSEÑA, no otro',
      /const mostrado = rachaCinco\?\.v \?\? H\?\.gust10;/.test(src)
-     && /Math\.round\(M\.racha - mostrado\)/.test(src)
+     && /Math\.round\(M\.racha\) - Math\.round\(mostrado\)/.test(src)
      && !/Math\.round\(M\.racha - H\.gust10\)/.test(src),
      'antes: tabla 36 contra 20, y el veredicto decía «se pasó 3»');
-  ok('y si el que se enseña es el más alto, se dice de quién es',
-     /el de \$\{esc\(deQuien\)\}, que es el que se enseña arriba/.test(src));
+  ok('y si el que se enseña es el más alto, se juzga a los dos: el más alto y el de la cabecera, cada uno con su cifra',
+     /el más alto de los cinco \(\$\{esc\(deQuien\)\} \$\{wtxt\(mostrado, true\)\}\) \$\{juicioDe\(dif, mostrado\)\}/.test(src)
+     && /el de la cabecera \(\$\{esc\(cargado\.n\)\} \$\{wtxt\(cargado\.v, true\)\}\) \$\{juicioDe\(difC, cargado\.v\)\}/.test(src)
+     && !/que es el que se enseña arriba/.test(src),
+     '20-09-2026, BI BERMEO: la tabla ponía 13 contra 9 y decía «se pasó 4»; la cabecera enseñaba 9 y había clavado');
 
   /* Y se EJERCITA con los números de su captura. */
   const dif = (mostrado, medida) => Math.round(medida - mostrado);
@@ -8155,6 +8164,51 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      /has\(r\.max\) \? ` · máxima/.test(A) && /has\(r\.dir\) && rumboLargo\(r\.dir\) \? ` · del/.test(A)
      && /has\(r\.agua\) \? ` · agua/.test(A)
      && /Medido de verdad · <b>\$\{esc\(r\.nombre\)\}<\/b> \(EuskOOS, /.test(A));
+}
+
+
+/* ── MIS ESTACIONES A PIE DE CASETA (20-09-2026, portátil) ──────────────
+   Suyo, con catorce pantallazos delante y la prueba de fuego al día
+   siguiente: «eso de trabajo a 40 metros fuera, solo a pie de caseta,
+   resto sobra» · «de torre no quiero ver nada» · «tienen que cuadrar los
+   datos». Y los fallos que vio o que salieron al repasar: la frase «el
+   de ECMWF, que es el que se enseña arriba» con otro número arriba; el
+   30/31 de la misma hora sin decir de quién era cada uno; «los 5 de
+   acuerdo, 11 km/h de diferencia»; humedad 101 %; veredicto con una
+   lectura de hace 65 min. */
+{
+  const A = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  ok('las horas de cada emplazamiento se calculan a 10 m (ALTURA_CASETA), no a la altura de trabajo guardada',
+     /const ALTURA_CASETA = 10;/.test(A)
+     && /horas: buildHours\(fc, ALTURA_CASETA, p\)/.test(A)
+     && /horas: buildHours\(copia\.data\.fc, ALTURA_CASETA, place\)/.test(A)
+     && !/buildHours\(fc, cfg\.alt, p\)/.test(A) && !/cfgDe\(place\)\.alt, place\)/.test(A));
+  ok('la cabecera de la tarjeta lleva UNA racha y UN viento, los de 10 m, sin «(est.)» ni «de altura»',
+     /'racha a 10 m · a pie de caseta', rachaAltaP, 'decide'/.test(A)
+     && /\`viento a 10 m\$\{has\(h\.dir\) \? ' · del ' \+ rumboLargo\(h\.dir\) : ''\}\`/.test(A)
+     && !/'racha a 10 m de altura'/.test(A)
+     && !/racha a \$\{h\.h\} m\$\{h\.gustEst \? ' \(est\.\)' : ''\}\`, rachaAlta/.test(A));
+  ok('el pie de la tarjeta dice «A pie de caseta · a 10 m · cota», y Ajustar solo pide la cota',
+     /A pie de caseta · a \$\{ALTURA_CASETA\} m/.test(A)
+     && !/trabajo a <b>\$\{t\.cfg\?\.alt/.test(A)
+     && !/data-c="alt"/.test(A) && !/data-c="tipo"/.test(A)
+     && /const c = \{ tipo: previo\.tipo \|\| 'torre', alt: previo\.alt \?\? S\.hgt, cota: num\('cota'\) \};/.test(A));
+  ok('con una lectura de más de 60 min no hay veredicto: se dice de cuándo es y se espera',
+     /const lecturaVieja = has\(minM\) && minM > 60;/.test(A)
+     && /sin veredicto: la lectura de\s*\$\{esc\(M\.nombre\)\} es de \$\{esc\(hace\)\}/.test(A));
+  ok('la humedad medida no pasa de 100 y se dice lo que marca el aparato (Matxitxako 101 %)',
+     /^function hrMedida\(v\) \{/m.test(A)
+     && /has\(M\?\.humedad\) \? hrMedida\(M\.humedad\) : ''/.test(A)
+     && /const medido = \(c\.k === 'humedad' && has\(x\[c\.k\]\)\) \? Math\.min\(100, x\[c\.k\]\) : x\[c\.k\];/.test(A)
+     && /HR \$\{Math\.min\(100, Math\.round\(e\.humedad\)\)\} %/.test(A));
+  ok('«de acuerdo» solo hasta 5 km/h; por debajo de 12 se dice la horquilla',
+     /dif <= 5 \? \{ c: 'ok',  t: \`los \$\{filas\.length\} de acuerdo: de/.test(A)
+     && /dif < 12 \? \{ c: 'ok',  t: \`de \$\{wtxt\(mn\.v\)\} a \$\{wtxt\(mx\.v, true\)\} entre los/.test(A)
+     && !/de acuerdo, \$\{difVista/.test(A));
+  ok('la racha máxima del parte dice quién la da, y la línea de horas de qué modelo son las cifras',
+     /return \{ k: key\(p\), racha: mx, hora, quien \};/.test(A)
+     && /la más alta de los \$\{MODELOS_TORMENTA\.length\}, la da \$\{esc\(R\.quien\)\}/.test(A)
+     && /cifras de \$\{esc\(model\(\)\.name\)\} a \$\{ALTURA_CASETA\} m/.test(A));
 }
 
 

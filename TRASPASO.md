@@ -832,3 +832,69 @@ Publicado en UNA tanda (`deploy.sh`, 1101 pruebas en verde): build 2026.09.20-10
 **11:00, OPCIÓN A publicada (build 2026.09.20-1052, commits 6c2bc29 y 98e177b): sin rumbo en el clic de las capas de Mar.** Orden del chat del MacBook vía Aitor («si la B se alarga, publica ya la A»). **Medido antes en el Chrome del iMac (build 1038, EWAM, «Altura de ola», dom 20 a las 11:00):** el clic decía «1,8 m · del norte (2°)» en 43,60/-2,90 **y también** en 43,90/-3,50; la API marina del mismo modelo y hora (`/om?api=marine&models=ewam`) daba **318° y 319°** (noroeste) en esos dos puntos, con 1,80 y 1,82 m. La altura cuadra; el rumbo sale siempre ~2°. Y ojo: el ejemplo de §25 («1,9 m · del norte (2°)») ya era ese mismo 2°. Hecho: `RUMBO_EN_CLIC_MAR = false` en maps.js (junto a MODELOS_OLAS), la lectura sigue escrita detrás del interruptor; guardia nueva vista en rojo y la del portátil («el clic … lee también de dónde viene la ola») reescrita para admitir el interruptor. 1102 en verde.
 
 **OPCIÓN B, PARA EL MACBOOK (sin hacer):** averiguar qué devuelve `OMWeatherMapLayer.getValueFromLatLong(lat, lng, uD)` sobre la variable `wave_direction`: no son grados. Pistas: (1) `uD` sale de `omUrl(L_.direccion, …)` con `limpiarMarca`, pero `omUrl` mete `interpolation=linear` y la marca de la escala de la CAPA (`ola`) al buscar por variable — la tesela de dirección puede estar pidiéndose con la escala de altura y devolviendo el valor «pintado» o un índice; (2) la dirección es circular: interpolar linealmente 350° y 10° da 180°, y un «2» constante huele a valor normalizado (¿0-1?, ¿radianes?); (3) comparar en consola `getValueFromLatLong` de `wave_height` (que cuadra) y de `wave_direction` en el mismo punto, y contra la API marina del mismo modelo (`models=ewam`). Cuando cuadre en dos puntos con la API, `RUMBO_EN_CLIC_MAR = true` y las dos guardias.
+
+### §28 · 20-09-2026, 11:00-12:30, portátil: MIS ESTACIONES A PIE DE CASETA, y los fallos de sus catorce pantallazos
+
+**Lo que dijo**, con las tarjetas delante y la prueba de fuego al día
+siguiente: *«eso de trabajo a 40 metros fuera, solo a pie de caseta,
+resto sobra»* · *«de torre no quiero ver nada»* · *«el 90 % del trabajo
+es a pie de caseta: contadores, fusibles, cuadros, grupos electrógenos,
+cortar la hierba del recinto»* · *«ya decido yo con lo que tengo en la
+base de la caseta más 40 metros de torre»* · *«tienen que cuadrar los
+datos»* · *«con calma y revisa 2 veces»*.
+
+**Lo que estaba mal (visto en sus capturas de las 11:03-11:07):**
+1. BI BERMEO, Balmaseda, Zornotza: «nuestro pronóstico se pasó 4 km/h —
+   el de ECMWF, que es el que se enseña arriba». Arriba (cabecera) se
+   enseñaba el modelo cargado con 9 y la estación midió 9: clavado. El 13
+   era el más alto de los cinco. La frase acusaba al modelo equivocado.
+2. Gernika2 y Zornotza: «a las 15:00 · racha 30» y dos líneas más abajo
+   «Racha máxima 31 a las 15:00». No era redondeo: la línea de horas es
+   el modelo cargado y la máxima es la más alta de los cinco, y ninguna
+   decía de quién era.
+3. Almike y Matxitxako (AEMET): «Entre ellos: los 5 de acuerdo, 11 km/h
+   de diferencia» con los modelos de 2 a 13. Se contradecía sola.
+4. Matxitxako (Euskalmet): humedad **101 %** medida, y «ninguno se acerca»
+   con los modelos de 72 a 90. Sensor saturado tomado como medida.
+5. Amorebieta-Etxano: veredicto «se pasó 9 km/h» comparando la hora en
+   curso del modelo con una lectura de AEMET de hace 65 min.
+6. Sollubemendi (trabajo a 40 m): «racha 40 a las 15:00» (estimada a
+   40 m, sin decirlo) y «racha máxima 35 a 10 m». Y con trabajo a 10 m,
+   dos casillas iguales: «racha a 10 m» y «racha a 10 m de altura».
+
+**Lo hecho (build de esta publicación):**
+- `ALTURA_CASETA = 10` en `app.js`: `cargarTorres` (y la vía de copia)
+  construyen las horas con `buildHours(fc, ALTURA_CASETA, p)`. Nada se
+  estima a otra altura en Mis estaciones: cabecera, semáforo, línea de
+  horas, racha máxima y tabla contra el aparato, todo a 10 m.
+- Cabecera: UNA racha («racha a 10 m · a pie de caseta») y UN viento
+  («viento a 10 m · del …»). Pie: «A pie de caseta · a 10 m · cota X».
+  Ajustar solo pide la cota; tipo y altura guardados se conservan sin
+  pintarse. (En Ahora sigue su ajuste de altura: es otra pantalla.)
+- Veredicto: si la lectura tiene más de 60 min, **sin veredicto** («la
+  lectura de X es de hace 65 min… se compara cuando llegue la de esta
+  hora»). Si el más alto de los cinco no es el cargado, se juzga a los
+  dos con nombre y cifra: «el más alto de los cinco (ECMWF 13 km/h) se
+  pasó 4 km/h; el de la cabecera (AROME HD 9 km/h) clavó».
+- `hrMedida()`: la humedad medida no pasa de 100; se enseña «100 % (el
+  aparato marca 101)» en la tabla, en el aparato y en la línea de AEMET
+  de Ahora, y se compara con 100.
+- `frasesContraste`: «los 5 de acuerdo: de 12 a 13 km/h» solo hasta 5
+  km/h; de 5 a 12, «de 2 a 13 km/h entre los 5: 11 km/h de diferencia».
+- «Racha máxima 31 km/h a 10 m a las 15:00 · la más alta de los 5, la da
+  ECMWF» y la línea de horas cierra con «cifras de AROME HD a 10 m».
+- Pruebas: 7 nuevas y 4 adaptadas (las que fijaban la altura de trabajo).
+  1109 en verde. Comprobado en local con dos sitios guardados (uno con
+  alt 40): cabecera, pie, horas y máxima como se describe. El veredicto
+  y la humedad se comprueban en producción, que es donde está
+  `/estaciones`.
+- Y la resta del veredicto va entre los enteros que se ven: en Zornotza
+  salía «AROME HD 7 km/h clavó» con la estación en 4 (4,4 y 6,6 por
+  dentro). Ahora `dif` y `difC` son `Math.round(medido) − Math.round(modelo)`.
+- Comprobado en producción (build 1134, con tres sitios guardados desde el
+  navegador): BI BERMEO «el más alto de los cinco (ECMWF 13 km/h) clavó;
+  el de la cabecera (AROME HD 10 km/h) clavó»; Zornotza con Amorebieta a
+  38 min ya da veredicto; Sollubemendi contra Matxitxako sigue en «no se
+  pueden comparar» por los 236 m. La humedad de Matxitxako marcaba ya
+  100 a esa hora: el caso 101 queda cubierto por la prueba.
+- Publicado como build 2026.09.20-1143 y comprobado en producción: Zornotza «el de la cabecera (AROME HD 7 km/h) se pasó 3 km/h» con la estación en 4; «Entre ellos: de 3 a 13 km/h entre los 5: 10 km/h de diferencia».

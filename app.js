@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.20-1052';
+const BUILD = '2026.09.20-1143';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -1568,7 +1568,11 @@ function frasesContraste(filas, medido) {
   })();
 
   const acuerdo = bandos ? { c: 'mal', t: bandos }
-                : dif < 12 ? { c: 'ok',  t: `los ${filas.length} de acuerdo, ${difVista(mx.v, mn.v, true)} de diferencia` }
+                /* «Los 5 de acuerdo, 11 km/h de diferencia» se contradecía
+                   sola (Almike, 20-09-2026: de 2 a 13). De acuerdo es hasta
+                   5; por debajo de 12 se dice la horquilla, no «de acuerdo». */
+                : dif <= 5 ? { c: 'ok',  t: `los ${filas.length} de acuerdo: de ${wtxt(mn.v)} a ${wtxt(mx.v, true)}` }
+                : dif < 12 ? { c: 'ok',  t: `de ${wtxt(mn.v)} a ${wtxt(mx.v, true)} entre los ${filas.length}: ${difVista(mx.v, mn.v, true)} de diferencia` }
                 : dif < 25 ? { c: 'reg', t: `${difVista(mx.v, mn.v, true)} entre el más flojo y el más fuerte` }
                 :            { c: 'mal', t: `${difVista(mx.v, mn.v, true)} de diferencia, no se ponen de acuerdo` };
 
@@ -1604,6 +1608,15 @@ function frasesContraste(filas, medido) {
    pluviómetro, no hay fila de lluvia — no se rellena con el modelo y se
    hace pasar por medida, que es el fallo que ya se cometió con la altura
    del suelo. */
+/** Humedad medida, tal cual pero sin pasar de 100: la de Matxitxako
+ *  marcó 101 % el 20-09-2026 (sensor saturado). Se enseña 100 y se dice
+ *  lo que marca el aparato; compararla como 101 hacía que «ninguno se
+ *  acerca» sin que ningún modelo fallara. */
+function hrMedida(v) {
+  if (!has(v)) return '';
+  return v > 100 ? `<b>100 %</b> <small>(el aparato marca ${Math.round(v)})</small>` : `<b>${Math.round(v)} %</b>`;
+}
+
 function otrasMedidas(H, i, x) {
   /* La cifra y la unidad van SEPARADAS a propósito. Primera versión, y
      se vio nada más mirarla: «de 25 km/h a 42 km/h», «de 22,0 °C a
@@ -1632,7 +1645,11 @@ function otrasMedidas(H, i, x) {
   ];
 
   const filas = CUALES.map(c => {
-    const medido = x[c.k];
+    /* La humedad no pasa de 100 (ver hrMedida): se compara con 100 y se
+       dice lo que marca el aparato. */
+    const marca = (c.k === 'humedad' && has(x[c.k]) && x[c.k] > 100)
+      ? ` <small>(marca ${Math.round(x[c.k])})</small>` : '';
+    const medido = (c.k === 'humedad' && has(x[c.k])) ? Math.min(100, x[c.k]) : x[c.k];
     if (!has(medido)) return '';
     const vs = COMPARAR.map(m => ({ n: m.name, v: H[`${c.om}_${m.om}`]?.[i] }))
                        .filter(f => has(f.v));
@@ -1681,7 +1698,7 @@ function otrasMedidas(H, i, x) {
                 : clavan.length * 2 >= vs.length ? 'go' : 'warn';
 
     return `<tr><th>${c.eti}</th>
-      <td${tonoMed ? ` data-t="${tonoMed}"` : ''}><b>${c.med(medido)}</b> <i>${c.uni}</i></td>
+      <td${tonoMed ? ` data-t="${tonoMed}"` : ''}><b>${c.med(medido)}</b> <i>${c.uni}</i>${marca}</td>
       <td>${abanico}</td><td data-t="${tonoQ}">${quien}</td></tr>`;
   }).filter(Boolean).join('');
 
@@ -6477,10 +6494,20 @@ function rejillaLluvia(H, i) {
    el viento real es MAYOR que el que se ve en pantalla. Eso hay que
    decirlo, no callarlo.                                              */
 
-const TIPOS = {
-  torre:  { et:'Torre en campo o monte', ayuda:'Altura de trabajo sobre el suelo' },
-  azotea: { et:'Antena en azotea',       ayuda:'Altura del edificio más la antena' },
-};
+/* ── A PIE DE CASETA, Y NADA MÁS (20-09-2026, portátil) ──────────────
+   Suyo, con las tarjetas de Mis estaciones delante: «eso de trabajo a 40
+   metros fuera, solo a pie de caseta, resto sobra» · «de torre no quiero
+   ver nada» · «el 90 % del trabajo es a pie de caseta: contadores,
+   fusibles, cuadros, grupos electrógenos, cortar la hierba del recinto»
+   · «ya decido yo con lo que tengo en la base de la caseta más 40 metros
+   de torre». Así que las horas de cada emplazamiento se calculan a
+   ALTURA_CASETA, la altura a la que publica el modelo, y no a la altura
+   de trabajo guardada: ni racha estimada ni viento subido. El semáforo,
+   la racha máxima, la línea de horas y la tabla contra el aparato quedan
+   así a la MISMA altura. Los tipos y la altura de trabajo que hubiera
+   guardados no se borran, solo dejan de pintarse aquí (Ahora sigue con
+   su propio ajuste de altura, que es otra pantalla). */
+const ALTURA_CASETA = 10;
 
 
 /** Altitud real del terreno en un punto, del modelo digital de 90 m.
@@ -7268,7 +7295,7 @@ async function cargarTorres() {
       const fc = arr[i];
       if (!fc?.hourly) return { place: p, horas: null };
       const cfg = cfgDe(p);
-      return { place: p, cfg, horas: buildHours(fc, cfg.alt, p), elev: fc.elevation,
+      return { place: p, cfg, horas: buildHours(fc, ALTURA_CASETA, p), elev: fc.elevation,
                pista: comoEstaLaPista(fc) };
     });
     /* El parte PRIMERO: `renderTorres` lee `S.parteFilas` para meterlo
@@ -7319,7 +7346,7 @@ async function cargarTorres() {
        «Guardar para el monte», la que usa cuando no hay red— se quedó sin
        arreglar. (Barrido del 01-09-2026.) */
     S.torres = conCopia.map(({ place, copia }) => ({
-      place, cfg: cfgDe(place), horas: buildHours(copia.data.fc, cfgDe(place).alt, place),
+      place, cfg: cfgDe(place), horas: buildHours(copia.data.fc, ALTURA_CASETA, place),
       elev: copia.data.fc?.elevation,
       copia,
     }));
@@ -7344,23 +7371,14 @@ function abrirAjuste(k) {
   el.dataset.on = '1';
   el.innerHTML = `
     <div class="aj">
-      <label>Tipo
-        <select data-c="tipo">
-          ${Object.entries(TIPOS).map(([v, o]) =>
-            `<option value="${v}"${v === c.tipo ? ' selected' : ''}>${esc(o.et)}</option>`).join('')}
-        </select>
-      </label>
-      <label>Altura de trabajo <small>10 = a pie de caseta</small>
-        <input type="number" inputmode="numeric" data-c="alt" value="${c.alt ?? ''}" min="3" max="300"> m
-      </label>
       <label>Cota del terreno
         <input type="number" inputmode="numeric" data-c="cota" value="${has(c.cota) ? c.cota : ''}"
                placeholder="buscando…" min="-10" max="3500"> m
       </label>
       <button class="btn btn--acc" data-guardar="${esc(k)}">Guardar</button>
       <p class="aj__n">La cota se saca sola de un mapa de elevaciones de 90 m; solo tócala si
-        sabes que está mal. Es la altura del <b>suelo</b>, no la de la antena: eso es la altura
-        de trabajo. Sirve para avisarte cuando el modelo alise el terreno y se quede corto.</p>
+        sabes que está mal. Es la altura del <b>suelo</b>, no la de la antena. Sirve para
+        avisarte cuando el modelo alise el terreno y se quede corto.</p>
     </div>`;
 
   // Si no tenía cota, se busca sola y se rellena
@@ -7550,7 +7568,7 @@ function calcularParte(sitios, arr) {
   S.rachaTorres = sitios.map((p, n) => {
     const H = arr[n]?.hourly;
     if (!H?.time) return null;
-    let mx = null, hora = null;
+    let mx = null, hora = null, quien = null;
     for (const m of MODELOS_TORMENTA) {
       const g = H[`wind_gusts_10m_${m.om}`];
       if (!g) continue;
@@ -7558,10 +7576,10 @@ function calcularParte(sitios, arr) {
         const t = new Date(H.time[i]).getTime();
         if (t < desde || t > finVentana) continue;
         if (!has(g[i])) continue;
-        if (mx === null || g[i] > mx) { mx = g[i]; hora = new Date(H.time[i]); }
+        if (mx === null || g[i] > mx) { mx = g[i]; hora = new Date(H.time[i]); quien = m.nom; }
       }
     }
-    return { k: key(p), racha: mx, hora };
+    return { k: key(p), racha: mx, hora, quien };
   }).filter(Boolean);
 
   /* ── A QUÉ HORA DEJA DE FRENARTE ────────────────────────────────────
@@ -8184,7 +8202,11 @@ function renderParte() {
        uno. Ahora se resta EL QUE SE ENSEÑA, y si es el más alto de los
        cinco se dice de quién es. */
     const mostrado = rachaCinco?.v ?? H?.gust10;
-    const dif = (has(mostrado) && has(M?.racha)) ? Math.round(M.racha - mostrado) : null;
+    /* SE RESTAN LOS NÚMEROS QUE SE VEN, redondeados uno a uno (20-09-2026):
+       con 4,4 medidos y 6,6 del modelo salía «7 km/h … clavó» al lado de
+       «4 km/h»: tres de diferencia a la vista y la palabra diciendo que
+       no. Ahora la resta es entre los dos enteros que hay en pantalla. */
+    const dif = (has(mostrado) && has(M?.racha)) ? Math.round(M.racha) - Math.round(mostrado) : null;
     const deQuien = (rachaCinco && has(H?.gust10)
                      && Math.round(rachaCinco.v) > Math.round(H.gust10))
       ? rachaCinco.nom : null;
@@ -8226,7 +8248,7 @@ function renderParte() {
              has(M?.temperatura) ? `<b>${M.temperatura.toFixed(1).replace('.', ',')} °C</b>` : '')
       + fila('Humedad',
              has(H?.hum) ? `<b>${H.hum} %</b>` : '',
-             has(M?.humedad) ? `<b>${M.humedad} %</b>` : '')
+             has(M?.humedad) ? hrMedida(M.humedad) : '')
       /* El cielo, pedido por él el 31-08-2026 mirando esta tabla: «aquí
          falta nubosidad, si hay o despejado». Del lado del modelo va el
          código visto (el del dueño del cielo, con el agua mandando) y el
@@ -8276,18 +8298,39 @@ function renderParte() {
     const lejosEnAltura = has(desn) && Math.abs(desn) >= 200;
     const algoDeAltura  = has(desn) && Math.abs(desn) >= 80 && !lejosEnAltura;
 
+    /* ── LECTURA VIEJA: SIN VEREDICTO (20-09-2026) ──────────────────
+       Amorebieta-Etxano, 11:05: «nuestro pronóstico se pasó 9 km/h»
+       comparando la hora en curso del modelo (11-12) con una lectura de
+       AEMET de las 10:00, de hace 65 min. Con una hora de por medio no
+       se juzga a nadie: se dice de cuándo es la lectura y se espera. */
+    const lecturaVieja = has(minM) && minM > 60;
+    /* ── Y SE JUZGA A LOS DOS QUE SE VEN ────────────────────────────
+       Suyo, 20-09-2026, en BI BERMEO: la tabla ponía 13 (el más alto de
+       los cinco) contra 9 medidos y debajo «se pasó 4 — el de X, que es
+       el que se enseña arriba». Pero arriba, en la cabecera de la
+       tarjeta, se enseñaba el modelo CARGADO con 9: había clavado y la
+       frase lo escondía. Ahora, cuando el más alto no es el cargado, se
+       juzga a los dos, cada uno con su nombre y su cifra. */
+    const cargado = has(H?.gust10) ? { v: H.gust10, n: model().name } : null;
+    const difC = (cargado && has(M?.racha)) ? Math.round(M.racha) - Math.round(cargado.v) : null;
+    const juicioDe = (d, v) => d >= 3 ? `se quedó <b>${difVista(M.racha, v, true)} corto</b>`
+                             : d <= -3 ? `se pasó <b>${difVista(M.racha, v, true)}</b>`
+                             : '<b>clavó</b>';
     const veredicto = lejosEnAltura
       ? `<div class="pt__veredicto" data-d="ni">no se pueden comparar:
          <b>${Math.abs(desn)} m de desnivel</b> entre tu emplazamiento
          (${Math.round(cotaSitio)} m) y la estación (${M.altitud} m).
          Son dos sitios distintos, no un fallo del pronóstico</div>`
+      : (lecturaVieja && has(dif))
+      ? `<div class="pt__veredicto" data-d="ni">sin veredicto: la lectura de
+         ${esc(M.nombre)} es de ${esc(hace)} y el modelo va por la hora en curso.
+         Se compara cuando llegue la de esta hora</div>`
       : has(dif)
       ? `<div class="pt__veredicto" data-d="${
-          dif >= 3 ? 'corto' : dif <= -3 ? 'pasa' : 'clava'}">nuestro pronóstico ${
-          dif >= 3 ? `se quedó <b>${difVista(M.racha, mostrado, true)} corto</b>`
-        : dif <= -3 ? `se pasó <b>${difVista(M.racha, mostrado, true)}</b>`
-        : '<b>clavó</b>'}${deQuien
-          ? ` <span class="pt__veredicto__ojo">— el de ${esc(deQuien)}, que es el que se enseña arriba</span>` : ''}${algoDeAltura
+          dif >= 3 ? 'corto' : dif <= -3 ? 'pasa' : 'clava'}">${(deQuien && cargado && has(difC))
+          ? `el más alto de los cinco (${esc(deQuien)} ${wtxt(mostrado, true)}) ${juicioDe(dif, mostrado)};
+             el de la cabecera (${esc(cargado.n)} ${wtxt(cargado.v, true)}) ${juicioDe(difC, cargado.v)}`
+          : `nuestro pronóstico ${juicioDe(dif, mostrado)}`}${algoDeAltura
           ? ` <span class="pt__veredicto__ojo">— con ${Math.abs(desn)} m de desnivel entre los dos</span>` : ''}</div>`
       : '';
 
@@ -8772,9 +8815,14 @@ function renderParte() {
        altura de trabajo, y la de la cabecera sí está subida. Dos
        números de lo mismo en la misma pantalla y ninguno decía a qué
        altura. Arriba, en la torre, pega bastante más. */
+    /* Y DE QUIÉN ES (20-09-2026): en Gernika2 la línea de horas decía
+       «a las 15:00 racha 30» (el modelo cargado) y ésta «racha máxima 31
+       a las 15:00» (la más alta de los cinco). Dos números de la misma
+       hora sin decir de quién era cada uno. Ahora los dos lo dicen. */
     return `<div class="pt__r" data-s="${st}">Racha máxima <b>${wtxt(R.racha, true)}</b>`
          + `<small> a 10 m</small>`
          + (R.hora ? ` a las ${String(R.hora.getHours()).padStart(2, '0')}:00` : '')
+         + (R.quien ? `<small> · la más alta de los ${MODELOS_TORMENTA.length}, la da ${esc(R.quien)}</small>` : '')
          /* AQUÍ NO VAN SUS LÍMITES, Y ES LA SEGUNDA VUELTA.
             Primero ponía «tus listones 45 y 60». Él: *«¿eso de tus
             listones?»*. Lo reescribí como «tú avisas a 45 y paras a 60»,
@@ -9373,6 +9421,7 @@ function renderTorres() {
           r.et} · ${cifras(r.x)}</span>`).join('')}
         ${V && !V.cerca ? `<span class="tor__lleg__q">a ${V.min} min de Bermeo,
           estimado</span>` : ''}
+        ${t.copia ? '' : `<span class="tor__lleg__q">cifras de ${esc(model().name)} a ${ALTURA_CASETA} m</span>`}
       </div>` : '';
 
     return `<div class="tor" data-s="${h.st}"${D ? ' data-disc="1"' : ''} data-ir="${esc(key(t.place))}">
@@ -9438,7 +9487,6 @@ function renderTorres() {
              altos es lo segundo que decide: Orduña llega a 63 km/h y
              Carranza toca los 60, que es su límite de NO APTO. Se marca
              en ámbar a partir de su propio umbral de precaución. */
-          const rachaAlta = has(h.gust) && h.gust >= listonRafaga().warn;
           /* MÁS DATOS. Suyo, 28-08-2026, repetido toda la mañana:
              *«añadir más datos, más datos, más info mejor»*,
              *«vosotros cifras»*, *«rellena con datos, la decisión la
@@ -9504,12 +9552,13 @@ function renderTorres() {
                + num(has(h.cape) ? h.cape.toFixed(0) : '—', 'CAPE J/kg', tapaAbierta, 'decide')
                + num(has(h.cin) ? h.cin.toFixed(0) : '—',
                      'tapa J/kg' + (has(h.cin) ? ' · ' + textoTapa(h.cin) : ''), tapaAbierta, 'decide')
-               + num(has(h.gust) ? wtxt(h.gust, true) : '—',
-                     `racha a ${h.h} m${h.gustEst ? ' (est.)' : ''}`, rachaAlta, 'decide')
-               + num(has(h.gust10) ? wtxt(h.gust10, true) : '—', 'racha a 10 m de altura', rachaAltaP)
-               + num(has(h.wind) ? wtxt(h.wind, true) : '—',
-                     `viento a ${h.h} m${h.windExact ? '' : ' (est.)'}${
-                       has(h.dir) ? ' · del ' + rumboLargo(h.dir) : ''}`)
+               /* Una sola racha y un solo viento, los de 10 m (a pie de
+                  caseta, 20-09-2026): antes salían «racha a 40 m (est.)»
+                  y «racha a 10 m de altura» —dos números de lo mismo— y con
+                  trabajo a 10 m las dos casillas eran idénticas. */
+               + num(has(h.gust10) ? wtxt(h.gust10, true) : '—', 'racha a 10 m · a pie de caseta', rachaAltaP, 'decide')
+               + num(has(h.w10) ? wtxt(h.w10, true) : '—',
+                     `viento a 10 m${has(h.dir) ? ' · del ' + rumboLargo(h.dir) : ''}`)
                + num(has(h.temp) ? h.temp.toFixed(0) + '°' : '—',
                      (has(h.dew) ? `rocío ${h.dew.toFixed(0)}°` : 'temperatura')
                      + (has(h.hum) ? ` · HR ${h.hum}%` : ''), rocioPegado)
@@ -9566,8 +9615,8 @@ function renderTorres() {
       })()}
       <div class="tor__form" id="tor-${cssId(key(t.place))}"></div>
       <div class="tor__cfg">
-        ${esc(TIPOS[t.cfg?.tipo || 'torre'].et)} · trabajo a <b>${t.cfg?.alt ?? S.hgt} m</b>${
-          has(t.cfg?.cota) ? ` · cota ${t.cfg.cota} m` : ''}
+        A pie de caseta · a ${ALTURA_CASETA} m${
+          has(t.cfg?.cota) ? ` · cota <b>${t.cfg.cota} m</b>` : ''}
         <button class="tor__aj" data-abrir="${esc(key(t.place))}">Ver en Ahora</button>
         <button class="tor__aj" data-aj="${esc(key(t.place))}">Ajustar</button>
       </div>
@@ -11915,7 +11964,7 @@ async function pintarMedidoCerca(p) {
   el.innerHTML = `Medido de verdad · <b>AEMET ${esc(e.nombre)}</b> (${kmTxt(e.km)} km): <b>${e.temperatura.toFixed(1).replace('.', ',')}°</b>`
     + (has(e.viento) ? ` · viento <b>${wtxt(e.viento, true)}</b>${has(e.direccion) ? ` del ${esc(rumboLargo(e.direccion))}` : ''}` : '')
     + (has(e.racha) ? ` · racha <b>${wtxt(e.racha, true)}</b>` : '')
-    + (has(e.humedad) ? ` · HR ${Math.round(e.humedad)} %` : '')
+    + (has(e.humedad) ? ` · HR ${Math.min(100, Math.round(e.humedad))} %${e.humedad > 100 ? ` (el aparato marca ${Math.round(e.humedad)})` : ''}` : '')
     + (has(e.lluvia) ? ` · ${mmTxt(e.lluvia)} mm en la hora` : '')
     + (hm ? ` · a las ${hm}${vieja ? ` <b>(${vieja})</b>` : ''}` : '');
 }
@@ -16186,15 +16235,14 @@ function bind() {
       const v = caja.querySelector(`[data-c="${sel}"]`).value.trim();
       return v === '' ? null : Number(v);
     };
-    const c = {
-      tipo: caja.querySelector('[data-c="tipo"]').value,
-      alt:  num('alt') ?? S.hgt,
-      cota: num('cota'),
-    };
     const t = (S.torres || []).find(x => key(x.place) === k);
     if (!t) return;
+    /* Solo la cota: el tipo y la altura de trabajo ya no se piden (a pie
+       de caseta, 20-09-2026). Lo que hubiera guardado se conserva. */
+    const previo = cfgDe(t.place) || {};
+    const c = { tipo: previo.tipo || 'torre', alt: previo.alt ?? S.hgt, cota: num('cota') };
     guardarCfg(t.place, c);
-    toast(`${t.place.name}: trabajo a ${c.alt} m${has(c.cota) ? `, cota ${c.cota} m` : ''}`);
+    toast(`${t.place.name}: ${has(c.cota) ? `cota ${c.cota} m` : 'sin cota'}`);
     cargarTorres();
   });
 
