@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.20-1806';
+const BUILD = '2026.09.20-1950';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -6868,8 +6868,7 @@ async function cargarObservacion() {
          el contador relativo se recalcula contra ella. */
       const cuando = minGenuinos != null
         ? `a las ${hhDe(Number.isFinite(tMed) ? tMed : Date.now() - minGenuinos * 60000)} · `
-          + (minGenuinos < 90 ? `hace ${Math.max(1, minGenuinos)} min`
-                              : `hace ${Math.round(minGenuinos / 60)} h`)
+          + edadMedida(minGenuinos)
         : 'sin hora';
       return `<div class="obs" data-s="${st}">
         <div class="obs__n">
@@ -8263,7 +8262,7 @@ function renderParte() {
       ? Math.max(0, Math.round((Date.now() - tM) / 60000))
       : (has(M?.haceMinutos) ? M.haceMinutos : null);
     const hace = minM != null
-      ? (minM < 90 ? `hace ${Math.max(1, minM)} min` : `hace ${Math.round(minM / 60)} h`)
+      ? edadMedida(minM)
       : '';
 
     const fila = (etq, mod, est, tono) => (mod || est)
@@ -12020,13 +12019,38 @@ const MEDIDO_CERCA = new Map();
    más, con el feed de AEMET dos horas atrasado para Matxitxako. Una lectura
    vieja sin su edad se lee como de ahora. Hasta 60 min, nada; de 61 a 119,
    en minutos; desde 2 h, en horas enteras. Sin fecha, nada: no se inventa. */
+/* ── LO VIEJA QUE ES UNA MEDIDA SE DICE EN UN SOLO SITIO ──────────────
+   Cazado el 20-09-2026 por la tarde, repasando en producción con él: la
+   MISMA lectura de AEMET Matxitxako, la de las 16:00, salía a la vez como
+   «hace 3 h» en Ahora y «hace 4 h» en Mis estaciones. No era un dato
+   distinto: eran tres fórmulas distintas para el mismo minuto —una con
+   `Math.floor`, otra con `Math.round`, otra con el corte en 120—, así que
+   a las 19:33 una redondeaba hacia abajo y otra hacia arriba.
+
+   Suyo, al verlo: *«pero esto no debería de pasar, haz que no vuelva a
+   pasar»*. Y tiene razón en lo de fondo: ese número lo usa para decidir si
+   la lectura del aparato todavía sirve para comparar. Que una pantalla la
+   haga más fresca de lo que es le puede hacer fiarse de una medida vieja.
+
+   Así que ahora hay UNA función y la usan las tres pantallas. Y no
+   redondea la edad ni hacia arriba ni hacia abajo: pasada la hora y media
+   se dan las horas Y los minutos, que no engaña en ninguna dirección.
+   `pruebas.js` monta guardia para que no vuelva a aparecer otra fórmula. */
+function edadMedida(min) {
+  const m = Math.max(0, Math.round(min));
+  if (m < 90) return `hace ${Math.max(1, m)} min`;
+  const h = Math.floor(m / 60), r = m % 60;
+  return r ? `hace ${h} h ${String(r).padStart(2, '0')} min` : `hace ${h} h`;
+}
+
+/* Lo mismo, pero callado mientras la medida es de la última hora: en Ahora
+   una lectura fresca no lleva coletilla, solo las viejas se marcan. */
 function haceTxt(cuando, ahora = Date.now()) {
   const t = cuando ? Date.parse(cuando) : NaN;
   if (!Number.isFinite(t)) return '';
   const min = Math.round((ahora - t) / 60e3);
   if (min <= 60) return '';
-  if (min < 120) return `hace ${min} min`;
-  return `hace ${Math.floor(min / 60)} h`;
+  return edadMedida(min);
 }
 
 async function pintarMedidoCerca(p) {
@@ -12078,7 +12102,27 @@ async function pintarMedidoCerca(p) {
    lista. Ahora, Horas y 10 días no cambian. */
 function estacionDePortada() {
   const k = LS.get('portadaEstacion', null);
-  return (S.saved || []).find(p => key(p) === k) || S.saved?.[0] || null;
+  const fijada = (S.saved || []).find(p => key(p) === k);
+  if (fijada) return fijada;
+  /* ── «EL PRIMERO DE LA LISTA» ES EL PRIMERO QUE ÉL VE ─────────────────
+     Cazado el 20-09-2026 por la tarde, repasando en producción: la portada
+     enseñaba BI SOLLUBEMENDI cuando la primera tarjeta de la lista era BI
+     BERMEO. No era un despiste del pintado: esto cogía `S.saved[0]`, o sea
+     el orden CRUDO en que están guardadas, y las tarjetas se pintan
+     ordenadas `deCasaAFuera`. Son dos órdenes distintos.
+
+     Y lo peor es que el orden crudo **se mueve solo**: cada vez que la
+     lista se junta con la del servidor (`/api/torres`, modo juntar) los
+     sitios pueden volver en otro orden, así que la portada podía cambiar
+     de estación sin que él tocara nada. Es el fallo de esta casa otra vez
+     —algo que se mueve solo y no avisa—, y encima en la pantalla con la
+     que decide a quién manda al monte.
+
+     Sus palabras del 20-09 por la mañana: «que salga BI_BERMEO O EL
+     PRIMERO DE LA LISTA O EL QUE META YO A MANO». Las tres cosas son la
+     misma si se ordena igual que la lista: de casa hacia fuera, BI BERMEO
+     es la primera. Y el que mete a mano con «Portada» sigue mandando. */
+  return [...(S.saved || [])].sort(deCasaAFuera)[0] || null;
 }
 async function pintarPortadaEstacion({ forzar = false } = {}) {
   const est = estacionDePortada();
@@ -14592,10 +14636,26 @@ const Radar = {
       this.map = L.map(el, { zoomControl: true, attributionControl: true })
         .setView([p.lat, p.lon], 8);
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 12, attribution: '© OpenStreetMap · © CARTO',
+      /* ── EL MAPA DE DEBAJO DEL RADAR, SIN MARCA DE AGUA (20-09-2026) ──
+         Él lo vio en su pantalla esta tarde: el radar salía con «API KEY
+         REQUIRED · carto.com/basemaps/apikey» escrito en diagonal por
+         encima de media costa. CARTO ha empezado a marcar sus teselas de
+         imagen cuando se piden sin clave, y esto las pedía sin clave.
+
+         COMPROBADO ANTES DE CAMBIARLO, no de oídas: reproducido en otro
+         navegador sobre la web publicada (108 teselas, la marca encima);
+         y la pestaña Mapa, que usa los mapas VECTORIALES de CARTO, sale
+         limpia — o sea que no es la cuenta, son las teselas de imagen.
+
+         Se pasa al lienzo oscuro de Esri, que no pide clave y se probó en
+         vivo sobre este mismo mapa antes de tocar nada: 30 teselas, cero
+         rotas, y el eco de lluvia se sigue leyendo igual de bien encima.
+         OJO con el orden: Esri va {z}/{y}/{x}, al revés que casi todos.
+         No se paga nada ni hay que darse de alta en ningún sitio. */
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 12, attribution: '© Esri · © OpenStreetMap',
       }).addTo(this.map);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
         { maxZoom: 12, pane: 'shadowPane' }).addTo(this.map);
 
       this.marca = L.circleMarker([p.lat, p.lon], {

@@ -103,6 +103,9 @@ eval(sacarConst('VISTO_MIN'));
 eval(sacar('function kmEntre(a, b) {'));
 eval(sacarConst('BERMEO'));
 eval(sacar('function deCasaAFuera(a, b) {'));
+eval(sacar('function edadMedida(min) {'));
+eval(sacar('function haceTxt(cuando, ahora = Date.now()) {'));
+eval(sacar('function estacionDePortada() {'));
 eval(sacarConst('enCostaVasca'));
 eval(sacarConst('COSTA'));
 eval(sacarConst('cercaDelMar'));
@@ -328,6 +331,34 @@ ok('NINGÚN sitio con lluvia lleva etiqueta verde',
    verdesConAgua.map(b => b.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0,90)).join(' | '));
 ok('los que sí mojan llevan LLUVIA o SIRIMIRI',
    bloques.some(b => /LLUVIA|SIRIMIRI/.test(b)));
+
+/* ── LA PORTADA NO SE MUEVE SOLA (20-09-2026, tarde) ──────────────────
+   En producción la portada enseñaba BI SOLLUBEMENDI y la primera tarjeta
+   era BI BERMEO: `estacionDePortada()` cogía `S.saved[0]` —el orden crudo,
+   que lo reordena el servidor al juntar— en vez del orden de la lista que
+   él ve. Suyo: «que salga BI_BERMEO o el primero de la lista o el que meta
+   yo a mano». */
+{
+  const guardadas = S.saved, portadaAntes = LS.get('portadaEstacion', null);
+  const P = n => ({ name: n, admin1: 'Bizkaia', country: 'España',
+                    lat: n === 'BI BERMEO' ? 43.413 : n === 'BI SOLLUBEMENDI' ? 43.4375 : 43.32,
+                    lon: n === 'BI BERMEO' ? -2.718 : n === 'BI SOLLUBEMENDI' ? -2.7636 : -2.853 });
+  LS.set('portadaEstacion', null);
+  // el orden CRUDO al revés de como se ven las tarjetas
+  S.saved = [P('BI MUNGIA'), P('BI SOLLUBEMENDI'), P('BI BERMEO')];
+  ok('sin «Portada» fijada, la portada es la PRIMERA DE LA LISTA que él ve, no la primera guardada',
+     estacionDePortada()?.name === 'BI BERMEO',
+     'salía ' + estacionDePortada()?.name + ': el orden crudo lo reordena el servidor y la portada cambiaba sola');
+  // y el orden crudo puede cambiar sin que él toque nada: la portada NO
+  S.saved = [P('BI SOLLUBEMENDI'), P('BI BERMEO'), P('BI MUNGIA')];
+  ok('y si el servidor devuelve la lista en otro orden, la portada sigue siendo la misma',
+     estacionDePortada()?.name === 'BI BERMEO');
+  // lo que él fija a mano manda sobre todo
+  LS.set('portadaEstacion', key(P('BI MUNGIA')));
+  ok('el que mete a mano con «Portada» sigue mandando',
+     estacionDePortada()?.name === 'BI MUNGIA');
+  S.saved = guardadas; LS.set('portadaEstacion', portadaAntes);
+}
 
 /* EN ROJO LO QUE SALTA. Suyo, 20-09-2026: «si hay algo que salte alarma
    que salte en rojo; si ve CAPE en rojo, si ve lluvia en rojo». Y «si no
@@ -8043,19 +8074,60 @@ grupo('Tocar un día en «10 días» abre ese día entero, hora a hora (17-09-20
    vieja sin su edad se lee como de ahora, y el lunes decide con ella. */
 grupo('La línea «Medido de verdad» dice «hace 2 h» cuando la lectura pasa de 60 min (20-09-2026)');
 {
-  const haceTxt = (() => { try { return eval(`(${sacar('function haceTxt(')})`); } catch { return null; } })();
   const T0 = Date.parse('2026-09-19T12:26:00+02:00');
   const en = m => new Date(T0 - m * 60e3).toISOString();
   ok('hasta 60 min no dice nada: la lectura es reciente',
-     !!haceTxt && haceTxt(en(0), T0) === '' && haceTxt(en(45), T0) === '' && haceTxt(en(60), T0) === '');
-  ok('de 61 a 119 min lo dice en minutos: «hace 90 min»',
-     !!haceTxt && haceTxt(en(90), T0) === 'hace 90 min' && haceTxt(en(61), T0) === 'hace 61 min');
-  ok('desde 2 h lo dice en horas enteras: la de las 10:00 vista a las 12:26 es «hace 2 h»',
-     !!haceTxt && haceTxt(en(146), T0) === 'hace 2 h' && haceTxt(en(300), T0) === 'hace 5 h');
+     haceTxt(en(0), T0) === '' && haceTxt(en(45), T0) === '' && haceTxt(en(60), T0) === '');
+  ok('de 61 a 89 min lo dice en minutos',
+     haceTxt(en(61), T0) === 'hace 61 min' && haceTxt(en(89), T0) === 'hace 89 min');
+  /* Desde la hora y media se dan las horas Y los minutos. Cambiado el
+     20-09-2026: antes esto redondeaba a horas enteras y la otra pantalla
+     redondeaba al revés, así que la misma lectura salía como «hace 3 h» y
+     «hace 4 h» a la vez. Ver el comentario de `edadMedida` en app.js. */
+  ok('desde hora y media se dan horas Y minutos: no redondea ni a favor ni en contra',
+     haceTxt(en(90), T0) === 'hace 1 h 30 min'
+     && haceTxt(en(146), T0) === 'hace 2 h 26 min'
+     && haceTxt(en(300), T0) === 'hace 5 h'
+     && haceTxt(en(213), T0) === 'hace 3 h 33 min');
   ok('sin fecha, o con una fecha rota, no inventa nada',
-     !!haceTxt && haceTxt(null, T0) === '' && haceTxt('no es fecha', T0) === '');
+     haceTxt(null, T0) === '' && haceTxt('no es fecha', T0) === '');
+
+  /* ── LA GUARDIA, QUE ES LO QUE ÉL PIDIÓ ────────────────────────────
+     Suyo, 20-09-2026: «pero esto no debería de pasar, haz que no vuelva a
+     pasar». La edad de una medida se dice en UN solo sitio; si alguien
+     escribe otra fórmula, la publicación se para aquí. */
+  const otrasFormulas = (src.match(/`hace \$\{Math\.(round|floor)\([A-Za-z_$][\w$]* \/ 60\)\} h`/g) || []);
+  ok('NADIE MÁS calcula la edad de una medida por su cuenta (20-09-2026)',
+     otrasFormulas.length === 0,
+     'quedan ' + otrasFormulas.length + ': ' + otrasFormulas.join(' | ') + ' — usa edadMedida()');
+  ok('y las tres pantallas usan la misma función',
+     (src.match(/edadMedida\(/g) || []).length >= 4,
+     'la ficha de medidas, la tabla de Mis estaciones y haceTxt tienen que llamarla');
+  ok('la edad no se redondea hacia abajo: una lectura vieja no puede parecer fresca',
+     edadMedida(213) === 'hace 3 h 33 min' && edadMedida(89) === 'hace 89 min'
+     && edadMedida(120) === 'hace 2 h');
   ok('y pintarMedidoCerca la pone detrás de «a las HH:MM»',
      /async function pintarMedidoCerca\(p\) \{[\s\S]*?const vieja = haceTxt\(e\.medidoEn\);[\s\S]*?a las \$\{hm\}\$\{vieja \? /.test(src));
+}
+
+/* ═══ EL RADAR NO PIDE TESELAS QUE VENGAN MARCADAS (20-09-2026) ══════════
+   Él lo vio en su pantalla: «API KEY REQUIRED · carto.com/basemaps/apikey»
+   en diagonal sobre media costa. CARTO marca sus teselas de imagen cuando
+   se piden sin clave. Reproducido en otro navegador antes de cambiarlo, y
+   comprobado que la pestaña Mapa (vectorial) sale limpia. */
+grupo('El mapa de debajo del radar no lleva marca de agua (20-09-2026)');
+{
+  const radar = src.slice(src.indexOf("const el = $('#radar')"), src.indexOf("const el = $('#radar')") + 2600);
+  ok('el radar ya NO pide las teselas de imagen de CARTO, que vienen marcadas',
+     !/cartocdn/.test(radar),
+     'si vuelven, Aitor ve el mapa tachado justo cuando mira si está cayendo');
+  ok('y usa un fondo que no pide clave',
+     /server\.arcgisonline\.com[\s\S]*?World_Dark_Gray_Base/.test(radar));
+  ok('con el orden de Esri, {z}/{y}/{x}, que va al revés que casi todos',
+     /World_Dark_Gray_Base\/MapServer\/tile\/\{z\}\/\{y\}\/\{x\}/.test(radar),
+     'con {z}/{x}/{y} el mapa sale movido y no cuadra con el eco de lluvia');
+  ok('y sigue diciendo de quién es el mapa',
+     /attribution: '© Esri/.test(radar));
 }
 
 /* ═══ EL MODELO DE OLAS DE 9 km SE QUEDA FUERA DEL MAPA (20-09-2026) ═══════
