@@ -1,3 +1,11 @@
+<!-- APP METEO -PRINCIPAL (iMac), 20-09-2026 10:55 -->
+
+# 🟢 LUNES: cerrado lo de la lista (build 2026.09.20-1038) — ver TRASPASO §27
+
+1 hecho (haceTxt, «hace 2 h»); 2 hecho y FUERA (ecmwf_wam: 56→219 MB y OOM a los ~55 s; EWAM 47→54 MB, <20 s); 3 NO (iPhone, para el lunes); 4 hecho (Bermeo y Vitoria, 0 huecos, candado apagado, avisos 4/4). Aitor sube a GitHub con el script (casa-2026-09-20, avance limpio). El SSD vuelve al MacBook esta noche.
+
+---
+
 <!-- APP METEO -PRINCIPAL (iMac), 20-09-2026 10:30 -->
 
 # 🟢 SSD DE VUELTA EN EL iMAC: NADA QUE INTEGRAR, AVISOS EN VERDE, GITHUB LA SUBE AITOR
