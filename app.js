@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.20-1248';
+const BUILD = '2026.09.20-1426';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -15682,19 +15682,25 @@ function paint() {
 function comprobarCielo() {
   const faltas = [];
   if (!S.data?.hours?.length) return faltas;
+  /* En Mis estaciones la portada es la de SU estación (20-09-2026): se
+     compara contra las horas de la estación, que son las que enseña, y
+     no contra las del sitio buscado; y la tarjeta de Horas (que sigue
+     siendo del sitio buscado) no se compara con esa portada. */
+  const portadaDeEstacion = S.view === 'torres' && S.portadaEstacion?.D?.hours?.length;
+  const HP = portadaDeEstacion ? S.portadaEstacion.D.hours : S.data.hours;
   const codigos = el => [...(el?.querySelectorAll?.('svg[data-code]') || [])]
     .map(x => x.dataset.code).filter(x => x !== '').map(Number);
-  const h0 = cieloVisto(S.data.hours[0]);
+  const h0 = cieloVisto(HP[0]);
   const grande = codigos($('#nowIco'))[0];
   if (has(grande) && has(h0.code) && grande !== h0.code)
     faltas.push(`Ahora pinta ${grande} y la hora en curso dice ${h0.code}`);
-  const primera = document.querySelector('#hlist .hcard');
+  const primera = portadaDeEstacion ? null : document.querySelector('#hlist .hcard');
   if (primera) {
     const c1 = codigos(primera)[0];
     if (has(c1) && has(grande) && c1 !== grande) faltas.push(`Horas pinta ${c1} en la hora en curso y Ahora ${grande}`);
   }
   document.querySelectorAll('#parts .part[data-ini]').forEach(p => {
-    const sel = S.data.hours.filter(h => h.t >= p.dataset.ini && h.t <= p.dataset.fin);
+    const sel = HP.filter(h => h.t >= p.dataset.ini && h.t <= p.dataset.fin);
     const R = resumenCielo(sel);
     if (!R) return;
     const esperado = R.partes && R.partes.length >= 2 ? R.partes.map(t => t.code) : [R.code];

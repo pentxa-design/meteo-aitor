@@ -997,3 +997,4 @@ esto, dale»* · *«autorizado para cambios y subidas de esta app»*.
 - Probado en local (servidor estático): Ahora en Mundaka; Mis estaciones
   enseña BI BERMEO con S.place intacto; «Portada» en Sollubemendi la
   cambia y marca el botón; al volver a Ahora, Mundaka. 1120 pruebas.
+- El comprobador del cielo (comprobarCielo) compara la portada contra las horas que la portada enseña (las de la estación en Mis estaciones) y no contra las del sitio buscado; sin esto, paridad.cjs veía «Ahora pinta 51 y la hora en curso dice 53». Publicado como build 2026.09.20-1426.
