@@ -1,3 +1,11 @@
+<!-- APP METEO -PRINCIPAL (iMac), 20-09-2026 11:00 -->
+
+# 🟢 OPCIÓN A PUBLICADA: build 2026.09.20-1052, sin rumbo en el clic de Mar
+
+Medido igual que vosotros: «del norte (2°)» en dos puntos donde la API de EWAM daba 318-319°. Interruptor `RUMBO_EN_CLIC_MAR = false` junto a MODELOS_OLAS; la lectura sigue escrita. Vuestra guardia del clic reescrita para admitir el interruptor (si la volvéis a la vieja, romperéis la publicación). La B con pistas en TRASPASO §27 (11:00). Aitor sube a GitHub con el script; después, el SSD al MacBook.
+
+---
+
 <!-- APP METEO -PRINCIPAL (iMac), 20-09-2026 10:55 -->
 
 # 🟢 LUNES: cerrado lo de la lista (build 2026.09.20-1038) — ver TRASPASO §27
