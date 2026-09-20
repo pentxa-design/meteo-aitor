@@ -8230,6 +8230,48 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 }
 
 
+/* ── AHORA, DE UNA PASADA (20-09-2026) ────────────────────────────────
+   Suyo: «fíjate todo lo que tengo que leer para saber en esa estación qué
+   me voy a encontrar… mucho lío» · «quiero info la justa para saber de
+   una pasada qué tengo en cada sitio» · «sin tanto recuadro» ·
+   «simplifícalo» · «aprovecha el espacio, bonito y claro, en color». */
+{
+  const A = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  const H = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const C = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+  ok('Ahora lleva cinco casillas en su orden: lluvia, ráfaga, viento (con dirección), riesgo eléctrico, sensación; las estimadas solo si la altura no es 10',
+     /\$\('#kpis'\)\.innerHTML = \[kLluvia, kRafaga, kViento, kRiesgo, kSensacion,\s*\.\.\.\(S\.hgt === 10 \? \[\] : kAltura\)\]\.join\(''\);/.test(A)
+     && !/kpi\('Dirección',/.test(A)
+     && /del \$\{rumboLargo\(c\.dir\)\} \(\$\{c\.dir\.toFixed\(0\)\}°\) · De donde viene el viento a/.test(A));
+  ok('la comparativa de modelos se pliega: la frase de color queda a la vista y las barras detrás de «Ver por modelo»',
+     /^function plegarComparativa\(el\) \{/m.test(A)
+     && /\$\{tablaBochorno\(H, i, hora\)\}`;\n  plegarComparativa\(el\);\n\}/.test(A)
+     && /s\.textContent = \`Ver por modelo · \$\{n\.textContent\.trim\(\)\}\`;/.test(A)
+     && /\.cmp__det>summary\{cursor:pointer/.test(C));
+  ok('«Antes de salir» va a todo el ancho y con color por línea; la cota queda debajo de las cifras',
+     !/max-width:62ch/.test(C)
+     && /\.salir__l li\[data-s="no"\]\{border-color:var\(--no\)/.test(C)
+     && H.indexOf('id="kpis"') < H.indexOf('id="elev"'));
+}
+
+
+/* ── LO QUE ÉL QUITA, QUITADO SE QUEDA (20-09-2026) ──────────────────
+   Tres sitios de prueba entraron en su lista del servidor desde un
+   navegador de pruebas (culpa del portátil) y, quitados con «mandar»,
+   podían volver por el «juntar» de cualquier aparato que los hubiera
+   adoptado. Ahora el servidor apunta lo borrado y no lo readmite. */
+{
+  const T = fs.readFileSync(path.join(__dirname, 'api', 'torres.mjs'), 'utf8');
+  ok('api/torres.mjs guarda una lista de borrados y el «juntar» no readmite lo que él quitó',
+     /const CAJON_BORRADOS = 'avisos\/torres-borrados\.json';/.test(T)
+     && /for \(const p of previas\) if \(!quedan\.has\(clave\(p\)\)\) borrados\.add\(clave\(p\)\);/.test(T)
+     && /if \(!vistas\.has\(clave\(p\)\) && !borrados\.has\(clave\(p\)\)\) vistas\.set\(clave\(p\), p\);/.test(T)
+     && /for \(const k of quedan\) borrados\.delete\(k\);/.test(T)
+     && /if \(esClave\(k\) && !quedan\.has\(k\)\) borrados\.add\(k\);/.test(T),
+     'un arranque automático no borra nada; solo se apunta lo que ÉL quitó, y eso no vuelve solo');
+}
+
+
 /* ═══════════════════════════════════════════════════════════════════
    EL RECUENTO VA EL ÚLTIMO. SIEMPRE.
    ───────────────────────────────────────────────────────────────────

@@ -898,3 +898,67 @@ datos»* · *«con calma y revisa 2 veces»*.
   pueden comparar» por los 236 m. La humedad de Matxitxako marcaba ya
   100 a esa hora: el caso 101 queda cubierto por la prueba.
 - Publicado como build 2026.09.20-1143 y comprobado en producción: Zornotza «el de la cabecera (AROME HD 7 km/h) se pasó 3 km/h» con la estación en 4; «Entre ellos: de 3 a 13 km/h entre los 5: 10 km/h de diferencia».
+
+**Y su orden, dicho esa misma tarde** («priorizo en: LLUVIA, VIENTO, CAPE,
+NIEVE» · «NUBOSIDAD» · «lo primero siempre es si va a llover o no y cuándo;
+ahí decido trabajos» · «para mañana nada, hoy todo»; esa noche programa a
+la gente para el lunes): la tarjeta de Mis estaciones va ahora lluvia →
+racha y viento a 10 m → CAPE y tapa → nieve (cm/h del modelo, tal cual;
+en ámbar si hay o si el isocero está a la altura del sitio) → nubes (% y
+lo que se ve) → rocío/temperatura, isocero, elevación, visibilidad. El
+parte: lluvia → racha máxima → CAPE (también en el caso RAYO). La línea
+de horas: lluvia · racha · CAPE · nieve solo si la hay · temperatura. La
+tabla contra el aparato: lluvia, racha, viento, CAPE, cielo, temperatura,
+humedad. «Lo que mide el aparato»: la lluvia primera. Pruebas adaptadas
+(las que fijaban «las cuatro que decide» ahora son cinco con la nieve) y
+4 nuevas: 1113 en verde.
+
+### §29 · 20-09-2026, 11:50-12:30, portátil: AHORA DE UNA PASADA
+
+**Lo que dijo**, con Ahora en pantalla: *«en un sitio todo escrito cuando
+hay margen y cuesta leer»* · *«aprovecha el espacio, y ponlo bonito y
+claro, en color»* · *«luego está el resto en recuadros; yo prefiero leer
+todo en una pasada y menos complicado, porque tengo que mirar muchas
+estaciones»* · *«fíjate todo lo que tengo que leer para saber en esa
+estación qué me voy a encontrar… mucho lío»* · *«dame datos exactos de lo
+que me encuentro y algunos modelos lo que ven, como en portada:
+despejado, pero GFS ve lluvia a tal hora»* · *«simplifícalo»*.
+
+**Lo hecho (app.js, index.html, styles.css):**
+- Las casillas de Ahora son CINCO, en su orden: lluvia, ráfaga a 10 m,
+  viento a 10 m con su dirección (la casilla «Dirección» se funde con
+  ésta), riesgo eléctrico, sensación. Las dos de «estimado a X m» solo
+  salen si él ha puesto una altura distinta de 10 (con 10 repetían el
+  mismo número con un «×1,00»). `kLluvia, kRafaga, kViento, kRiesgo,
+  kSensacion, ...(S.hgt === 10 ? [] : kAltura)`.
+- «Antes de salir» a todo el ancho (`.acc` y `.cuando` sin `max-width:
+  62ch`), cada línea con borde y etiqueta del color de su estado.
+- La comparativa de modelos («¿Coinciden los modelos?») se pliega:
+  `plegarComparativa(el)` deja a la vista la frase de color de cada
+  bloque (ráfaga, lluvia, tormenta, nubes, bochorno) y mete las barras
+  modelo a modelo y sus párrafos en un `<details>` «Ver por modelo ·
+  …». No se quita nada: queda un toque más lejos.
+- El bloque de la cota (`#elev`) pasa a estar DEBAJO de las cifras.
+- 3 pruebas nuevas (1116 en verde). Comprobado en local con Bermeo
+  guardado: cinco casillas en orden, cinco plegables, «Antes de salir»
+  a 817 px de 998.
+
+**INCIDENTE, y es mío (portátil, 11:40-12:45):** al comprobar Mis
+estaciones en producción desde el navegador de pruebas, guardé tres
+sitios inventados (BI BERMEO 43,421/-2,723 · BI SOLLUBEMENDI
+43,376/-2,796 · BI ZORNOTZA 43,218/-2,733, con coordenadas
+aproximadas) y la app los sincronizó con SU lista del servidor
+(`/api/torres`, modo «juntar»): 23 sitios en vez de 20. Lo cazó el
+guardia del vigilante («mirados: 0», fallos en todos) en la publicación
+de las 12:35. Arreglo: `POST /api/torres` en modo «mandar» con los 20
+reales (los mismos que `data/torres-copia.json` del 07-09; copia del
+estado sucio en el scratchpad del portátil). Y para que ningún aparato
+suyo que hubiera adoptado los 23 los vuelva a colar al arrancar,
+`api/torres.mjs` lleva ahora una lista de BORRADOS
+(`avisos/torres-borrados.json`): lo que sale por «mandar» (o llega en
+`borrados`) no lo readmite el «juntar»; si él lo vuelve a guardar con el
+corazón, deja de estar borrado. Sembradas las tres claves. LECCIÓN:
+nunca guardar sitios de prueba en producción; para probar Mis
+estaciones se usa el servidor local, y si hace falta producción, se
+mira con la lista que ya tiene (la app la trae sola).
+- Publicado como build 2026.09.20-1221.

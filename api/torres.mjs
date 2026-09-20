@@ -46,6 +46,28 @@ async function leerLista() {
 
 const guardarLista = filas => guardarJSON(CAJON, filas);
 
+/* ── LO QUE ÉL QUITA, QUITADO SE QUEDA (20-09-2026) ──────────────────
+   Cazado ese día, y era culpa del portátil: al probar Mis estaciones en
+   producción desde un navegador de pruebas con tres sitios inventados,
+   la app los sincronizó («juntar») y su lista pasó de 20 a 23. Se
+   quitaron con «mandar»… pero cualquier aparato suyo que hubiera
+   adoptado la lista de 23 los volvería a colar al arrancar, porque el
+   «juntar» une sin preguntar.
+
+   Por eso hay una lista de BORRADOS: cada clave que sale por «mandar»
+   (o que llega en `borrados`) queda apuntada, y el «juntar» no la
+   readmite. Si él vuelve a guardar ese sitio con el corazón (llega en
+   un «mandar»), deja de estar borrado. La regla de arriba sigue en pie:
+   un arranque automático no borra nada; solo apunta lo que ÉL quitó. */
+const CAJON_BORRADOS = 'avisos/torres-borrados.json';
+const esClave = k => typeof k === 'string' && /^-?\d+\.\d{3},-?\d+\.\d{3}$/.test(k);
+async function leerBorrados() {
+  try {
+    const d = (await leerDelAlmacen(CAJON_BORRADOS)).dato;
+    return new Set(Array.isArray(d) ? d.filter(esClave) : []);
+  } catch { return new Set(); }
+}
+
 /* Solo lo que hace falta para pintar un emplazamiento. Nada más: esta
    lista dice dónde trabaja: no se le añaden campos por si acaso. */
 /* UN HUECO NO ES UN CERO. Aitor, 28-08-2026, con la pantalla delante:
@@ -99,13 +121,20 @@ export default async function handler(req, res) {
          hay una intención suya detrás, no un arranque automático. */
     const sustituir = req.body?.modo === 'mandar';
     const previas = await leerLista();
+    const borrados = await leerBorrados();
 
     let final;
     if (sustituir) {
       final = llegan;
+      const quedan = new Set(final.map(clave));
+      for (const p of previas) if (!quedan.has(clave(p))) borrados.add(clave(p));
+      for (const k of (Array.isArray(req.body?.borrados) ? req.body.borrados : []))
+        if (esClave(k) && !quedan.has(k)) borrados.add(k);
+      for (const k of quedan) borrados.delete(k);   // lo vuelve a poner él: deja de estar borrado
+      await guardarJSON(CAJON_BORRADOS, [...borrados]);
     } else {
       const vistas = new Map(previas.map(p => [clave(p), p]));
-      for (const p of llegan) if (!vistas.has(clave(p))) vistas.set(clave(p), p);
+      for (const p of llegan) if (!vistas.has(clave(p)) && !borrados.has(clave(p))) vistas.set(clave(p), p);
       final = [...vistas.values()];
     }
 

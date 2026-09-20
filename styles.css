@@ -1602,7 +1602,7 @@ body.sin-scroll{overflow:hidden}
    es la otra mitad de la decisión: de nada sirve que se pueda trabajar
    si la pista está con hielo o hay que subir un remolque por el barro. */
 .acc{margin:9px 0 0;padding:9px 11px;border-radius:10px;
-  border:1px solid var(--line);background:rgba(255,255,255,.03);max-width:62ch}
+  border:1px solid var(--line);background:rgba(255,255,255,.03);max-width:none}
 .acc[hidden]{display:none}
 .acc[data-s="warn"]{border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
 .acc[data-s="no"]{border-color:color-mix(in srgb,var(--no) 55%,transparent)}
@@ -1622,7 +1622,7 @@ body.sin-scroll{overflow:hidden}
    cifra de esta caja cayera en su propio renglón: «Racha: ahora / 24
    km/h / · +1 h / 18 km/h». Suyo el 02-09-2026, con la foto. */
 .cuando b{display:inline}
-.cuando{margin:6px 0 0;font-size:0.8125rem;line-height:1.5;color:var(--ink);max-width:62ch}
+.cuando{margin:6px 0 0;font-size:0.8125rem;line-height:1.5;color:var(--ink);max-width:none}
 .cuando[hidden]{display:none}
 .cuando b[data-s="go"]{color:var(--go)}
 .cuando b[data-s="warn"]{color:var(--warn)}
@@ -2805,3 +2805,26 @@ body.sin-scroll{overflow:hidden}
 
 /* Oleaje por horas (19-09-2026): la racha en la tarjeta del mar no es un semáforo. */
 .hcard--mar .hcard__g{white-space:normal}
+
+/* ── AHORA, DE UNA PASADA (20-09-2026) ─────────────────────────────────
+   Suyo: «en un sitio todo escrito cuando hay margen y cuesta leer» ·
+   «aprovecha el espacio, y ponlo bonito y claro, en color». «Antes de
+   salir» a todo el ancho, cada línea con su color por el borde y la
+   etiqueta, y la comparativa de modelos plegada. */
+.acc__k{font-size:0.875rem}
+.salir__l{font-size:0.875rem;line-height:1.55;padding-left:0;list-style:none}
+.salir__l li{padding:5px 0 5px 12px;margin-bottom:5px;border-left:3px solid var(--line);color:var(--ink)}
+.salir__l li[data-s="go"]{border-color:var(--go);color:var(--ink)}
+.salir__l li[data-s="warn"]{border-color:var(--warn);color:var(--ink)}
+.salir__l li[data-s="no"]{border-color:var(--no);color:var(--ink);font-weight:500}
+.salir__l li[data-s="nd"]{border-color:var(--line);color:var(--faint)}
+.salir__l li[data-s="go"] .salir__k{color:var(--go)}
+.salir__l li[data-s="warn"] .salir__k{color:var(--warn)}
+.salir__l li[data-s="no"] .salir__k{color:var(--no)}
+.cmp__det{margin:-4px 0 16px}
+.cmp__det>summary{cursor:pointer;list-style:none;font-size:0.8125rem;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--faint);padding:6px 0}
+.cmp__det>summary::-webkit-details-marker{display:none}
+.cmp__det>summary::before{content:"▸ ";display:inline-block}
+.cmp__det[open]>summary{color:var(--dim)}
+.cmp__det[open]>summary::before{content:"▾ "}

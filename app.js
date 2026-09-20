@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.20-1157';
+const BUILD = '2026.09.20-1221';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -4290,22 +4290,34 @@ function renderTower() {
   const w10St = !has(w10) ? 'nd' : w10 >= S.thr.windNo ? 'no' : w10 >= S.thr.windWarn ? 'warn' : 'go';
   const g10St = !has(g10) ? 'nd' : g10 >= listonRafaga().no ? 'no' : g10 >= listonRafaga().warn ? 'warn' : 'go';
 
-  $('#kpis').innerHTML = [
+  /* ── CINCO CASILLAS, EN SU ORDEN Y SIN REPETIR (20-09-2026) ────────
+     Suyo, la víspera de la prueba de fuego: «quiero info la justa para
+     saber de una pasada qué tengo en cada sitio» · «sin tanto recuadro»
+     · «simplifícalo» · «lo primero siempre es si va a llover o no y
+     cuándo». Lluvia, ráfaga, viento con su dirección, riesgo eléctrico,
+     sensación. Las de «estimado a X m» solo si él ha puesto una altura
+     distinta de 10: con 10 m repetían el mismo número con un «×1,00»
+     que parecía una cuenta. La casilla de Dirección se funde con la del
+     viento, que es donde se lee. */
+  const kRafaga =
     kpi('Ráfaga a 10 metros de altura',
         /* La marca de «otro da más» va pegada al número, igual que la del
            cielo, y sale de `avisoRacha()`, que es el único sitio donde se
            decide. Suyo, 30-08-2026: *«todo eso en las tres capas de
            torre, mis torres y ahora»*. */
         has(g10) ? `${wtxt(g10)}<i>${wu().lbl}</i>${avisoRacha(g10, { corto: true })}` : nd,
-        'Tal cual lo publica el modelo',
-        g10St),
+        'Tal cual lo publica el modelo · a pie de caseta',
+        g10St);
+  const kViento =
     kpi('Viento a 10 metros de altura',
         has(w10) ? `${wtxt(w10)}<i>${wu().lbl}</i>` : nd,
-        'Tal cual lo publica el modelo',
-        w10St),
-    // Si el modelo solo publica 10 m no hay estimación posible: se dice,
-    // en vez de repetir el mismo número con la etiqueta EST. y un ×1.00
-    // que parece un cálculo cuando no lo es.
+        has(c.dir) ? `del ${rumboLargo(c.dir)} (${c.dir.toFixed(0)}°) · De donde viene el viento a ${c.dirNivel ?? (has(c.dir80) ? 80 : 10)} m`
+                   : 'Tal cual lo publica el modelo',
+        w10St);
+  // Si el modelo solo publica 10 m no hay estimación posible: se dice,
+  // en vez de repetir el mismo número con la etiqueta EST. y un ×1.00
+  // que parece un cálculo cuando no lo es.
+  const kAltura = [
     ...(sinPerfil ? [
       kpi(`A ${S.hgt} m`, '—',
           c.windNote === 'solo-10'
@@ -4330,20 +4342,20 @@ function renderTower() {
             : 'Interpolado entre niveles del modelo',
           wSt),
     ]),
-    kpi('Dirección',
-        has(c.dir) ? `${rumboLargo(c.dir)}<i>${c.dir.toFixed(0)}°</i>` : nd,
-        `De donde viene el viento a ${c.dirNivel ?? (has(c.dir80) ? 80 : 10)} m`),
-    /* El riesgo eléctrico lleva SIEMPRE la tapa al lado. Un CAPE suelto
+  ];
+  /* El riesgo eléctrico lleva SIEMPRE la tapa al lado. Un CAPE suelto
        engaña: 90 J/kg se lee como «tranquilo» y 1.360 como «peligro»,
        cuando lo que decide es la pareja. Lo que cazó las tormentas del
        23 y el 24 de agosto no fue el CAPE, fue el CAPE con la tapa
        cayéndose — 720 con la tapa en 14 el día que oyó truenos. */
+  const kRiesgo =
     kpi('Riesgo eléctrico',
         has(c.cape) ? `${c.cape.toFixed(0)}<i>J/kg</i>` : nd,
         isStormCode(c.code) ? 'Tormenta en la previsión horaria'
           : has(c.cin) ? `CAPE · tapa ${c.cin.toFixed(0)} — ${textoTapa(c.cin)}`
           : 'CAPE — energía convectiva disponible',
-        isStormCode(c.code) ? 'no' : cSt),
+        isStormCode(c.code) ? 'no' : cSt);
+  const kSensacion =
     kpi('Sensación',
         has(c.feels) ? `${c.feels.toFixed(0)}<i>°C</i>` : nd,
         !has(c.temp) ? 'Sin temperatura' : !has(c.feels) ? `Temperatura del aire ${c.temp.toFixed(0)} °C` : (() => {
@@ -4352,10 +4364,10 @@ function renderTower() {
           const dif = Math.round(c.feels) - Math.round(c.temp);
           const aire = `Temperatura del aire ${c.temp.toFixed(0)} °C`;
           return dif === 0 ? aire : `${Math.abs(dif)}° ${dif > 0 ? 'más' : 'menos'} que el aire (${c.temp.toFixed(0)} °C)`;
-        })()),
-    /* El número solo no basta: 0,0 mm con sirimiri se lee «no llueve» y
-       moja. Va la palabra delante y los milímetros detrás. */
-    (() => {
+        })());
+  /* El número solo no basta: 0,0 mm con sirimiri se lee «no llueve» y
+     moja. Va la palabra delante y los milímetros detrás. */
+  const kLluvia = (() => {
       const L = comoLlueve(c);
       const otro = lluviaQueNoVesTu(c);
       const base = [L.k === 'sirimiri' ? 'No marca en el pluviómetro, pero moja'
@@ -4379,8 +4391,9 @@ function renderTower() {
         [base, aviso].filter(Boolean).join('<br>'),
         L.k === 'bien' ? 'no' : (L.k === 'sirimiri' || L.k === 'poco') ? 'warn'
         : L.k === 'nd' ? 'nd' : otro ? 'warn' : 'go');
-    })(),
-  ].join('');
+    })();
+  $('#kpis').innerHTML = [kLluvia, kRafaga, kViento, kRiesgo, kSensacion,
+    ...(S.hgt === 10 ? [] : kAltura)].join('');
 
   /* Se dice de qué hora son las cifras de arriba. `hrs[0]` es la hora
      EN CURSO —`buildHours` coge la primera que aún no ha terminado—, así
@@ -6036,6 +6049,7 @@ function renderComparativa() {
     ${tablaTormenta(H, i, hora)}
     ${tablaNubes(H, i, hora)}
     ${tablaBochorno(H, i, hora)}`;
+  plegarComparativa(el);
 }
 
 /* ── LA TORMENTA, MODELO A MODELO ─────────────────────────────────────
@@ -6231,6 +6245,33 @@ function tablaBochorno(H, i, hora) {
     todo dentro de una caseta o en una azotea. <b>Cómodo</b> por debajo de 16 · <b>se
     nota</b> 16-18 · <b>bochorno</b> 18-21 · <b>agobiante</b> por encima de 21. La cifra
     es del modelo; lo que se hace con ella, tuyo.</p>`;
+}
+
+/* ── LA COMPARATIVA, PLEGADA (20-09-2026) ──────────────────────────
+   Suyo, con tres pantallas de barras delante: «fíjate todo lo que tengo
+   que leer para saber en esa estación qué me voy a encontrar… mucho lío»
+   · «quiero info la justa para saber de una pasada qué tengo en cada
+   sitio» · «dame datos exactos de lo que me encuentro y algunos modelos
+   lo que ven, como en portada: despejado, pero GFS ve lluvia a tal
+   hora». Se queda a la vista la frase de color de cada bloque —que es
+   justo eso, lo que ven los otros— y las barras modelo a modelo se
+   pliegan detrás de «Ver por modelo». No se quita nada: queda un toque
+   más lejos. */
+function plegarComparativa(el) {
+  let det = null;
+  for (const n of [...el.children]) {
+    if (n.classList.contains('cmp__v')) { det = null; continue; }
+    if (n.classList.contains('cmp__h')) {
+      det = document.createElement('details');
+      det.className = 'cmp__det';
+      const s = document.createElement('summary');
+      s.textContent = `Ver por modelo · ${n.textContent.trim()}`;
+      det.appendChild(s);
+      n.replaceWith(det);
+      continue;
+    }
+    if (det) det.appendChild(n);
+  }
 }
 
 function tablaNubes(H, i, hora) {
