@@ -8016,6 +8016,23 @@ grupo('La línea «Medido de verdad» dice «hace 2 h» cuando la lectura pasa d
      /async function pintarMedidoCerca\(p\) \{[\s\S]*?const vieja = haceTxt\(e\.medidoEn\);[\s\S]*?a las \$\{hm\}\$\{vieja \? /.test(src));
 }
 
+/* ═══ EL MODELO DE OLAS DE 9 km SE QUEDA FUERA DEL MAPA (20-09-2026) ═══════
+   Medido en el Chrome del iMac (build 1615, «Altura de ola», zoom 6 sobre el
+   Cantábrico): ecmwf_wam (9 km, el de Windy) sube el montón de 56 a 219 MB,
+   pinta a los ~55 s y acto seguido el mapa se queda sin memoria y se recarga
+   solo (teselasALaVez baja a 2). EWAM (dwd_ewam): 47 → 54 MB, pintado en
+   < 20 s, 0 fallos. Mismo destino que meteofrance_wave (§25). */
+grupo('El modelo de olas de 9 km (ecmwf_wam) NO entra en el mapa: medido que revienta la memoria (20-09-2026)');
+{
+  const M = mapsSrc;
+  const lista = (M.match(/const MODELOS_OLAS = \[([^\]]*)\];/) || [])[1] || '';
+  ok('MODELOS_OLAS empieza por EWAM y no lleva ni ecmwf_wam ni meteofrance_wave',
+     /^\s*'dwd_ewam'/.test(lista) && !/'ecmwf_wam'/.test(lista) && !/'meteofrance_wave'/.test(lista),
+     lista || 'sin lista');
+  ok('y el comentario de TMODELS dice que se midió, no que está «sin probar»',
+     /ecmwf_wam \(9 km, el de Windy\): MEDIDO el 20-09-2026/.test(M) && !/ecmwf_wam \(9 km, el de Windy\): está en el bucket, SIN PROBAR/.test(M));
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');

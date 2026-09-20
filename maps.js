@@ -252,8 +252,11 @@ const TMODELS = [
          Europa, o más allá de sus 3 días).
        · ncep_gfswave016 (0,16°, global, cada hora, 16 días): 48 MB,
          aguanta, pero deja un hueco grande pegado a la costa. Último.
-       · ecmwf_wam (9 km, el de Windy): está en el bucket, SIN PROBAR;
-         por tamaño (rejilla del HRES) huele a OOM. No se mete a ciegas.
+       · ecmwf_wam (9 km, el de Windy): MEDIDO el 20-09-2026 en el Chrome del
+         iMac (Altura de ola, zoom 6, Cantábrico): el montón sube de 56 a
+         219 MB, pinta a los ~55 s y acto seguido Aborted(OOM) y recarga
+         sola. FUERA, como meteofrance_wave. EWAM en las mismas condiciones:
+         47 → 54 MB y pintado en menos de 20 s.
      Ningún modelo de olas tiene celda en los primeros 5-15 km de costa:
      ahí la capa queda vacía a propósito, no se rellena. */
   { id:'dwd_ewam', mar:true, name:'EWAM', res:'0,05°',
