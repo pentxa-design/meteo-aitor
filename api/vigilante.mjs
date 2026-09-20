@@ -216,6 +216,18 @@ const hh = h => String(h).padStart(2, '0') + 'h';
 /* «de 18h a 18h» no es un tramo: una sola hora se dice «a las 18h» (§11 del
    guion del domingo, 13-09-2026; le llegó «racha de 71 km/h de 18h a 18h»). */
 const tramoTxt = (ini, fin) => (ini === fin ? `a las ${hh(ini)}` : `de ${hh(ini)} a ${hh(fin)}`);
+/* LOS TRAMOS DE VERDAD, NO LOS EXTREMOS DEL DÍA. `enTramos()` se calculaba
+   para el agua y la racha desde el 26-08 y NO LO USABA NADIE: todos los
+   avisos escribían `tramoTxt(ini, fin)`, o sea el primer hueco y el último.
+   Con horas a las 04, 05, 21 y 22 salía «de 04h a 22h»: dieciocho horas que
+   nadie ha dicho. El comentario de `enTramos` ya lo advertía, y el arreglo
+   estaba escrito a medias (20-09-2026). */
+const tramosTxt = (t, ini, fin) => (Array.isArray(t) && t.length
+  ? t.map(r => tramoTxt(r.ini, r.fin)).join(' y ')
+  : tramoTxt(ini, fin));
+/* Y la hora del pico se dice aparte, porque el máximo del día casi nunca
+   cae en la primera hora del tramo. */
+const picoTxt = (hPico, ini) => `a las ${hh(hPico ?? ini)}`;
 const rangoTxt = (ini, fin) => (ini === fin ? hh(ini) : `${hh(ini)}-${hh(fin)}`);
 
 /* Parte horas sueltas en tramos SEGUIDOS. Sin esto, un sitio que salta a
@@ -334,7 +346,7 @@ async function unSitio(s) {
         const dia = H_.time[i].slice(0, 10), h = Number(H_.time[i].slice(11, 13));
         const g = aguaDia[dia] ??= { horas: new Set(), mm: 0, quien: null };
         g.horas.add(h);
-        if (v > g.mm) { g.mm = v; g.quien = nombreDe(m) + (deLado ? ' (celda de al lado)' : ''); }
+        if (v > g.mm) { g.mm = v; g.hPico = h; g.quien = nombreDe(m) + (deLado ? ' (celda de al lado)' : ''); }
       }
     }
   }
@@ -353,7 +365,14 @@ async function unSitio(s) {
         const dia = H_.time[i].slice(0, 10), h = Number(H_.time[i].slice(11, 13));
         const r = rachaDia[dia] ??= { horas: new Set(), kmh: 0, quien: null };
         r.horas.add(h);
-        if (v > r.kmh) { r.kmh = v; r.quien = nombreDe(m) + (deLado ? ' (celda de al lado)' : ''); }
+        /* Y LA HORA DEL PICO. Encontrado el 20-09-2026: `kmh` era el máximo
+           del día y `ini` la PRIMERA hora que pasaba de 70, y el parte de la
+           mañana los pegaba: con 71 a las 07, 94 a las 17 y 88 a las 18
+           escribía «lo peor OIZ 94 km/h a las 07h». Eso no lo ha dicho ningún
+           modelo, y él manda la cuadrilla a las siete creyendo que lo peor ya
+           ha pasado. La app cliente sí guarda la hora del pico; el servidor
+           no. */
+        if (v > r.kmh) { r.kmh = v; r.hPico = h; r.quien = nombreDe(m) + (deLado ? ' (celda de al lado)' : ''); }
       }
     }
   }
@@ -361,14 +380,14 @@ async function unSitio(s) {
   for (const [dia, r] of Object.entries(rachaDia)) {
     const hs = [...r.horas].sort((a2, b2) => a2 - b2);
     racha[dia] = { ini: hs[0], fin: hs.at(-1), tramos: enTramos(hs),
-                   kmh: Math.round(r.kmh), quien: r.quien };
+                   kmh: Math.round(r.kmh), hPico: r.hPico, quien: r.quien };
   }
 
   const agua = {};
   for (const [dia, g] of Object.entries(aguaDia)) {
     const hs = [...g.horas].sort((a2, b2) => a2 - b2);
     agua[dia] = { ini: hs[0], fin: hs.at(-1), tramos: enTramos(hs),
-                  mm: Math.round(g.mm * 10) / 10, quien: g.quien,
+                  mm: Math.round(g.mm * 10) / 10, hPico: g.hPico, quien: g.quien,
                   fuerte: g.mm >= AGUA_FUERTE };
   }
 
@@ -645,7 +664,9 @@ export default async function handler(req, res) {
       return res.status(200).json({ ultima: e.cuando, haceMin, envia,
         lista: e.listaDeRespaldo ? 'respaldo' : 'la tuya',
         parteDe: e.parteDe ?? null,
-        sitios: Object.keys(e.sitios || {}).length });
+        sitios: Object.keys(e.sitios || {}).length,
+        nLista: e.nLista ?? null,
+        noMirados: e.noMirados ?? [] });
     } catch (err) {
       return res.status(200).json({ ultima: null, haceMin: null, fallo: String(err?.message || err).slice(0, 60) });
     }
@@ -817,7 +838,11 @@ export default async function handler(req, res) {
   const porDelante = x => x && (x.fin == null || x.fin >= h0);
   const rojo = !!(antes && (
     antes.ultimoAviso
-    || Object.values(antes.sitios || {}).some(d => porDelante(d?.[claveHoy]))
+    /* Con la medianoche por delante, la madrugada cuenta igual: si no, esa
+       noche el vigilante se queda en ámbar (cada media hora) justo cuando
+       se está armando lo de las 00:00 (20-09-2026). */
+    || Object.values(antes.sitios || {}).some(d => porDelante(d?.[claveHoy])
+         || (h0 >= 21 && d?.[claveManana]))
     || Object.values(antes.rachaSitios || {}).some(r => r?.[claveHoy] && r[claveHoy].kmh >= RACHA_TOPE && porDelante(r[claveHoy]))));
   const nivel = rojo ? 'rojo' : algoEnMarcha ? 'ambar' : 'verde';
   const cadaMin = { verde: 115, ambar: 25, rojo: 10 }[nivel];
@@ -837,7 +862,24 @@ export default async function handler(req, res) {
   const fallos = datos.filter(d => !d.ok);
 
   /* ── 1. LO INMINENTE: esta hora y las tres siguientes ─────────────── */
+  /* ── Y LO QUE EMPIEZA DESPUÉS DE MEDIANOCHE (20-09-2026) ───────────
+     Esto miraba SOLO el día de hoy. A las 23:10, un sitio cuya tormenta
+     arranca a las 00:00 —dentro de cincuenta minutos— no entraba en la
+     lista, porque sus horas están apuntadas en el día de mañana y el de
+     hoy no existe. Silencio total justo en la franja en la que él trabaja
+     de noche y en la que entra de guardia.
+
+     Es el mismo fallo que este fichero ya documenta en `cuandoTxt` —«el
+     episodio no acaba donde acaba la consulta»— pero allí se arregló el
+     TEXTO y la DETECCIÓN se quedó igual. Ahora, cuando las tres horas
+     siguientes cruzan la medianoche, se miran también las primeras horas
+     de mañana. */
+  const hastaManana = h0 + 3 - 24;          // negativo si no se cruza la medianoche
   const inminentes = buenos.filter(d => {
+    if (hastaManana >= 0) {
+      const m = d.dias[claveManana];
+      if (m && m.ini <= hastaManana) return true;
+    }
     const t = d.dias[claveHoy];
     return t && t.ini <= h0 + 3 && t.fin >= h0;
   });
@@ -942,7 +984,7 @@ export default async function handler(req, res) {
         const va = antes.aguaSitios?.[d.n]?.[clave], vb = d.agua?.[clave];
         if (vb && !va && hayAguaGuardada && !(cual === 'hoy' && vb.fin < h0)) {
           cambiosAgua.push({ n: d.n, lat: d.lat, lon: d.lon, cual, peor: true, critico: d.critico,
-            txt: `${vb.fuerte ? 'lluvia fuerte' : 'agua'} ${tramoTxt(vb.ini, vb.fin)}`
+            txt: `${vb.fuerte ? 'lluvia fuerte' : 'agua'} ${tramosTxt(vb.tramos, vb.ini, vb.fin)}`
                + ` (${vb.mm} mm/h, lo ve ${vb.quien})` });
         } else if (vb && va && !(cual === 'hoy' && vb.fin < h0)) {
           const aFuerte = !va.fuerte && vb.fuerte;
@@ -950,7 +992,7 @@ export default async function handler(req, res) {
           if (aFuerte || antesDe) {
             cambiosAgua.push({ n: d.n, lat: d.lat, lon: d.lon, cual, peor: true, critico: d.critico,
               txt: aFuerte
-                ? `el agua pasa a fuerte: ${vb.mm} mm/h ${tramoTxt(vb.ini, vb.fin)}`
+                ? `el agua pasa a fuerte: ${vb.mm} mm/h ${picoTxt(vb.hPico, vb.ini)}`
                 : `el agua se adelanta: ${hh(va.ini)} pasa a ${hh(vb.ini)}` });
           }
         }
@@ -958,7 +1000,9 @@ export default async function handler(req, res) {
         const ra = antes.rachaSitios?.[d.n]?.[clave], rb = d.racha?.[clave];
         if (rb && !ra && hayRachaGuardada && !(cual === 'hoy' && rb.fin < h0)) {
           cambiosRacha.push({ n: d.n, lat: d.lat, lon: d.lon, cual, peor: true, critico: d.critico, kmh: rb.kmh,
-            txt: `racha de ${rb.kmh} km/h ${tramoTxt(rb.ini, rb.fin)} (lo ve ${rb.quien})` });
+            txt: `racha de ${rb.kmh} km/h ${picoTxt(rb.hPico, rb.ini)}`
+                 + `${(rb.tramos?.length ?? 1) > 1 ? `, y pasa de ${RACHA_TOPE} ${tramosTxt(rb.tramos, rb.ini, rb.fin)}` : ''}`
+                 + ` (lo ve ${rb.quien})` });
         } else if (rb && ra && !(cual === 'hoy' && rb.fin < h0)) {
           const masFuerte = rb.kmh >= ra.kmh + 10;
           const antesDe = rb.ini <= ra.ini - 2;
@@ -1138,12 +1182,14 @@ export default async function handler(req, res) {
     if (conAgua.length) {
       const peor = conAgua.reduce((a2, b2) => b2.agua[claveHoy].mm > a2.agua[claveHoy].mm ? b2 : a2);
       trozos.push(`🌧 agua en ${conAgua.length}: lo más fuerte ${peor.n} `
-        + `${peor.agua[claveHoy].mm} mm/h ${tramoTxt(peor.agua[claveHoy].ini, peor.agua[claveHoy].fin)}`);
+        + `${peor.agua[claveHoy].mm} mm/h ${picoTxt(peor.agua[claveHoy].hPico, peor.agua[claveHoy].ini)}`
+        + `, y llueve ${tramosTxt(peor.agua[claveHoy].tramos, peor.agua[claveHoy].ini, peor.agua[claveHoy].fin)}`);
     }
     if (conRacha.length) {
       const peor = conRacha.reduce((a2, b2) => b2.racha[claveHoy].kmh > a2.racha[claveHoy].kmh ? b2 : a2);
       trozos.push(`💨 racha de 70+ en ${conRacha.length}: lo peor ${peor.n} `
-        + `${peor.racha[claveHoy].kmh} km/h a las ${hh(peor.racha[claveHoy].ini)}`);
+        + `${peor.racha[claveHoy].kmh} km/h ${picoTxt(peor.racha[claveHoy].hPico, peor.racha[claveHoy].ini)}`
+        + `, y pasa de ${RACHA_TOPE} ${tramosTxt(peor.racha[claveHoy].tramos, peor.racha[claveHoy].ini, peor.racha[claveHoy].fin)}`);
     }
 
     avisos.push({
@@ -1233,6 +1279,16 @@ export default async function handler(req, res) {
              ? firmaAhora
              : (antes?.ultimoAviso ?? null)),
       sitios: Object.fromEntries(buenos.map(d => [d.n, d.dias])),
+      /* ── CUÁNTOS TENÍA, NO SOLO CUÁNTOS PUDE ─────────────────────
+         Cazado el 20-09-2026 mirando el pulso en producción: decía 19 y
+         él tiene 20. `sitios` son los que SALIERON BIEN, y la app lo
+         pinta como «Última pasada por tus 19 emplazamientos» — que se
+         lee como «tienes 19», no como «uno falló». El número baja solo y
+         nadie dice por qué: el error de esta casa otra vez.
+         Se guarda también el total de la lista y los nombres de los que
+         no se pudieron mirar, y el pulso los canta. */
+      nLista: datos.length,
+      noMirados: fallos.map(f => f.n).slice(0, 8),
       /* Sin guardar esto, la pasada siguiente compararía contra nada y
          soltaría «ahora da agua» en todos los sitios a la vez. */
       aguaSitios: Object.fromEntries(buenos.map(d => [d.n, d.agua || {}])),

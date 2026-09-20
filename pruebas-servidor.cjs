@@ -351,6 +351,44 @@ ok('si NO se llegó a enviar, no se marca como dado: se reintenta',
    /: \(antes\?\.parteDe \?\? null\)/.test(vig));
 ok('un día sin nada TAMBIÉN manda parte: es la señal de vida',
    /sin nada por encima de tus listones/.test(vig));
+
+/* ── LA HORA QUE SE PEGA AL NÚMERO ES LA DEL NÚMERO (20-09-2026) ──────
+   `kmh` era el máximo del día y `ini` la PRIMERA hora que pasaba de 70. El
+   parte de la mañana los pegaba: con 71 a las 07 y 94 a las 17 escribía
+   «lo peor OIZ 94 km/h a las 07h». Nadie ha dicho eso, y él manda la
+   cuadrilla a las siete creyendo que lo peor ya ha pasado. */
+ok('la racha guarda la HORA de su pico, no solo el pico',
+   /if \(v > r\.kmh\) \{ r\.kmh = v; r\.hPico = h;/.test(vig)
+   && /kmh: Math\.round\(r\.kmh\), hPico: r\.hPico/.test(vig));
+ok('y el agua también',
+   /if \(v > g\.mm\) \{ g\.mm = v; g\.hPico = h;/.test(vig)
+   && /mm: Math\.round\(g\.mm \* 10\) \/ 10, hPico: g\.hPico/.test(vig));
+ok('el pico se dice con SU hora, no con la primera del día',
+   /const picoTxt = \(hPico, ini\)/.test(vig)
+   && !/km\/h a las \$\{hh\(peor\.racha\[claveHoy\]\.ini\)\}/.test(vig),
+   'el máximo del día casi nunca cae en la primera hora del tramo');
+
+/* ── LOS TRAMOS DE VERDAD, NO LOS EXTREMOS ───────────────────────────
+   `enTramos()` se calculaba desde el 26-08 para el agua y la racha y NO LO
+   USABA NADIE: los avisos escribían el primer hueco y el último. Con horas
+   a las 04, 05, 21 y 22 salía «de 04h a 22h»: dieciocho horas que nadie ha
+   dicho. */
+ok('los avisos de agua y racha usan los TRAMOS, no los extremos del día',
+   /const tramosTxt = \(t, ini, fin\)/.test(vig)
+   && !/'agua'\} \$\{tramoTxt\(vb\.ini, vb\.fin\)\}/.test(vig),
+   'enTramos se calculaba y no lo leía nadie');
+
+/* ── LA MADRUGADA CUENTA (20-09-2026) ────────────────────────────────
+   Lo inminente miraba SOLO el día de hoy. A las 23:10, una tormenta que
+   arranca a las 00:00 —dentro de cincuenta minutos— no entraba en la
+   lista: sus horas están apuntadas en mañana. Silencio justo en la franja
+   en la que él trabaja de noche. */
+ok('lo inminente mira también las primeras horas de mañana',
+   /const hastaManana = h0 \+ 3 - 24;/.test(vig)
+   && /if \(hastaManana >= 0\) \{\s*\n\s*const m = d\.dias\[claveManana\];/.test(vig),
+   'él trabaja de noche: una tormenta a las 00:00 tiene que avisar a las 23:00');
+ok('y esa noche el vigilante no se queda en ámbar',
+   /\|\| \(h0 >= 21 && d\?\.\[claveManana\]\)/.test(vig));
 ok('y dice cuántos sitios ha mirado, que un cero sin contexto no vale',
    /Los \$\{buenos\.length\} emplazamientos/.test(vig));
 /* 12 es EL TOPE del plan Hobby de Vercel, y con /api/ajustes (30-08,

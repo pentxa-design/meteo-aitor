@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.20-1950';
+const BUILD = '2026.09.20-2019';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -2121,12 +2121,18 @@ function assess(h, thr, quePerfil, place = null) {
        salía en VERDE con «Nada llega a tus listones». La comparativa lo
        rescata cuando la hay (`otra10`); cuando no —las veinte filas de
        «Mis torres», el primer pintado— aquí no hay dato, y se dice. */
+    /* CON EL NÚMERO QUE SE IMPRIME, no con el crudo. La rama de torre se
+       arregló el 04-09 («con la racha en 59,6 se imprimía Ráfaga 60 en
+       ÁMBAR») y a ésta —la de caseta y poste, su 90 %— se le olvidó: con
+       69,6 escribía «Ráfaga 70 km/h», que es su tope exacto, y la pintaba
+       en ÁMBAR diciendo que dentro de la caseta no impide trabajar
+       (20-09-2026). */
     if (!has(g10)) bump('nd', 'Ráfaga: sin dato del modelo');
-    else if (P.rafagaBestia && g10 >= P.rafagaBestia)
+    else if (P.rafagaBestia && wRed(g10) >= wRed(P.rafagaBestia))
       bump('no', `Ráfaga ${wtxt(g10, true)}${deOtro}` +
         (conHierro ? `, y a ras de suelo se nota: ramas en la pista, trampillas y rejillas`
                    : ` a la intemperie`));
-    else if (P.rafagaBestia && g10 >= P.rafagaBestia * 0.7)
+    else if (P.rafagaBestia && wRed(g10) >= wRed(P.rafagaBestia * 0.7))
       bump('warn', `Ráfaga ${wtxt(g10, true)}${deOtro} — ` +
         (conHierro ? `molesta en la escalera del poste y para abrir armarios; dentro de la caseta no impide trabajar`
                    : `cuidado con lo que se pueda volar`));
@@ -2149,7 +2155,13 @@ function assess(h, thr, quePerfil, place = null) {
   /* Con SU listón de lluvia, no con un 0,2 escrito a mano: es un número
      que él puede cambiar en Ajustes y hasta hoy no cambiaba nada aquí
      (barrido del 01-09-2026). Con los valores de fábrica sale igual. */
-  const lloviendo = has(h.prec) && h.prec > (thr?.rainWarn ?? 0.2);
+  /* `>=`, como en todas las demás pantallas. Era el ÚNICO sitio de la app
+     con `>`, y los modelos publican la lluvia con un decimal: 0,2 exacto
+     sale a diario. Con 0,2 el aviso decía «CAPE 1.200 — no es tormenta
+     todavía» en ámbar, y con 0,21 «CAPE 1.200 y lloviendo — tormenta en
+     marcha» en rojo. Una centésima de milímetro cambiaba el color
+     (20-09-2026). */
+  const lloviendo = has(h.prec) && h.prec >= (thr?.rainWarn ?? 0.2);
 
   if (tormentaAhora) bump('no', `Tormenta prevista (${wmoText(h.code)}) — riesgo eléctrico`);
 
@@ -3951,6 +3963,28 @@ function horaDe(fc, i, height, place, extra) {
    son la MISMA hora con los MISMOS datos, y no pueden discrepar. */
 function conAhora(h, C) {
   if (!h || !C) return h;
+  /* ── Y SOLO SI `current` ES DE ESTA HORA (20-09-2026) ──────────────
+     Esto pisaba el cielo de la hora en curso con el de `current` sin mirar
+     de cuándo era `current`. Con datos frescos da igual —es de hace quince
+     minutos—, pero `guardarCopia()` guarda el `fc` ENTERO, `current`
+     incluido, y la copia se usa justo donde más duele: en el monte, sin
+     cobertura.
+
+     Escenario medido leyendo el código: guarda a las 08:10 con sol; a las
+     14:20, sin cobertura, abre la app. La propia copia trae para las 14:00
+     código 63 (lluvia) y 96 % de nubes... y esto los sustituía por el sol
+     de las 08:10. En pantalla: sol grande, «Despejado», y justo debajo
+     «Cifras de 14:00 a 15:00 — la hora en curso». Encima se comía la
+     previsión buena que la copia sí traía.
+
+     Ahora `current` solo pisa si cae dentro de la hora que se está
+     pintando. Si es de antes, manda la previsión de esa hora, que es lo
+     honrado y además es mejor dato. */
+  if (has(C.time) && has(h.date)) {
+    const tC = new Date(C.time).getTime();
+    const tH = h.date.getTime();
+    if (!Number.isFinite(tC) || tC < tH || tC >= tH + 3600e3) return h;
+  }
   if (has(C.weather_code))     h.code        = C.weather_code;
   if (has(C.cloud_cover))      h.cloud       = C.cloud_cover;
   if (has(C.cloud_cover_low))  h.nubesBajas  = C.cloud_cover_low;
@@ -5936,7 +5970,12 @@ function renderComparativa() {
   // ¿Alguno supera tus umbrales?
   const algunoNo   = rachas.some(r => r >= listonRafaga().no);
   const algunoWarn = rachas.some(r => r >= listonRafaga().warn);
-  const todosNo    = rachas.every(r => r >= listonRafaga().no);
+  /* `[].every(...)` es TRUE, y eso aquí significaba pintar el panel en rojo
+     con «Todos los modelos superan tu límite · Coinciden en que no son
+     condiciones para subir» SIN UN SOLO DATO DE RACHA — porque las filas
+     admiten modelos que publican el viento pero no la racha. Falsa alarma,
+     que erosiona la confianza igual que un silencio (20-09-2026). */
+  const todosNo    = rachas.length > 0 && rachas.every(r => r >= listonRafaga().no);
 
   let nivel, titulo, texto;
   if (todosNo) {
@@ -6096,7 +6135,15 @@ function tablaTormenta(H, i, hora) {
        12-09-2026 00:34): la tapa no estaba puesta, lo que no había era
        gasolina. Se dice cuál de las dos falta. */
     const abiertos = losQueSaben.filter(f => f.cin < 75);
-    const capeMax = Math.round(Math.max(...losQueSaben.map(f => f.cape)));
+    /* DE LOS ABIERTOS, NO DE TODOS. Con ICON en 2.500 y la tapa puesta, y
+       GFS en 120 con la tapa abierta, esto escribía «está abierta, pero no
+       hay gasolina: CAPE máximo 2.500, y hacen falta 700» — una frase que
+       se desmiente a sí misma en su propia mitad, y en verde, con la barra
+       de ICON en ámbar justo debajo (20-09-2026). La gasolina que importa
+       es la de los modelos que tienen la tapa abierta. */
+    const capeMax = abiertos.length
+      ? Math.round(Math.max(...abiertos.map(f => f.cape)))
+      : Math.round(Math.max(...losQueSaben.map(f => f.cape)));
     cab = { s: 'go', t: 'Ninguno de los que saben ve tormenta',
             x: abiertos.length
               ? `${listar(losQueSaben.map(f => f.name))} publican la tapa. `
@@ -7387,11 +7434,28 @@ async function cargarTorres() {
        31-08 en la vía con cobertura y que en ésta —la del monte, la de
        «Guardar para el monte», la que usa cuando no hay red— se quedó sin
        arreglar. (Barrido del 01-09-2026.) */
-    S.torres = conCopia.map(({ place, copia }) => ({
-      place, cfg: cfgDe(place), horas: buildHours(copia.data.fc, ALTURA_CASETA, place),
-      elev: copia.data.fc?.elevation,
-      copia,
-    }));
+    /* ── LOS QUE NO TIENEN COPIA SE DICEN, NO DESAPARECEN (20-09-2026) ──
+       Encontrado en el repaso del domingo. Esta rama —la del monte, la que
+       corre cuando no hay red— pintaba SOLO los emplazamientos con copia
+       guardada. Los demás se caían de la lista y lo único que lo decía era
+       un aviso flotante de cinco segundos.
+
+       Y lo peor no era la ausencia: `#torresHint` se calcula sobre lo que
+       hay en `S.torres`, así que con diecisiete de veinte escribía
+       «ninguna fuera de umbrales ahora mismo» —una frase tranquila y
+       rotunda— sobre una lista a la que le faltaban tres sitios. Es el
+       error de esta casa con otra ropa: lo que no se mira se ve igual que
+       lo que está tranquilo.
+
+       El arreglo ya estaba escrito veinte líneas más arriba, en la vía con
+       cobertura: un sitio sin previsión se guarda con `horas: null` y sale
+       como tarjeta «sin datos». Aquí faltaba aplicarlo. */
+    S.torres = S.saved.map(p => {
+      const copia = leerCopia(p);
+      if (!copia) return { place: p, horas: null, sinCopia: true };
+      return { place: p, cfg: cfgDe(p), horas: buildHours(copia.data.fc, ALTURA_CASETA, p),
+               elev: copia.data.fc?.elevation, copia };
+    });
     /* El parte PRIMERO: `renderTorres` lee `S.parteFilas` para meterlo
        dentro de cada tarjeta. Al revés pintaba el del render anterior. */
     renderParte(); renderTorres();
@@ -7572,8 +7636,6 @@ function calcularParte(sitios, arr) {
      presentación**. Se guarda la FECHA y quien necesite el nombre lo pide
      a `nombreDeDia`, que es la única que sabe escribirlo. */
   S.parteDiaFecha = v_.dia;
-  const CON_TAPA = ['best_match', 'icon_seamless', 'gfs_seamless'];
-
   /* ── EL PARTE ES DE UN DÍA, NO DE 24 HORAS ────────────────────────
      Lo pidió él el 26-08-2026 y tiene toda la razón: *«prefiero que sea
      de hoy, y mañana cuando abra esta pestaña pues de mañana… día por
@@ -7743,7 +7805,26 @@ function calcularParte(sitios, arr) {
          Ahora se busca **la hora peor de verdad** —la de más CAPE— y se
          enseña LA TAPA DE ESA HORA. Si empatan en CAPE, gana la que
          tenga la tapa más baja, que es la que más se acerca a romper. */
-      let peorPar = null;
+      /* ── Y LOS EXTREMOS DEL DÍA, QUE SON OTRA COSA (20-09-2026) ────
+         El arreglo del 30-08 —emparejar CAPE y tapa de la MISMA hora— se
+         comió sin querer el del 26-08, el del «AL FILO». Porque con una
+         sola pareja, la condición «hay gasolina Y la tapa se abre» es
+         imposible aquí: si las dos cosas pasaran en la misma hora, arriba
+         ya se habría marcado que SALTA y no se llegaría a este trozo.
+
+         Resultado, medido leyendo el código en el repaso del domingo: la
+         etiqueta AL FILO **no podía salir nunca**, la frase «pero no a la
+         vez» tampoco, y a un sitio con 1.350 de CAPE a las 14:00 y la tapa
+         en 8 a las 22:00 se le pintaba «SIN RAYO» en verde con «la tapa no
+         baja de 210: aguanta» debajo. Justo la mentira que él cazó el
+         26-08, de vuelta por la puerta de atrás.
+
+         Así que ahora se guardan LAS DOS COSAS y cada una dice lo suyo:
+           · la pareja (misma hora, mismo modelo) — para enseñar cifras que
+             de verdad ocurrieron juntas;
+           · el techo de CAPE y el suelo de la tapa del día entero — para
+             saber si le falta poco, aunque no coincidan. */
+      let peorPar = null, capeTecho = null, tapaSuelo = null;
       for (const m of CON_TAPA) {
         const cape = H[`cape_${m}`], cin = H[`convective_inhibition_${m}`];
         if (!cape || !cin) continue;
@@ -7755,11 +7836,19 @@ function calcularParte(sitios, arr) {
               || (cape[i] === peorPar.cape && cin[i] < peorPar.cin)) {
             peorPar = { cape: cape[i], cin: cin[i] };
           }
+          if (capeTecho === null || cape[i] > capeTecho) capeTecho = cape[i];
+          if (tapaSuelo === null || cin[i] < tapaSuelo) tapaSuelo = cin[i];
         }
       }
+      /* UN HUECO NO ES UN CERO. Antes esto devolvía `maxCape: 0` cuando
+         ningún modelo publicaba la pareja, y el parte escribía «0 de CAPE
+         — hace falta 700» en verde: un dato que nadie ha dado, pintado
+         como si lo hubieran dado y fuera tranquilizador. Va en null y la
+         frase lo dice con todas las letras (20-09-2026). */
       return { k, salta: false,
-               maxCape: peorPar ? peorPar.cape : 0,
-               minCin:  peorPar ? peorPar.cin : null };
+               maxCape: peorPar ? peorPar.cape : null,
+               minCin:  peorPar ? peorPar.cin : null,
+               capeTecho, tapaSuelo };
     }
     const nom = MODELOS_TORMENTA.find(m => m.om === quien)?.nom ?? quien;
     return { k, salta: true, ini, fin, cape: peor.cape, cin: peor.cin, hora: peor.d, modelo: nom,
@@ -7917,7 +8006,12 @@ async function discrepaTorres(sitios) {
     if (!H?.time) return null;
     const capeMio = H[`cape_${mio}`];
     const codMio  = H[`weather_code_${mio}`];
+    /* ¿PUEDE MI MODELO CONTESTAR? AROME HD —el de fábrica— NO publica el
+       código del cielo, así que preguntarle si ve tormenta y escribir «no»
+       es convertir un hueco en una negación. La regla de la casa lo
+       prohíbe, y aquí se estaba rompiendo (20-09-2026). */
     let yoLaVeo = false, avisos = [];
+    const yoPuedoVerla = Array.isArray(codMio) && codMio.some(has);
     for (const m of MODELOS_TORMENTA) {
       if (m.om === mio) continue;
       let tor = 0, capeMax = 0, hora = null, mioAhi = null;
@@ -7936,7 +8030,7 @@ async function discrepaTorres(sitios) {
     }
     if (!avisos.length) return null;
     avisos.sort((a, b) => (b.tor - a.tor) || (b.capeMax - a.capeMax));
-    return { yoLaVeo, avisos };
+    return { yoLaVeo, yoPuedoVerla, avisos };
   });
 }
 
@@ -9158,7 +9252,11 @@ function renderParte() {
        RAYO» y debajo «si se juntan una hora, salta». La etiqueta
        afirmando lo que el renglón de abajo desmiente — el mismo fallo
        que la barra de 48 h de la víspera. */
-    const alFilo = d.maxCape >= CAPE_COMBINACION && has(d.minCin) && d.minCin < 75;
+    /* Con el techo y el suelo del día, no con la pareja: «al filo» es
+       justamente que las dos cosas pasen, pero no a la vez (20-09-2026). */
+    const alFilo = has(d.capeTecho) && d.capeTecho >= CAPE_COMBINACION
+                   && has(d.tapaSuelo) && d.tapaSuelo < 75;
+    const sinDatoTormenta = !has(d.capeTecho);
 
     const etq = alFilo ? 'AL FILO'
       : mojaDeVerdad ? (L_.soloSirimiri ? 'SIRIMIRI' : 'LLUVIA')
@@ -9170,7 +9268,16 @@ function renderParte() {
        LLUVIA y AL FILO van en rojo. El SIRIMIRI se queda en ámbar: moja,
        pero no marca, y en Bermeo lo hay muchos días — en rojo a diario se
        dejaría de mirar, que es lo único que no puede pasar. */
-    const est = (alFilo || (mojaDeVerdad && !L_.soloSirimiri)) ? 'no'
+    /* Y LA RACHA TAMBIÉN CUENTA. Encontrado el 20-09-2026: esto miraba
+       rayo y lluvia, pero no el viento — así que un sitio seco y sin CAPE
+       con una racha de 85 km/h (su tope son 70) salía con la etiqueta
+       «SIN RAYO» EN VERDE y, un renglón más abajo, «Racha máxima 85 km/h»
+       EN ROJO. La etiqueta desmintiendo al renglón de debajo, que es el
+       fallo que ya se corrigió dos veces con la lluvia y con el rayo. Y
+       encima la tarjeta del mismo sitio sí se marcaba. */
+    const R_ = S.rachaTorres?.find(x => x?.k === k);
+    const rachaPasa = has(R_?.racha) && R_.racha >= listonRafaga().no;
+    const est = (alFilo || rachaPasa || (mojaDeVerdad && !L_.soloSirimiri)) ? 'no'
       : mojaDeVerdad ? 'warn' : 'go';
 
     /* No salta el rayo: se dice de qué le falta. Y son TRES casos, no
@@ -9182,19 +9289,24 @@ function renderParte() {
        El motivo real de que no salte es otro y hay que decirlo: el CAPE
        alto y la tapa baja le pasan A HORAS DISTINTAS. Y eso no es lo
        mismo que estar a salvo — basta con que se junten una hora. */
-    const hayGasolina = d.maxCape >= CAPE_COMBINACION;
-    const tapaSeAbre = has(d.minCin) && d.minCin < 75;
+    const hayGasolina = has(d.capeTecho) && d.capeTecho >= CAPE_COMBINACION;
+    const tapaSeAbre = has(d.tapaSuelo) && d.tapaSuelo < 75;
     /* El CAPE del día en rojo desde su «avisar desde» (Ajustes, 300 por
        defecto): «si ve CAPE, en rojo» (20-09-2026). */
-    const capeTxt = `<b${d.maxCape >= (S.thr?.capeWarn ?? 300) ? ' class="rojo"' : ''}>${nCape(d.maxCape)} de CAPE</b>`;
-    const porQue = !hayGasolina
-      ? `${capeTxt}${has(d.minCin) ? ` · tapa <b>${nCape(d.minCin)}</b>` : ''}`
-        + ` — hace falta ${CAPE_COMBINACION} con la tapa por debajo de 75`
-      : tapaSeAbre
-        ? `llega a ${capeTxt} y la tapa le baja a
-           <b>${nCape(d.minCin)}</b>, <b>pero no a la vez</b> — si se juntan una hora, salta`
-        : `tiene ${capeTxt}, pero la tapa no baja de
-           <b>${d.minCin === null ? '—' : nCape(d.minCin)}</b>: aguanta`;
+    const rojoSi = v => has(v) && v >= (S.thr?.capeWarn ?? 300) ? ' class="rojo"' : '';
+    const capeTxt = `<b${rojoSi(d.maxCape)}>${nCape(d.maxCape)} de CAPE</b>`;
+    const techoTxt = `<b${rojoSi(d.capeTecho)}>${nCape(d.capeTecho)} de CAPE</b>`;
+    const porQue = sinDatoTormenta
+      ? `<b>Ninguno de los ${CON_TAPA.length} que publican la tapa da el CAPE aquí</b>
+         — no se sabe si hay tormenta, no es que no la haya`
+      : alFilo
+        ? `llega a ${techoTxt} y la tapa le baja a
+           <b>${nCape(d.tapaSuelo)}</b>, <b>pero no a la vez</b> — si se juntan una hora, salta`
+      : !hayGasolina
+        ? `${capeTxt}${has(d.minCin) ? ` · tapa <b>${nCape(d.minCin)}</b>` : ''}`
+          + ` — hace falta ${CAPE_COMBINACION} con la tapa por debajo de 75`
+        : `tiene ${techoTxt}, pero la tapa no baja de
+           <b>${has(d.tapaSuelo) ? nCape(d.tapaSuelo) : '—'}</b>: aguanta`;
     /* ── EN SU ORDEN: LLUVIA, RAYOS, VIENTO ─────────────────────────
        Suyo, 02-09-2026, con la tarjeta delante:
          *«y lo digo, para mí la LLUVIA es lo más, después RAYOS y luego
@@ -9345,19 +9457,39 @@ function renderTorres() {
   const orden = [...S.torres].sort((a, b) => deCasaAFuera(a.place, b.place));
 
   const noAptas = orden.filter(t => t.horas?.[0]?.st === 'no').length;
+  /* Los que no se han podido mirar van en el recuento de arriba. Sin esto,
+     «ninguna fuera de umbrales» hablaba solo de los que SÍ se miraron y se
+     leía como si hablara de los veinte (20-09-2026). */
+  const sinMirar = orden.filter(t => !t.horas?.[0]).length;
   const conDisc = orden.filter(t => dPorSitio.get(key(t.place))).length;
   /* «Ninguna fuera de umbrales» a secas es una respuesta, y el 25-08-2026
      era una respuesta falsa: nueve en verde con ECMWF dando tormenta en
      tres de ellas. Si hay discrepancia, se dice aquí arriba. */
   $('#torresHint').textContent =
     (noAptas ? `· ${noAptas} fuera de umbrales ahora mismo`
-             : '· ninguna fuera de umbrales ahora mismo')
-    + (conDisc ? ` · ⚠ en ${conDisc} otro modelo ve tormenta` : '');
+             : sinMirar === orden.length ? '· no se ha podido mirar ninguna'
+             : `· ninguna de las ${orden.length - sinMirar} miradas fuera de umbrales`)
+    + (sinMirar && sinMirar < orden.length ? ` · ⚠ ${sinMirar} sin mirar` : '')
+    + (conDisc ? ` · ⚠ en ${conDisc} otro modelo ve tormenta` : '')
+    /* ── EL AVISO QUE SE ESCRIBÍA Y NO LEÍA NADIE (20-09-2026) ───────
+       `S.torresNoSeAdopto` se ponía cuando el servidor devolvía la lista
+       VACÍA teniendo él veinte guardados. El comentario de arriba decía
+       «el vacío se rechaza Y SE DICE»: se rechazaba, sí, pero no se decía
+       en ninguna parte. Era una variable muerta —comprobado en todo el
+       repo— y la guardia no lo cazaba porque solo miraba que el texto
+       existiera en el fuente, no que llegara a pintarse.
+       Importa: si el servidor ha perdido su lista y él cambia de móvil,
+       se queda sin los veinte sitios y nadie se lo había avisado. */
+    + (S.torresNoSeAdopto ? ` · ⚠ ${S.torresNoSeAdopto}` : '');
 
   el.innerHTML = orden.map(t => {
     const h = t.horas?.[0];
+    /* Y se dice POR QUÉ no hay nada. «Sin datos» a secas, en el monte y sin
+       cobertura, se lee como «aquí no pasa nada» (20-09-2026). */
     if (!h) return `<div class="tor" data-s="nd" data-ir="${esc(key(t.place))}">
-      <div class="tor__n"><b>${esc(t.place.name)}</b><span>sin datos</span></div></div>`;
+      <div class="tor__n"><b>${esc(t.place.name)}</b><span>${t.sinCopia
+        ? 'sin copia guardada — NO SE HA MIRADO'
+        : 'sin datos — NO SE HA MIRADO'}</span></div></div>`;
 
     // Próximas 12 h en tiras
     /* LA HORA, ESCRITA DENTRO DE CADA CASILLA. Antes solo salía al pasar
@@ -9391,7 +9523,15 @@ function renderTorres() {
               : `<b>${esc(a.nom)}</b> llega a ${a.capeMax.toFixed(0)} J/kg`
                 + (a.hora ? ` ${esc(horaDia(a.hora.toISOString()))}` : '')
                 + ` — aquí ${has(a.mioAhi) ? a.mioAhi.toFixed(0) : 'sin dato'}`
-      ).join(' · ')} <span class="tor__disc__q">y ${esc(model().name)}, no</span></div>` : '';
+      ).join(' · ')} <span class="tor__disc__q">${
+        /* El «no» era FIJO: se imprimía viera lo que viera tu modelo, y
+           `yoLaVeo` se calculaba y no lo leía nadie. Encima, con AROME HD
+           ese «no» era un hueco disfrazado. Tres respuestas distintas
+           (20-09-2026). Y el nombre, el del modelo que DIO los números. */
+        !D.yoPuedoVerla ? `y ${esc(modeloDato()?.name ?? model().name)} no publica el cielo: no dice ni que sí ni que no`
+        : D.yoLaVeo ? `y ${esc(modeloDato()?.name ?? model().name)}, también`
+        : `y ${esc(modeloDato()?.name ?? model().name)}, no`
+      }</span></div>` : '';
 
     /* ── LO QUE TE VAS A ENCONTRAR AL LLEGAR ────────────────────────
        Suyo, 30-08-2026: *«me pasan a las 2 de la mañana Arbaiza estación
@@ -9838,6 +9978,15 @@ const CAPE_COMBINACION = 700;
    Lo usan el parte y las comparativas, así que vive aquí y no dentro de
    una función. */
 const nCape = v => Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+/* ── QUIÉN PUBLICA LA TAPA ────────────────────────────────────────────
+   No todos los modelos publican la inhibición (el CIN, la «tapa»), y sin
+   tapa no se puede aplicar la regla del rayo. ECMWF y AROME HD no la dan:
+   0 horas de 24, medido. Por eso el parte dice «1 de los 3 que publican la
+   tapa» y no «1 de 5», que sería mentir.
+   Vive aquí arriba, y no dentro del parte, desde el 20-09-2026: la
+   pantalla que explica por qué no hay dato también necesita contarlos. */
+const CON_TAPA = ['best_match', 'icon_seamless', 'gfs_seamless'];
 
 const MODELOS_TORMENTA = [
   { om: 'ecmwf_ifs025',                nom: 'ECMWF' },
@@ -12061,12 +12210,40 @@ async function pintarMedidoCerca(p) {
   let e = c && Date.now() - c.t < 10 * 60e3 ? c.e : undefined;
   if (e === undefined) {
     el.textContent = '';
+    /* ── UN FALLO DE AEMET NO ES «AQUÍ NO HAY APARATO» (20-09-2026) ──
+       Esto hacía tres cosas mal en siete líneas: un 502 de AEMET —que pasa
+       de verdad, está apuntado «11 de 20 sitios volvían con 502»— se
+       convertía en `null`; ese `null` se GUARDABA diez minutos, así que
+       aunque AEMET volviera a los treinta segundos la línea no reaparecía
+       ni recargando; y se pintaba como vacío, exactamente igual que cuando
+       de verdad no hay ninguna estación a 15 km.
+       Resultado: desaparecía «Medido de verdad · AEMET Forua (2,9 km)…» y
+       él leía que allí no hay aparato cerca, cuando lo hay a 3 km. Ahora
+       se distingue, se dice, y el fallo NO se cachea. Con timeout, que
+       tampoco lo tenía. */
+    let fallo = null;
     try {
-      const r = await fetch(`/estaciones?puntos=${encodeURIComponent(k)}&radio=15`);
-      const d = r.ok ? await r.json() : null;
-      e = d?.puntos?.[0]?.estaciones?.find(x => has(x.temperatura)) || null;
-    } catch { e = null; }
-    MEDIDO_CERCA.set(k, { t: Date.now(), e });
+      const ac = new AbortController();
+      const reloj = setTimeout(() => ac.abort(), 12000);
+      const r = await fetch(`/estaciones?puntos=${encodeURIComponent(k)}&radio=15`,
+                            { signal: ac.signal });
+      clearTimeout(reloj);
+      if (!r.ok) { fallo = `AEMET contesta ${r.status}`; e = null; }
+      else {
+        const d = await r.json();
+        if (d?.error) { fallo = d.reason || 'AEMET no ha contestado bien'; e = null; }
+        else e = d?.puntos?.[0]?.estaciones?.find(x => has(x.temperatura)) || null;
+      }
+    } catch (err) { fallo = err?.name === 'AbortError' ? 'AEMET tarda demasiado' : 'no he podido preguntar a AEMET'; e = null; }
+    // Un fallo no se guarda: a los diez minutos la línea seguiría sin salir.
+    if (!fallo) MEDIDO_CERCA.set(k, { t: Date.now(), e });
+    if (fallo) {
+      const m0 = (S.view === 'torres' && S.portadaEstacion) ? S.portadaEstacion.est : S.place;
+      if (m0 && `${m0.lat.toFixed(3)},${m0.lon.toFixed(3)}` === k)
+        el.innerHTML = `<b>No se ha podido leer el aparato de AEMET</b> (${esc(fallo)}).
+          Lo de arriba es solo previsión: hoy no hay con qué contrastarla.`;
+      return;
+    }
   }
   /* Contra la portada que se ENSEÑA: en Mis estaciones es la de su
      estación, no S.place (20-09-2026). */
@@ -12129,7 +12306,16 @@ async function pintarPortadaEstacion({ forzar = false } = {}) {
   const fijo = document.querySelector('.cover-fijo');
   if (!est || S.view !== 'torres') return;
   const P = S.portadaEstacion;
-  let D = (P && key(P.est) === key(est) && Date.now() - P.t < 15 * 60e3 && !forzar) ? P.D : null;
+  /* EL MODELO Y LOS LISTONES VAN EN LA CLAVE. Sin ellos, esto pasaba:
+     está en Mis estaciones con AROME, va a Ahora, pone ECMWF para
+     comparar, vuelve a los dos minutos — y la portada de arriba seguía
+     con las cifras de AROME mientras las tarjetas de abajo ya eran de
+     ECMWF. El mismo sitio, la misma pantalla, dos modelos, sin una
+     palabra que lo explicara. Y lo mismo al tocar un umbral: las franjas
+     de la portada se quedaban con el semáforo viejo (20-09-2026). */
+  const selloPortada = `${S.model}|${S.hgt}|${JSON.stringify(S.thr ?? {})}`;
+  let D = (P && key(P.est) === key(est) && P.sello === selloPortada
+           && Date.now() - P.t < 15 * 60e3 && !forzar) ? P.D : null;
   if (!D) {
     try { D = await loadAll(est); }
     catch (e) {
@@ -12141,7 +12327,7 @@ async function pintarPortadaEstacion({ forzar = false } = {}) {
       return;
     }
     D.hours = buildHours(D.fc, ALTURA_CASETA, est);
-    S.portadaEstacion = { est, D, t: Date.now() };
+    S.portadaEstacion = { est, D, t: Date.now(), sello: selloPortada };
     if (S.view !== 'torres') return;             // se fue a otra pestaña mientras cargaba
   }
   fijo?.classList.remove('sin-estacion');
@@ -13567,9 +13753,20 @@ function renderDays() {
       return o && o !== modeloDia ? ` <small class="dcard__de">${esc(nombreDeModelo(o))}</small>` : '';
     };
     const tormenta = isStormCode(D.weather_code[i]);
-    // Color del borde por la racha, que es lo que decide el ascenso
-    const nivel = !has(racha) ? 'nd'
+    /* ── EL COLOR SALE DE LAS TRES COSAS, NO SOLO DE LA RACHA ─────────
+       Encontrado en el repaso del domingo, y es el fallo de siempre: esta
+       tarjeta se pintaba SOLO con la racha, así que un día con 30 mm de
+       agua y ⚡ de tormenta escritos dentro salía con la barra VERDE si la
+       racha se quedaba en 30 km/h. El mismo «verde con 12,4 mm debajo» que
+       ya se corrigió en el parte, vivo en la pantalla con la que programa
+       la semana — y encima su prioridad número uno es la lluvia, no el
+       viento. Ahora manda la peor de las tres. */
+    const peorDe = (...ns) => ns.includes('no') ? 'no' : ns.includes('warn') ? 'warn' : ns.includes('go') ? 'go' : 'nd';
+    const nRacha = !has(racha) ? 'nd'
       : racha >= listonRafaga().no ? 'no' : racha >= listonRafaga().warn ? 'warn' : 'go';
+    const nLluvia = !has(mm) ? 'nd'
+      : mm >= (S.thr?.rainNo ?? 2) ? 'no' : mm >= (S.thr?.rainWarn ?? 0.2) ? 'warn' : 'go';
+    const nivel = tormenta ? 'no' : peorDe(nRacha, nLluvia);
     return `<li class="dcard" data-s="${nivel}" data-dia="${esc(t)}">
       <div class="dcard__top"></div>
       <div class="dcard__d">${i === 0 ? 'Hoy' : d.toLocaleDateString('es',{weekday:'short'})}</div>
@@ -14000,18 +14197,24 @@ function avisoTormentaFranja(horas) {
   let lectura, clase = 'part__ray--ojo';
   const tapaAbierta = has(pico.cin) && pico.cin < 75;
 
-  if (pico.cape < 200) {
+  /* CON SU LISTÓN, NO CON UN 200 Y UN 500 ESCRITOS A MANO. Encontrado el
+     20-09-2026: con un pico de CAPE 450 y la tapa en 300, la ficha de la
+     hora decía «CAPE 450 J/kg — inestabilidad moderada» en ÁMBAR (que sí
+     mira `capeWarn`, 300) y esta franja, en la misma pantalla, decía
+     «Riesgo eléctrico muy bajo». Dos renglones de la misma hora diciendo
+     lo contrario. Y si él bajaba el aviso a 150 en Ajustes, la franja
+     seguía diciendo «sin riesgo» hasta los 200. */
+  const avisa = S.thr?.capeWarn ?? 300;
+  if (pico.cape < avisa) {
     lectura = 'Sin riesgo eléctrico';
   } else if (pico.cape >= (S.thr?.capeNo ?? 1000)) {
     lectura = 'Inestabilidad alta, pero con tapa';
     clase = 'part__ray';                 // este merece verse
-  } else if (pico.cape >= 500 && tapaAbierta) {
+  } else if (tapaAbierta) {
     lectura = 'Riesgo moderado — tapa abierta';
     clase = 'part__ray';
-  } else if (pico.cape >= 500) {
-    lectura = 'Riesgo eléctrico bajo';
   } else {
-    lectura = tapaAbierta ? 'Riesgo bajo, pero sin tapa' : 'Riesgo eléctrico muy bajo';
+    lectura = 'Riesgo eléctrico bajo';
   }
 
   return `<br><span class="${clase}">${lectura}</span>`
@@ -18281,9 +18484,18 @@ async function mirarPulso() {
   const card = $('#parteCard');
   if (!card) return;
 
+  /* CON TIMEOUT. Sin él, una red colgada —media rayita, portal cautivo,
+     la caseta de siempre— dejaba la promesa pendiente para siempre, y TODO
+     lo que va detrás de este `await` no se ejecutaba: ni se insertaba el
+     banner rojo de «nadie está vigilando», ni el amarillo de «no he podido
+     preguntar». Simplemente no salía nada. Un cuarto estado que este
+     fichero está escrito entero para que no exista (20-09-2026). */
   let d = null;
   try {
-    const r = await fetch('/api/vigilante?pulso=1', { cache: 'no-store' });
+    const ac = new AbortController();
+    const reloj = setTimeout(() => ac.abort(), 12000);
+    const r = await fetch('/api/vigilante?pulso=1', { cache: 'no-store', signal: ac.signal });
+    clearTimeout(reloj);
     if (r.ok) d = await r.json();
   } catch { d = null; }
 
@@ -18399,7 +18611,15 @@ function textoPulso(d) {
     pegas.push(`<b>Y NO está mirando TU lista</b>, sino la de respaldo escrita a
       mano: puede faltarle algún emplazamiento de los tuyos.`);
 
-  return `<b>Vigilante en pie.</b> Última pasada por tus
-    ${d.sitios ? `<b>${d.sitios}</b> ` : ''}emplazamientos <b>${cuanto}</b>.`
+  /* «Tus 19 emplazamientos» cuando tiene 20 se lee como «tienes 19», no
+     como «uno falló». El número bajaba solo y nadie decía por qué
+     (20-09-2026). Si faltó alguno, se dice cuántos de cuántos y cuáles. */
+  if (has(d.nLista) && d.sitios && d.nLista > d.sitios)
+    pegas.push(`<b>Y NO pudo mirar ${d.nLista - d.sitios} de tus ${d.nLista}</b>`
+      + (d.noMirados?.length ? `: ${d.noMirados.map(esc).join(' · ')}` : '')
+      + `. De ésos no sabe nada: no es que estén tranquilos.`);
+
+  return `<b>Vigilante en pie.</b> Última pasada por
+    ${d.sitios ? `<b>${d.sitios}</b>${has(d.nLista) && d.nLista > d.sitios ? ` de tus ${d.nLista}` : ' de tus'} ` : 'tus '}emplazamientos <b>${cuanto}</b>.`
     + (pegas.length ? `<br><span class="pulso__pega">${pegas.join('<br>')}</span>` : '');
 }

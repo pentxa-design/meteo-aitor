@@ -451,13 +451,28 @@ export default async function handler(req, res) {
 
       const necesarias = [...new Set(candidatas.flat().map(c => c.c))];
       const leidas = new Map();
+      /* ── «NO PUDE LEERLA» NO ES «NO MIDE VIENTO» (20-09-2026) ───────
+         Este `catch` se tragaba el motivo, y abajo TODOS los sitios sin
+         estación salían con `porque: 'ninguna de las cercanas mide
+         viento'` — que con Euskalmet caído es falso. Y la respuesta iba
+         con `ok: true`, así que la app no ponía ni una palabra.
+         Resultado medido leyendo el código: con una caída de Euskalmet,
+         sus veinte emplazamientos enseñaban solo la estación de AEMET del
+         valle, 400 o 500 m más abajo, y sus estaciones de cima —Oiz,
+         Orduña, las que valen para una torre— desaparecían sin explicación.
+         El camino de UN punto, en este mismo fichero, ya lo distingue:
+         faltaba aplicarlo aquí. */
+      const noLeidas = new Set();
       await Promise.all(necesarias.map(async cod => {
         const e = ESTACIONES_EUSKALMET.find(x => x.c === cod);
         try {
           const r = await leer({ Codigo: cod, Nombre: e.n, LATWGS84: e.la, LONWGS84: e.lo }, jwt2, null);
-          if (r) leidas.set(cod, r);
-        } catch { /* esa estación se queda fuera, las demás siguen */ }
+          if (r) leidas.set(cod, r); else noLeidas.add(cod);   // sin viento en esta hora
+        } catch { noLeidas.add(cod); }                          // no se ha podido preguntar
       }));
+      /* Si NINGUNA de las que hacían falta se pudo leer, no es que no
+         midan: es que Euskalmet no está contestando. */
+      const euskalmetCaido = leidas.size === 0 && necesarias.length > 0;
 
       const salida = candidatas.map((cs, i) => {
         const cota = puntos[i][2];
@@ -481,14 +496,21 @@ export default async function handler(req, res) {
              puede es callarse, que entonces parece que allí no hay
              estaciones cuando lo que no hay es una que mida viento. */
           return { sinEstacion: true, miradas: cs.length,
-                   porque: 'ninguna de las cercanas mide viento' };
+                   noSePudo: euskalmetCaido || undefined,
+                   porque: euskalmetCaido
+                     ? 'no se ha podido preguntar a Euskalmet'
+                     : 'ninguna de las cercanas mide viento' };
         }
         return mejor;
       });
-      return res.status(200).json({ ok: true, hayClave: true,
+      return res.status(200).json({ ok: euskalmetCaido ? false : true, hayClave: true,
         fuente: 'Euskalmet · Gobierno Vasco',
         consultado: new Date().toISOString(),
-        estacionesLeidas: leidas.size, puntos: salida });
+        reason: euskalmetCaido
+          ? `no he podido leer ninguna de las ${necesarias.length} estaciones de Euskalmet`
+          : undefined,
+        estacionesLeidas: leidas.size, estacionesPedidas: necesarias.length,
+        puntos: salida });
     } catch (e) {
       return res.status(200).json({ ok: false, hayClave: true, puntos: [],
                                     reason: `${e.message || e} (al hablar con api.euskadi.eus)` });

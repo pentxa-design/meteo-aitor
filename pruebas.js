@@ -106,6 +106,7 @@ eval(sacar('function deCasaAFuera(a, b) {'));
 eval(sacar('function edadMedida(min) {'));
 eval(sacar('function haceTxt(cuando, ahora = Date.now()) {'));
 eval(sacar('function estacionDePortada() {'));
+eval(sacarConst('CON_TAPA'));
 eval(sacarConst('enCostaVasca'));
 eval(sacarConst('COSTA'));
 eval(sacarConst('cercaDelMar'));
@@ -255,9 +256,9 @@ S.torres = sitios.map(p => ({ place: p }));
 S.parteTorres = [
   { k: k(sitios[0]), salta: true, ini: Hh(0, 23), fin: Hh(1, 1), cape: 1660, cin: 58, hora: Hh(1, 0), modelo: 'GFS' },
   { k: k(sitios[1]), salta: true, ini: Hh(0, 13), fin: Hh(0, 18), cape: 2680, cin: 11, hora: Hh(0, 16), modelo: 'ICON' },
-  { k: k(sitios[2]), salta: false, maxCape: 640, minCin: 20 },
-  { k: k(sitios[3]), salta: false, maxCape: 1220, minCin: 102 },
-  { k: k(sitios[4]), salta: false, maxCape: 1350, minCin: 0 },
+  { k: k(sitios[2]), salta: false, maxCape: 640, minCin: 20, capeTecho: 640, tapaSuelo: 20 },
+  { k: k(sitios[3]), salta: false, maxCape: 1220, minCin: 102, capeTecho: 1220, tapaSuelo: 102 },
+  { k: k(sitios[4]), salta: false, maxCape: 1350, minCin: 210, capeTecho: 1350, tapaSuelo: 8 },
 ];
 S.lluviaTorres = [
   { k: k(sitios[0]), llueve: false },
@@ -557,9 +558,9 @@ S.torres = sitios.map(p => ({ place: p }));
 S.parteTorres = [
   { k: k(sitios[0]), salta: true, ini: Hh(0, 23), fin: Hh(1, 1), cape: 1660, cin: 58, hora: Hh(1, 0), modelo: 'GFS' },
   { k: k(sitios[1]), salta: true, ini: Hh(0, 13), fin: Hh(0, 18), cape: 2680, cin: 11, hora: Hh(0, 16), modelo: 'ICON' },
-  { k: k(sitios[2]), salta: false, maxCape: 640, minCin: 20 },
-  { k: k(sitios[3]), salta: false, maxCape: 1220, minCin: 102 },
-  { k: k(sitios[4]), salta: false, maxCape: 1350, minCin: 0 },
+  { k: k(sitios[2]), salta: false, maxCape: 640, minCin: 20, capeTecho: 640, tapaSuelo: 20 },
+  { k: k(sitios[3]), salta: false, maxCape: 1220, minCin: 102, capeTecho: 1220, tapaSuelo: 102 },
+  { k: k(sitios[4]), salta: false, maxCape: 1350, minCin: 210, capeTecho: 1350, tapaSuelo: 8 },
 ];
 
 LS.vaciar();
@@ -907,7 +908,7 @@ ok('el aviso NO depende de estar en la costa', true, 'quitada la restricción');
 /* Y en pantalla: un sitio de costa sin lluvia tiene que DECIRLO. */
 S.saved = [enCosta];
 S.torres = [{ place: enCosta }];
-S.parteTorres = [{ k: k(enCosta), salta: false, maxCape: 300, minCin: 200 }];
+S.parteTorres = [{ k: k(enCosta), salta: false, maxCape: 300, minCin: 200, capeTecho: 300, tapaSuelo: 200 }];
 S.lluviaTorres = [{ k: k(enCosta), llueve: false }];
 LS.vaciar();
 renderParte();
@@ -928,7 +929,7 @@ ok('y NO le dice qué hacer con eso',
 /* EL CASO DE VITORIA: tierra adentro también tiene que llevarlo. */
 S.saved = [tierraAdentro];
 S.torres = [{ place: tierraAdentro }];
-S.parteTorres = [{ k: k(tierraAdentro), salta: false, maxCape: 200, minCin: 300 }];
+S.parteTorres = [{ k: k(tierraAdentro), salta: false, maxCape: 200, minCin: 300, capeTecho: 200, tapaSuelo: 300 }];
 S.lluviaTorres = [{ k: k(tierraAdentro), llueve: false }];
 renderParte();
 ok('tierra adentro TAMBIÉN entra en el aviso',
@@ -936,7 +937,7 @@ ok('tierra adentro TAMBIÉN entra en el aviso',
    'le chispeó en Vitoria, a 45 km del mar');
 
 S.saved = [enCosta]; S.torres = [{ place: enCosta }];
-S.parteTorres = [{ k: k(enCosta), salta: false, maxCape: 300, minCin: 200 }];
+S.parteTorres = [{ k: k(enCosta), salta: false, maxCape: 300, minCin: 200, capeTecho: 300, tapaSuelo: 200 }];
 
 /* Si SÍ llueve, no se repite: ya lo dice el renglón de la lluvia. */
 S.lluviaTorres = [{ k: k(enCosta), llueve: true, ini: Hh(0, 9), fin: Hh(0, 10),
@@ -954,7 +955,7 @@ ok('si llueve NO se añade el aviso de seco',
    26-08. Aquí se comprueba que `renderParte` deja el sello puesto. */
 S.parteCuando = new Date().setHours(9, 12, 0, 0);
 S.saved = [enCosta]; S.torres = [{ place: enCosta }];
-S.parteTorres = [{ k: k(enCosta), salta: false, maxCape: 300, minCin: 200 }];
+S.parteTorres = [{ k: k(enCosta), salta: false, maxCape: 300, minCin: 200, capeTecho: 300, tapaSuelo: 200 }];
 S.lluviaTorres = [{ k: k(enCosta), llueve: false }];
 pintado['#parteSello'] = undefined;
 renderParte();
@@ -1734,7 +1735,7 @@ for (let n = 0; n < 14; n++) {
   const sitio = { name: `SITIO ${n}`, lat: 43.2 + n * 0.02, lon: -2.7 - n * 0.02 };
   S.saved.push(sitio);
   S.torres.push({ place: sitio });
-  S.parteTorres.push({ k: k(sitio), salta: false, maxCape: 300, minCin: 200 });
+  S.parteTorres.push({ k: k(sitio), salta: false, maxCape: 300, minCin: 200, capeTecho: 300, tapaSuelo: 200 });
   S.lluviaTorres.push({ k: k(sitio), llueve: false });
 }
 LS.vaciar();
@@ -2961,13 +2962,27 @@ grupo('El «ahora» dice de qué modelo es, y lo medido de verdad va debajo con 
      && !/`Medido a las <b>/.test(src));
   ok('debajo va la estación AEMET más cercana (15 km), con nombre, temperatura, humedad y hora',
      /async function pintarMedidoCerca\(p\)/.test(src)
-     && /fetch\(`\/estaciones\?puntos=\$\{encodeURIComponent\(k\)\}&radio=15`\)/.test(src)
+     && /fetch\(`\/estaciones\?puntos=\$\{encodeURIComponent\(k\)\}&radio=15`/.test(src)
      && /Medido de verdad · <b>AEMET \$\{esc\(e\.nombre\)\}<\/b>/.test(src)
      && /pintarMedidoCerca\(S\.place\);/.test(src)
      && /id="nowAemet"/.test(html));
-  ok('si no hay estación cerca o AEMET no contesta, no se pone nada (ni se inventa)',
-     /if \(!e\) \{ el\.textContent = ''; return; \}/.test(src)
-     && /\} catch \{ e = null; \}/.test(src));
+  ok('si no hay ninguna estación cerca, no se pone nada (ni se inventa)',
+     /if \(!e\) \{ el\.textContent = ''; return; \}/.test(src));
+  /* ── PERO UN FALLO DE AEMET SÍ SE DICE (20-09-2026) ─────────────────
+     Antes un 502 de AEMET se pintaba EXACTAMENTE igual que «aquí no hay
+     ningún aparato a 15 km»: la línea desaparecía y ya. Y encima el fallo
+     se guardaba diez minutos, así que no volvía ni recargando. Él leía que
+     no hay aparato cerca teniéndolo a 3 km, y se quedaba sin nada con lo
+     que contrastar la previsión. */
+  ok('pero si AEMET falla se DICE, que no es lo mismo que no haber aparato',
+     /No se ha podido leer el aparato de AEMET/.test(src)
+     && /Lo de arriba es solo previsión/.test(src));
+  ok('y el fallo NO se guarda en la caché: a los diez minutos seguiría sin salir',
+     /\/\/ Un fallo no se guarda[\s\S]{0,80}if \(!fallo\) MEDIDO_CERCA\.set/.test(src));
+  ok('y la petición lleva timeout, que no lo tenía',
+     /const ac = new AbortController\(\);\s*\n\s*const reloj = setTimeout\(\(\) => ac\.abort\(\), 12000\);\s*\n\s*const r = await fetch\(`\/estaciones/.test(src));
+  ok('el pulso del vigilante también, o una red colgada borra su aviso',
+     /const r = await fetch\('\/api\/vigilante\?pulso=1', \{ cache: 'no-store', signal: ac\.signal \}\)/.test(src));
 }
 
 grupo('En el móvil la portada sale en Ahora, Horas, 10 días y Mar, como en el Mac');
@@ -4676,8 +4691,24 @@ grupo('El parte juntaba el CAPE de un modelo con la tapa de otro (30-08)');
      'antes: max de CAPE por un lado, min de tapa por otro');
   ok('con empate de CAPE gana la tapa más baja, que es la que se acerca a romper',
      /cape\[i\] === peorPar\.cape && cin\[i\] < peorPar\.cin/.test(src));
-  ok('y las dos cifras salen del mismo objeto, no de dos acumuladores',
-     /maxCape: peorPar \? peorPar\.cape : 0,\s*\n\s*minCin:\s*peorPar \? peorPar\.cin : null/.test(src));
+  ok('y las dos cifras de la PAREJA salen del mismo objeto, no de dos acumuladores',
+     /maxCape: peorPar \? peorPar\.cape : null,\s*\n\s*minCin:\s*peorPar \? peorPar\.cin : null/.test(src));
+  /* ── Y EL TECHO Y EL SUELO DEL DÍA, QUE SON OTRA COSA (20-09-2026) ──
+     Emparejar CAPE y tapa de la misma hora fue el arreglo del 30-08, y sin
+     querer mató el del 26-08: con una sola pareja, «hay gasolina Y la tapa
+     se abre» es imposible en esta rama —si pasaran a la vez, arriba ya se
+     habría marcado que salta—, así que la etiqueta AL FILO no podía salir
+     NUNCA y en su lugar se escribía «aguanta» en verde. */
+  ok('además se guardan el techo de CAPE y el suelo de la tapa del día entero',
+     /if \(capeTecho === null \|\| cape\[i\] > capeTecho\) capeTecho = cape\[i\];/.test(src)
+     && /if \(tapaSuelo === null \|\| cin\[i\] < tapaSuelo\) tapaSuelo = cin\[i\];/.test(src),
+     'sin ellos, «AL FILO» es código muerto');
+  ok('y «AL FILO» se decide con esos extremos, no con la pareja',
+     /const alFilo = has\(d\.capeTecho\) && d\.capeTecho >= CAPE_COMBINACION\s*\n\s*&& has\(d\.tapaSuelo\) && d\.tapaSuelo < 75;/.test(src));
+  ok('un hueco de CAPE ya no se escribe como «0 de CAPE»',
+     !/maxCape: peorPar \? peorPar\.cape : 0/.test(src)
+     && /Ninguno de los \$\{CON_TAPA\.length\} que publican la tapa da el CAPE aquí/.test(src),
+     'un dato que nadie ha dado no se pinta como un cero tranquilizador');
 }
 
 grupo('El pueblo no es tu estación — y buscar pueblos sigue libre (30-08)');
@@ -5658,6 +5689,16 @@ grupo('NADA VACÍO PISA NADA LLENO (01-09-2026, con el almacén caído)');
      'sin esto, un servidor vacío le borra los veinte emplazamientos');
   ok('y el rechazo se APUNTA, no se calla',
      /torresNoSeAdopto = 'el servidor devolvió la lista vacía/.test(src));
+  /* ── Y SE PINTA, QUE NO ES LO MISMO (20-09-2026) ───────────────────
+     Esta guardia pasaba desde el primer día... y la variable estaba
+     MUERTA: se escribía y no la leía nadie en todo el repo. El comentario
+     prometía «se rechaza y se dice», y se rechazaba sin decirlo. La
+     prueba no lo cazaba porque miraba que el texto existiera en el
+     fuente, no que llegara a la pantalla. Es el fallo de esta casa
+     aplicado a su propia red de seguridad. */
+  ok('y LLEGA A LA PANTALLA: una variable que nadie lee es un silencio',
+     /S\.torresNoSeAdopto \? ` · ⚠ \$\{S\.torresNoSeAdopto\}` : ''/.test(src),
+     'se escribía y no lo leía nadie');
   ok('la comprobación EJERCITA el caso que borraría, no solo el bueno',
      (() => {
        /* Se simula la rama con lo que llega vacío y lo local lleno. */
@@ -8286,7 +8327,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('las horas de cada emplazamiento se calculan a 10 m (ALTURA_CASETA), no a la altura de trabajo guardada',
      /const ALTURA_CASETA = 10;/.test(A)
      && /horas: buildHours\(fc, ALTURA_CASETA, p\)/.test(A)
-     && /horas: buildHours\(copia\.data\.fc, ALTURA_CASETA, place\)/.test(A)
+     && /horas: buildHours\(copia\.data\.fc, ALTURA_CASETA, p\)/.test(A)
      && !/buildHours\(fc, cfg\.alt, p\)/.test(A) && !/cfgDe\(place\)\.alt, place\)/.test(A));
   ok('la cabecera de la tarjeta lleva UNA racha y UN viento, los de 10 m, sin «(est.)» ni «de altura»',
      /'racha a 10 m · a pie de caseta',\s*has\(h\.gust10\) && h\.gust10 >= listonRafaga\(\)\.no \? 'rojo' : rachaAltaP, 'decide'/.test(A)
