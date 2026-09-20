@@ -387,6 +387,20 @@ ok('lo inminente mira también las primeras horas de mañana',
    /const hastaManana = h0 \+ 3 - 24;/.test(vig)
    && /if \(hastaManana >= 0\) \{\s*\n\s*const m = d\.dias\[claveManana\];/.test(vig),
    'él trabaja de noche: una tormenta a las 00:00 tiene que avisar a las 23:00');
+/* ── QUIÉN VIBRA Y QUIÉN NO (20-09-2026) ─────────────────────────────
+   Esa noche el aviso de prueba LLEGÓ al Ulefone y no sonó: lo tenía en
+   silencio, y al día siguiente entraba de guardia 24 h. El service worker
+   hace vibrar los avisos `importante: true`; aquí se guarda CUÁLES lo son.
+   Si el parte diario se marcara importante, vibraría todos los días y él
+   acabaría silenciando la app entera — y entonces no avisaría de nada. */
+ok('vibran los que decidan algo: tormenta, racha de 70 y «llevo sin vigilar»',
+   /tag: 'tormenta', importante: true/.test(vig)
+   && /tag: 'racha', importante: true/.test(vig)
+   && /tag: 'parado', importante: true/.test(vig));
+ok('y el parte de la mañana NO vibra: llega todos los días',
+   /tag: 'parte', importante: false/.test(vig),
+   'un móvil que vibra a diario se silencia entero');
+
 ok('y esa noche el vigilante no se queda en ámbar',
    /\|\| \(h0 >= 21 && d\?\.\[claveManana\]\)/.test(vig));
 ok('y dice cuántos sitios ha mirado, que un cero sin contexto no vale',

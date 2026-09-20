@@ -10,7 +10,7 @@
      pantalla con la hora de la descarga.
    ═══════════════════════════════════════════════════════════════════ */
 
-const V     = 'torre-2026.09.20-2100';
+const V     = 'torre-2026.09.21-0029';
 const SHELL = [
   './', './index.html', './styles.css', './app.js', './maps.js',
   './manifest.webmanifest',
@@ -280,6 +280,24 @@ self.addEventListener('push', e => {
     tag: d.tag || 'meteo',        // uno nuevo del mismo tipo sustituye al viejo
     renotify: true,
     requireInteraction: !!d.importante,
+    /* ── QUE EL SILENCIO NO SE COMA UN RAYO (20-09-2026) ──────────────
+       Esa noche probó el aviso en el Ulefone y **llegó, pero no sonó**:
+       tenía el teléfono en silencio. Y al día siguiente entraba de guardia
+       24 horas. Un aviso de tormenta que llega y no se nota es lo mismo
+       que no llegar.
+
+       La vibración SÍ atraviesa el modo silencio de Android (el «No
+       molestar» ya es otra cosa, y eso se arregla en los ajustes del
+       teléfono, no aquí). Solo para los avisos IMPORTANTES —tormenta,
+       racha de 70, vigilante parado—: el parte de la mañana y los cambios
+       no vibran, que un teléfono que vibra cada dos horas se silencia
+       entero y entonces no avisa de nada.
+
+       El patrón es largo y con pausas a propósito: tres golpes cortos y
+       uno largo se distinguen de cualquier otra cosa con el móvil en el
+       bolsillo del pantalón de trabajo. */
+    vibrate: d.importante ? [300, 150, 300, 150, 300, 150, 700] : undefined,
+    silent: false,
     data: { url: d.url || './', enviado: d.enviado || null },
   };
   e.waitUntil((async () => {

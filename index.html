@@ -583,11 +583,24 @@ html[data-bloqueado]{overflow:hidden}
     <div class="q">
       <div class="q__t"><b>Precipitación</b><span>mm/h</span></div>
       <p>Lo que el modelo prevé que caiga.</p>
+      <!-- ── LA GUÍA NO PUEDE DECIR OTRA COSA QUE EL CÓDIGO (20-09-2026) ──
+           Esta escala ponía «<0,5 · sirimiri» EN VERDE y «1-4 · lluvia» en
+           ámbar, mientras el listón real de la app es 0,2 («llueve poco»,
+           ámbar) y 2,0 («llueve bien», rojo). Con 0,3 mm/h la Guía decía
+           verde y el semáforo decía ámbar; y entre 0,5 y 1,0 no había ni
+           color. La Guía es donde él va a mirar qué significa un número:
+           si dice una cosa y la app hace otra, deja de fiarse de las dos.
+           Ahora lleva SUS listones, con el nombre que usa la app. -->
       <div class="esc">
-        <span data-s="go">&lt;0,5 · sirimiri</span>
-        <span data-s="warn">1-4 · lluvia</span>
-        <span data-s="no">&gt;4 · chaparrón</span>
+        <span data-s="go">0,0 · sin lluvia</span>
+        <span data-s="warn">0,2-2 · llueve poco</span>
+        <span data-s="no">&gt;2 · llueve bien</span>
       </div>
+      <p class="q__n"><b>Y el sirimiri va aparte</b>, porque no se mide en
+        milímetros: marca 0,1 o incluso 0,0 y moja igual. La app lo reconoce
+        por el código del modelo, no por la cantidad. Estos dos listones son
+        los tuyos y los puedes cambiar en <b>Ajustes</b>: si los cambias, el
+        semáforo cambia con ellos.</p>
     </div>
 
     <div class="q">

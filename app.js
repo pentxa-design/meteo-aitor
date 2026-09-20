@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.20-2100';
+const BUILD = '2026.09.21-0029';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -2726,8 +2726,22 @@ function textoCeldaLejos() {
   if (!A) return '';
   const h = new Date(A.hora);
   const hh = String(h.getHours()).padStart(2, '0') + ':00';
+  /* ── LA TAPA DE AQUÍ NO ES DEL MISMO MODELO QUE EL CAPE ────────────
+     Encontrado en el repaso del 20-09-2026. Esta frase empieza diciendo
+     «el mismo modelo da…» y luego pegaba el CAPE del nudo de tierra —que
+     es del modelo cargado, AROME HD— con la tapa de ese mismo nudo, que
+     está PRESTADA por ICON, porque AROME no publica la tapa. Dos modelos
+     presentados como uno, justo en el dato que decide el rayo, y en la
+     misma frase que presume de ser del mismo modelo.
+     Se dice de quién es cada mitad. Si el préstamo es del mismo, no se
+     repite el nombre y la frase queda como estaba. */
+  const dueñoCin = nombreDeModelo(origenDelDato(f, 'convective_inhibition', null)) || null;
+  const mio = modeloDato()?.name ?? model().name;
   const alli = has(A.capeT)
-    ? `aquí sale <b>CAPE ${Math.round(A.capeT)}</b>${has(A.cinT) ? ` con la tapa en ${Math.round(A.cinT)}` : ''}`
+    ? `aquí sale <b>CAPE ${Math.round(A.capeT)}</b>`
+      + (has(A.cinT)
+          ? ` con la tapa en ${Math.round(A.cinT)}${dueñoCin && dueñoCin !== mio ? ` (la tapa, de ${esc(dueñoCin)})` : ''}`
+          : '')
     : 'aquí no hay dato';
   const loDeAlLado = A.seguro
     ? `<b>CAPE ${Math.round(A.cape)} con la tapa en ${Math.round(A.cin)}</b> a las ${hh},
@@ -4032,8 +4046,23 @@ function horasDelDia(fc, dia) {
   if (!H?.time) return [];
   const extra = extrasDe(fc);
   const out = [];
-  for (let i = 0; i < H.time.length; i++)
-    if (String(H.time[i]).startsWith(dia)) out.push(horaDe(fc, i, S.hgt, null, extra));
+  /* ── LA HORA EN CURSO, IGUAL QUE EN «HORAS» (20-09-2026) ───────────
+     `buildHours` pisa el cielo de la hora en curso con el de `current` —el
+     instantáneo de hace quince minutos— y esta función no lo hacía. Las
+     dos acaban en la MISMA plantilla de tarjeta, así que la tarjeta de las
+     12:00 de «Horas» y la de las 12:00 de «10 días → Hoy» salían con
+     cielos distintos y nada en pantalla lo explicaba. Y como `assess()`
+     decide el color con el código, una podía salir en rojo y la otra no.
+     El comprobador del cielo no lo cazaba: compara «10 días» contra sus
+     propios iconos, que salen de aquí, así que eran coherentes entre sí. */
+  const ahora = Date.now();
+  for (let i = 0; i < H.time.length; i++) {
+    if (!String(H.time[i]).startsWith(dia)) continue;
+    const h = horaDe(fc, i, S.hgt, null, extra);
+    const t = new Date(H.time[i]).getTime();
+    if (t <= ahora && ahora < t + 3600e3) conAhora(h, fc.current);
+    out.push(h);
+  }
   return out;
 }
 

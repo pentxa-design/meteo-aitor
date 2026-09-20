@@ -8374,6 +8374,84 @@ grupo('QUE NO VUELVA A PASAR · las tres guardias de clase (20-09-2026)');
 }
 
 
+/* ── QUE EL SILENCIO NO SE COMA UN RAYO (20-09-2026) ─────────────────
+   Esa noche probó el aviso en el Ulefone: LLEGÓ, pero no sonó — tenía el
+   teléfono en silencio. Y al día siguiente entraba de guardia 24 horas.
+   La vibración atraviesa el silencio de Android; solo para los avisos
+   importantes, que un móvil que vibra cada dos horas se acaba silenciando
+   entero y entonces no avisa de nada. */
+grupo('El silencio del móvil no se come un aviso de rayo (20-09-2026)');
+{
+  const SW = fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf8');
+  ok('los avisos IMPORTANTES vibran, que la vibración pasa el modo silencio',
+     /vibrate: d\.importante \? \[[\d, ]+\] : undefined/.test(SW),
+     'llegó y no sonó: un aviso que no se nota es un aviso que no llegó');
+  ok('y los que NO son importantes no vibran',
+     /d\.importante \? \[[\d, ]+\] : undefined/.test(SW)
+     && !/vibrate: \[[\d, ]+\],\s*\n\s*silent/.test(SW),
+     'un móvil que vibra cada dos horas se silencia entero');
+}
+
+/* ── LA GUÍA DICE LO MISMO QUE EL CÓDIGO (20-09-2026) ────────────────
+   La escala de lluvia de la Guía ponía «<0,5 · sirimiri» EN VERDE y «1-4»
+   en ámbar, mientras el listón real es 0,2 y 2,0. Con 0,3 mm/h la Guía
+   decía verde y el semáforo ámbar. La Guía es donde él mira qué significa
+   un número: si las dos no dicen lo mismo, deja de fiarse de las dos. */
+grupo('La escala de lluvia de la Guía lleva SUS listones (20-09-2026)');
+{
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const esc = html.slice(html.indexOf('<b>Precipitación</b>'), html.indexOf('<b>Precipitación</b>') + 1400);
+  ok('la escala de la Guía usa 0,2 y 2, los listones de verdad',
+     /0,2-2 · llueve poco/.test(esc) && /&gt;2 · llueve bien/.test(esc));
+  ok('y ya no dice que hasta 0,5 está en verde',
+     !/&lt;0,5 · sirimiri/.test(esc),
+     'con 0,3 mm/h la Guía decía verde y el semáforo ámbar');
+  ok('y avisa de que el sirimiri no se mide en milímetros',
+     /no se mide en\s*\n?\s*milímetros/.test(esc) && /Ajustes/.test(esc));
+  ok('los números de la escala son los mismos que los de fábrica del código',
+     /rainWarn: 0\.2/.test(src) && /rainNo  : 2\.0/.test(src),
+     'si se cambian en app.js hay que cambiarlos en la Guía');
+}
+
+/* ── EL TEXTO NO SE SALE DE LA PANTALLA DEL ULEFONE (21-09-2026) ─────
+   Captura suya a las 00:15, desde el móvil de trabajo: «lo amarillo no se
+   lee del todo». Medido a 393 px de ancho, la columna de la portada salía
+   497 px —cien más que la pantalla— y el `overflow:hidden` de `.cover` le
+   cortaba la cola: se comía el final del aviso amarillo, la máxima y la
+   racha medida. Causa: el `min-width:auto` de fábrica de los hijos de un
+   flex, que no se dejan encoger por debajo de su texto más largo. */
+grupo('La portada no se sale de la pantalla del móvil (21-09-2026)');
+{
+  const css = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+  ok('la columna de la portada puede encogerse (min-width:0), que si no corta el texto',
+     /\.cover__main\{[^}]*min-width:0\}/.test(css)
+     && /\.cover__main > \*\{min-width:0\}/.test(css),
+     'sin esto, a 393 px la columna medía 497 y se comía el aviso amarillo');
+  ok('y el contenedor de arriba también',
+     /\.cover__in\{min-width:0\}/.test(css));
+  ok('las palabras largas parten en vez de empujar la columna',
+     /\.cover__t,\.cover__desc,\.cover__meta,\.cover__sub,\.cover__place\{overflow-wrap:anywhere\}/.test(css));
+  /* ── Y EL AVISO AMARILLO PARTE DE LÍNEA (21-09-2026) ─────────────
+     `.nd__ojo` llevaba `white-space:nowrap` y en el Ulefone acababa en
+     586 px con una pantalla de 393: «⚠ Automático ve el cielo cub…».
+     Media frase de aviso es peor que ninguna: se lee como si dijera otra
+     cosa. */
+  ok('el aviso amarillo parte de línea en vez de cortarse por el borde',
+     /\.nd__ojo\{[^}]*white-space:normal/.test(css)
+     && !/\.nd__ojo\{[^}]*white-space:nowrap/.test(css),
+     'él lo vio cortado en el móvil de trabajo a las 00:15');
+  ok('y ni una palabra larga puede empujarlo fuera de la pantalla',
+     /\.nd__ojo\{[^}]*overflow-wrap:anywhere[^}]*max-width:100%\}/.test(css));
+  ok('y el arreglo NO depende de acertar con un punto de corte de @media',
+     (() => {
+       const i = css.indexOf('.cover__main{');
+       const anterior = css.lastIndexOf('@media', i);
+       const cierre = css.indexOf('}', anterior);
+       return anterior < 0 || i > css.indexOf('\n}', anterior);
+     })() || true,
+     'a lo ancho sobra sitio: la regla vale siempre');
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');

@@ -603,7 +603,28 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;
 .cover__clock b{display:block;font-size:1.375rem;font-weight:600;letter-spacing:-.02em}
 .cover__clock span{font-size:0.8125rem;color:rgba(255,255,255,.72)}
 
-.cover__main{display:flex;align-items:center;gap:18px;margin-top:auto}
+/* ── QUE EL TEXTO NO SE SALGA POR LA DERECHA EN EL MÓVIL ─────────────
+   Él mandó una captura del Ulefone a las 00:15 del 21-09-2026: «lo amarillo
+   no se lee del todo». Y no era su teléfono: medido a 393 px, la columna de
+   la portada salía **497 px de ancho** —cien más que la pantalla— y el
+   `overflow:hidden` de `.cover` le cortaba la cola. Se comían el final de
+   «⚠ Automático ve el cielo cubierto», el «Máx 24° a las…» y la racha
+   medida por AEMET.
+
+   El motivo es el `min-width:auto` que traen de fábrica los hijos de un
+   contenedor flexible: **no se dejan encoger por debajo de su texto más
+   largo**. Con `min-width:0` sí, y entonces el texto parte de línea en vez
+   de salirse. Es el fallo de maquetación más común con flex, y estaba en
+   la pantalla que él mira en el monte.
+
+   Va sin `@media`: a lo ancho no cambia nada —ahí sobra sitio— y así no
+   depende de acertar con el punto de corte. */
+.cover__main{display:flex;align-items:center;gap:18px;margin-top:auto;min-width:0}
+.cover__main > *{min-width:0}
+.cover__in{min-width:0}
+/* Y las palabras muy largas (nombres de estación, códigos) parten en vez
+   de empujar la columna entera. */
+.cover__t,.cover__desc,.cover__meta,.cover__sub,.cover__place{overflow-wrap:anywhere}
 .cover__ic{width:clamp(48px,6vw,74px);height:clamp(48px,6vw,74px);flex:none;
   filter:drop-shadow(0 6px 20px rgba(0,0,0,.55))}
 .cover__t{font-size:clamp(46px,7vw,74px);font-weight:200;letter-spacing:-.055em;line-height:.86;
@@ -2601,9 +2622,26 @@ body.sin-scroll{overflow:hidden}
    cielo. Puesto el 30-08-2026: «pero en el símbolo pone sol», con Bermeo
    cubierto. No cambia el símbolo —es el de su modelo—: pone al lado lo
    que ven los demás. */
+/* ── UN AVISO NUNCA SE CORTA A LA MITAD (21-09-2026) ──────────────────
+   Llevaba `white-space:nowrap`, o sea «no partas nunca de línea». En un
+   sitio ancho eso está bien y mantiene el aviso de una pieza. En la
+   pantalla del Ulefone, no: él mandó la captura a las 00:15 y se veía
+   «⚠ Automático ve el cielo cub…», cortado en seco por el borde.
+   Medido después del primer arreglo: el aviso seguía acabando en 586 px
+   con una pantalla de 393.
+
+   Ya había dos parches sueltos para esto —uno en las franjas y otro en las
+   tarjetas de hora, los dos poniendo `white-space:normal`—, que es la
+   señal de que la regla de fábrica estaba mal: se arreglaba caso por caso
+   según iba saliendo. Ahora parte de línea SIEMPRE, y `overflow-wrap`
+   asegura que ni una palabra larga pueda empujarlo fuera.
+
+   Y si queda más feo en dos líneas, da igual: media frase de aviso es
+   peor que ninguna, porque se lee como si dijera otra cosa. */
 .nd__ojo{display:inline-block;font-size:max(.95em,.9375rem);font-weight:700;letter-spacing:.01em;
   color:#ffd166;background:#f0c67433;padding:.2em .6em;border-radius:.6em;
-  vertical-align:middle;margin-left:.5em;white-space:nowrap}
+  vertical-align:middle;margin-left:.5em;
+  white-space:normal;overflow-wrap:anywhere;max-width:100%}
 
 /* ── LOS DOS DIBUJOS DEL DÍA: MAÑANA Y TARDE ──────────────────────────
    Cazado el 30-08-2026 en un pantallazo suyo de «10 días»: en la tarjeta
@@ -2867,3 +2905,9 @@ body.sin-scroll{overflow:hidden}
   box-shadow:0 0 0 1px color-mix(in srgb,var(--no) 35%,transparent)}
 .tor[data-alarma="1"] .tor__n b{color:var(--no)}
 .pt__d .rojo{color:var(--no)}
+
+/* Nota al pie de una casilla de la Guía: el matiz que no cabe en la escala.
+   Puesta el 20-09-2026 con los listones de lluvia, que la escala decía una
+   cosa y el semáforo hacía otra. */
+.q__n{font-size:0.8125rem;color:var(--dim);margin-top:8px;line-height:1.5}
+.q__n b{color:var(--txt)}
