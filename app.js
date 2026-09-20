@@ -9678,11 +9678,14 @@ function renderTorres() {
       <div class="tor__cfg">
         A pie de caseta · a ${ALTURA_CASETA} m${
           has(t.cfg?.cota) ? ` · cota <b>${t.cfg.cota} m</b>` : ''}
+        <button class="tor__aj${key(t.place) === key(estacionDePortada() || {}) ? ' is-on' : ''}" data-portada="${esc(key(t.place))}"
+          title="Que la portada de Mis estaciones sea la de este sitio">Portada</button>
         <button class="tor__aj" data-abrir="${esc(key(t.place))}">Ver en Ahora</button>
         <button class="tor__aj" data-aj="${esc(key(t.place))}">Ajustar</button>
       </div>
     </div>`;
   }).join('');
+  pintarPortadaEstacion();
 }
 
 
@@ -12017,7 +12020,10 @@ async function pintarMedidoCerca(p) {
     } catch { e = null; }
     MEDIDO_CERCA.set(k, { t: Date.now(), e });
   }
-  const sigue = S.place && `${S.place.lat.toFixed(3)},${S.place.lon.toFixed(3)}` === k;
+  /* Contra la portada que se ENSEÑA: en Mis estaciones es la de su
+     estación, no S.place (20-09-2026). */
+  const mostrada = (S.view === 'torres' && S.portadaEstacion) ? S.portadaEstacion.est : S.place;
+  const sigue = mostrada && `${mostrada.lat.toFixed(3)},${mostrada.lon.toFixed(3)}` === k;
   if (!sigue) return;                                   // ya está mirando otro sitio
   if (!e) { el.textContent = ''; return; }
   const hm = e.medidoEn ? (d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`)(new Date(e.medidoEn)) : '';
@@ -12030,7 +12036,61 @@ async function pintarMedidoCerca(p) {
     + (hm ? ` · a las ${hm}${vieja ? ` <b>(${vieja})</b>` : ''}` : '');
 }
 
+/* ── LA PORTADA DE SU ESTACIÓN EN MIS ESTACIONES (20-09-2026) ─────────
+   Suyo, con Mis estaciones en el Mac: «esa no es mi estación, aquí
+   debería poner BI BERMEO… en Ahora vale que lo use para otros pueblos,
+   pero en Mis estaciones solo las estaciones» · «que salga BI BERMEO, o
+   el primero de la lista, o el que meta yo a mano» · «aunque tenga en
+   Ahora puesto Mundaka, en Mis estaciones no debe ser igual».
+
+   La portada (foto, temperatura, franjas, lo medido) está atada a
+   S.place y S.data, el sitio buscado. Aquí se pinta con la MISMA función
+   y el MISMO cargador que Ahora, pero con su estación: los datos se piden
+   aparte con loadAll() y se guardan en S.portadaEstacion (15 min); para
+   pintar se cambian S.place/S.data un instante y se devuelven en el
+   finally, pase lo que pase. Al salir de Mis estaciones, setView()
+   repinta la del sitio buscado. Cuál: la fijada con el botón «Portada»
+   de su tarjeta (LS 'portadaEstacion'); si no hay, la primera de la
+   lista. Ahora, Horas y 10 días no cambian. */
+function estacionDePortada() {
+  const k = LS.get('portadaEstacion', null);
+  return (S.saved || []).find(p => key(p) === k) || S.saved?.[0] || null;
+}
+async function pintarPortadaEstacion({ forzar = false } = {}) {
+  const est = estacionDePortada();
+  const fijo = document.querySelector('.cover-fijo');
+  if (!est || S.view !== 'torres') return;
+  const P = S.portadaEstacion;
+  let D = (P && key(P.est) === key(est) && Date.now() - P.t < 15 * 60e3 && !forzar) ? P.D : null;
+  if (!D) {
+    try { D = await loadAll(est); }
+    catch (e) {
+      /* Sin datos de la estación, la portada NO se queda con el pueblo
+         de Ahora como si fuera ella: se esconde y se dice. */
+      S.portadaEstacion = null;
+      fijo?.classList.add('sin-estacion');
+      console.warn('portada de estación: sin datos', e);
+      return;
+    }
+    D.hours = buildHours(D.fc, ALTURA_CASETA, est);
+    S.portadaEstacion = { est, D, t: Date.now() };
+    if (S.view !== 'torres') return;             // se fue a otra pestaña mientras cargaba
+  }
+  fijo?.classList.remove('sin-estacion');
+  const antes = { place: S.place, data: S.data };
+  S.place = est; S.data = D; S._pintandoEstacion = true;
+  try { renderNow(); }
+  catch (e) { try { Petardazo.registrar('portada de estación', e); } catch { console.error(e); } }
+  finally { S.place = antes.place; S.data = antes.data; S._pintandoEstacion = false; }
+  const sub = $('#coverSub');
+  if (sub) sub.textContent = `${sub.textContent} · tu estación · cámbiala con «Portada» en cada tarjeta`;
+}
+
 function renderNow() {
+  /* En Mis estaciones la portada es la de SU estación: si alguien pide
+     repintar la del sitio buscado (el refresco de cada 15 min, el
+     arranque), se pinta la de la estación. Ahora se repinta al volver. */
+  if (S.view === 'torres' && S.portadaEstacion && !S._pintandoEstacion) { pintarPortadaEstacion(); return; }
   const { fc } = S.data, C = fc.current, hrs = S.data.hours, c = hrs[0];
 
   /* Ver `codigoQueSeVe()`: si el dueño de la lluvia ve agua, eso manda
@@ -15367,7 +15427,10 @@ async function sincronizarTorres({ mandar = false } = {}) {
    nada más tocar un ajuste. Si el servidor no contesta, la app sigue
    con lo suyo — el ajuste local nunca se pierde ni se bloquea.       */
 
-const AJUSTES_QUE_VIAJAN = ['model', 'wunit', 'hgt', 'thr', 'zoom'];
+/* 'portadaEstacion' viaja (20-09-2026): la estación que él fija como
+   portada de Mis estaciones tiene que ser la misma en el Mac, el iMac y
+   el Ulefone («quiero tener lo mismo que en el Mac»). */
+const AJUSTES_QUE_VIAJAN = ['model', 'wunit', 'hgt', 'thr', 'zoom', 'portadaEstacion'];
 
 /** Se llama nada más tocar él un ajuste: apunta la hora del cambio y
  *  manda en breve. El retén de 800 ms junta una ráfaga de toques (los
@@ -15386,7 +15449,7 @@ function ajusteTocado(k) {
 function recogerAjustes() {
   const t = LS.get('ajustesT', {});
   const val = { model: S.model, wunit: S.wunit, hgt: S.hgt,
-                thr: S.thr, zoom: LS.get('zoom', 1) };
+                thr: S.thr, zoom: LS.get('zoom', 1), portadaEstacion: LS.get('portadaEstacion', null) };
   const out = {};
   for (const k of AJUSTES_QUE_VIAJAN)
     if (t[k] && val[k] !== undefined) out[k] = { v: val[k], t: t[k] };
@@ -15401,7 +15464,7 @@ function adoptarAjustes(remoto) {
   /* Lo que vale AHORA en este aparato, para reconocer en la respuesta
      nuestro propio cambio aunque venga con otra hora (ver abajo). */
   const mio = { model: S.model, wunit: S.wunit, hgt: S.hgt,
-                thr: S.thr, zoom: LS.get('zoom', 1) };
+                thr: S.thr, zoom: LS.get('zoom', 1), portadaEstacion: LS.get('portadaEstacion', null) };
   let repintar = false, recargar = false;
   for (const k of AJUSTES_QUE_VIAJAN) {
     const r = remoto?.[k];
@@ -15430,6 +15493,9 @@ function adoptarAjustes(remoto) {
     } else if (k === 'zoom') {
       ponerZoom(r.v, false);        // sin `guardar`: guardamos nosotros,
       LS.set('zoom', +r.v);         // que ponerZoom marcaría hora nueva
+    } else if (k === 'portadaEstacion' && r.v !== LS.get('portadaEstacion', null)) {
+      LS.set('portadaEstacion', r.v);
+      if (S.view === 'torres') { renderTorres(); pintarPortadaEstacion({ forzar: true }); }
     }
   }
   LS.set('ajustesT', t);
@@ -16023,6 +16089,9 @@ function setView(v) {
     if (t) t.textContent = 'Pantalla completa';
   }
   document.body.dataset.view = v;          // la portada fija se muestra según la pestaña
+  /* Al salir de Mis estaciones vuelve la portada del sitio buscado; al
+     entrar, la de su estación (pintarPortadaEstacion, desde renderTorres). */
+  if (v !== 'torres' && S.portadaEstacion && S.data) seguro('ahora', renderNow);
   $$('.tab').forEach(t => t.classList.toggle('is-on', t.dataset.v === v));
   $$('.view').forEach(s => s.classList.toggle('is-on', s.dataset.v === v));
   // La fila de pestañas se desliza: si la activa queda fuera de pantalla
@@ -16286,6 +16355,14 @@ function bind() {
   // Sin cobertura y emplazamientos propios
   // Ficha de cada emplazamiento
   $('#torres')?.addEventListener('click', e => {
+    const pb = e.target.closest('[data-portada]');
+    if (pb) {
+      LS.set('portadaEstacion', pb.dataset.portada); ajusteTocado('portadaEstacion');
+      renderTorres();                                   // marca el botón y repinta la portada
+      pintarPortadaEstacion({ forzar: true });
+      try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch {}
+      return;
+    }
     const aj = e.target.closest('[data-aj]');
     if (aj) { abrirAjuste(aj.dataset.aj); return; }
     const g = e.target.closest('[data-guardar]');

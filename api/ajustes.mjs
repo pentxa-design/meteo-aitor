@@ -62,6 +62,9 @@ const CAMPOS = {
   wunit:  v => ['kmh', 'kt', 'ms'].includes(v),
   hgt:    v => Number.isFinite(+v) && +v >= 0 && +v <= 200,
   zoom:   v => [1, 1.15, 1.3, 1.5].includes(+v),   // el tamaño de letra
+  /* La estación que es portada de Mis estaciones: su clave lat,lon
+     (20-09-2026). Viaja como el modelo o los listones. */
+  portadaEstacion: v => typeof v === 'string' && /^-?\d+\.\d{3},-?\d+\.\d{3}$/.test(v),
   thr:    v => v && typeof v === 'object' && !Array.isArray(v)
                && Object.keys(v).length <= 20
                && Object.values(v).every(x => Number.isFinite(+x)),

@@ -964,3 +964,36 @@ mira con la lista que ya tiene (la app la trae sola).
 - Publicado como build 2026.09.20-1221.
 
 **Y a las 12:45, en Mis estaciones (build de esta publicación):** la línea de horas de la tarjeta va en cuatro columnas (ahora, 13:00, 14:00, 16:00) con la hora arriba y las cifras debajo, a letra 1 rem, y las notas (viaje, modelo) debajo aparte —«aquí todo está agrupado con todo el sitio que hay»—. Y la portada del pueblo buscado NO se enseña en Mis estaciones a ningún ancho («esa no es mi estación… en Mis estaciones solo las estaciones»; Ahora, Horas y 10 días siguen igual). PENDIENTE que pidió: portada de SU estación en Mis estaciones (la primera de la lista o la que fije él), que es una obra aparte porque la portada está atada a S.place.
+
+### §30 · 20-09-2026, 12:50-13:30, portátil: LA PORTADA DE SU ESTACIÓN EN MIS ESTACIONES
+
+**Lo que dijo:** *«esa no es mi estación, aquí debería poner BI BERMEO»* ·
+*«que salga BI BERMEO, o el primero de la lista, o el que meta yo a
+mano»* · *«aunque tenga en Ahora puesto Mundaka, en Mis estaciones no
+debe ser igual; en el resto (Ahora, Horas, 10 días) sí»* · *«hoy lo que
+quiero es dejarlo todo terminado, adelante»* · *«tengo 9 horas para
+esto, dale»* · *«autorizado para cambios y subidas de esta app»*.
+
+**Lo hecho:**
+- `pintarPortadaEstacion()` y `estacionDePortada()` en app.js: en Mis
+  estaciones la portada (foto, temperatura, franjas, lo medido) es la de
+  SU estación, pintada con la misma `renderNow()` y el mismo `loadAll()`
+  que Ahora: los datos de la estación se cargan aparte, se guardan en
+  `S.portadaEstacion` (15 min), y para pintar se cambian S.place/S.data
+  un instante y se devuelven en el `finally`. `renderNow()` lleva una
+  guardia: en Mis estaciones, si alguien pide repintar la del sitio
+  buscado (el refresco de cada 15 min), pinta la de la estación.
+  `setView()` repinta la del sitio buscado al salir de Mis estaciones.
+- Cuál: la fijada con el botón «Portada» de cada tarjeta (marcado en la
+  elegida), si no la primera de la lista. La elección VIAJA entre
+  aparatos como el modelo o los listones: `portadaEstacion` en
+  `AJUSTES_QUE_VIAJAN`, en `recogerAjustes/adoptarAjustes` y en `CAMPOS`
+  de `api/ajustes.mjs` (clave lat,lon a tres decimales).
+- Si no hay datos de la estación, la portada se ESCONDE
+  (`.cover-fijo.sin-estacion`), nunca se queda con el pueblo de Ahora.
+  En el móvil también sale (antes Mis estaciones iba sin portada).
+- La línea «Medido de verdad» de la portada compara contra la portada
+  que se enseña (`mostrada`), no contra S.place.
+- Probado en local (servidor estático): Ahora en Mundaka; Mis estaciones
+  enseña BI BERMEO con S.place intacto; «Portada» en Sollubemendi la
+  cambia y marca el botón; al volver a Ahora, Mundaka. 1120 pruebas.

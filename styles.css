@@ -1160,12 +1160,12 @@ canvas.mvals{width:100%;height:100%;display:block}
   body[data-view="sea"] .cover-fijo{display:block}
 }
 /* 20-09-2026, suyo desde el Mac, en Mis estaciones: «esa no es mi
-   estación, aquí debería poner BI BERMEO… en Ahora vale que lo use para
-   otros pueblos, pero en Mis estaciones solo las estaciones». La portada
-   es del PUEBLO buscado (Bermeo, a otra altura que BI BERMEO); en Mis
-   estaciones no se enseña, a ningún ancho. Ahora, Horas, 10 días y Mar
-   siguen igual. */
-body[data-view="torres"] .cover-fijo{display:none}
+   estación, aquí debería poner BI BERMEO… en Mis estaciones solo las
+   estaciones». Ahí la portada es la de SU estación (ver
+   pintarPortadaEstacion en app.js), también en el móvil; si no hay datos
+   de la estación, se esconde en vez de dejar el pueblo de Ahora. */
+@media (max-width:900px){ body[data-view="torres"] .cover-fijo{display:block} }
+.cover-fijo.sin-estacion{display:none!important}
 
 /* LA PORTADA YA NO SE QUEDA PEGADA. Suyo, 28-08-2026, en Mis torres:
    *«cuando vaya moviendo el ratón para abajo y ver más datos, que tire

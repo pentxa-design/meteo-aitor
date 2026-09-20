@@ -8281,9 +8281,21 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /<div class="tor__lleg__n">/.test(A)
      && /\.tor__lleg__t\{display:grid;grid-template-columns:repeat\(auto-fit,minmax\(210px,1fr\)\)/.test(C),
      'suyo: «aquí todo está agrupado con todo el sitio que hay»');
-  ok('en Mis estaciones no se enseña la portada del pueblo, a ningún ancho',
-     /body\[data-view="torres"\] \.cover-fijo\{display:none\}/.test(C),
-     'suyo: «esa no es mi estación… en Mis estaciones solo las estaciones»');
+  ok('en Mis estaciones la portada es la de SU estación: la fijada con «Portada» o la primera de la lista, con los mismos datos que Ahora',
+     /^function estacionDePortada\(\) \{/m.test(A) && /^async function pintarPortadaEstacion\(/m.test(A)
+     && /LS\.get\('portadaEstacion', null\)/.test(A) && /LS\.set\('portadaEstacion', pb\.dataset\.portada\);/.test(A)
+     && /D = await loadAll\(est\);/.test(A) && /D\.hours = buildHours\(D\.fc, ALTURA_CASETA, est\);/.test(A)
+     && /finally \{ S\.place = antes\.place; S\.data = antes\.data; S\._pintandoEstacion = false; \}/.test(A)
+     && /if \(S\.view === 'torres' && S\.portadaEstacion && !S\._pintandoEstacion\) \{ pintarPortadaEstacion\(\); return; \}/.test(A)
+     && /data-portada="\$\{esc\(key\(t\.place\)\)\}"/.test(A)
+     && /body\[data-view="torres"\] \.cover-fijo\{display:block\}/.test(C)
+     && !/body\[data-view="torres"\] \.cover-fijo\{display:none\}/.test(C),
+     'suyo: «que salga BI BERMEO, o el primero de la lista, o el que meta yo a mano»');
+  ok('y al salir de Mis estaciones vuelve la portada del sitio buscado; sin datos de la estación, se esconde',
+     /if \(v !== 'torres' && S\.portadaEstacion && S\.data\) seguro\('ahora', renderNow\);/.test(A)
+     && /fijo\?\.classList\.add\('sin-estacion'\);/.test(A)
+     && /\.cover-fijo\.sin-estacion\{display:none!important\}/.test(C)
+     && /const mostrada = \(S\.view === 'torres' && S\.portadaEstacion\) \? S\.portadaEstacion\.est : S\.place;/.test(A));
 }
 
 
