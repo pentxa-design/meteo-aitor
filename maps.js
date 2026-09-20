@@ -269,6 +269,17 @@ const TMODELS = [
 /** Orden en que las capas de mar buscan modelo: el fino de Europa primero. */
 const MODELOS_OLAS = ['dwd_ewam', 'ecmwf_wam025', 'ncep_gfswave016'];
 
+/* ── EL RUMBO DEL CLIC DE MAR, APAGADO (20-09-2026) ─────────────────────
+   Medido en el Chrome del iMac (EWAM, «Altura de ola», dom 20 a las 11:00):
+   el clic decía «1,8 m · del norte (2°)» en 43,60/-2,90 Y en 43,90/-3,50,
+   mientras la API marina del mismo modelo y hora daba 318° y 319°
+   (noroeste) en esos dos puntos. La altura cuadra; el rumbo sale siempre
+   ~2°: lo que devuelve getValueFromLatLong sobre la variable hermana no
+   son grados (o no es la tesela que se cree). Hasta que se arregle
+   (opción B, en el MacBook, TRASPASO §27), sin rumbo en el clic: mejor
+   sin él que con uno inventado. La pestaña Mar no usa este camino. */
+const RUMBO_EN_CLIC_MAR = false;
+
 
 /* `v` es el nombre EXACTO de la variable en el servicio de teselas.
    Si el modelo elegido no la publica, la capa no aparece.
@@ -4206,7 +4217,7 @@ const Maps = {
          (`direccion` en la capa) del MISMO modelo y hora. Si ese modelo
          no la publica, no se pone nada: no se inventa un rumbo. */
       let deDonde = '';
-      if (L_.direccion && R.meta?.variables?.includes(L_.direccion)) {
+      if (RUMBO_EN_CLIC_MAR && L_.direccion && R.meta?.variables?.includes(L_.direccion)) {
         try {
           const uD = limpiarMarca(this.omUrl(L_.direccion, this.t, R.modelo, R.meta) || '');
           const leerD = async () => (await OMWeatherMapLayer.getValueFromLatLong(lngLat.lat, lngLat.lng, uD))?.value;

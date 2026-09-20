@@ -8033,6 +8033,22 @@ grupo('El modelo de olas de 9 km (ecmwf_wam) NO entra en el mapa: medido que rev
      /ecmwf_wam \(9 km, el de Windy\): MEDIDO el 20-09-2026/.test(M) && !/ecmwf_wam \(9 km, el de Windy\): está en el bucket, SIN PROBAR/.test(M));
 }
 
+/* ═══ EL RUMBO DEL CLIC DE MAR, APAGADO HASTA QUE SE LEA BIEN (20-09-2026) ═══
+   Medido en el Chrome del iMac (build 1038, EWAM, «Altura de ola», dom 20 a las
+   11:00): el clic decía «1,8 m · del norte (2°)» en 43,60/-2,90 Y en 43,90/-3,50;
+   la API marina del mismo modelo y hora daba 318° y 319° (noroeste) en esos dos
+   puntos. La altura cuadra; el rumbo sale siempre ~2°. Un rumbo inventado en la
+   víspera de la prueba de fuego no se publica: mejor sin él (opción A). La lectura
+   buena (opción B) queda para el MacBook, TRASPASO §27. */
+grupo('El rumbo del clic de Mar está apagado: medido 2° donde la API decía 318° (20-09-2026)');
+{
+  const M = mapsSrc;
+  ok('la lectura del rumbo en el clic va detrás de un interruptor, y el interruptor está en false',
+     /const RUMBO_EN_CLIC_MAR = false;/.test(M)
+     && /if \(RUMBO_EN_CLIC_MAR && L_\.direccion && R\.meta\?\.variables\?\.includes\(L_\.direccion\)\) \{/.test(M),
+     'con el rumbo puesto, el clic decía «del norte (2°)» con la ola viniendo del noroeste');
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');
