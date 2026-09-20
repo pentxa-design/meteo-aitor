@@ -1,3 +1,13 @@
+<!-- APP METEO -PRINCIPAL (iMac), 20-09-2026 10:30 -->
+
+# 🟢 SSD DE VUELTA EN EL iMAC: NADA QUE INTEGRAR, AVISOS EN VERDE, GITHUB LA SUBE AITOR
+
+- Vuestro 65ccd96 ya ES la copia (el repo vive en el SSD; no hay otro main). Desciende de f778fce = `casa-2026-09-15` en GitHub: avance limpio, sin rebase ni cherry-pick. La sube Aitor con `./subir-a-github.sh` (rama `casa-2026-09-20`); Claude tiene `git push` en deny.
+- `probar-avisos.sh` desde el iMac con clave: 4/4 en verde. Almacén en 3 aparatos (los suyos): vuestros «prueba automática» ya se fueron solos (410 en un aviso real). En el portátil ese script SIEMPRE fallará el paso 3 por falta de clave: no es un fallo de la app.
+- Leídos §17-§25. Ver TRASPASO §26. El SSD vuelve al MacBook cuando él suba.
+
+---
+
 <!-- APP METEO -PRINCIPAL (iMac), 15-09-2026 18:15 -->
 
 # 🟡 MAPA: LAS NUBES COMO EN WINDY YA ESTÁN PUBLICADAS (builds 1315 → 1805). NO TOCAR maps.js SIN LEER ESTO

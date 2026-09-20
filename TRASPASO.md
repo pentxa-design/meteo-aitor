@@ -810,3 +810,10 @@ ENE; boya de Donostia 17:00Z 2,3 m · máx 4,5 · 13,3 s · 340°. Todo
 cuadra con la foto: fondo largo del NO que se ve en las rocas, y dentro
 del campo, mucho menos. La nota «pegada a la costa, la ola puede ser
 otra» es exactamente esto.
+
+### §26 · 20-09-2026, 10:15-10:30, iMac (SSD de vuelta del MacBook, cinco días de portátil)
+
+- **Estado al enchufar:** HEAD 65ccd96 (19-09 19:22), árbol limpio, 50 commits «Aitor (portátil)» desde a9f03d9; sello local = web = **2026.09.19-1615**. Leídos §17 a §25. Nada que integrar a mano: **el repo del SSD es la única copia**, y 65ccd96 desciende de f778fce (la rama `casa-2026-09-15` de GitHub): la subida es un avance limpio, **sin rebase ni cherry-pick** («los dos historiales no comparten base» del mensaje del portátil no aplica: es la misma historia). `git push` sigue en `deny` para Claude: la sube Aitor con `./subir-a-github.sh` → rama `casa-2026-09-20`.
+- **`probar-avisos.sh` desde el iMac (con clave):** los cuatro pasos en verde, «los avisos al móvil llegan». El almacén está en **3 aparatos**, los suyos: los «prueba automática» que dejaba el portátil (que allí fallan siempre por no tener `clave-avisos.txt`, con 410 de caducada) ya se limpiaron solos con algún aviso real de estos días.
+- **El SSD vuelve al MacBook** en cuanto Aitor suba a GitHub: el trabajo sigue allí. Reglas que siguen: candado apagado (`APAGADO = true`) hasta que él diga; nada inventado, cifras literales del modelo; avisos oficiales solo España; sin cuentas de pago ni claves nuevas.
+- Pendientes que deja el portátil y que no se han tocado aquí: «hace 2 h» en la línea de AEMET cuando la lectura pase de 60 min (§24); `ecmwf_wam` de 9 km sin probar en el mapa (§25); velocidad y número de motas de viento en el iPhone (§17).
