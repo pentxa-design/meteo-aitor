@@ -929,6 +929,15 @@ canvas.mvals{width:100%;height:100%;display:block}
 .tor__lleg__k{display:block;font-weight:700;letter-spacing:.02em;
   text-transform:uppercase;font-size:0.75rem;color:var(--acc)}
 .tor__lleg__q{display:block;opacity:.72;font-size:0.75rem}
+/* Las horas en columnas (20-09-2026): «todo agrupado con todo el sitio
+   que hay». Cada tramo es una columna; en pantalla estrecha se apilan. */
+.tor__lleg__t{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px 18px}
+.tor__lleg__c{padding:2px 0 2px 10px;border-left:2px solid color-mix(in srgb,var(--acc) 30%,transparent)}
+.tor__lleg__c--ahora{border-left-color:var(--acc)}
+.tor__lleg__c .tor__lleg__q,.tor__lleg__c .tor__lleg__k{text-transform:uppercase;letter-spacing:.02em;font-weight:700;opacity:.9;font-size:0.8125rem}
+.tor__lleg__v{display:block;font-size:1rem;line-height:1.5;margin-top:2px}
+.tor__lleg__n{margin-top:6px;font-size:0.75rem;opacity:.72}
+.tor__lleg__n span+span::before{content:" · "}
 
 .tor[data-s=go]  {--c:var(--go)}
 .tor[data-s=warn]{--c:var(--warn)}
@@ -1150,6 +1159,13 @@ canvas.mvals{width:100%;height:100%;display:block}
   body[data-view="days"] .cover-fijo,
   body[data-view="sea"] .cover-fijo{display:block}
 }
+/* 20-09-2026, suyo desde el Mac, en Mis estaciones: «esa no es mi
+   estación, aquí debería poner BI BERMEO… en Ahora vale que lo use para
+   otros pueblos, pero en Mis estaciones solo las estaciones». La portada
+   es del PUEBLO buscado (Bermeo, a otra altura que BI BERMEO); en Mis
+   estaciones no se enseña, a ningún ancho. Ahora, Horas, 10 días y Mar
+   siguen igual. */
+body[data-view="torres"] .cover-fijo{display:none}
 
 /* LA PORTADA YA NO SE QUEDA PEGADA. Suyo, 28-08-2026, en Mis torres:
    *«cuando vaya moviendo el ratón para abajo y ver más datos, que tire

@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.20-1221';
+const BUILD = '2026.09.20-1248';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -9458,12 +9458,17 @@ function renderTorres() {
         return x ? { x, et: et || `a las ${reloj2(x.date)}` } : null;
       })
       .filter(Boolean);
+    /* EN COLUMNAS (20-09-2026). Suyo, con la tarjeta en el Mac: «aquí
+       todo está agrupado con todo el sitio que hay». Cuatro líneas
+       apiladas a la izquierda y media tarjeta vacía. Ahora cada tramo
+       (ahora, 13:00, 14:00, 16:00) es una columna con su hora arriba y
+       sus cifras debajo; en el Ulefone se apilan solas. Las notas
+       (viaje, modelo) van debajo, aparte. */
     const lineaLlegada = tramos.length ? `<div class="tor__lleg">
-        ${tramos.map((r, j) => `<span class="tor__lleg__${j ? 'q' : 'k'}">${
-          r.et} · ${cifras(r.x)}</span>`).join('')}
-        ${V && !V.cerca ? `<span class="tor__lleg__q">a ${V.min} min de Bermeo,
-          estimado</span>` : ''}
-        ${t.copia ? '' : `<span class="tor__lleg__q">cifras de ${esc(model().name)} a ${ALTURA_CASETA} m</span>`}
+        <div class="tor__lleg__t">${tramos.map((r, j) => `<div class="tor__lleg__c${j ? '' : ' tor__lleg__c--ahora'}"><span class="tor__lleg__${j ? 'q' : 'k'}">${
+          r.et}</span><span class="tor__lleg__v">${cifras(r.x)}</span></div>`).join('')}</div>
+        <div class="tor__lleg__n">${V && !V.cerca ? `<span>a ${V.min} min de Bermeo, estimado</span>` : ''}${
+          t.copia ? '' : `<span>cifras de ${esc(model().name)} a ${ALTURA_CASETA} m</span>`}</div>
       </div>` : '';
 
     return `<div class="tor" data-s="${h.st}"${D ? ' data-disc="1"' : ''} data-ir="${esc(key(t.place))}">

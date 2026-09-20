@@ -4520,7 +4520,7 @@ grupo('«Me pasan a las 2 de la mañana: Arbaiza» — el viaje entra en la resp
      'un rango sin los dos puntos se lee como una fecha: «21–09»');
   ok('la hora no se dice dos veces en cada tramo',
      !/r\.et\} \$\{reloj\(r\.x\.date\)\}/.test(src)
-     && /r\.et\} · \$\{cifras\(r\.x\)\}/.test(src),
+     && /r\.et\}<\/span><span class="tor__lleg__v">\$\{cifras\(r\.x\)\}/.test(src),
      'la etiqueta ya es «a las 22:00»: repetir el reloj daba «a las 22:00 22:00»');
   {
     const cssC = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
@@ -8269,6 +8269,21 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /for \(const k of quedan\) borrados\.delete\(k\);/.test(T)
      && /if \(esClave\(k\) && !quedan\.has\(k\)\) borrados\.add\(k\);/.test(T),
      'un arranque automático no borra nada; solo se apunta lo que ÉL quitó, y eso no vuelve solo');
+}
+
+
+/* ── HORAS EN COLUMNAS Y SIN PORTADA DEL PUEBLO EN MIS ESTACIONES (20-09) ── */
+{
+  const A = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  const C = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+  ok('la línea de horas de la tarjeta va en columnas (una por tramo) y las notas debajo',
+     /<div class="tor__lleg__t">\$\{tramos\.map\(\(r, j\) => \`<div class="tor__lleg__c/.test(A)
+     && /<div class="tor__lleg__n">/.test(A)
+     && /\.tor__lleg__t\{display:grid;grid-template-columns:repeat\(auto-fit,minmax\(210px,1fr\)\)/.test(C),
+     'suyo: «aquí todo está agrupado con todo el sitio que hay»');
+  ok('en Mis estaciones no se enseña la portada del pueblo, a ningún ancho',
+     /body\[data-view="torres"\] \.cover-fijo\{display:none\}/.test(C),
+     'suyo: «esa no es mi estación… en Mis estaciones solo las estaciones»');
 }
 
 

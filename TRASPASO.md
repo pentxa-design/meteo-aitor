@@ -962,3 +962,5 @@ nunca guardar sitios de prueba en producción; para probar Mis
 estaciones se usa el servidor local, y si hace falta producción, se
 mira con la lista que ya tiene (la app la trae sola).
 - Publicado como build 2026.09.20-1221.
+
+**Y a las 12:45, en Mis estaciones (build de esta publicación):** la línea de horas de la tarjeta va en cuatro columnas (ahora, 13:00, 14:00, 16:00) con la hora arriba y las cifras debajo, a letra 1 rem, y las notas (viaje, modelo) debajo aparte —«aquí todo está agrupado con todo el sitio que hay»—. Y la portada del pueblo buscado NO se enseña en Mis estaciones a ningún ancho («esa no es mi estación… en Mis estaciones solo las estaciones»; Ahora, Horas y 10 días siguen igual). PENDIENTE que pidió: portada de SU estación en Mis estaciones (la primera de la lista o la que fije él), que es una obra aparte porque la portada está atada a S.place.
