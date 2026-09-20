@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.20-1426';
+const BUILD = '2026.09.20-1806';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -8940,7 +8940,7 @@ function renderParte() {
         intemperie estará mojado</div>`;
     const fuerza = L.pico >= (S.thr?.rainNo ?? 2) ? 'Llueve bien' : L.pico >= (S.thr?.rainWarn ?? 0.2) ? 'Llueve poco' : 'Cuatro gotas';
     const dPico = dia(L.hPico).trim();
-    return `<div class="pt__l"><b>${fuerza}</b> ${cuando}
+    return `<div class="pt__l${L.pico >= (S.thr?.rainWarn ?? 0.2) ? ' pt__l--rojo' : ''}"><b>${fuerza}</b> ${cuando}
       — lo más fuerte <b>${nMm(L.pico)} mm</b> a las ${hm(L.hPico)}${dPico ? ` de ${dPico}` : ''}
       <span class="pt__m">· lo ve ${esc(L.quien ?? '—')}</span>${L.discrepan
         ? `<br><span class="pt__m">Los modelos no coinciden en la cantidad:
@@ -9164,7 +9164,15 @@ function renderParte() {
     const etq = alFilo ? 'AL FILO'
       : mojaDeVerdad ? (L_.soloSirimiri ? 'SIRIMIRI' : 'LLUVIA')
       : 'SIN RAYO';
-    const est = (alFilo || mojaDeVerdad) ? 'warn' : 'go';
+    /* EN ROJO LO QUE SALTA. Suyo, 20-09-2026: *«en Mis estaciones, al dar
+       la pasada, si hay algo que salte alarma que salte en rojo; si ve CAPE
+       en rojo, si ve lluvia en rojo; así con una mirada ya se ve»*. Y lo
+       remató: *«si no hay nada, como hoy, no pinta nada de rojo, claro»*.
+       LLUVIA y AL FILO van en rojo. El SIRIMIRI se queda en ámbar: moja,
+       pero no marca, y en Bermeo lo hay muchos días — en rojo a diario se
+       dejaría de mirar, que es lo único que no puede pasar. */
+    const est = (alFilo || (mojaDeVerdad && !L_.soloSirimiri)) ? 'no'
+      : mojaDeVerdad ? 'warn' : 'go';
 
     /* No salta el rayo: se dice de qué le falta. Y son TRES casos, no
        dos. El tercero salió en su pantalla el 26-08-2026 y decía una
@@ -9177,13 +9185,16 @@ function renderParte() {
        mismo que estar a salvo — basta con que se junten una hora. */
     const hayGasolina = d.maxCape >= CAPE_COMBINACION;
     const tapaSeAbre = has(d.minCin) && d.minCin < 75;
+    /* El CAPE del día en rojo desde su «avisar desde» (Ajustes, 300 por
+       defecto): «si ve CAPE, en rojo» (20-09-2026). */
+    const capeTxt = `<b${d.maxCape >= (S.thr?.capeWarn ?? 300) ? ' class="rojo"' : ''}>${nCape(d.maxCape)} de CAPE</b>`;
     const porQue = !hayGasolina
-      ? `<b>${nCape(d.maxCape)} de CAPE</b>${has(d.minCin) ? ` · tapa <b>${nCape(d.minCin)}</b>` : ''}`
+      ? `${capeTxt}${has(d.minCin) ? ` · tapa <b>${nCape(d.minCin)}</b>` : ''}`
         + ` — hace falta ${CAPE_COMBINACION} con la tapa por debajo de 75`
       : tapaSeAbre
-        ? `llega a <b>${nCape(d.maxCape)} de CAPE</b> y la tapa le baja a
+        ? `llega a ${capeTxt} y la tapa le baja a
            <b>${nCape(d.minCin)}</b>, <b>pero no a la vez</b> — si se juntan una hora, salta`
-        : `tiene <b>${nCape(d.maxCape)} de CAPE</b>, pero la tapa no baja de
+        : `tiene ${capeTxt}, pero la tapa no baja de
            <b>${d.minCin === null ? '—' : nCape(d.minCin)}</b>: aguanta`;
     /* ── EN SU ORDEN: LLUVIA, RAYOS, VIENTO ─────────────────────────
        Suyo, 02-09-2026, con la tarjeta delante:
@@ -9471,7 +9482,17 @@ function renderTorres() {
           t.copia ? '' : `<span>cifras de ${esc(model().name)} a ${ALTURA_CASETA} m</span>`}</div>
       </div>` : '';
 
-    return `<div class="tor" data-s="${h.st}"${D ? ' data-disc="1"' : ''} data-ir="${esc(key(t.place))}">
+    /* EN ROJO LO QUE SALTA (suyo, 20-09-2026). La tarjeta entera se marca
+       cuando el parte del día va en rojo —LLUVIA, AL FILO, RAYO— o cuando
+       la hora en curso pasa de sus listones: lluvia que moja, racha de
+       tope, CAPE desde donde él avisa, nieve. Si no hay nada, nada de rojo. */
+    const P0 = S.parteFilas?.get(key(t.place));
+    const alarma = P0?.est === 'no'
+      || (has(h.prec) && (h.prec >= (S.thr?.rainWarn ?? 0.2) || esLlovizna(h.codeLluvia ?? h.code)))
+      || (has(h.gust10) && h.gust10 >= listonRafaga().no)
+      || (has(h.cape) && h.cape >= (S.thr?.capeWarn ?? 300))
+      || (has(h.nieve) && h.nieve > 0);
+    return `<div class="tor" data-s="${h.st}"${D ? ' data-disc="1"' : ''}${alarma ? ' data-alarma="1"' : ''} data-ir="${esc(key(t.place))}">
       <div class="tor__badge">${VT[h.st]}</div>
       <div class="tor__n">
         <b>${esc(t.place.name)}</b>${(() => {
@@ -9479,7 +9500,7 @@ function renderTorres() {
              al nombre. Ver `S.parteFilas`: el parte ya no es una lista
              aparte, vive dentro de la tarjeta de su sitio. */
           const P = S.parteFilas?.get(key(t.place));
-          return P?.etq ? ` <span class="pt__b">${P.etq}</span>` : '';
+          return P?.etq ? ` <span class="pt__b" data-s="${P.est}">${P.etq}</span>` : '';
         })()}
         <span>${esc([t.place.admin1, t.place.country].filter(Boolean).join(' · '))}</span>
         <!-- DE QUÉ HORA SON LAS CIFRAS. Suyo, 02-09-2026: *«el tiempo que
@@ -9522,7 +9543,7 @@ function renderTorres() {
              · `ctx`     → apagado, se lee cuando lo buscas
            El ámbar de `data-a` sigue mandando sobre las dos.          */
         const num = (v, etq, aviso, fam = 'ctx') =>
-          `<div class="tor__d" data-f="${fam}"${aviso ? ' data-a="1"' : ''}>
+          `<div class="tor__d" data-f="${fam}"${aviso === 'rojo' ? ' data-a="2"' : aviso ? ' data-a="1"' : ''}>
              <span class="tor__big">${v}</span>
              <span class="tor__lbl">${etq}</span>
            </div>`;
@@ -9604,20 +9625,23 @@ function renderTorres() {
             ? (h.nieve > 0 ? `${h.nieve.toFixed(1).replace('.', ',')} cm` : '0') : '—';
           return num(has(h.prec) ? mmTxt(h.prec) : '—',
                      'lluvia mm/h' + (has(h.pop) ? ` · ${h.pop}% prob.` : ''),
-                     has(h.prec) && h.prec > 0, 'decide')
+                     has(h.prec) && (h.prec >= (S.thr?.rainWarn ?? 0.2) || esLlovizna(h.codeLluvia ?? h.code)) ? 'rojo'
+                       : has(h.prec) && h.prec > 0, 'decide')
                /* Una sola racha y un solo viento, los de 10 m (a pie de
                   caseta, 20-09-2026): antes salían «racha a 40 m (est.)»
                   y «racha a 10 m de altura» —dos números de lo mismo— y con
                   trabajo a 10 m las dos casillas eran idénticas. */
-               + num(has(h.gust10) ? wtxt(h.gust10, true) : '—', 'racha a 10 m · a pie de caseta', rachaAltaP, 'decide')
+               + num(has(h.gust10) ? wtxt(h.gust10, true) : '—', 'racha a 10 m · a pie de caseta',
+                     has(h.gust10) && h.gust10 >= listonRafaga().no ? 'rojo' : rachaAltaP, 'decide')
                + num(has(h.w10) ? wtxt(h.w10, true) : '—',
                      `viento a 10 m${has(h.dir) ? ' · del ' + rumboLargo(h.dir) : ''}`)
-               + num(has(h.cape) ? h.cape.toFixed(0) : '—', 'CAPE J/kg', tapaAbierta, 'decide')
+               + num(has(h.cape) ? h.cape.toFixed(0) : '—', 'CAPE J/kg',
+                     has(h.cape) && h.cape >= (S.thr?.capeWarn ?? 300) ? 'rojo' : tapaAbierta, 'decide')
                + num(has(h.cin) ? h.cin.toFixed(0) : '—',
-                     'tapa J/kg' + (has(h.cin) ? ' · ' + textoTapa(h.cin) : ''), tapaAbierta, 'decide')
+                     'tapa J/kg' + (has(h.cin) ? ' · ' + textoTapa(h.cin) : ''), tapaAbierta ? 'rojo' : false, 'decide')
                + num(has(h.nieve) ? nieveTxt : '—',
                      'nieve cm/h' + (hielo ? ' · isocero a la altura del sitio' : ''),
-                     (has(h.nieve) && h.nieve > 0) || hielo, 'decide')
+                     has(h.nieve) && h.nieve > 0 ? 'rojo' : hielo, 'decide')
                + num(has(h.cloud) ? Math.round(h.cloud) + ' %' : '—',
                      'nubes' + ((has(h.code) || has(h.cloud)) && cieloVisto(h).txt ? ' · ' + cieloVisto(h).txt : ''))
                + num(has(h.temp) ? h.temp.toFixed(0) + '°' : '—',

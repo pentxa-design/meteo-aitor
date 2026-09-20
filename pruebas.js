@@ -329,6 +329,21 @@ ok('NINGÚN sitio con lluvia lleva etiqueta verde',
 ok('los que sí mojan llevan LLUVIA o SIRIMIRI',
    bloques.some(b => /LLUVIA|SIRIMIRI/.test(b)));
 
+/* EN ROJO LO QUE SALTA. Suyo, 20-09-2026: «si hay algo que salte alarma
+   que salte en rojo; si ve CAPE en rojo, si ve lluvia en rojo». Y «si no
+   hay nada, no pinta nada de rojo». */
+const lluviaSinRojo = bloques.filter(b => /pt__b">LLUVIA</.test(b) && !/^\s*data-s="no"/.test(b));
+ok('los que llueve de verdad van en ROJO, no en ámbar (20-09-2026)',
+   lluviaSinRojo.length === 0,
+   lluviaSinRojo.map(b => b.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0,90)).join(' | '));
+ok('y el AL FILO también en rojo',
+   bloques.filter(b => /pt__b">AL FILO</.test(b)).every(b => /^\s*data-s="no"/.test(b)));
+ok('el sirimiri se queda en ámbar: moja, pero en rojo a diario se dejaría de mirar',
+   bloques.filter(b => /pt__b">SIRIMIRI</.test(b)).every(b => /^\s*data-s="warn"/.test(b)));
+ok('y los secos sin nada siguen en verde: si no hay nada, nada de rojo',
+   bloques.filter(b => /pt__b">SIN RAYO</.test(b) && /Sin lluvia/.test(b) && !/pero no a la vez/.test(b))
+     .every(b => /^\s*data-s="go"/.test(b)));
+
 /* Salió en la SEGUNDA pasada del 26-08-2026. Un sitio con gasolina de
    sobra y la tapa que se le llega a abrir —aunque no a la vez— salía en
    VERDE con «si se juntan una hora, salta» debajo. La etiqueta decía lo
@@ -4031,7 +4046,7 @@ grupo('«Me pasan a las 2 de la mañana: Arbaiza» — el viaje entra en la resp
      /\$\{P\.cuerpo\}<\/div>\$\{P\.comp \|\| ''\}/.test(src),
      'esa tabla es lo único que dice si el pronóstico acierta en su sitio');
   ok('y el chip de rayo, junto al nombre',
-     /P\?\.etq \? ` <span class="pt__b">\$\{P\.etq\}<\/span>`/.test(src));
+     /P\?\.etq \? ` <span class="pt__b" data-s="\$\{P\.est\}">\$\{P\.etq\}<\/span>`/.test(src));
 
   /* EL ORDEN IMPORTA y es el fallo que casi se me cuela: `renderTorres`
      LEE `S.parteFilas`, así que el parte tiene que calcularse antes. Al
@@ -4240,6 +4255,22 @@ grupo('«Me pasan a las 2 de la mañana: Arbaiza» — el viaje entra en la resp
      cssT.indexOf('.tor__d[data-a="1"] .tor__big') < cssT.indexOf('.tor__d[data-f="ctx"] .tor__big')
      || /\.tor__d\[data-a="1"\] \.tor__big\{color:var\(--warn\)\}/.test(cssT),
      'si una racha se pasa, tiene que verse aunque sea de la familia que sea');
+  /* EN ROJO LO QUE SALTA (20-09-2026): la cifra que pasa del listón va en
+     rojo (data-a="2"), la etiqueta del parte lleva su color dentro de la
+     tarjeta y la tarjeta entera se marca. Y todo ello al final del CSS,
+     que es donde manda sobre ctx/decide. */
+  ok('la cifra que se pasa va en ROJO, y manda sobre ctx/decide',
+     /\.tor \.tor__d\[data-a="2"\] \.tor__big\{color:var\(--no\)/.test(cssT)
+     && cssT.lastIndexOf('.tor .tor__d[data-a="2"] .tor__big') > cssT.indexOf('.tor__d[data-f="decide"] .tor__big')
+     && /aviso === 'rojo' \? ' data-a="2"'/.test(src));
+  ok('lluvia, racha, CAPE, tapa y nieve saben ponerse en rojo',
+     (src.match(/\? 'rojo'/g) || []).length === 5);
+  ok('la etiqueta del parte lleva su color dentro de la tarjeta',
+     /\.pt__b\[data-s="no"\]\{[^}]*color:var\(--no\)/.test(cssT)
+     && /<span class="pt__b" data-s="\$\{P\.est\}">/.test(src));
+  ok('y la tarjeta entera se marca cuando algo salta',
+     /data-alarma="1"/.test(src) && /\.tor\[data-alarma="1"\]\{border-color/.test(cssT)
+     && /const alarma = P0\?\.est === 'no'/.test(src));
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -8186,7 +8217,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /horas: buildHours\(copia\.data\.fc, ALTURA_CASETA, place\)/.test(A)
      && !/buildHours\(fc, cfg\.alt, p\)/.test(A) && !/cfgDe\(place\)\.alt, place\)/.test(A));
   ok('la cabecera de la tarjeta lleva UNA racha y UN viento, los de 10 m, sin «(est.)» ni «de altura»',
-     /'racha a 10 m · a pie de caseta', rachaAltaP, 'decide'/.test(A)
+     /'racha a 10 m · a pie de caseta',\s*has\(h\.gust10\) && h\.gust10 >= listonRafaga\(\)\.no \? 'rojo' : rachaAltaP, 'decide'/.test(A)
      && /\`viento a 10 m\$\{has\(h\.dir\) \? ' · del ' \+ rumboLargo\(h\.dir\) : ''\}\`/.test(A)
      && !/'racha a 10 m de altura'/.test(A)
      && !/racha a \$\{h\.h\} m\$\{h\.gustEst \? ' \(est\.\)' : ''\}\`, rachaAlta/.test(A));

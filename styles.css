@@ -1699,7 +1699,11 @@ body.sin-scroll{overflow:hidden}
 .pt__l--seco{opacity:1;color:var(--txt);border-left-color:var(--line)}
 /* Y cuando SÍ llueve, la barra en azul: no es una alarma —llueve casi
    todos los días— pero tiene que verse de un vistazo cuál cae y cuál no. */
-.pt__l:not(.pt__l--seco):not(.pt__l--siri){border-left-color:#4da3ff}
+.pt__l:not(.pt__l--seco):not(.pt__l--siri):not(.pt__l--rojo){border-left-color:#4da3ff}
+/* Y en ROJO cuando moja de verdad (0,2 mm/h o más). Suyo, 20-09-2026: «si ve
+   lluvia, en rojo; así con una mirada ya se ve». El sirimiri sigue en ámbar. */
+.pt__l--rojo{border-left-color:var(--no)}
+.pt__l--rojo>b:first-child{color:var(--no)}
 
 /* De qué hora son las cifras de la ficha de Torre. Discreto pero
    siempre visible: sin esto, un número sin hora se lee como «ahora
@@ -2844,3 +2848,22 @@ body.sin-scroll{overflow:hidden}
 .cmp__det>summary::before{content:"▸ ";display:inline-block}
 .cmp__det[open]>summary{color:var(--dim)}
 .cmp__det[open]>summary::before{content:"▾ "}
+
+/* ══ EN ROJO LO QUE SALTA · Mis estaciones (20-09-2026) ═══════════════════
+   Suyo: «al dar la pasada, si hay algo que salte alarma que salte en rojo;
+   si ve CAPE en rojo, si ve lluvia en rojo; así con una mirada ya se ve». Y
+   «si no hay nada, como hoy, no pinta nada de rojo». Tres capas, todas del
+   mismo rojo: la etiqueta del parte dentro de la tarjeta, la cifra que se
+   pasa (data-a="2"), y el marco de la tarjeta entera (data-alarma). Van al
+   final del fichero para mandar sobre ctx/decide. */
+.pt__b[data-s="no"]{background:rgba(255,77,94,.14);color:var(--no)}
+.pt__b[data-s="go"]{background:rgba(60,200,140,.12);color:var(--go)}
+.pt__b[data-s="warn"]{background:rgba(255,176,32,.14);color:var(--warn)}
+.tor .tor__d[data-a="1"] .tor__big{color:var(--warn)}
+.tor .tor__d[data-a="1"] .tor__lbl{color:var(--warn);opacity:.85}
+.tor .tor__d[data-a="2"] .tor__big{color:var(--no);font-weight:800}
+.tor .tor__d[data-a="2"] .tor__lbl{color:var(--no);opacity:.9}
+.tor[data-alarma="1"]{border-color:color-mix(in srgb,var(--no) 70%,var(--line));
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--no) 35%,transparent)}
+.tor[data-alarma="1"] .tor__n b{color:var(--no)}
+.pt__d .rojo{color:var(--no)}

@@ -998,3 +998,32 @@ esto, dale»* · *«autorizado para cambios y subidas de esta app»*.
   enseña BI BERMEO con S.place intacto; «Portada» en Sollubemendi la
   cambia y marca el botón; al volver a Ahora, Mundaka. 1120 pruebas.
 - El comprobador del cielo (comprobarCielo) compara la portada contra las horas que la portada enseña (las de la estación en Mis estaciones) y no contra las del sitio buscado; sin esto, paridad.cjs veía «Ahora pinta 51 y la hora en curso dice 53». Publicado como build 2026.09.20-1426.
+
+### §31 · 20-09-2026, 15:40-16:05, portátil: EN ROJO LO QUE SALTA (Mis estaciones)
+
+Suyo, con la app delante: «en Mis estaciones, al dar la pasada, quiero que si hay algo
+que salte alarma que salte en rojo; por ejemplo en Sollube si ve CAPE que lo ponga en
+rojo, si ve lluvia en rojo; así con una mirada ya se ve». Y: «si no hay nada, como hoy,
+no pinta nada de rojo, claro».
+
+- **Etiqueta del parte** (`est` en renderParte): LLUVIA y AL FILO pasan de ámbar a
+  ROJO (`no`); RAYO ya lo era; SIRIMIRI se queda en ámbar (moja pero no marca, y en
+  Bermeo lo hay muchos días: en rojo a diario se dejaría de mirar); SIN RAYO verde.
+- **La etiqueta dentro de la tarjeta** ahora lleva su color (`<span class="pt__b"
+  data-s="${P.est}">`): antes salía gris porque las reglas eran `.pt[data-s] .pt__b` y
+  dentro de `.tor` no hay `.pt`. Reglas nuevas `.pt__b[data-s=…]` al final del CSS.
+- **Las cinco cifras que decide** (`num()`): tercer nivel `aviso === 'rojo'` →
+  `data-a="2"` (rojo, negrita). Lluvia ≥ rainWarn o llovizna por código; racha ≥ tope
+  (`listonRafaga().no`, 70 en hierro); CAPE ≥ capeWarn (300, Ajustes); tapa cuando
+  cape ≥ 700 y cin < 75; nieve > 0. El ámbar `data-a="1"` sigue para lo de antes y se
+  repite al final del CSS con `.tor .tor__d…` para que mande sobre ctx/decide (antes
+  estaba por delante y decide lo pisaba).
+- **La tarjeta entera** se marca con `data-alarma="1"` (marco y nombre en rojo) cuando
+  el parte del sitio va en rojo o la hora en curso pasa de los listones de arriba.
+- **El CAPE del día en el parte** («120 de CAPE · tapa 3») va en rojo desde capeWarn
+  (`capeTxt`, clase `rojo`), y la línea de lluvia lleva `pt__l--rojo` (barra y
+  «Llueve poco/bien» en rojo) cuando el pico llega a rainWarn.
+- Pruebas: 1128 ✓ (5 nuevas: LLUVIA en rojo, AL FILO en rojo, SIRIMIRI en ámbar,
+  secos en verde, CSS/markup del rojo; una adaptada: la celda de la racha ahora va en
+  dos líneas). Comprobado en local: hoy nada en rojo, SIN RAYO en verde dentro de la
+  tarjeta, 0 celdas rojas, 0 tarjetas con alarma.
