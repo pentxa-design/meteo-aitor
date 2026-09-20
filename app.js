@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.20-1143';
+const BUILD = '2026.09.20-1157';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -1624,20 +1624,22 @@ function otrasMedidas(H, i, x) {
      columna que él lee en diagonal. Ahora la unidad va una vez, al final:
      «de 25 a 42 km/h». */
   const CUALES = [
-    /* LA RACHA VA LA PRIMERA, aunque abajo esté el detalle de los siete.
-       Es el orden que él aprobó al ver la tabla del Oiz, y tiene sentido:
-       las cuatro medidas se leen de un vistazo y en vertical, y luego, si
-       quiere, baja al detalle del viento.
+    /* LA LLUVIA VA LA PRIMERA Y LA RACHA DETRÁS (20-09-2026, su orden:
+       «lluvia, viento, CAPE, nieve, nubosidad»; hasta entonces iba la
+       racha primero, como en la tabla del Oiz del 28-08). Las cuatro
+       medidas se leen de un vistazo y en vertical.
 
        EL MARGEN DE «CLAVAR» ES 5, NO 8. La primera versión usaba 8 y
        decía «5 de 7» clavando: con ocho kilómetros por hora de holgura
        casi todos entran, y una columna que se llama «el que clava» tiene
        que exigir clavar. Cinco es lo que él distingue en el sitio con su
        anemómetro. */
-    { k: 'racha',       om: 'wind_gusts_10m',       eti: 'Racha',
-      med: v => wtxt(v),                                uni: wu().lbl, cerca: 5 },
+    /* 20-09-2026: la LLUVIA la primera y la racha detrás, que es su
+       orden («lluvia, viento, CAPE, nieve, nubosidad»). */
     { k: 'lluvia',      om: 'precipitation',        eti: 'Lluvia',
       med: v => mmTxt(v),                               uni: 'mm',     cerca: 0.2 },
+    { k: 'racha',       om: 'wind_gusts_10m',       eti: 'Racha',
+      med: v => wtxt(v),                                uni: wu().lbl, cerca: 5 },
     { k: 'temperatura', om: 'temperature_2m',       eti: 'Temperatura',
       med: v => v.toFixed(1).replace('.', ','),         uni: '°C',     cerca: 1.5 },
     { k: 'humedad',     om: 'relative_humidity_2m', eti: 'Humedad',
@@ -8230,8 +8232,13 @@ function renderParte() {
     const tonoRacha = !has(M?.racha) ? ''
       : M.racha >= listonRafaga().no ? 'no' : M.racha >= listonRafaga().warn ? 'warn' : 'go';
 
+    /* En SU orden (20-09-2026): lluvia, viento, CAPE, nieve (no la
+       mide ningún aparato de aquí), nubosidad; el resto detrás. */
     const cuerpo =
-        fila('Racha',
+        fila('Lluvia',
+             has(H?.prec) ? `<b>${mmTxt(H.prec)} mm</b>` : '',
+             has(M?.lluvia) ? `<b>${mmTxt(M.lluvia)} mm</b>` : (M ? 'no la mide' : ''))
+      + fila('Racha',
              rachaCinco ? `<b>${wtxt(rachaCinco.v, true)}</b>${
                has(H?.gust10) && Math.round(rachaCinco.v) > Math.round(H.gust10)
                  ? ` <small>lo da ${esc(rachaCinco.nom)}</small>` : ''}`
@@ -8240,37 +8247,24 @@ function renderParte() {
       + fila('Viento',
              has(H?.w10) ? `<b>${wtxt(H.w10, true)}</b>${has(H?.dir) ? ` del ${rumboLargo(H.dir)}` : ''}` : '',
              has(M?.viento) ? `<b>${wtxt(M.viento, true)}</b>${has(M?.direccion) ? ` del ${rumboLargo(M.direccion)}` : ''}` : '')
-      + fila('Lluvia',
-             has(H?.prec) ? `<b>${mmTxt(H.prec)} mm</b>` : '',
-             has(M?.lluvia) ? `<b>${mmTxt(M.lluvia)} mm</b>` : (M ? 'no la mide' : ''))
-      + fila('Temperatura',
-             has(H?.temp) ? `<b>${H.temp.toFixed(1).replace('.', ',')} °C</b>` : '',
-             has(M?.temperatura) ? `<b>${M.temperatura.toFixed(1).replace('.', ',')} °C</b>` : '')
-      + fila('Humedad',
-             has(H?.hum) ? `<b>${H.hum} %</b>` : '',
-             has(M?.humedad) ? hrMedida(M.humedad) : '')
-      /* El cielo, pedido por él el 31-08-2026 mirando esta tabla: «aquí
-         falta nubosidad, si hay o despejado». Del lado del modelo va el
-         código visto (el del dueño del cielo, con el agua mandando) y el
-         % de nubes; del lado del aparato, la verdad: los de Euskalmet y
-         AEMET no miden la nube — decirlo evita que la celda vacía se lea
-         como fallo de la estación. */
+      + fila('CAPE y tapa',
+             /* El CAPE y la tapa solo tienen columna de modelo, y se dice por
+                qué: no existe el aparato que los mida. «tapa 104» va dentro de
+                su propio <span> que no se parte (Ulefone, 29-08-2026). */
+             has(H?.cape) ? `<b>${H.cape.toFixed(0)}</b>${has(H?.cin)
+               ? ` <span class="pt__tab__par">· tapa ${H.cin.toFixed(0)}</span>` : ''}` : '',
+             '<span class="pt__tab__no">ningún aparato lo mide</span>')
       + fila('Cielo',
              (has(H?.code) || has(H?.cloud))
                ? `<b>${esc(cieloVisto(H).txt ?? '—')}</b>${has(H?.cloud) ? ` · ${Math.round(H.cloud)} %` : ''}`
                : '',
              M ? '<span class="pt__tab__no">ningún aparato lo mide</span>' : '')
-      /* El CAPE y la tapa solo tienen columna de modelo, y se dice por
-         qué: no existe el aparato que los mida. Dejar la celda vacía sin
-         explicarlo se leería como que la estación falla. */
-      + fila('CAPE y tapa',
-             /* «tapa 104» va dentro de su propio <span> que no se parte:
-                en su Ulefone salía «30 · tapa» arriba y «104» abajo, y un
-                número solo en un renglón no se sabe de qué es. Visto en
-                sus capturas del 29-08-2026 a las 10:29. */
-             has(H?.cape) ? `<b>${H.cape.toFixed(0)}</b>${has(H?.cin)
-               ? ` <span class="pt__tab__par">· tapa ${H.cin.toFixed(0)}</span>` : ''}` : '',
-             '<span class="pt__tab__no">ningún aparato lo mide</span>');
+      + fila('Temperatura',
+             has(H?.temp) ? `<b>${H.temp.toFixed(1).replace('.', ',')} °C</b>` : '',
+             has(M?.temperatura) ? `<b>${M.temperatura.toFixed(1).replace('.', ',')} °C</b>` : '')
+      + fila('Humedad',
+             has(H?.hum) ? `<b>${H.hum} %</b>` : '',
+             has(M?.humedad) ? hrMedida(M.humedad) : '');
 
     if (!cuerpo) return '';
 
@@ -9094,10 +9088,11 @@ function renderParte() {
   el.innerHTML = avisoSinDato + filas.map(({ p, d, k }) => {
     if (d.salta) {
       const cuando = tramo(d.ini, d.fin);
-      const cuerpoR = `<div class="pt__d"><b>CAPE ${nCape(d.cape)}</b> con la
+      const cuerpoR = `${lineaLluvia(k)}${lineaRacha(k)}
+          <div class="pt__d"><b>CAPE ${nCape(d.cape)}</b> con la
             <b>tapa en ${nCape(d.cin)}</b>, a las ${hm(d.hora)}
             <span class="pt__m">· lo ve ${esc(d.modelo)}${cuantosLoVen(d)}</span></div>
-          ${lineaLluvia(k)}${cuandoSePuede(k)}${lineaCambio(k)}`;
+          ${cuandoSePuede(k)}${lineaCambio(k)}`;
       S.parteFilas.set(key(p), { est: 'no', etq: `RAYO ${esc(cuando)}`,
                                  cuerpo: cuerpoR, comp: comparativa(p) });
       return `<div class="pt" data-s="no">
@@ -9158,9 +9153,11 @@ function renderParte() {
        lluvia la última, en una línea sin cifra. Y la lluvia es lo que le
        bloquea el trabajo —los fusibles al aire, los armarios que hay que
        abrir—, no un dato de apoyo.                                    */
+    /* 20-09-2026, su orden: lluvia, viento, CAPE. La racha sube por
+       encima del CAPE. */
     const cuerpo = `${lineaLluvia(k)}
-        <div class="pt__d">${porQue}</div>
-        ${lineaRacha(k)}${cuandoSePuede(k)}${lineaCambio(k)}`;
+        ${lineaRacha(k)}
+        <div class="pt__d">${porQue}</div>${cuandoSePuede(k)}${lineaCambio(k)}`;
     S.parteFilas.set(key(p), { est, etq, cuerpo, comp: comparativa(p) });
     return `<div class="pt" data-s="${est}">
       <div class="pt__izq">
@@ -9383,10 +9380,14 @@ function renderTorres() {
          `?? 0` pisaba esa protección pintando «0,0 mm» donde lo que pasa
          es que no ha llegado la lluvia (01-09-2026). */
       cif(`${esc(mmTxt(x.prec))} mm`, nivelLluvia(x.prec), 'agua')
-        + (has(x.cape) ? ` · ${cif(`CAPE ${Math.round(x.cape)}`,
-            nivelCape(x.cape, x.cin), 'rayo')}` : '')
         + ` · ${cif(`racha ${esc(wtxt(x.gust ?? x.wind, true))}`,
             nivelRacha(x.gust ?? x.wind), 'viento')}`
+        + (has(x.cape) ? ` · ${cif(`CAPE ${Math.round(x.cape)}`,
+            nivelCape(x.cape, x.cin), 'rayo')}` : '')
+        /* La nieve solo cuando la hay: un «nieve 0» en cada renglón de
+           septiembre es ruido; en enero, la cifra que decide la pista. */
+        + (has(x.nieve) && x.nieve > 0
+            ? ` · ${cif(`nieve ${x.nieve.toFixed(1).replace('.', ',')} cm`, 'no', 'agua')}` : '')
         + (has(x.temp) ? ` · ${cif(`${Math.round(x.temp)}°`, null, 'temp')}` : '');
     /* ── AHORA, Y A HORAS VISTA ─────────────────────────────────────
        Suyo, 02-09-2026, después de no entender el «al llegar, sobre las
@@ -9546,12 +9547,18 @@ function renderTorres() {
              La tapa va pegada al CAPE porque es la pareja que decide si
              rompe —una sola no rompe nada—, y la racha a SU altura va
              antes que la de 10 m, que es contexto. */
+          /* ── EN SU ORDEN DEL 20-09-2026 ──────────────────────────
+             Suyo, la víspera de la prueba de fuego: *«priorizo en:
+             LLUVIA, VIENTO, CAPE, NIEVE»* y luego *«NUBOSIDAD»*. Y
+             *«para mañana nada, hoy todo»*. Antes iba lluvia, CAPE,
+             racha (su orden del 02-09); ahora el viento va segundo, y
+             entran la nieve (centímetros por hora del modelo, tal cual)
+             y las nubes (% total y lo que se ve), que no estaban. */
+          const nieveTxt = has(h.nieve)
+            ? (h.nieve > 0 ? `${h.nieve.toFixed(1).replace('.', ',')} cm` : '0') : '—';
           return num(has(h.prec) ? mmTxt(h.prec) : '—',
                      'lluvia mm/h' + (has(h.pop) ? ` · ${h.pop}% prob.` : ''),
                      has(h.prec) && h.prec > 0, 'decide')
-               + num(has(h.cape) ? h.cape.toFixed(0) : '—', 'CAPE J/kg', tapaAbierta, 'decide')
-               + num(has(h.cin) ? h.cin.toFixed(0) : '—',
-                     'tapa J/kg' + (has(h.cin) ? ' · ' + textoTapa(h.cin) : ''), tapaAbierta, 'decide')
                /* Una sola racha y un solo viento, los de 10 m (a pie de
                   caseta, 20-09-2026): antes salían «racha a 40 m (est.)»
                   y «racha a 10 m de altura» —dos números de lo mismo— y con
@@ -9559,6 +9566,14 @@ function renderTorres() {
                + num(has(h.gust10) ? wtxt(h.gust10, true) : '—', 'racha a 10 m · a pie de caseta', rachaAltaP, 'decide')
                + num(has(h.w10) ? wtxt(h.w10, true) : '—',
                      `viento a 10 m${has(h.dir) ? ' · del ' + rumboLargo(h.dir) : ''}`)
+               + num(has(h.cape) ? h.cape.toFixed(0) : '—', 'CAPE J/kg', tapaAbierta, 'decide')
+               + num(has(h.cin) ? h.cin.toFixed(0) : '—',
+                     'tapa J/kg' + (has(h.cin) ? ' · ' + textoTapa(h.cin) : ''), tapaAbierta, 'decide')
+               + num(has(h.nieve) ? nieveTxt : '—',
+                     'nieve cm/h' + (hielo ? ' · isocero a la altura del sitio' : ''),
+                     (has(h.nieve) && h.nieve > 0) || hielo, 'decide')
+               + num(has(h.cloud) ? Math.round(h.cloud) + ' %' : '—',
+                     'nubes' + ((has(h.code) || has(h.cloud)) && cieloVisto(h).txt ? ' · ' + cieloVisto(h).txt : ''))
                + num(has(h.temp) ? h.temp.toFixed(0) + '°' : '—',
                      (has(h.dew) ? `rocío ${h.dew.toFixed(0)}°` : 'temperatura')
                      + (has(h.hum) ? ` · HR ${h.hum}%` : ''), rocioPegado)

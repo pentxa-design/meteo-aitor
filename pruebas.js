@@ -4159,18 +4159,20 @@ grupo('«Me pasan a las 2 de la mañana: Arbaiza» — el viaje entra en la resp
      primer `num(` (02-09-2026). */
   const bloque = iH < 0 ? '' : src.slice(iH, iH + 9000);
   const orden = [...bloque.matchAll(/num\(has\(h\.(\w+)\)/g)].map(m => m[1]);
-  ok('la fila de cifras empieza por la lluvia, el CAPE y la tapa',
-     orden.slice(0, 3).join(',') === 'prec,cape,cin',
-     `salió: ${orden.slice(0, 4).join(', ')} — para él la lluvia es lo primero`);
+  /* 20-09-2026, su orden: «lluvia, viento, CAPE, nieve» y «nubosidad». */
+  ok('la fila de cifras va en su orden: lluvia, racha y viento a 10 m, CAPE y tapa, nieve, nubes',
+     orden.slice(0, 7).join(',') === 'prec,gust10,w10,cape,cin,nieve,cloud',
+     `salió: ${orden.slice(0, 8).join(', ')} — lluvia, viento, CAPE, nieve, nubosidad`);
   /* 20-09-2026: a pie de caseta. La racha es UNA, la de 10 m, y va la
      cuarta; la estimada a su altura de trabajo ya no se pinta («de torre
      no quiero ver nada»). */
   ok('y la racha va la cuarta, y es la de 10 m: a pie de caseta, sin estimada a otra altura',
-     orden.slice(0, 9).join(',') === 'prec,cape,cin,gust10,w10,temp,frz,li,vis',
+     orden.slice(0, 11).join(',') === 'prec,gust10,w10,cape,cin,nieve,cloud,temp,frz,li,vis',
      `salió: ${orden.join(', ')}`);
 
-  ok('el parte también: primero la lluvia, luego el rayo, luego la racha',
-     /const cuerpo = `\$\{lineaLluvia\(k\)\}\s*\n\s*<div class="pt__d">\$\{porQue\}<\/div>\s*\n\s*\$\{lineaRacha\(k\)\}/.test(src),
+  ok('el parte también: primero la lluvia, luego la racha, luego el CAPE (su orden del 20-09)',
+     /const cuerpo = `\$\{lineaLluvia\(k\)\}\s*\n\s*\$\{lineaRacha\(k\)\}\s*\n\s*<div class="pt__d">\$\{porQue\}<\/div>/.test(src)
+     && /const cuerpoR = `\$\{lineaLluvia\(k\)\}\$\{lineaRacha\(k\)\}/.test(src),
      'la lluvia le bloquea el trabajo: no puede ir la última');
   ok('y «Sin lluvia» lleva su cifra, no solo la palabra',
      /<b>Sin lluvia<\/b> \$\{[\s\S]{0,60}\} · 0,0 mm/.test(src),
@@ -4228,9 +4230,9 @@ grupo('«Me pasan a las 2 de la mañana: Arbaiza» — el viaje entra en la resp
   ok('las cifras llevan su familia: lo que decide o contexto',
      /const num = \(v, etq, aviso, fam = 'ctx'\)/.test(src)
      && /data-f="\$\{fam\}"/.test(src));
-  ok('y son EXACTAMENTE las cuatro que él mira: racha, CAPE, tapa y lluvia',
-     (src.match(/'decide'\)/g) || []).length === 4,
-     'sus límites son racha, rayo y lluvia; el resto va después');
+  ok('y son EXACTAMENTE las cinco que él mira: lluvia, racha, CAPE, tapa y nieve (20-09-2026)',
+     (src.match(/'decide'\)/g) || []).length === 5,
+     'sus prioridades son lluvia, viento, CAPE y nieve; el resto va después');
   ok('el contexto se apaga y lo que decide no',
      /\.tor__d\[data-f="ctx"\] \.tor__big\{color:var\(--faint\)\}/.test(cssT)
      && /\.tor__d\[data-f="decide"\] \.tor__big\{color:var\(--txt\)\}/.test(cssT));
@@ -8209,6 +8211,22 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      /return \{ k: key\(p\), racha: mx, hora, quien \};/.test(A)
      && /la más alta de los \$\{MODELOS_TORMENTA\.length\}, la da \$\{esc\(R\.quien\)\}/.test(A)
      && /cifras de \$\{esc\(model\(\)\.name\)\} a \$\{ALTURA_CASETA\} m/.test(A));
+}
+
+
+/* ── SU ORDEN: LLUVIA, VIENTO, CAPE, NIEVE, NUBOSIDAD (20-09-2026) ──── */
+{
+  const A = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  ok('la línea de horas va lluvia · racha · CAPE · nieve (solo si la hay) · temperatura',
+     /cif\(\`\$\{esc\(mmTxt\(x\.prec\)\)\} mm\`, nivelLluvia\(x\.prec\), 'agua'\)\s*\+ \` · \$\{cif\(\`racha /.test(A)
+     && /has\(x\.nieve\) && x\.nieve > 0\s*\? \` · \$\{cif\(\`nieve /.test(A));
+  ok('la tabla contra el aparato va lluvia, racha, viento, CAPE, cielo, temperatura, humedad',
+     /const cuerpo =\s*fila\('Lluvia',[\s\S]*?\+ fila\('Racha',[\s\S]*?\+ fila\('Viento',[\s\S]*?\+ fila\('CAPE y tapa',[\s\S]*?\+ fila\('Cielo',[\s\S]*?\+ fila\('Temperatura',[\s\S]*?\+ fila\('Humedad',/.test(A));
+  ok('y en lo que mide el aparato, la lluvia va la primera',
+     /const CUALES = \[[\s\S]{0,900}?\{ k: 'lluvia',[\s\S]*?\{ k: 'racha',/.test(A));
+  ok('la nieve de la cabecera es el centímetro por hora del modelo, tal cual, y las nubes el % total con lo que se ve',
+     /'nieve cm\/h' \+ \(hielo \? ' · isocero a la altura del sitio' : ''\)/.test(A)
+     && /num\(has\(h\.cloud\) \? Math\.round\(h\.cloud\) \+ ' %' : '—',/.test(A));
 }
 
 
