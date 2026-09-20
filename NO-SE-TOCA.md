@@ -171,3 +171,47 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **Tocar un día en «10 días» abre ese día entero, hora a hora, con las mismas tarjetas de «Horas» (una sola plantilla, tarjetaHora); en la app y en la agenda (17-09-2026, «los de casa lo prefieren, Apple lo tiene así»)** | `al tocar una tarjeta de «10 días» se abre debajo el día entero con esas mismas tarjetas, y se cierra al volver a tocar` |
 | **La comparación entre modelos de un sitio se pide a 10 días, y cada hora dice también si otro modelo ve nubes (regla de la franja): el día abierto lleva sus chips de nube, agua, racha y tormenta cualquier día (17-09-2026 12:40, «que ponga también si alguno ve nube o agua»)** | `la comparación entre modelos se pide a 10 días (antes 2): el día abierto lleva sus chips también del sábado en adelante` |
 | **La capa de encima (sombra de lluvia) va ENCIMA de la nube, y la costa por encima de todas las capas propias** | `la capa de encima (sombra de lluvia) se monta ENCIMA de la nube, no debajo: justo detrás de omLayer` |
+
+---
+
+## Las tres guardias del «que no vuelva a pasar» (20-09-2026)
+
+**Suyo, esa noche, después de un día entero cazando fallos:** *«no solo es
+reparar esos fallos, quiero que no vuelvan a salir e invierte tiempo en
+eso»* · *«no puede haber errores tontos repetitivos, no es serio»* · *«la
+gente está esperando qué hacer, si subir al monte o no»*.
+
+Ese día se arreglaron 26 fallos y **todos seguían el mismo patrón**, repetido
+tres veces distintas:
+
+1. **El arreglo existe en el fichero, unas líneas más arriba, y no se aplicó
+   al hermano.** El redondeo antes de colorear se arregló el 04-09 en la rama
+   de torre y NO en la de caseta, que es el 90 % de su trabajo.
+   `comoEstaLaPista()` se quedó sin el `todoHueco` que sí tiene `acceso()`.
+   El camino de un punto de Euskalmet distingue «no pude leer» de «no mide
+   viento»; el de veinte, no.
+2. **Se calcula algo para enseñarlo y no lo lee nadie.** `enTramos()` se
+   escribió el 26-08 y estuvo **un mes muerto**: los avisos de agua y racha
+   del vigilante seguían diciendo los extremos del día. `yoLaVeo` igual.
+   `S.torresNoSeAdopto` igual, **y con una guardia encima** que pasaba porque
+   solo miraba que el texto existiera en el fuente.
+3. **La prueba se monta los datos a mano y nunca ejercita el cálculo real.**
+   Así murió «AL FILO»: el arreglo del 30-08 lo volvió imposible y la prueba
+   siguió en verde **tres semanas**.
+
+### Lo que hay ahora, y no se quita
+
+En `pruebas.js`, grupo **«QUE NO VUELVA A PASAR · las tres guardias de
+clase»**:
+
+| Guardia | Qué impide | La prueba que la guarda |
+|---|---|---|
+| **Nada muerto** | Una lista de señales que existen PARA ENSEÑARSE: `S.torresNoSeAdopto`, `capeTecho`, `tapaSuelo`, `todoHueco`, `hPico`, `tramos`, `noMirados`, `euskalmetCaido`… Si una solo se escribe y nadie la lee, la publicación se para. Y si una desaparece del código, también: una excusa huérfana es una puerta abierta. | `nada que se calcule para enseñarse se queda sin que lo lea nadie` |
+| **Un solo sitio por regla** | Los listones que deciden no pueden escribirse a pelo en una comparación. El CAPE ya se recalibró una vez, de 800 a 700. | `los listones que deciden (CAPE_COMBINACION, TAPA_ROMPE, listonRafaga()) no se escriben a pelo` |
+| **El banco prueba la forma real** | Las claves que devuelve el cálculo del parte tienen que estar en los datos con los que se prueba. Si el cálculo cambia y el fixture no, se para. | `S.parteTorres del banco lleva TODAS las claves que devuelve el cálculo, no la forma vieja` |
+
+**COMPROBADAS ROMPIÉNDOLAS.** No se dieron por buenas: se reintrodujeron los
+cuatro fallos a propósito sobre una copia, y cada uno quedó parado por al
+menos una guardia. Una guardia que no puede parar nada es un adorno.
+
+**Si alguna de estas guardias molesta, NO se quita: se arregla el código.**

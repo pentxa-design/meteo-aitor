@@ -2266,8 +2266,18 @@ const soloTexto = t => t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
 S.lluviaTorres = [{ k: 'seco', llueve: false }];
 ok('sin agua se dice que está seco, no se calla',
-   /Seco en las próximas 24 h/.test(lineaAguaTorre('seco')),
+   /^<div class="tor__agua" data-a="seco">Seco /.test(lineaAguaTorre('seco')),
    'callar se lee igual que «no lo he mirado»');
+/* ── Y SE DICE LA VENTANA QUE SE HA MIRADO (20-09-2026) ──────────────
+   Antes ponía siempre «en las próximas 24 h», y casi nunca son 24 horas:
+   a las 19:00 la ventana del parte son las seis que quedan de hoy. Con 4
+   mm a las 02:00 dentro de los datos pero fuera de la ventana, la tarjeta
+   decía «Seco en las próximas 24 h» y la tira de colores de debajo, que sí
+   llega a las 07:00, decía otra cosa. */
+ok('y NO se afirman 24 horas cuando la ventana es otra',
+   !/en las próximas 24 h/.test(lineaAguaTorre('seco'))
+   && /lo que queda de hoy|Seco el /.test(lineaAguaTorre('seco')),
+   'la ventana del parte es lo que queda del día, o el día que él tenga pulsado');
 
 ok('un emplazamiento que no está en la lista NO inventa una línea',
    lineaAguaTorre('no-existe') === '');
@@ -6340,8 +6350,6 @@ grupo('Ningún hueco se convierte en cero a escondidas (01-09-2026)');
   const PERMITIDOS = {
     'Math.round((d.cape ?? 0) / 100) * 100':
       'redondeo para AGRUPAR el titular del parte; el valor que se enseña sale de otro sitio',
-    'Math.max(...sel.map(h => h.gust ?? 0))':
-      'la racha de la franja: si salen 0 no se pinta nada (se comprueba con > 0 más abajo)',
     'Math.max(...pts.map(p => p.gust ?? 0), 10)':
       'ALTO del eje de la gráfica, no un dato: sin él no habría escala',
     'Math.max(...pts.map(p => p.prec ?? 0), 1)':
@@ -6565,9 +6573,13 @@ grupo('En el mar, «Ahora» es AHORA (02-09-2026)');
 
 grupo('El acceso no cuenta un hueco como un cero (01-09-2026)');
 {
-  const fn = new Function('has', 'wtxt', 'kmTxt', `
+  /* `listonRafaga()` entra como dependencia desde el 20-09-2026: el tope
+     del viaje dejó de ser un 70 clavado y pasa a ser el suyo, el de
+     Ajustes. Se le da el de fábrica del perfil hierro. */
+  const fn = new Function('has', 'wtxt', 'kmTxt', 'listonRafaga', `
     ${sacar('function acceso(')}
-    return acceso;`)(globalThis.has, x => `${x} km/h`, x => String(x));
+    return acceso;`)(globalThis.has, x => `${x} km/h`, x => String(x),
+                     () => ({ warn: 49, no: 70, de: 'hierro' }));
 
   const hora = (extra = {}) => ({ temp: 8, hum: 60, vis: 20000, frz: 3000, ...extra });
 
@@ -8204,6 +8216,164 @@ grupo('El rumbo del clic de Mar está apagado: medido 2° donde la API decía 31
      'con el rumbo puesto, el clic decía «del norte (2°)» con la ola viniendo del noroeste');
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   LAS TRES GUARDIAS DEL «QUE NO VUELVA A PASAR» (20-09-2026)
+   ───────────────────────────────────────────────────────────────────
+   Suyo, esta noche, después de un día entero cazando fallos:
+
+     *«no solo es reparar esos fallos, quiero que no vuelvan a salir e
+      invierte tiempo en eso»* · *«no puede haber errores tontos
+      repetitivos, no es serio»* · *«la gente está esperando qué hacer,
+      si subir al monte o no»*.
+
+   Y tiene razón, porque el día entero ha enseñado SIEMPRE EL MISMO
+   PATRÓN, tres veces repetido:
+
+     1. **El arreglo existe en el fichero, unas líneas más arriba, y no
+        se aplicó al hermano.** El redondeo antes de colorear se arregló
+        el 04-09 en la rama de torre y no en la de caseta —la que él usa
+        el 90 % del tiempo—. `comoEstaLaPista` se quedó sin el
+        `todoHueco` que sí tiene `acceso()`. El camino de un punto de
+        Euskalmet distingue «no pude leer» de «no mide viento»; el de
+        veinte, no.
+
+     2. **Se calcula algo para enseñarlo y no lo lee nadie.** `enTramos()`
+        se escribió el 26-08 y estuvo UN MES muerto: todos los avisos de
+        agua y racha seguían diciendo los extremos del día. `yoLaVeo`
+        igual. `S.torresNoSeAdopto` igual, y CON UNA GUARDIA ENCIMA que
+        pasaba porque solo miraba que el texto existiera en el fuente.
+
+     3. **La prueba se construye los datos a mano y nunca ejercita el
+        cálculo real.** Así murió «AL FILO»: el arreglo del 30-08 lo
+        volvió imposible y la prueba siguió en verde durante tres
+        semanas, porque el `S.parteTorres` del banco se escribía a mano
+        con la forma vieja.
+
+   Estas tres guardias atacan los tres patrones. De los fallos de hoy,
+   habrían cazado seis.
+   ═══════════════════════════════════════════════════════════════════ */
+grupo('QUE NO VUELVA A PASAR · las tres guardias de clase (20-09-2026)');
+{
+  const VIG = fs.readFileSync(path.join(__dirname, 'api', 'vigilante.mjs'), 'utf8');
+  const EUS = fs.readFileSync(path.join(__dirname, 'api', 'euskalmet.mjs'), 'utf8');
+  const sinComent = t => t
+    .replace(/\/\*[\s\S]*?\*\//g, c => c.replace(/[^\n]/g, ' '))
+    .replace(/^([^'"`\n]*?)\/\/.*$/gm, (l, pre) => pre + ' '.repeat(l.length - pre.length));
+  const A_ = sinComent(src), V_ = sinComent(VIG), E_ = sinComent(EUS);
+
+  /* ── 1. NADA MUERTO ────────────────────────────────────────────────
+     Cada una de estas existe PARA ENSEÑARSE. Si solo se escribe y nadie
+     la lee, es un silencio con forma de aviso: lo peor que puede haber
+     en esta app. Y si una desaparece del código, hay que quitarla de
+     aquí a mano — una excusa que ya no corresponde a nada es una puerta
+     abierta. */
+  const SENALES = [
+    ['S.torresNoSeAdopto', A_, 'el servidor perdió tu lista: si no se dice, cambias de móvil y los pierdes'],
+    ['S.medidoSinAemet',   A_, 'AEMET no contestó — no es que no haya estación'],
+    ['S.medidoSinEuskalmet', A_, 'Euskalmet no contestó'],
+    ['S.estacionesFallo',  A_, 'no se pudieron leer las estaciones'],
+    ['yoPuedoVerla',       A_, 'tu modelo no publica el cielo: ni sí ni no'],
+    ['capeTecho',          A_, 'el techo de CAPE del día — sin él «AL FILO» es código muerto'],
+    ['tapaSuelo',          A_, 'el suelo de la tapa del día — lo mismo'],
+    ['todoHueco',          A_, '72 h sin dato NO son «sin agua»'],
+    ['sinCopia',           A_, 'en el monte, un sitio sin copia no puede desaparecer'],
+    ['hPico',              V_, 'la hora del pico, que no es la primera del tramo'],
+    ['tramos',             V_, 'las horas seguidas de verdad, no los extremos del día'],
+    ['noMirados',          V_, 'los emplazamientos que el vigilante no pudo mirar'],
+    ['nLista',             V_, 'cuántos tenía, no solo cuántos pudo'],
+    ['euskalmetCaido',     E_, 'una caída no es «ninguna mide viento»'],
+  ];
+  const muertas = [];
+  for (const [n, fuente, por] of SENALES) {
+    const e = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const todas  = (fuente.match(new RegExp(e, 'g')) || []).length;
+    const escrib = (fuente.match(new RegExp(e + '\\s*[=:](?!=)', 'g')) || []).length;
+    if (!todas) muertas.push(`${n}: YA NO EXISTE — quita la entrada de la lista`);
+    else if (todas <= escrib) muertas.push(`${n}: se escribe y NO LO LEE NADIE — ${por}`);
+  }
+  ok('nada que se calcule para enseñarse se queda sin que lo lea nadie',
+     muertas.length === 0, muertas.join(' · '));
+
+  /* ── 2. UN SOLO SITIO POR REGLA ────────────────────────────────────
+     Cada listón tiene UN dueño. Si aparece el número a pelo en una
+     comparación, el día que se recalibre —ya pasó con el CAPE, de 800 a
+     700— se quedan sitios con el número viejo y la app se contradice
+     sola. La lista de excusas es corta y se comprueba que siga usándose:
+     una excusa huérfana es una puerta abierta. */
+  const REGLAS = [
+    { num: '700', dueno: 'CAPE_COMBINACION', cerca: /cape/i },
+    { num: '70',  dueno: 'listonRafaga()/rafagaBestia', cerca: /gust|racha/i },
+    { num: '49',  dueno: 'listonRafaga()', cerca: /gust|racha/i },
+  ];
+  const EXCUSAS = {
+    'const CAPE_COMBINACION = 700': 'aquí vive el número',
+    'const RACHA_TOPE = 70': 'el del vigilante, que no comparte código con la app',
+    'rafagaBestia: 70': 'la tabla de perfiles: aquí vive el número',
+    'rafagaBestia: 90': 'la tabla de perfiles',
+    'hace falta ${CAPE_COMBINACION} con la tapa': 'texto que YA usa la constante',
+  };
+  const pillados = [];
+  for (const { num, dueno, cerca } of REGLAS) {
+    const rx = new RegExp(`[^\\n]*(?:>=|<=|>|<|===)\\s*${num}(?![\\d.])[^\\n]*`, 'g');
+    for (const l of (A_.match(rx) || [])) {
+      const t = l.trim();
+      if (!cerca.test(t)) continue;
+      if (t.includes(dueno.split('/')[0])) continue;
+      if (Object.keys(EXCUSAS).some(x => t.includes(x))) continue;
+      pillados.push(`${num} a pelo (debería ser ${dueno}): ${t.slice(0, 74)}`);
+    }
+  }
+  ok('los listones que deciden (CAPE_COMBINACION, TAPA_ROMPE, listonRafaga()) no se escriben a pelo',
+     pillados.length === 0, pillados.join(' · '));
+  const huerfanas = Object.keys(EXCUSAS).filter(x => !A_.includes(x) && !V_.includes(x));
+  ok('y no queda ninguna excusa huérfana en la lista',
+     huerfanas.length === 0, huerfanas.join(' · '));
+
+  /* ── 3. EL BANCO PRUEBA LA FORMA REAL, NO UNA COPIA A MANO ─────────
+     Así murió «AL FILO» durante tres semanas: `parteTorres` cambió lo que
+     devuelve y el `S.parteTorres` que el banco monta a mano se quedó con
+     la forma vieja, así que la prueba seguía en verde sobre un caso que
+     en la app ya era imposible. Ahora las claves del `return` de verdad
+     tienen que estar en el fixture. */
+  const ret = A_.match(/return \{ k, salta: false,([\s\S]{0,320}?)\};/);
+  ok('se encuentra lo que devuelve parteTorres cuando NO salta', !!ret);
+  if (ret) {
+    /* Sin quitar antes `objeto.propiedad`, los dos puntos de un ternario
+       (`peorPar ? peorPar.cape : null`) se colaban como si fueran claves.
+       Lo cazó la propia guardia el primer día (20-09-2026). */
+    const cuerpo = ret[1].replace(/\b[\w$]+\.[\w$]+/g, 'X');
+    const claves = [...new Set([
+      ...[...cuerpo.matchAll(/[\n{,]\s*(\w+)\s*:/g)].map(m => m[1]),
+      ...[...cuerpo.matchAll(/[\n{,]\s*(\w+)\s*(?=[,}])/g)].map(m => m[1]),
+    ])];
+    /* El fixture vive en ESTE fichero, no en app.js. El primer intento
+       buscaba en `src` —que es app.js— y daba «faltan» siempre
+       (20-09-2026). */
+    const banco = fs.readFileSync(__filename, 'utf8');
+    const i0 = banco.indexOf('salta: false, maxCape');
+    const fixture = i0 < 0 ? '' : banco.slice(i0, i0 + 900);
+    const faltan = claves.filter(c => !fixture.includes(`${c}:`));
+    ok('S.parteTorres del banco lleva TODAS las claves que devuelve el cálculo, no la forma vieja',
+       faltan.length === 0,
+       `faltan en el fixture: ${faltan.join(', ')} — así murió «AL FILO» tres semanas`);
+  }
+
+  /* ── Y LA REGLA QUE LAS RESUME ────────────────────────────────────
+     Los hermanos hacen lo mismo. Si una función distingue «no pude leer»
+     de «no hay nada», su gemela también. Estas tres parejas ya se
+     separaron una vez y costaron un fallo cada una. */
+  ok('la edad de una medida sale de una sola función en las tres pantallas',
+     (A_.match(/edadMedida\(/g) || []).length >= 4);
+  ok('las dos ramas del semáforo de ráfaga colorean con el número QUE SE IMPRIME',
+     (A_.match(/wRed\(g10\) >= wRed\(/g) || []).length >= 2
+     && (A_.match(/wRed\(gMax\) >= wRed\(/g) || []).length >= 1,
+     'el 04-09 se arregló la de torre y se dejó la de caseta, que es su 90 %');
+  ok('el sirimiri se reconoce con esLlovizna en todas partes, no con rangos a mano',
+     !/>= 51 && [\w.]+ <= 5[0-6]\b/.test(A_),
+     'el 56 y el 57 son llovizna ENGELANTE: dejarlos fuera es dejar fuera el hielo');
+}
+
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');
@@ -8441,6 +8611,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /\.cover-fijo\.sin-estacion\{display:none!important\}/.test(C)
      && /const mostrada = \(S\.view === 'torres' && S\.portadaEstacion\) \? S\.portadaEstacion\.est : S\.place;/.test(A));
 }
+
 
 
 /* ═══════════════════════════════════════════════════════════════════

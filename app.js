@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.20-2019';
+const BUILD = '2026.09.20-2100';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -3521,7 +3521,24 @@ async function completarLargo(f, p) {
     for (let i = ultimo + 1; i < H.time.length; i++) {
       const j = donde.get(H.time[i].slice(0, 13));
       if (j === undefined) continue;
-      for (const k of campos) if (Array.isArray(H[k]) && d.hourly[k]) H[k][i] = d.hourly[k][j];
+      /* ── Y NO SE PISA UN DATO BUENO CON UN HUECO (20-09-2026) ──────
+         Esto cogía TODAS las claves de `hourly` —incluidas las que ya
+         estaban PRESTADAS por otro modelo para los diez días: la tapa y el
+         isocero de ICON, el índice de elevación y el UV de GFS— y se las
+         pedía al modelo de relleno, que no publica ninguna. Open-Meteo
+         contesta 200 con la columna llena de nulos, y esa columna de nulos
+         pisaba el número que ya estaba descargado.
+         Efecto: de la hora 48 en adelante, la ficha decía «tapa: no la
+         publica» teniéndola en memoria, y la tormenta de los días 3 a 10
+         no podía detectarse nunca. El mismo sábado, mirado el martes y
+         mirado el jueves, daba dos respuestas.
+         La regla ya estaba escrita cuatro líneas más arriba —«una columna
+         de nulos no es un dato»—; aquí faltaba aplicarla. */
+      for (const k of campos) {
+        if (!Array.isArray(H[k]) || !d.hourly[k]) continue;
+        const v = d.hourly[k][j];
+        if (has(v) || !has(H[k][i])) H[k][i] = v;
+      }
       puestos++;
     }
     if (puestos) f.rellenoDesde = H.time[ultimo + 1];
@@ -5313,7 +5330,10 @@ function lluviaQueNoVesTu(c) {
   const peor = otros[0] || elMismo;
 
   /* Sirimiri o chaparrón: cambia lo que puede hacer, no solo el número. */
-  const sirimiri = has(peor.code) && peor.code >= 51 && peor.code <= 55;
+  /* 51 a 57, como `esLlovizna`. Dos sitios se habían quedado en 55 y
+     dejaban fuera el 56 y el 57, que son llovizna ENGELANTE — o sea la
+     peor de todas, la que hiela sobre el metal (20-09-2026). */
+  const sirimiri = esLlovizna(peor.code);
   /* ── Y SI NOMBRA UNO QUE NO ESTÁ EN SU SELECTOR, SE AVISA ─────────
      Suyo, 30-08-2026: *«HARMONIE sí, pero no tenemos, ¿no? no lo veo
      ese modelo»*. Y lleva razón: en el selector hay cinco —Automático,
@@ -6459,8 +6479,14 @@ function tablaLluvia(H, i, hora) {
 
   if (!filas.length) return '';
 
-  const conAgua = filas.filter(f => f.mm >= 0.1);
-  const sirimiri = f => has(f.code) && f.code >= 51 && f.code <= 55;
+  /* Con SUS listones. El corte era un 0,1 escrito a mano y `rainNo` no
+     aparecía en toda la función, así que los siete modelos dando 12,4 mm/h
+     salían en ÁMBAR con «Todos ven agua · Coinciden: va a caer» — el mismo
+     color que un sirimiri de 0,1 (20-09-2026). */
+  const UMBRAL_VE_AGUA = 0.1;                    // lo que basta para decir «lo ve»
+  const conAgua = filas.filter(f => f.mm >= UMBRAL_VE_AGUA);
+  const mmMax = Math.max(0, ...filas.map(f => f.mm).filter(has));
+  const sirimiri = f => esLlovizna(f.code);      // 51-57: el 56 y el 57 son engelante
   const tope = Math.max(...filas.map(f => f.mm), 1);
 
   let cab;
@@ -6511,7 +6537,8 @@ function tablaLluvia(H, i, hora) {
     <div class="cmp__h">Lluvia · ${esc(hora)}</div>
     ${filas.map(f => {
       const pc = clamp(f.mm / tope * 100, f.mm > 0 ? 4 : 0, 100);
-      const st = f.mm >= 0.1 ? 'warn' : 'go';
+      const st = f.mm >= (S.thr?.rainNo ?? 2) ? 'no'
+               : f.mm >= UMBRAL_VE_AGUA ? 'warn' : 'go';
       return `<div class="cmp__f" data-s="${st}">
         <span class="cmp__n">${esc(f.name)}<small>${esc(f.res)}</small></span>
         <span class="cmp__b"><i style="width:${pc}%"></i></span>
@@ -7038,19 +7065,29 @@ function comoEstaLaPista(fc) {
   const ahora = Date.now();
   let agua = 0, horasAgua = 0, nieveAntes = 0;
   let nieveSuelo = null, nieveHoy = 0;
+  /* ── Y CUÁNTOS HUECOS HABÍA (20-09-2026) ───────────────────────────
+     Sin esto, con la lluvia en null las 72 horas la línea «Para llegar»
+     afirmaba «sin agua en las últimas 72 h» — una afirmación rotunda
+     sobre algo que nadie ha mirado. El arreglo ya estaba en `acceso()`,
+     que lleva su `todoHueco`; aquí faltaba. */
+  let mirados = 0, huecos = 0, huecosHoy = 0;
 
   for (let i = 0; i < H.time.length; i++) {
     const t = new Date(H.time[i]).getTime();
     const pr = H.precipitation?.[i], nv = H.snowfall?.[i];
     if (t < ahora && t >= ahora - 72 * 3600e3) {
-      if (has(pr) && pr > 0) { agua += pr; horasAgua++; }
+      mirados++;
+      if (has(pr)) { if (pr > 0) { agua += pr; horasAgua++; } } else huecos++;
       if (has(nv)) nieveAntes += nv;
       // La nieve en el suelo se coge de la hora más reciente que la traiga
       if (has(H.snow_depth?.[i])) nieveSuelo = H.snow_depth[i];
     }
-    if (t >= ahora && t < ahora + 24 * 3600e3 && has(nv)) nieveHoy += nv;
+    if (t >= ahora && t < ahora + 24 * 3600e3) {
+      if (has(nv)) nieveHoy += nv; else huecosHoy++;
+    }
   }
-  return { agua, horasAgua, nieveAntes, nieveSuelo, nieveHoy };
+  return { agua, horasAgua, nieveAntes, nieveSuelo, nieveHoy,
+           todoHueco: mirados > 0 && huecos === mirados, huecos, huecosHoy };
 }
 
 /* ── LA MEDIDA DE CADA EMPLAZAMIENTO, DE UNA SOLA LLAMADA ────────────
@@ -9397,8 +9434,23 @@ function lineaAguaTorre(k) {
   if (!L) return '';
   const hh = d => String(new Date(d).getHours()).padStart(2, '0') + ':00';
 
+  /* ── LA VENTANA QUE SE DICE ES LA QUE SE HA MIRADO (20-09-2026) ────
+     Esto ponía siempre «Seco en las próximas 24 h», y casi nunca son 24
+     horas: `ventanaParte()` mira lo que QUEDA de hoy (a las 19:00 son
+     seis horas), o el día entero de la pestaña que él tenga pulsada.
+     A las 19:00, con 4 mm a las 02:00 de la madrugada dentro de los datos
+     pero fuera de la ventana, la tarjeta decía «Seco en las próximas 24 h»
+     y justo debajo la tira de colores —que sí llega a las 07:00— decía
+     otra cosa. Dos ventanas distintas a dos centímetros.
+     Y al pulsar la pestaña del jueves, «Llueve bien de 08:00 a 14:00» sin
+     decir de qué día, con la cabecera que sí lo dice fuera de pantalla. */
+  const v = ventanaParte();
+  const hoyEs = v.salto === 0;
+  const queda = Math.max(1, Math.round((v.hasta - Math.max(Date.now(), v.desde)) / 3600e3));
+  const cuandoEs = hoyEs ? `en lo que queda de hoy (${queda} h)` : `el ${v.etiqueta.trim()}`;
+
   if (!L.llueve)
-    return `<div class="tor__agua" data-a="seco">Seco en las próximas 24 h</div>`;
+    return `<div class="tor__agua" data-a="seco">Seco ${cuandoEs}</div>`;
 
   const tipo = L.soloSirimiri ? 'Sirimiri'
              : L.pico >= (S.thr?.rainNo ?? 2) ? 'Llueve bien'
@@ -9435,7 +9487,9 @@ function lineaPista(P) {
     trozos.push(`<b>${mmTxt(P.agua)} mm</b> en las últimas 72 h`
       + (P.horasAgua ? ` (${P.horasAgua} h de agua)` : ''));
   else if (P.agua > 0) trozos.push('apenas ha llovido en 72 h');
-  else trozos.push('sin agua en las últimas 72 h');
+  else if (P.todoHueco) trozos.push('<b>no hay dato de lluvia de estas 72 h</b> — no es que no haya llovido');
+  else trozos.push('sin agua en las últimas 72 h'
+    + (P.huecos ? ` (con ${P.huecos} horas sin dato)` : ''));
 
   if (has(P.nieveSuelo) && P.nieveSuelo > 0)
     trozos.push(`<b>${(P.nieveSuelo * 100).toFixed(0)} cm de nieve en el suelo</b>`);
@@ -9689,7 +9743,7 @@ function renderTorres() {
 
         if (S.perfil === 'hierro') {
           // CAPE y tapa juntos: es la pareja que decide si se va o no.
-          const tapaAbierta = has(h.cin) && h.cin < 75 && has(h.cape) && h.cape >= 700;
+          const tapaAbierta = has(h.cin) && h.cin < TAPA_ROMPE && has(h.cape) && h.cape >= CAPE_COMBINACION;
           /* La RACHA entra aquí el 26-08-2026. Faltaba, y en sus sitios
              altos es lo segundo que decide: Orduña llega a 63 km/h y
              Carranza toca los 60, que es su límite de NO APTO. Se marca
@@ -9972,6 +10026,13 @@ const CAMS = [
    `assess()` y el aviso de discrepancia entre modelos. Un umbral
    duplicado se separa solo con el tiempo. */
 const CAPE_COMBINACION = 700;
+/* ── Y EL OTRO MEDIO LISTÓN DE LA TORMENTA ────────────────────────────
+   La tapa por debajo de la cual la burbuja rompe. Vivía escrito a pelo
+   —un 75 suelto— en ocho sitios distintos, y el CAPE ya se recalibró una
+   vez (de 800 a 700): el día que se recalibre esto, los sitios que se
+   queden con el número viejo harán que la app se contradiga sola.
+   Puesto el 20-09-2026, con la guardia de «un solo sitio por regla». */
+const TAPA_ROMPE = 75;
 
 /* Los miles con punto, a mano. `toLocaleString` da un espacio fino que
    en el móvil se lee como si fueran dos números: «2 700» parecía 2 y 700.
@@ -12628,7 +12689,10 @@ function renderNow() {
                                     pintan en segundos y son la misma (falsa alarma del 13-09, 23:54). */
                                  S.data?.fc?.current?.time ?? null,
                                  { n: sel.length, ini: sel[0]?.t ?? null, votado: !!deEsteSitio(S.comparativa) });
-    const gm = Math.max(...sel.map(h => h.gust ?? 0));
+    /* Con todas las rachas en null esto daba 0 y la línea «Racha máx» no
+       se pintaba: silencio donde debería decir «sin dato» (20-09-2026). */
+    const gDatos = sel.map(h => h.gust).filter(has);
+    const gm = gDatos.length ? Math.max(...gDatos) : null;
     // Y a qué hora es esa racha (suyo, 09-09-2026: «que se aplique siempre»).
     const hGm = sel.find(h => has(h.gust) && h.gust === gm)?.date;   // sin «?? 0»: un hueco no es una racha
     const gmCuando = gm > 0 && hGm ? ` · a las ${String(hGm.getHours()).padStart(2, '0')}:00` : '';
@@ -12651,7 +12715,13 @@ function renderNow() {
     const dTxt = has(hMax?.dir) ? ` del ${rumboLargo(hMax.dir)}` : '';
     // Los milímetros ESCRITOS. Con solo el icono no se distingue una
     // llovizna de un chaparrón, y el número no admite interpretación.
-    const mm = sel.map(h => h.prec).filter(has).reduce((a, b) => a + b, 0);
+    /* Si NINGUNA hora de la franja trae lluvia, esto daba 0 por la semilla
+       del `reduce` y la guarda de «sin dato» de más abajo era inalcanzable:
+       se escribía «Sin lluvia · 0,0 mm» sobre siete horas en blanco, justo
+       debajo del comentario que dice que un hueco no dice «no llueve» sino
+       «no lo he mirado» (20-09-2026). */
+    const mmDatos = sel.map(h => h.prec).filter(has);
+    const mm = mmDatos.length ? mmDatos.reduce((a, b) => a + b, 0) : null;
 
     /* ── Y A QUÉ HORA EMPIEZA, QUE SI NO PARECE UN FALLO ──────────────
        Suyo, 30-08-2026, con la pantalla delante: *«en el símbolo
@@ -12816,7 +12886,10 @@ function renderNow() {
          Es el mismo motivo por el que la tabla de «Mis torres» lleva
          escrito «a 10 m» en la cabecera desde que él preguntó *«¿es a
          10 m o qué significa?»*. Aquí faltaba. */
-      }${vTxt ? `<br>Viento ${vTxt}${dTxt}<small> a ${S.hgt} m</small>` : ''}${gm > 0 ? `<br>Racha máx ${wtxt(gm, true)}<small> a ${S.hgt} m${gmCuando}</small>` : ''}${(() => {
+      }${vTxt ? `<br>Viento ${vTxt}${dTxt}<small> a ${S.hgt} m</small>` : ''}${gm > 0 ? `<br>Racha máx ${wtxt(gm, true)}<small> a ${S.hgt} m${gmCuando}</small>`
+       /* Sin dato NO es silencio: callarse se lee como «no hay racha que
+          contar», y lo que pasa es que nadie la ha dado (20-09-2026). */
+       : !has(gm) ? `<br>Racha máx<small> · sin dato en esta franja</small>` : ''}${(() => {
           const r = rachaEnLaFranjaQueNoVesTu(sel);
           return r ? ` <span class="nd__ojo">⚠ ${esc(r.quien)} da ${wtxt(r.max, true)} a 10 m${r.cuando ? ` ${r.cuando}` : ''}${r.cruza && has(r.limite) ? ` — tu listón es ${wtxt(r.limite, true)}` : ''}</span>` : '';
         })()}${
@@ -12900,7 +12973,7 @@ function renderNow() {
   /* El mismo listón que usa el vigilante: CAPE ≥ 700 con la tapa por
      debajo de 75. Un número distinto aquí y allí sería otro renglón que
      dice una cosa mientras el aviso dice otra. */
-  const tormenta = has(c?.cape) && has(c?.cin) && c.cape >= 700 && c.cin < 75;
+  const tormenta = has(c?.cape) && has(c?.cin) && c.cape >= CAPE_COMBINACION && c.cin < TAPA_ROMPE;
 
   /* ── CUÁNDO EMPIEZA A LLOVER, no solo cuánto cae ahora ───────────────
      «0,0 mm» con nubarrones encima no le dice nada. Lo que sirve es la
@@ -13717,7 +13790,7 @@ function renderDays() {
     for (let i = 0; i < H.time.length; i++) {
       if (!String(H.time[i]).startsWith(dia)) continue;
       const c = H.weather_code?.[i], cape = H.cape?.[i], cin = H.convective_inhibition?.[i];
-      if (isStormCode(c) || (has(cape) && has(cin) && cape >= 700 && cin < 75))
+      if (isStormCode(c) || (has(cape) && has(cin) && cape >= CAPE_COMBINACION && cin < TAPA_ROMPE))
         return `${String(new Date(H.time[i]).getHours()).padStart(2, '0')}:00`;
     }
     return null;
@@ -14049,7 +14122,10 @@ function acceso(horas, cota) {
   const conRacha = proximas.map(x => x.gust10).filter(has);
   const rachaMax = conRacha.length ? Math.max(...conRacha) : null;
   if (!conRacha.length) sinDato.push('la racha');
-  if (rachaMax !== null && rachaMax >= 70)
+  /* Su tope de viaje, no un 70 clavado: «con unas rachas de 70 puedo
+     volcar con el 4x4». Si algún día lo cambia en Ajustes, esto lo sigue
+     (20-09-2026). */
+  if (rachaMax !== null && rachaMax >= listonRafaga().no)
     avisos.push({ n: 'warn', t: `Rachas de ${wtxt(rachaMax, true)} — ramas y árboles en la pista` });
 
   // — Niebla —
@@ -14144,7 +14220,7 @@ function avisoTormentaFranja(horas) {
      Si falta el dato de probabilidad se avisa igual — un hueco nunca
      puede valer como «no hay disparador». */
   const combinacion = horas.filter(h => has(h.cape) && has(h.cin)
-                                     && h.cape >= 700 && h.cin < 75);
+                                     && h.cape >= CAPE_COMBINACION && h.cin < TAPA_ROMPE);
   const malas = combinacion.filter(h => !has(h.pop) || h.pop >= 10);
 
   if (malas.length) {
@@ -18619,7 +18695,12 @@ function textoPulso(d) {
       + (d.noMirados?.length ? `: ${d.noMirados.map(esc).join(' · ')}` : '')
       + `. De ésos no sabe nada: no es que estén tranquilos.`);
 
-  return `<b>Vigilante en pie.</b> Última pasada por
-    ${d.sitios ? `<b>${d.sitios}</b>${has(d.nLista) && d.nLista > d.sitios ? ` de tus ${d.nLista}` : ' de tus'} ` : 'tus '}emplazamientos <b>${cuanto}</b>.`
+  /* Mientras el servidor no mande el total (la pasada anterior al arreglo
+     del 20-09-2026 no lo tiene), se dice el número a secas y sin «de tus»,
+     que si no queda «19 de tus emplazamientos» y no significa nada. */
+  const faltan = has(d.nLista) && d.sitios && d.nLista > d.sitios;
+  return `<b>Vigilante en pie.</b> Última pasada por ${
+    d.sitios ? (faltan ? `<b>${d.sitios}</b> de tus <b>${d.nLista}</b> ` : `tus <b>${d.sitios}</b> `) : 'tus '
+  }emplazamientos <b>${cuanto}</b>.`
     + (pegas.length ? `<br><span class="pulso__pega">${pegas.join('<br>')}</span>` : '');
 }
