@@ -11878,6 +11878,20 @@ function tituloFranja(sel, code, desde = '') {
    llamada por sitio, guardada 10 min; si no hay estación a 15 km o AEMET
    no contesta, no se pone nada (ni se inventa). */
 const MEDIDO_CERCA = new Map();
+/* ── CUÁNTO DE VIEJA ES LA LECTURA (20-09-2026) ─────────────────────────
+   TRASPASO §24: el 19-09 a las 12:26 la línea decía «a las 10:00» y nada
+   más, con el feed de AEMET dos horas atrasado para Matxitxako. Una lectura
+   vieja sin su edad se lee como de ahora. Hasta 60 min, nada; de 61 a 119,
+   en minutos; desde 2 h, en horas enteras. Sin fecha, nada: no se inventa. */
+function haceTxt(cuando, ahora = Date.now()) {
+  const t = cuando ? Date.parse(cuando) : NaN;
+  if (!Number.isFinite(t)) return '';
+  const min = Math.round((ahora - t) / 60e3);
+  if (min <= 60) return '';
+  if (min < 120) return `hace ${min} min`;
+  return `hace ${Math.floor(min / 60)} h`;
+}
+
 async function pintarMedidoCerca(p) {
   const el = $('#nowAemet');
   if (!el || !p || !has(p.lat) || !has(p.lon)) return;
@@ -11897,12 +11911,13 @@ async function pintarMedidoCerca(p) {
   if (!sigue) return;                                   // ya está mirando otro sitio
   if (!e) { el.textContent = ''; return; }
   const hm = e.medidoEn ? (d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`)(new Date(e.medidoEn)) : '';
+  const vieja = haceTxt(e.medidoEn);
   el.innerHTML = `Medido de verdad · <b>AEMET ${esc(e.nombre)}</b> (${kmTxt(e.km)} km): <b>${e.temperatura.toFixed(1).replace('.', ',')}°</b>`
     + (has(e.viento) ? ` · viento <b>${wtxt(e.viento, true)}</b>${has(e.direccion) ? ` del ${esc(rumboLargo(e.direccion))}` : ''}` : '')
     + (has(e.racha) ? ` · racha <b>${wtxt(e.racha, true)}</b>` : '')
     + (has(e.humedad) ? ` · HR ${Math.round(e.humedad)} %` : '')
     + (has(e.lluvia) ? ` · ${mmTxt(e.lluvia)} mm en la hora` : '')
-    + (hm ? ` · a las ${hm}` : '');
+    + (hm ? ` · a las ${hm}${vieja ? ` <b>(${vieja})</b>` : ''}` : '');
 }
 
 function renderNow() {

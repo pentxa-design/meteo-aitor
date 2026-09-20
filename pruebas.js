@@ -7994,6 +7994,28 @@ grupo('Tocar un día en «10 días» abre ese día entero, hora a hora (17-09-20
      && /\}\)\.join\(''\);\n  renderDiaDetalle\(\);\n\}/.test(A));
 }
 
+/* ═══ LA LECTURA DE AEMET DICE CUÁNTO DE VIEJA ES (20-09-2026) ═══════════
+   TRASPASO §24: el 19-09 a las 12:26 la línea «Medido de verdad» enseñaba la
+   lectura de las 10:00 de Matxitxako como si fuera de ahora («a las 10:00» y
+   nada más): el feed de AEMET va con retraso para esa estación. Una lectura
+   vieja sin su edad se lee como de ahora, y el lunes decide con ella. */
+grupo('La línea «Medido de verdad» dice «hace 2 h» cuando la lectura pasa de 60 min (20-09-2026)');
+{
+  const haceTxt = (() => { try { return eval(`(${sacar('function haceTxt(')})`); } catch { return null; } })();
+  const T0 = Date.parse('2026-09-19T12:26:00+02:00');
+  const en = m => new Date(T0 - m * 60e3).toISOString();
+  ok('hasta 60 min no dice nada: la lectura es reciente',
+     !!haceTxt && haceTxt(en(0), T0) === '' && haceTxt(en(45), T0) === '' && haceTxt(en(60), T0) === '');
+  ok('de 61 a 119 min lo dice en minutos: «hace 90 min»',
+     !!haceTxt && haceTxt(en(90), T0) === 'hace 90 min' && haceTxt(en(61), T0) === 'hace 61 min');
+  ok('desde 2 h lo dice en horas enteras: la de las 10:00 vista a las 12:26 es «hace 2 h»',
+     !!haceTxt && haceTxt(en(146), T0) === 'hace 2 h' && haceTxt(en(300), T0) === 'hace 5 h');
+  ok('sin fecha, o con una fecha rota, no inventa nada',
+     !!haceTxt && haceTxt(null, T0) === '' && haceTxt('no es fecha', T0) === '');
+  ok('y pintarMedidoCerca la pone detrás de «a las HH:MM»',
+     /async function pintarMedidoCerca\(p\) \{[\s\S]*?const vieja = haceTxt\(e\.medidoEn\);[\s\S]*?a las \$\{hm\}\$\{vieja \? /.test(src));
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');
