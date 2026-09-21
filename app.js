@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.21-1840';
+const BUILD = '2026.09.21-2117';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -4045,6 +4045,27 @@ function conAhora(h, C) {
   if (has(C.cloud_cover_low))  h.nubesBajas  = C.cloud_cover_low;
   if (has(C.cloud_cover_mid))  h.nubesMedias = C.cloud_cover_mid;
   if (has(C.cloud_cover_high)) h.nubesAltas  = C.cloud_cover_high;
+  /* ── Y SI ES DE DÍA O DE NOCHE, TAMBIÉN (21-09-2026) ───────────────
+     Suyo, desde Bermeo a las 20:25, con la foto del cielo rosa: el sol se
+     había puesto a las **20:10** y la app seguía diciendo «Sol velado»,
+     con el dibujo de día. Lo pidió arreglado sin falta.
+
+     La causa, medida contra lo publicado ese mismo rato:
+
+         hora 19:00 → is_day 1      se pone el sol .... 20:10
+         hora 20:00 → is_day 1   ←  y esta hora vale como DÍA entera
+         hora 21:00 → is_day 0
+
+     O sea que de 20:10 a 21:00, CINCUENTA MINUTOS TODOS LOS DÍAS, el
+     rótulo y el dibujo iban de día con el sol ya puesto. Aquí se pisaban
+     el código y las tres capas de nubes con lo de `current`, que es de
+     este momento… y el día/noche no. Y `current.is_day` sí es del
+     momento: a las 20:25 vale 0.
+
+     Es el mismo despiste que el de Calpe del 08-09 (la luna con velo a
+     las 23:49), que arregló la noche cerrada y dejó abierta la
+     transición. El arreglo estaba a cinco líneas de aquí. */
+  if (has(C.is_day))           h.day         = C.is_day;
   return h;
 }
 

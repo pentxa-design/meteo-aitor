@@ -190,6 +190,69 @@ for (const f of ['listonRafaga', 'veladoSiToca', 'medianaPonderada', 'cieloVotad
   try { eval(sacar(`function ${f}(`)); } catch (e) { console.log(`  (sin ${f}: ${e.message})`); }
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   EL OCASO DURABA UNA HORA DE MÁS (21-09-2026)
+   ──────────────────────────────────────────────────────────────────────
+   Suyo, desde Bermeo a las 20:25, con la foto del cielo rosa: el sol se
+   había puesto a las 20:10 y la app seguía diciendo «Sol velado», con el
+   dibujo de día. Lo pidió arreglado sin falta.
+
+   MEDIDO contra lo publicado ese mismo rato, en su sitio:
+
+       hora 19:00 → is_day 1        se pone el sol .... 20:10
+       hora 20:00 → is_day 1    ←   y esta hora vale como DÍA entera
+       hora 21:00 → is_day 0
+
+   O sea CINCUENTA MINUTOS TODOS LOS DÍAS con el sol puesto y el rótulo de
+   día. `conAhora` ya pisaba el código y las tres capas de nubes con lo de
+   `current` —que es de este momento— y el día/noche no. Y `current.is_day`
+   sí es del momento.
+
+   Mismo despiste que el de Calpe del 08-09 (la luna con velo a las 23:49):
+   aquello arregló la noche cerrada y dejó abierta la transición. El
+   arreglo estaba a cinco líneas.
+   ══════════════════════════════════════════════════════════════════════ */
+grupo('El ocaso: de noche es de noche en cuanto se pone el sol (21-09-2026)');
+{
+  const hora = (t, day) => ({ date: new Date(t), t, day, code: 4, cloud: 60,
+                              nubesBajas: 0, nubesMedias: 0, nubesAltas: 96 });
+
+  /* 20:25, sol puesto a las 20:10: la hora dice día, el momento dice noche. */
+  const h1 = hora('2026-09-21T20:00', 1);
+  conAhora(h1, { time: '2026-09-21T20:25', is_day: 0, weather_code: 4, cloud_cover: 60 });
+  ok('con el sol ya puesto, la hora en curso pasa a NOCHE',
+     h1.day === 0,
+     'de 20:10 a 21:00 el rótulo iba de día todos los días del año');
+  ok('y entonces el texto es el velo de noche, no el sol velado',
+     textoVisto(globalThis.VELADO ?? 4, h1.day) === 'Velo de nubes altas',
+     textoVisto(globalThis.VELADO ?? 4, h1.day));
+
+  /* Y a las 19:30, con el sol todavía arriba, sigue siendo de día. */
+  const h2 = hora('2026-09-21T19:00', 1);
+  conAhora(h2, { time: '2026-09-21T19:30', is_day: 1, weather_code: 4 });
+  ok('pero con el sol arriba sigue siendo de día: esto no apaga el sol antes de tiempo',
+     h2.day === 1);
+
+  /* La regla del 20-09 no se toca: si `current` es de otra hora, no pisa
+     NADA, tampoco el día/noche. Es lo que protege la copia del monte. */
+  const h3 = hora('2026-09-21T14:00', 1);
+  conAhora(h3, { time: '2026-09-21T08:10', is_day: 1, weather_code: 0, cloud_cover: 0 });
+  ok('un `current` de otra hora no pisa nada, ni el día ni el cielo',
+     h3.day === 1 && h3.code === 4 && h3.cloud === 60,
+     'sin cobertura en el monte, la copia trae un current viejo: el sol de las 08:10 no puede pisar las 14:00');
+
+  /* Y sin `is_day` en `current` —modelo que no lo publica— se queda el de
+     la hora, que es lo que había antes. */
+  const h4 = hora('2026-09-21T20:00', 1);
+  conAhora(h4, { time: '2026-09-21T20:25', weather_code: 4 });
+  ok('si `current` no trae el día/noche, se queda el de la hora y no se inventa',
+     h4.day === 1);
+
+  ok('y `is_day` se pide de verdad en el bloque de AHORA',
+     /const CURRENT = \[\s*\n\s*'temperature_2m','apparent_temperature','relative_humidity_2m','is_day'/.test(src),
+     'sin pedirlo, `conAhora` no tendría qué copiar y esto no arreglaría nada');
+}
+
 grupo('La regla de la tormenta — casos reales, no inventados');
 ok('Lekeitio 23-08 23:00 (1350/15/23%) avisa — reventó postes', rompe(H(1350, 15, 23)));
 ok('Durango 23-08 23:00 (1070/56/15%) avisa — reventó', rompe(H(1070, 56, 15)));
