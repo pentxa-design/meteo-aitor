@@ -797,7 +797,24 @@ function veladoSiToca(code, h) {
      baja+media ≥ 15 %  → Mayormente despejado
      resto              → Despejado
    El agua y la tormenta NO se votan: eso sigue mandándolo el dueño de la
-   lluvia, que se elige por acierto medido. Ni la niebla.                */
+   lluvia, que se elige por acierto medido. Ni la niebla.
+
+   ── COMPROBADO EN LA CALLE (21-09-2026, 11:34, Bilbao) ──────────────
+   Él, de guardia, mandando fotos desde el coche: cielo azul mirando a un
+   lado y un campo de cirros blancos mirando al otro. *«Diría yo que si
+   son veladas, sol velado»* — y la app ponía **Sol velado**.
+
+   Los números de esa hora, y por qué salió bien: bajas 0 y medias 0 en
+   los cuatro que votan, así que ni el 70 ni el 40. Y en las altas iban
+   ECMWF 100, GFS 100, AROME 96 e **ICON 4**. La mediana se queda arriba y
+   pasa el listón del velo; un promedio con ese 4 dentro también habría
+   pasado hoy, pero el día que el descolgado sea el alto es la mediana la
+   que salva el icono. Que es justo para lo que se puso esto el 06-09.
+
+   Y lo que él dijo de verdad —*«según por dónde mires»*— es la razón de
+   que ninguno de los dos números sea «la verdad»: un porcentaje sobre una
+   celda de malla no sabe decir que media vuelta de cabeza cambia el
+   cielo. Por eso el aviso del abanico («van del 4 al 100 %») no sobra.  */
 function cieloVotado(t, place = null) {
   const C = deEsteSitio(S.comparativa, place)?.hourly;
   if (!C?.time || !t) return null;
