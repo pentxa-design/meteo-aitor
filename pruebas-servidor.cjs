@@ -875,7 +875,7 @@ ok('el marcador tampoco contesta «cero muestras» cuando no puede leer',
 console.log('\n  El vigilante afloja cuando no pasa nada');
 const vg = fs.readFileSync(path.join(__dirname, 'api', 'vigilante.mjs'), 'utf8');
 ok('si no hay nada en marcha, se salta la pasada (verde cada 2 h, ámbar cada media, rojo cada cuarto)',
-   /saltada: true/.test(vg) && /const cadaMin = \{ verde: 115, ambar: 25, rojo: 10 \}\[nivel\];/.test(vg)
+   /saltada: true/.test(vg) && /const cadaMin = \{ verde: 175, ambar: 25, rojo: 10 \}\[nivel\];/.test(vg)
    && /huecoPrevio < cadaMin/.test(vg) && !/huecoPrevio < 55/.test(vg),
    'pasar cada media hora un día tranquilo se llevaba 3,2 de las 4 h de CPU del mes');
 ok('y el rojo es rayo de HOY por delante, racha de 70 por delante o tormenta ya avisada',

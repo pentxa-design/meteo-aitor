@@ -883,7 +883,9 @@ export default async function handler(req, res) {
      **cada media hora**, así que el rojo sale cada media, no cada cuarto;
      para que el cuarto de hora sea de verdad hay que bajar el trabajo
      «Vigilante Aitor Meteo» a 15 min en su consola de cron-job.org.
-       verde  — nada guardado en marcha → una pasada cada 2 h
+       verde  — nada guardado en marcha → una pasada cada 3 h
+                (suyo, 21-09-2026, con la semana entera dando bueno: «en
+                días como hoy cada 3 vale»; estaba en 2 h)
        ámbar  — hay rayo, agua o racha apuntados (hoy o mañana) → cada media
        rojo   — rayo de HOY todavía por delante, racha de 70 por delante, o
                 tormenta inminente ya avisada → cada cuarto
@@ -899,12 +901,15 @@ export default async function handler(req, res) {
          || (h0 >= 21 && d?.[claveManana]))
     || Object.values(antes.rachaSitios || {}).some(r => r?.[claveHoy] && r[claveHoy].kmh >= RACHA_TOPE && porDelante(r[claveHoy]))));
   const nivel = rojo ? 'rojo' : algoEnMarcha ? 'ambar' : 'verde';
-  const cadaMin = { verde: 115, ambar: 25, rojo: 10 }[nivel];
+  /* 175 y no 180: el cron pasa cada cuarto de hora, así que el primer
+     tic que supera 175 min es justo el de las 3 h en punto. Con 180 se
+     iría al siguiente y saldrían pasadas de 3 h 15. */
+  const cadaMin = { verde: 175, ambar: 25, rojo: 10 }[nivel];
   const ojeadaAMano = req.query?.mirar === '1' || req.body?.mirar === true;
   if (!ojeadaAMano && !ventanaDelParte && huecoPrevio !== null && huecoPrevio < cadaMin) {
     return res.status(200).json({
       ok: true, saltada: true, nivel,
-      nota: `${nivel}: se pasa cada ${nivel === 'verde' ? 'dos horas' : nivel === 'ambar' ? 'media hora' : 'cuarto de hora'}`,
+      nota: `${nivel}: se pasa cada ${nivel === 'verde' ? 'tres horas' : nivel === 'ambar' ? 'media hora' : 'cuarto de hora'}`,
       ultimaPasada: antes.cuando,
     });
   }
