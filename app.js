@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.21-0222';
+const BUILD = '2026.09.21-0501';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -10570,6 +10570,52 @@ const RAYO_CERCA  = 30;
 /** Caja que se recorta de la imagen para mirar alrededor de un punto. */
 const RAYO_RADIO  = 60;
 
+/* ── EL VETO NO LO MANDA EL ÚLTIMO MARCO: LO MANDA TODO LO QUE AÚN ESTÁ
+   VIGENTE (21-09-2026) ───────────────────────────────────────────────
+   `Rayos.cerca()` se quedaba con `conAlgo[conAlgo.length - 1]`: el ÚLTIMO
+   marco con alguna descarga, y nada más. Y ese `ultima` es lo único que
+   leen los TRES sitios donde él decide —el titular de la pestaña Rayos, el
+   bloque de rayos de la ficha y «Antes de salir»—, mientras el veto dura
+   90 minutos (RAYO_VIGENTE) y los mapas de AEMET van por horas cerradas.
+   O sea que la ventana vigente pisa SIEMPRE dos marcos y solo se miraba uno.
+
+   Lo que pasaba, con una tormenta que se aleja, que es lo normal:
+   14:00-15:00 con 25 descargas a menos de 15 km —encima— y 15:00-16:00 con
+   una sola a 52 km. A las 16:20, dentro todavía de los 90 minutos, `ultima`
+   era el marco de las 15:00, con encima = 0. El titular salía VERDE, el
+   bloque de rayos de la ficha se ESCONDÍA entero (`if (!u || !u.cerca)`) y
+   el veredicto NO se pisaba a NO APTO. Las 25 descargas de hace hora y
+   cuarto quedaban solo en una fila de la tabla de abajo. Su único veto
+   desaparecía justo en la ventana en la que manda.
+
+   Ahora los marcos que siguen vigentes se SUMAN en uno: las cuentas son las
+   del rato entero, `desde`/`hasta` cubren el rato entero y `masCerca` es la
+   más cercana de todas. Si ya no queda ninguno vigente se devuelve el último
+   con descargas, como antes, que ahí ya es información y no veto — y de eso
+   vive el «nada desde entonces», que con RAYO_RECIENTE de 3 h solo se llega
+   a escribir cuando el último marco es de verdad el último.
+
+   Vive aquí fuera, y no dentro de `cerca()`, para que se pueda probar con
+   marcos de mentira sin canvas ni red: el fallo de AL FILO fue precisamente
+   que la prueba se construía el resultado a mano y nunca llegaba a mover el
+   cálculo de verdad. */
+function loQueAunCuenta(filas, ahora = Date.now()) {
+  const conAlgo = (filas || []).filter(f => f && f.n);
+  const vigentes = conAlgo.filter(f =>
+    f.hasta && ahora - new Date(f.hasta).getTime() <= RAYO_VIGENTE);
+  if (!vigentes.length) return conAlgo[conAlgo.length - 1] || null;
+  if (vigentes.length === 1) return vigentes[0];
+  return {
+    desde: vigentes[0].desde, hasta: vigentes[vigentes.length - 1].hasta,
+    n:      vigentes.reduce((a, f) => a + f.n, 0),
+    encima: vigentes.reduce((a, f) => a + f.encima, 0),
+    cerca:  vigentes.reduce((a, f) => a + f.cerca, 0),
+    pos:    vigentes.reduce((a, f) => a + f.pos, 0),
+    masCerca: vigentes.reduce((m, f) =>
+      f.masCerca && (!m || f.masCerca.km < m.km) ? f.masCerca : m, null),
+  };
+}
+
 const Rayos = {
   cat: null,          // catálogo de AEMET (qué horas hay publicadas)
   catT: 0,            // cuándo se pidió
@@ -10710,16 +10756,20 @@ const Rayos = {
       });
     }
 
-    const conAlgo = filas.filter(f => f.n);
-    const ultima  = conAlgo[conAlgo.length - 1] || null;
+    const ultima = loQueAunCuenta(filas);
     return {
       fuente: cat.fuente, licencia: cat.licencia, pagina: cat.pagina,
       radio, filas, ultima,
+      /* Cuántas horas se han MIRADO de verdad. Aquí iba el largo del
+         catálogo ENTERO de AEMET (24 marcos), y se escribía en pantalla
+         como «sin descargas en las últimas 24 h» habiendo leído 6:
+         dieciocho horas que nadie había mirado, afirmadas limpias
+         (21-09-2026). */
+      horasMiradas: marcos.length,
       total: filas.reduce((a, f) => a + f.n, 0),
       // Hasta cuándo llega lo publicado. Con esto se dice el retraso real
       // en pantalla en vez de poner un número inventado.
       hasta: todos[todos.length - 1]?.hasta || null,
-      horasCatalogo: todos.length,
     };
   },
 
@@ -11135,7 +11185,7 @@ function antesDeSalir() {
     else {
       const d = R.d, u = d?.ultima;
       const hasta = d?.hasta ? ` — medido hasta las ${horaHM(d.hasta)}, ${haceCuanto(d.hasta)}` : '';
-      if (!u) { s = 'go'; txt = `sin descargas a menos de ${d?.radio ?? RAYO_RADIO} km en las últimas ${d?.horasCatalogo ?? 6} h${hasta}`; }
+      if (!u) { s = 'go'; txt = `sin descargas a menos de ${d?.radio ?? RAYO_RADIO} km en las ${d?.horasMiradas ?? 6} h que he mirado${hasta}`; }
       else {
         const edad = Date.now() - new Date(u.hasta).getTime();
         const cuando = `entre ${rangoHoras(u.desde, u.hasta)} (${haceCuanto(u.hasta)})`;

@@ -192,7 +192,39 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'sin permiso' });
   }
 
-  const hechos = await Promise.all(SITIOS.map(s =>
+  /* ── SU LISTA DE VERDAD, NO UNA ESCRITA A MANO (21-09-2026) ────────
+     ESTE PARTE MIRABA 14 SITIOS Y ÉL TIENE 20. La lista de aquí abajo se
+     escribió el 26-08 y se quedó fija; desde entonces él añadió AMURRIO,
+     ZEBERIO, LEMONA, PUNTAGALEA, GALDAMES y DURAÑONA, y **a esos seis no
+     los miraba nadie en el parte de la mañana**.
+
+     Y lo peor no es el olvido: el aviso de «no he podido mirar N» solo
+     cuenta los que SÍ se intentaron y fallaron, así que los seis que
+     nunca se pidieron no salían por ningún lado. El push de las 06:30
+     decía «Día limpio en los 14: ni rayo ni lluvia que moje», y él lo lee
+     como «mis sitios están limpios» justo antes de repartir la jornada.
+
+     Es EXACTAMENTE el fallo que se arregló en `vigilante.mjs` el 29-08 —su
+     comentario nombra a Zeberio, Lemona, Punta Galea y Amurrio como «días
+     sin que nadie los mirara»— y a este fichero no se le aplicó. El mismo
+     arreglo, en el hermano de al lado, sin poner. Y el desajuste se
+     agrandaba solo cada vez que él guardaba un emplazamiento nuevo.
+
+     La lista de abajo se queda SOLO como red, y cuando se usa se dice. */
+  let sitios = SITIOS, listaDeRespaldo = true;
+  try {
+    const rt = await fetch(`${APP}/api/torres`);
+    const t = rt.ok ? (await rt.json())?.torres : null;
+    if (Array.isArray(t) && t.length) {
+      sitios = t.map(x => ({
+        n: String(x.name || '').replace(/^(BI|VI|SS|NA)\s+/, '').split(' · ')[0].trim() || 'sin nombre',
+        lat: x.lat, lon: x.lon,
+      })).filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lon));
+      listaDeRespaldo = false;
+    }
+  } catch { /* nos quedamos con la de respaldo, y se dice abajo */ }
+
+  const hechos = await Promise.all(sitios.map(s =>
     unSitio(s).catch(e => ({ n: s.n, fallo: String(e.message || e) }))));
 
   const fallos = hechos.filter(x => x.fallo);
@@ -222,6 +254,11 @@ export default async function handler(req, res) {
      podido mirar se lee como «esos están bien», y no es verdad. */
   if (fallos.length) {
     cuerpo += ` ⚠ No he podido mirar ${fallos.length}: ${fallos.map(f => f.n).join(', ')}.`;
+  }
+  /* Y si se está mirando la lista de respaldo, SE DICE: puede faltarle
+     alguno de los suyos y no hay forma de saber cuál (21-09-2026). */
+  if (listaDeRespaldo) {
+    cuerpo += ` ⚠ No he podido leer tu lista y he mirado la de respaldo (${sitios.length}): puede faltar alguno de los tuyos.`;
   }
 
   const titulo = saltan.length

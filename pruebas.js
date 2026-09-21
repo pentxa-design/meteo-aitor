@@ -6821,6 +6821,171 @@ grupo('Los rayos son de ESTE sitio, y si fallan se dice (01-09-2026)');
      'lo que no se puede comprobar no se pinta como comprobado');
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   QUE NO VUELVA A PASAR · EL VETO DE RAYOS ES DE TODO LO VIGENTE
+   ──────────────────────────────────────────────────────────────────────
+   Cazado el 21-09-2026, de madrugada, con él entrando de guardia a las 7.
+
+   Los rayos son su ÚNICO veto: «debo acudir siempre y cuando no caigan
+   rayos, porque la torre está pegada a la caseta y es un pararrayos».
+   Ese veto entero colgaba de UN campo, `ultima`, y `ultima` era
+   `conAlgo[conAlgo.length - 1]`: el último marco horario de AEMET con
+   alguna descarga. Nada más.
+
+   Pero el veto dura 90 minutos (RAYO_VIGENTE) y los mapas de AEMET van
+   por horas cerradas, así que la ventana vigente pisa SIEMPRE dos marcos
+   y solo se leía uno. Con la tormenta alejándose —lo normal— el marco
+   nuevo tiene una descarga lejos y el viejo tiene veinticinco encima:
+   ganaba el nuevo, el titular salía verde, el bloque de rayos de la ficha
+   se escondía entero y el veredicto no se pisaba a NO APTO. El veto
+   desaparecía justo en la ventana en la que manda.
+
+   Y al lado, la otra: la frase «sin descargas a menos de 60 km en las
+   últimas 24 h» salía de `horasCatalogo`, que era el catálogo entero de
+   AEMET; se leen 6. Dieciocho horas que nadie había mirado, afirmadas
+   limpias, en la única línea que él lee para decidir.
+
+   Las dos guardias de abajo MUEVEN EL CÁLCULO DE VERDAD —`loQueAunCuenta`
+   con marcos, y `Rayos.cerca()` entera contra un AEMET de mentira— en vez
+   de escribirse el resultado a mano. Ése fue el fallo de AL FILO: la
+   prueba se construía el `ultima` a mano y por eso no se enteró de que el
+   cálculo llevaba tres semanas muerto.
+   ══════════════════════════════════════════════════════════════════════ */
+{
+  const V = 90 * 60e3;                                 // RAYO_VIGENTE
+  const cuenta = new Function('RAYO_VIGENTE', `
+    ${sacar('function loQueAunCuenta(filas, ahora = Date.now()) {')}
+    return loQueAunCuenta;`)(V);
+
+  grupo('El veto de rayos cuenta TODO lo vigente, no solo el último marco (21-09-2026)');
+
+  const ahora = Date.now();
+  const hace  = m => new Date(ahora - m * 60e3).toISOString();
+
+  /* La tormenta que se aleja: encima hace rato, lejos hace nada. Los dos
+     marcos están dentro de los 90 minutos. */
+  const ENCIMA = { desde: hace(140), hasta: hace(80),
+                   n: 25, encima: 25, cerca: 25, pos: 3, masCerca: { km: 3.2 } };
+  const LEJOS  = { desde: hace(80),  hasta: hace(20),
+                   n: 1,  encima: 0,  cerca: 0,  pos: 0, masCerca: { km: 52 } };
+
+  const u = cuenta([ENCIMA, LEJOS], ahora);
+  ok('con la tormenta alejándose, las 25 descargas de encima SIGUEN contando',
+     !!u && u.encima === 25 && u.n === 26 && u.cerca === 25,
+     'quedarse con el último marco las borraba: pantalla verde con la tormenta encima hace hora y cuarto');
+  ok('la más cercana es la de todo el rato vigente, no la del último marco',
+     !!u && !!u.masCerca && u.masCerca.km === 3.2,
+     'poner «la más cercana a 52 km» teniendo una a 3,2 km es peor que no poner nada');
+  ok('el rato va del primer marco vigente al último, y la edad sale del último',
+     !!u && u.desde === ENCIMA.desde && u.hasta === LEJOS.hasta,
+     'de `hasta` cuelgan el veto y el «hace cuánto»: con el del marco viejo, el veto caducaría antes de tiempo');
+
+  /* Cuando ya no queda nada vigente vuelve a mandar el último marco: de
+     eso vive el «la última descarga fue hace X; nada desde entonces». */
+  const VIEJO_A = { desde: hace(320), hasta: hace(260),
+                    n: 9, encima: 9, cerca: 9, pos: 0, masCerca: { km: 2 } };
+  const VIEJO_B = { desde: hace(260), hasta: hace(200),
+                    n: 2, encima: 0, cerca: 0, pos: 0, masCerca: { km: 44 } };
+  ok('pasada la ventana, se enseña el último marco con descargas y ya está',
+     cuenta([VIEJO_A, VIEJO_B], ahora) === VIEJO_B,
+     'si no, «nada desde entonces» sería mentira, y poner NO APTO por un rayo de hace seis horas es el error contrario');
+  ok('sin descargas no se inventa un `ultima`',
+     cuenta([{ ...ENCIMA, n: 0, encima: 0, cerca: 0 }], ahora) === null
+     && cuenta([], ahora) === null && cuenta(null, ahora) === null);
+
+  /* ── Y AHORA LA FICHA DE VERDAD, CON ESE `ultima` REAL ─────────────
+     No se escribe a mano: se le da a `pintarRayosTorre` lo que acaba de
+     devolver `loQueAunCuenta`. Y detrás, la contraprueba con el último
+     marco a secas, que es lo que pasaba hasta el 21-09-2026. */
+  eval(sacarConst('VC')); eval(sacarConst('VT'));
+  const pintar = (ultima) => {
+    const nodos = {};
+    const nodo = () => ({ hidden: null, innerHTML: '', textContent: '', className: '',
+                          dataset: {}, style: { setProperty() {} },
+                          classList: { toggle() {}, add() {}, remove() {} } });
+    const $ = id => (nodos[id] || (nodos[id] = nodo()));
+    const S = { place: { lat: 43.412976, lon: -2.718316 },
+                rayos: { clave: '43.413,-2.718', t: Date.now(), error: null,
+                         d: { radio: 60, hasta: LEJOS.hasta, ultima } } };
+    new Function('S', '$', 'esc', 'RAYO_VIGENTE', 'RAYO_RECIENTE', 'RAYO_ENCIMA',
+                 'kmTxt', 'haceCuanto', 'rangoHoras', 'horaHM', 'VC', 'VT', `
+      ${sacar('function deEsteSitio(est, place = null) {')}
+      ${sacar('function pintarRayosTorre() {')}
+      return pintarRayosTorre;`)(S, $, x => String(x), V, 3 * 3600e3, 15,
+        x => String(x), () => 'hace 20 min', () => 'de 14:00 a 16:00', () => '16:00',
+        globalThis.VC, globalThis.VT)();
+    return nodos;
+  };
+
+  const bien = pintar(u);
+  ok('la ficha NO se esconde con la tormenta todavía vigente',
+     bien['#vRayos'].hidden === false && /25 de ellas a menos de 15 km/.test(bien['#vRayos'].innerHTML),
+     'es el sitio donde él mira antes de mandar gente al monte');
+  ok('y el veredicto se pisa a NO APTO por rayos',
+     bien['#vBadge'].textContent === globalThis.VT.no
+     && bien['#vTitle'].textContent === 'Han caído rayos encima de este emplazamiento',
+     'la medida pisa al modelo, y en el 24-08-2026 el modelo no dijo tormenta en NINGUNA de las horas en que descargaba');
+
+  const mal = pintar(LEJOS);
+  ok('(contraprueba) con solo el último marco, la ficha se escondía y el veredicto no se tocaba',
+     mal['#vRayos'].hidden === true && mal['#vRayos'].innerHTML === ''
+     && !mal['#vBadge'],   // ni se llegaba a tocar el veredicto: se salía antes
+     'esto es EXACTAMENTE lo que hacía la app hasta el 21-09-2026: el veto desaparecía solo');
+
+  /* ══════════════════════════════════════════════════════════════════
+     Y LAS HORAS QUE SE DICEN SON LAS QUE SE HAN MIRADO
+     ──────────────────────────────────────────────────────────────────
+     Esto mueve `Rayos.cerca()` ENTERA contra un AEMET de mentira: 24
+     marcos en el catálogo, 6 leídos, una tormenta encima en el penúltimo
+     y una descarga lejos en el último. Va en un `node -e` aparte porque
+     `cerca` es `async` y aquí el recuento es síncrono.
+     ══════════════════════════════════════════════════════════════════ */
+  grupo('«en las últimas N h» son las horas MIRADAS, no el catálogo entero (21-09-2026)');
+
+  const guion = `
+    const RAYO_RADIO = 60, RAYO_ENCIMA = 15, RAYO_CERCA = 30, RAYO_VIGENTE = ${V};
+    ${sacar('function kmEntre(a, b) {')}
+    ${sacar('function loQueAunCuenta(filas, ahora = Date.now()) {')}
+    const t0 = Date.now(), leidas = [], DESC = {};
+    const CAT = { fuente: 'AEMET', licencia: '(c)', pagina: 'p',
+                  ambitos: { PB: { bounds: { lat0: 35, lat1: 44, lon0: -10, lon1: 5 }, marcos: [] } } };
+    for (let i = 23; i >= 0; i--) CAT.ambitos.PB.marcos.push({
+      desde: new Date(t0 - (i + 1) * 3600e3).toISOString(),
+      hasta: new Date(t0 - i * 3600e3).toISOString(),
+      f: 'mapa' + (23 - i) + '.png' });
+    DESC['mapa22.png'] = Array.from({ length: 25 }, (_, i) =>
+      ({ lat: 43.027, lon: -2.5 + i * 1e-4, pos: i < 3 }));      // ~3 km: encima
+    DESC['mapa23.png'] = [{ lat: 43.46764, lon: -2.5, pos: false }];  // ~52 km: ni cerca
+    const R = {
+      ${sacar('  caja(puntos, km) {', '\n  },')}
+      ${sacar('  async cerca(place, { horas = 6, radio = RAYO_RADIO } = {}) {', '\n  },')}
+      async catalogo() { return CAT; },
+      ambito() { return 'PB'; },
+      async leer(amb, m) { leidas.push(m.f); return DESC[m.f] || []; },
+    };
+    R.cerca({ lat: 43, lon: -2.5 })
+     .then(d => console.log(JSON.stringify({ d, leidas })))
+     .catch(e => console.log(JSON.stringify({ error: String(e && e.message || e) })));`;
+  const sal = JSON.parse(require('child_process')
+    .execFileSync(process.execPath, ['-e', guion], { encoding: 'utf8', timeout: 20000 }));
+
+  ok('`Rayos.cerca()` corre de verdad contra un catálogo de 24 marcos',
+     !sal.error && !!sal.d, sal.error || 'si esto revienta, lo de abajo no prueba nada');
+  ok('se leen 6 marcos y se dicen 6, no las 24 horas del catálogo de AEMET',
+     sal.d && sal.d.horasMiradas === 6 && sal.d.filas.length === 6 && sal.leidas.length === 6,
+     'decir «sin descargas en las últimas 24 h» habiendo mirado 6 son 18 horas afirmadas limpias sin haberlas visto');
+  ok('y el `ultima` que sale de `cerca()` trae la tormenta entera, no el último marco',
+     sal.d && sal.d.ultima && sal.d.ultima.encima === 25 && sal.d.ultima.n === 26
+     && sal.d.ultima.masCerca.km < 15,
+     'aquí se comprueba el cableado: que `cerca()` llame a `loQueAunCuenta` y no se lo guise por su cuenta');
+  ok('no queda ni rastro de `horasCatalogo` en la app',
+     !/horasCatalogo/.test(src),
+     'era un número que solo servía para decir una cifra que nadie había mirado');
+  ok('la línea de «Antes de salir» cuenta las horas miradas y lo dice con esas palabras',
+     /en las \$\{d\?\.horasMiradas \?\? 6\} h que he mirado/.test(src),
+     'que se note que es lo mirado y no «las últimas», que se lee como si fuera todo');
+}
+
 /* El guardia de NO-SE-TOCA.md corre AL FINAL, justo antes del recuento:
    necesita haber visto ejecutarse TODAS las pruebas, y las de después del
    30-08 quedaban fuera (05-09-2026). */
@@ -8282,6 +8447,7 @@ grupo('QUE NO VUELVA A PASAR · las tres guardias de clase (20-09-2026)');
     ['noMirados',          V_, 'los emplazamientos que el vigilante no pudo mirar'],
     ['nLista',             V_, 'cuántos tenía, no solo cuántos pudo'],
     ['euskalmetCaido',     E_, 'una caída no es «ninguna mide viento»'],
+    ['horasMiradas',       A_, 'las horas de rayos MIRADAS; decir las del catálogo entero afirma limpias 18 que nadie vio'],
   ];
   const muertas = [];
   for (const [n, fuente, por] of SENALES) {

@@ -210,6 +210,25 @@ clase»**:
 | **Un solo sitio por regla** | Los listones que deciden no pueden escribirse a pelo en una comparación. El CAPE ya se recalibró una vez, de 800 a 700. | `los listones que deciden (CAPE_COMBINACION, TAPA_ROMPE, listonRafaga()) no se escriben a pelo` |
 | **El banco prueba la forma real** | Las claves que devuelve el cálculo del parte tienen que estar en los datos con los que se prueba. Si el cálculo cambia y el fixture no, se para. | `S.parteTorres del banco lleva TODAS las claves que devuelve el cálculo, no la forma vieja` |
 
+### Y el veto de rayos, que es el único que tiene (21-09-2026)
+
+`Rayos.cerca()` se quedaba con el ÚLTIMO marco horario de AEMET con alguna
+descarga. Pero el veto dura 90 minutos y los mapas van por horas cerradas, así
+que la ventana vigente pisa siempre DOS marcos y solo se leía uno. Con la
+tormenta alejándose —lo normal— ganaba el marco nuevo, con una descarga lejos,
+y se perdían las veinticinco de encima de hace hora y cuarto: titular verde,
+bloque de rayos de la ficha escondido y el veredicto sin pisar a NO APTO.
+Ahora manda `loQueAunCuenta()`, que SUMA todos los marcos vigentes; fuera de la
+ventana vuelve a mandar el último, que es de lo que vive el «nada desde
+entonces». Y las horas que se dicen en pantalla son las MIRADAS, no las 24 del
+catálogo.
+
+| Guardia | Qué impide | La prueba que la guarda |
+|---|---|---|
+| **El veto es de todo lo vigente** | Que el marco nuevo, más flojo, borre al viejo que todavía cuenta. Se mueve el cálculo de verdad y después la ficha con ESE resultado, con contraprueba del fallo viejo. | `con la tormenta alejándose, las 25 descargas de encima SIGUEN contando` |
+| **La ficha no se esconde sola** | Que el bloque de rayos y el veredicto se queden callados con la tormenta encima. | `y el veredicto se pisa a NO APTO por rayos` |
+| **Las horas dichas son las miradas** | Decir «en las últimas 24 h» habiendo leído 6. Se corre `Rayos.cerca()` entera contra un AEMET de mentira de 24 marcos. | `se leen 6 marcos y se dicen 6, no las 24 horas del catálogo de AEMET` |
+
 **COMPROBADAS ROMPIÉNDOLAS.** No se dieron por buenas: se reintrodujeron los
 cuatro fallos a propósito sobre una copia, y cada uno quedó parado por al
 menos una guardia. Una guardia que no puede parar nada es un adorno.
