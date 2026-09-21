@@ -212,6 +212,67 @@ for (const f of ['listonRafaga', 'veladoSiToca', 'medianaPonderada', 'cieloVotad
    aquello arregló la noche cerrada y dejó abierta la transición. El
    arreglo estaba a cinco líneas.
    ══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════
+   EL CAPE DE UNO CON LA TAPA DE OTRO NO ES UNA PAREJA (21-09-2026)
+   ──────────────────────────────────────────────────────────────────────
+   De sus pantallazos de las 21:40, con la tarjeta de BI PUNTAGALEA:
+
+       fila de cifras .....  130 CAPE  ·  0 TAPA · ABIERTA
+       resumen, 2 líneas .. «130 de CAPE · tapa 381»
+
+   MEDIDO contra la API en ese punto y esa hora:
+
+       AROME HD .... CAPE 100 · tapa NO LA PUBLICA
+       ECMWF ....... CAPE   0 · tapa no la publica
+       ICON ........ CAPE   0 · tapa 0
+       GFS ......... CAPE   0 · tapa 0
+       Automático .. CAPE 100 · tapa 376
+
+   O sea que la fila de cifras pegaba **el CAPE de AROME a la tapa de
+   ICON**, y ICON ahí no ve ni gota de gasolina: su cero significa «no hay
+   masa que levantar», no «la tapa está quitada». El resumen sí enseñaba
+   la pareja honrada (mismo modelo, misma hora).
+
+   Y no es un día raro: AROME HD —su modelo por defecto— **no publica la
+   tapa NI UNA HORA** (0 de 385 medidas), así que con AROME puesto la tapa
+   viene prestada SIEMPRE; y quien la presta la da en 0 el 69 % de las
+   horas. El rojo de la tormenta se estaba calculando con esa pareja
+   mezclada: con AROME en 800 y la tapa prestada en 0, la tarjeta pintaría
+   en rojo una tormenta que no pronostica ningún modelo.
+
+   La regla de esta casa está escrita desde agosto en `parteTorres`: la
+   pareja se enseña «misma hora, mismo modelo, para enseñar cifras que de
+   verdad ocurrieron juntas».
+   ══════════════════════════════════════════════════════════════════════ */
+grupo('El CAPE de uno con la tapa de otro no es una pareja (21-09-2026)');
+{
+  const hora = (cape, cin, tapaDe) => ({ cape, cin, tapaDe });
+  const rojo = h => !h.tapaDe && has(h.cin) && h.cin < globalThis.TAPA_ROMPE
+                 && has(h.cape) && h.cape >= globalThis.CAPE_COMBINACION;
+
+  ok('la regla del rojo está escrita con la tapa propia, no con la prestada',
+     /const tapaAbierta = !h\.tapaDe\s*\n\s*&& has\(h\.cin\) && h\.cin < TAPA_ROMPE\s*\n\s*&& has\(h\.cape\) && h\.cape >= CAPE_COMBINACION;/.test(src),
+     'con AROME puesto la tapa viene prestada SIEMPRE: 0 de 385 horas la publica él');
+
+  ok('con la tapa PRESTADA no se pinta la tormenta, aunque los números cuadren',
+     rojo(hora(800, 0, 'ICON')) === false,
+     'CAPE 800 de AROME con la tapa 0 de ICON es una pareja que no pronostica nadie');
+  ok('y con la tapa del MISMO modelo sí se pinta',
+     rojo(hora(800, 0, null)) === true,
+     'si esto se cae, se pierde el aviso de verdad y eso es peor que el falso');
+  ok('por debajo de los listones no se pinta ni con tapa propia',
+     rojo(hora(130, 0, null)) === false && rojo(hora(800, 381, null)) === false);
+
+  ok('y la casilla dice de quién es la tapa cuando no es del que da el CAPE',
+     /h\.tapaDe \? ` · la da \$\{esc\(h\.tapaDe\)\}, no \$\{esc\(modeloDato\(\)\?\.name \?\? ''\)\}` : ''/.test(src),
+     'sin decirlo, dos modelos distintos se leen como una pareja');
+  ok('la hora lleva el dueño de la tapa, como ya llevaba el del cielo',
+     /const dueñoTapa = presta\('convective_inhibition'\)/.test(src)
+     && /const tapaDe = dueñoTapa && dueñoTapa !== mio \? dueñoTapa : null;/.test(src)
+     && /codigoAjeno, cieloDe, tapaDe,/.test(src),
+     'y en null cuando la tapa es del propio modelo, para que nada cambie en ese caso');
+}
+
 grupo('El ocaso: de noche es de noche en cuanto se pone el sol (21-09-2026)');
 {
   const hora = (t, day) => ({ date: new Date(t), t, day, code: 4, cloud: 60,

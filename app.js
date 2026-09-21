@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.21-2117';
+const BUILD = '2026.09.21-2359';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -3939,12 +3939,32 @@ function extrasDe(fc) {
   const presta = k => (fc?.prestadosDe || []).find(x => x.k === k);
   const codigoAjeno = !!presta('weather_code') && !presta('precipitation');
   const cieloDe = presta('weather_code') ? nombreDeModelo(presta('weather_code').de) : null;
-  return { codigoAjeno, cieloDe };
+  /* ── Y DE QUIÉN ES LA TAPA (21-09-2026) ───────────────────────────
+     La misma idea que `cieloDe`, y por el mismo motivo, pero en el dato
+     que decide el rayo. MEDIDO ese día en sus emplazamientos:
+     **AROME HD —su modelo por defecto— no publica la tapa NI UNA HORA**
+     (0 de 385 en Carranza), así que con AROME puesto la tapa SIEMPRE
+     viene prestada. Y quien la presta, ICON, la da en 0 el 69 % de las
+     horas (GFS el 73 %), porque donde no ve masa que levantar pone cero.
+
+     El resultado en su pantalla, medido en Punta Galea a las 21:00:
+     AROME daba 100 de CAPE y sin tapa; ICON daba CAPE 0 y tapa 0; el
+     Automático, 100 con tapa 376. La tarjeta pegaba el CAPE de AROME a
+     la tapa de ICON y escribía «0 TAPA · ABIERTA». Una pareja que no
+     pronostica NADIE.
+
+     Se guarda el nombre del que la presta, y solo si es OTRO: con la
+     tapa del propio modelo esto queda en null y nada cambia. */
+  const dueñoTapa = presta('convective_inhibition')
+    ? nombreDeModelo(presta('convective_inhibition').de) : null;
+  const mio = (typeof modeloDato === 'function' ? modeloDato()?.name : null) ?? null;
+  const tapaDe = dueñoTapa && dueñoTapa !== mio ? dueñoTapa : null;
+  return { codigoAjeno, cieloDe, tapaDe };
 }
 
 function horaDe(fc, i, height, place, extra) {
   const H = fc.hourly;
-  const { codigoAjeno, cieloDe } = extra || extrasDe(fc);
+  const { codigoAjeno, cieloDe, tapaDe } = extra || extrasDe(fc);
   const lv = { 10: H.wind_speed_10m?.[i], 80: H.wind_speed_80m?.[i],
                120: H.wind_speed_120m?.[i], 180: H.wind_speed_180m?.[i] };
   const w  = windAt(height, lv);
@@ -3986,7 +4006,7 @@ function horaDe(fc, i, height, place, extra) {
          «llovizna» — y la llovizna era la verdad. A partir de otoño esto
          puede ser la pauta de DOS o TRES días seguidos (suyo). */
       codeLluvia: H.weather_code_lluvia?.[i],
-      codigoAjeno, cieloDe,
+      codigoAjeno, cieloDe, tapaDe,
       cape: H.cape?.[i], li: H.lifted_index?.[i], cin: H.convective_inhibition?.[i],
       /* ── LA ALTURA DE LA NUBE, QUE LLEVABA MUERTA DESDE SIEMPRE ─────
          Cazado el 01-09-2026 en el barrido. Los dos campos se PEDÍAN a
@@ -9893,7 +9913,33 @@ function renderTorres() {
 
         if (S.perfil === 'hierro') {
           // CAPE y tapa juntos: es la pareja que decide si se va o no.
-          const tapaAbierta = has(h.cin) && h.cin < TAPA_ROMPE && has(h.cape) && h.cape >= CAPE_COMBINACION;
+          /* ── LA PAREJA TIENE QUE SER DEL MISMO MODELO (21-09-2026) ──
+             Esto encendía el rojo de la tormenta con el CAPE del modelo
+             cargado y la tapa PRESTADA de otro. Y con AROME HD —su
+             modelo por defecto— la tapa viene prestada SIEMPRE, porque
+             AROME no la publica ni una hora (0 de 385, medido).
+
+             La regla de esta casa está escrita desde agosto y es justo
+             la contraria: la pareja se enseña «misma hora, mismo modelo,
+             para enseñar cifras que de verdad ocurrieron juntas» (ver
+             `peorPar` en parteTorres). El resumen de la tarjeta la
+             cumple; esta fila de cifras, no.
+
+             Lo que salía, medido el 21-09 en Punta Galea a las 21:00:
+             AROME 100 de CAPE sin tapa · ICON CAPE 0 con tapa 0 · el
+             Automático 100 con tapa 376. En pantalla: «130 CAPE · 0
+             TAPA · ABIERTA». Hoy no salta porque falta gasolina, pero
+             con AROME dando 800 y la tapa prestada de ICON en 0 —que es
+             lo que ICON pone el 69 % de las horas— la tarjeta pintaría
+             en rojo una tormenta **que no pronostica ningún modelo**.
+
+             Con la tapa prestada, aquí no se pinta rojo. El aviso de
+             verdad no se pierde: sale por el camino honrado, que son la
+             fila «GASOLINA Y TAPA DE CADA MODELO» y el `peorPar` del
+             parte, los dos con parejas del mismo modelo. */
+          const tapaAbierta = !h.tapaDe
+            && has(h.cin) && h.cin < TAPA_ROMPE
+            && has(h.cape) && h.cape >= CAPE_COMBINACION;
           /* La RACHA entra aquí el 26-08-2026. Faltaba, y en sus sitios
              altos es lo segundo que decide: Orduña llega a 63 km/h y
              Carranza toca los 60, que es su límite de NO APTO. Se marca
@@ -9981,7 +10027,11 @@ function renderTorres() {
                + num(has(h.cape) ? h.cape.toFixed(0) : '—', 'CAPE J/kg',
                      has(h.cape) && h.cape >= (S.thr?.capeWarn ?? 300) ? 'rojo' : tapaAbierta, 'decide')
                + num(has(h.cin) ? h.cin.toFixed(0) : '—',
-                     'tapa J/kg' + (has(h.cin) ? ' · ' + textoTapa(h.cin) : ''), tapaAbierta ? 'rojo' : false, 'decide')
+                     'tapa J/kg' + (has(h.cin) ? ' · ' + textoTapa(h.cin) : '')
+                     /* De quién es, si no es del que da el CAPE. Sin esto,
+                        dos modelos distintos se leen como una pareja. */
+                     + (h.tapaDe ? ` · la da ${esc(h.tapaDe)}, no ${esc(modeloDato()?.name ?? '')}` : ''),
+                     tapaAbierta ? 'rojo' : false, 'decide')
                + num(has(h.nieve) ? nieveTxt : '—',
                      'nieve cm/h' + (hielo ? ' · isocero a la altura del sitio' : ''),
                      has(h.nieve) && h.nieve > 0 ? 'rojo' : hielo, 'decide')
