@@ -295,7 +295,61 @@ function cuandoTxt(d, claveHoy, claveManana) {
    10. **Dos horas más en dos días**, y las dos en la costa —Bermeo a
    las 18h y Lekeitio a las 21h—, que es justo donde estaba el agujero.
    No es ruido: es lo que faltaba. */
-async function unSitio(s) {
+/* ══════════════════════════════════════════════════════════════════════
+   LOS VEINTE EN UNA PETICIÓN, NO CUARENTA (21-09-2026)
+   ──────────────────────────────────────────────────────────────────────
+   Cazado con su pantallazo de las 14:01, estando él de guardia: le llegó
+   «⚠ No he podido mirar 7 emplazamiento(s)» con Bermeo, Mungia, Markina2,
+   Balmaseda, Virgen Orduña, Zeberio y Puntagalea. El pulso confirmaba
+   `sitios: 13` de `nLista: 20`.
+
+   Y no era Open-Meteo caído ni la lista perdida: era ESTE fichero. Cada
+   emplazamiento pedía DOS veces —celda de tierra y celda de al lado— y
+   los veinte salían a la vez por `Promise.all`. Cuarenta peticiones
+   simultáneas contra el mismo intermediario: las que llegan tarde se
+   caen, y las que se caen se convierten en un aviso al móvil de uno que
+   está trabajando en el monte.
+
+   Open-Meteo acepta varias coordenadas en la misma llamada y contesta una
+   lista en el mismo orden (comprobado el 21-09 contra lo publicado: tres
+   puntos, tres respuestas, 48 horas cada una). Así que dos peticiones en
+   vez de cuarenta.
+
+   EL ORDEN NO SE DA POR BUENO. Un cruce aquí sería enseñarle el tiempo de
+   Bermeo con el nombre de Orduña, y eso es peor que no tener dato: cada
+   respuesta tiene que caer más cerca del punto que se pidió que de
+   cualquier otro de la lista, o ese sitio se marca como no mirado.
+
+   Y si la tanda falla entera, cada sitio vuelve a pedir lo suyo por su
+   cuenta, como antes. Un atajo nuevo no puede dejarlo sin vigilante.
+   ══════════════════════════════════════════════════════════════════════ */
+async function pedirTanda(sitios, cel) {
+  const u = `${APP}/om?api=fc&latitude=${sitios.map(s => s.lat).join(',')}`
+          + `&longitude=${sitios.map(s => s.lon).join(',')}&timezone=auto`
+          + `&hourly=cape,convective_inhibition,precipitation,wind_gusts_10m&forecast_days=2`
+          + `&cell_selection=${cel}&models=${MODELOS_AGUA.join(',')}`;
+  const r = await fetch(u);
+  if (!r.ok) throw new Error(`la app contesta ${r.status}`);
+  const j = await r.json();
+  const lista = Array.isArray(j) ? j : [j];
+  if (lista.length !== sitios.length) {
+    throw new Error(`pedí ${sitios.length} y contestó ${lista.length}`);
+  }
+  const d2 = (a, b) => (a.lat - b.lat) ** 2 + (a.lon - b.lon) ** 2;
+  return lista.map((x, i) => {
+    const p = { lat: x?.latitude, lon: x?.longitude };
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return null;
+    const mio = d2(p, sitios[i]);
+    // ¿Hay otro de la lista al que esta respuesta le cuadre mejor? Entonces
+    // no es suya, y sin dato se queda: el nombre manda sobre el número.
+    for (let k = 0; k < sitios.length; k++) {
+      if (k !== i && d2(p, sitios[k]) < mio) return null;
+    }
+    return x?.hourly || null;
+  });
+}
+
+async function unSitio(s, previo = null) {
   const pide = async cel => {
     const u = `${APP}/om?api=fc&latitude=${s.lat}&longitude=${s.lon}&timezone=auto`
             + `&hourly=cape,convective_inhibition,precipitation,wind_gusts_10m&forecast_days=2`
@@ -304,12 +358,12 @@ async function unSitio(s) {
     if (!r.ok) throw new Error(`la app contesta ${r.status}`);
     return (await r.json()).hourly;
   };
-  const H = await pide('land');
+  const H = previo?.H?.time ? previo.H : await pide('land');
   if (!H?.time) throw new Error('sin datos');
   /* La de al lado es opcional: si falla, se sigue con la de tierra y no
      se pierde ningún aviso de los de siempre. */
-  let C = null;
-  try { C = await pide('nearest'); } catch { C = null; }
+  let C = previo?.C?.time ? previo.C : null;
+  if (!C) { try { C = await pide('nearest'); } catch { C = null; } }
 
   const porDia = {};                       // '2026-08-26' -> {horas:Set, cape, quien}
   for (const [H_, deLado] of [[H, false], [C, true]]) {
@@ -855,8 +909,16 @@ export default async function handler(req, res) {
     });
   }
 
-  const datos = await Promise.all(sitios.map(s =>
-    unSitio(s).then(x => ({ ...x, ok: true })).catch(e => ({ n: s.n, critico: !!s.critico, ok: false, fallo: String(e.message || e) }))));
+  /* Dos peticiones para los veinte. Si alguna tanda falla, sus huecos los
+     rellena cada sitio por su cuenta dentro de `unSitio` (ver la nota). */
+  let tandaL = null, tandaC = null;
+  try { tandaL = await pedirTanda(sitios, 'land'); } catch { tandaL = null; }
+  try { tandaC = await pedirTanda(sitios, 'nearest'); } catch { tandaC = null; }
+
+  const datos = await Promise.all(sitios.map((s, i) =>
+    unSitio(s, { H: tandaL?.[i] || null, C: tandaC?.[i] || null })
+      .then(x => ({ ...x, ok: true }))
+      .catch(e => ({ n: s.n, critico: !!s.critico, ok: false, fallo: String(e.message || e) }))));
 
   const buenos = datos.filter(d => d.ok);
   const fallos = datos.filter(d => !d.ok);
@@ -1096,11 +1158,40 @@ export default async function handler(req, res) {
     });
   }
 
-  if (fallos.some(f => f.critico) || fallos.length >= 4) {
+  /* ── «SI DAN BUENO Y NO DAN NADA MALO, NI HACE FALTA» (21-09-2026) ──
+     Suyo, con el pantallazo de las 14:01 delante y él de guardia: le sonó
+     el móvil en el monte para decirle que no se habían podido mirar siete
+     sitios, un día con los veinte en verde y el parte de las 06:46 ya
+     dicho: «ni rayo ni lluvia que moje». *«A parte si dan bueno y no dan
+     nada malo ni hace falta»* · *«dan bueno todo el día, e incluso la
+     semana entera, sobra»*.
+
+     Y es la regla de siempre de esta app: **un aviso que suena cuando no
+     hace falta deja de significar algo**, y el que se lo come es el que
+     está subiendo por una pista.
+
+     Así que el aviso sigue existiendo —callarse un hueco es afirmar que
+     está tranquilo, y eso no se hace— pero solo SUENA cuando puede
+     cambiar algo:
+       · falla un sitio marcado como crítico;
+       · el día NO está en verde (hay rayo, agua o racha apuntados);
+       · o el hueco se repite: ya venía de la pasada anterior, así que no
+         es un tropiezo, es que ese sitio lleva rato sin mirarse.
+     En verde y de una sola vez, se apunta y se enseña en la pantalla de
+     Mis estaciones («no se han podido mirar N»), sin despertar a nadie.
+
+     El origen del tropiezo, además, se arregló el mismo día: eran cuarenta
+     peticiones a la vez. Ver la nota de `pedirTanda`. */
+  const seRepite = fallos.some(f => (antes?.noMirados || []).includes(f.n));
+  const huecoImporta = fallos.some(f => f.critico) || nivel !== 'verde' || seRepite;
+  if (fallos.length >= 4 && huecoImporta) {
+    const porQue = fallos.some(f => f.critico) ? ' Hay alguno de los que no pueden faltar.'
+                 : seRepite ? ' No es un tropiezo: ya no se pudieron mirar en la pasada anterior.'
+                 : ' Y hoy hay algo apuntado, así que el hueco pesa.';
     avisos.push({
       titulo: `⚠ No he podido mirar ${fallos.length} emplazamiento(s)`,
       url: './?v=torres',
-      cuerpo: fallos.map(f => f.n).join(', ') + '. No des por hecho que están tranquilos.',
+      cuerpo: fallos.map(f => f.n).join(', ') + '. No des por hecho que están tranquilos.' + porQue,
       tag: 'fallo', importante: false,
     });
   }

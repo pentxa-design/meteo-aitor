@@ -1037,5 +1037,90 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
      'suyo, 13-09-2026: «que la madrugada cuente igual que el resto del día»');
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════
+   LOS VEINTE EN UNA PETICIÓN, Y EL AVISO QUE SOLO SUENA SI IMPORTA
+   ──────────────────────────────────────────────────────────────────────
+   21-09-2026, 14:01, con él de guardia: «⚠ No he podido mirar 7
+   emplazamiento(s)». El pulso decía `sitios: 13` de `nLista: 20`. No era
+   Open-Meteo: el vigilante pedía DOS veces por emplazamiento y lanzaba los
+   veinte a la vez — cuarenta peticiones simultáneas— y las que llegaban
+   tarde se caían. Suyo: «si dan bueno y no dan nada malo, ni hace falta».
+   ══════════════════════════════════════════════════════════════════════ */
+{
+  const V = fs.readFileSync(path.join(__dirname, 'api', 'vigilante.mjs'), 'utf8');
+
+  /* La comprobación del orden se EJECUTA, que es lo único que impide el
+     accidente de verdad: enseñarle el tiempo de Bermeo con el nombre de
+     Orduña. Se le da un `fetch` de mentira y se le devuelve la lista
+     cambiada de sitio a propósito.
+
+     Va en un `node -e` aparte, y no es capricho: `pedirTanda` es `async` y
+     aquí el recuento es SÍNCRONO y va el último. Escrito con `await`, los
+     tres resultados se imprimían DESPUÉS del total y no podían parar una
+     publicación. Es el fallo del 05-09 otra vez, y en este fichero está
+     escrito que no se repita. */
+  const trozo = V.slice(V.indexOf('async function pedirTanda('),
+                        V.indexOf('\n}', V.indexOf('async function pedirTanda(')) + 2);
+  const guion = `
+    const SITIOS = [
+      { n: 'BERMEO', lat: 43.413, lon: -2.718 },
+      { n: 'ORDUNA', lat: 42.990, lon: -3.000 },
+      { n: 'MUNGIA', lat: 43.354, lon: -2.846 },
+    ];
+    const resp = SITIOS.map(s => ({ latitude: s.lat, longitude: s.lon, hourly: { time: ['x'], quien: s.n } }));
+    const APP = 'x', MODELOS_AGUA = ['a'];
+    let DEVUELVE = resp;
+    const fetch = async () => ({ ok: true, status: 200, json: async () => DEVUELVE });
+    ${trozo}
+    (async () => {
+      const out = {};
+      out.enOrden = (await pedirTanda(SITIOS, 'land')).map(h => h && h.quien);
+      DEVUELVE = [resp[2], resp[1], resp[0]];
+      out.cruzada = (await pedirTanda(SITIOS, 'land')).map(h => h && h.quien);
+      DEVUELVE = [resp[0], resp[1]];
+      try { await pedirTanda(SITIOS, 'land'); out.corta = 'NO REVENTO'; }
+      catch (e) { out.corta = 'reventó'; }
+      console.log(JSON.stringify(out));
+    })();`;
+  let R = {};
+  try {
+    R = JSON.parse(require('child_process')
+      .execFileSync(process.execPath, ['-e', guion], { encoding: 'utf8', timeout: 20000 }));
+  } catch (e) { R = { fallo: String(e.message || e).slice(0, 120) }; }
+
+  ok('`pedirTanda` corre de verdad contra una respuesta de mentira', !R.fallo, R.fallo);
+  ok('con la lista en su orden, cada emplazamiento se queda con lo suyo',
+     (R.enOrden || []).join(',') === 'BERMEO,ORDUNA,MUNGIA', String(R.enOrden));
+  ok('si la respuesta viene cruzada, esos sitios se quedan SIN dato en vez de con el del vecino',
+     (R.cruzada || [])[0] === null && (R.cruzada || [])[2] === null, String(R.cruzada));
+  ok('si contesta menos puntos de los que se piden, no se reparte a ciegas',
+     R.corta === 'reventó',
+     'emparejar por posición con la lista incompleta desplaza TODOS los sitios');
+
+  ok('el vigilante pide los emplazamientos en UNA tanda por celda, no dos por sitio',
+     /latitude=\$\{sitios\.map\(s => s\.lat\)\.join\(','\)\}/.test(V)
+     && /longitude=\$\{sitios\.map\(s => s\.lon\)\.join\(','\)\}/.test(V)
+     && /pedirTanda\(sitios, 'land'\)/.test(V) && /pedirTanda\(sitios, 'nearest'\)/.test(V),
+     'eran cuarenta peticiones a la vez y se caían siete de veinte');
+  ok('y si la tanda falla, cada sitio vuelve a pedir lo suyo: un atajo no puede dejarle sin vigilante',
+     /unSitio\(s, \{ H: tandaL\?\.\[i\] \|\| null, C: tandaC\?\.\[i\] \|\| null \}\)/.test(V)
+     && /const H = previo\?\.H\?\.time \? previo\.H : await pide\('land'\);/.test(V)
+     && /if \(!C\) \{ try \{ C = await pide\('nearest'\); \} catch \{ C = null; \} \}/.test(V));
+
+  ok('el aviso de «no he podido mirar» solo suena si puede cambiar algo',
+     /const huecoImporta = fallos\.some\(f => f\.critico\) \|\| nivel !== 'verde' \|\| seRepite;/.test(V)
+     && /const seRepite = fallos\.some\(f => \(antes\?\.noMirados \|\| \[\]\)\.includes\(f\.n\)\);/.test(V)
+     && /if \(fallos\.length >= 4 && huecoImporta\)/.test(V),
+     'suyo, 21-09: «si dan bueno y no dan nada malo, ni hace falta»');
+  ok('pero el hueco se sigue apuntando y se sigue viendo en la pantalla',
+     /noMirados: fallos\.map\(f => f\.n\)\.slice\(0, 8\)/.test(V),
+     'callarse un hueco es afirmar que está tranquilo, y eso no se hace');
+  ok('y cuando suena, dice POR QUÉ importa',
+     /Hay alguno de los que no pueden faltar/.test(V)
+     && /ya no se pudieron mirar en la pasada anterior/.test(V)
+     && /hoy hay algo apuntado, así que el hueco pesa/.test(V));
+}
+
 console.log(`\n  ${bien} bien, ${mal} mal`);
 if (mal) process.exit(1);
