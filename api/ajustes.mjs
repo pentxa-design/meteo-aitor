@@ -114,8 +114,105 @@ function juntar(guardado, entra) {
   return out;
 }
 
+/* ═══ Y DE PASO, LO QUE AITOR DA POR HECHO EN CENTRO OPERATIVO ═══════
+   Suyo, 21-09-2026, señalando dos instalaciones en el Mac: «Cristo 1
+   Bilbao, Jundiz Sur están instaladas, le di esta mañana desde el móvil
+   y aquí no se han quitado» · «si le doy a completadas en el móvil se
+   han de quitar en todas partes» · «al igual si las quito desde el PC».
+
+   Centro Operativo guarda todo en el navegador de cada aparato y no sube
+   nada: por eso el móvil y el Mac no se enteraban el uno del otro.
+
+   VIVE AQUÍ DENTRO Y NO EN SU PROPIA FUNCIÓN porque Vercel solo deja 12
+   en el plan gratuito y ya están las 12 — hay una prueba que lo vigila y
+   que cazó el intento («no se pasa del tope de funciones de Vercel: la
+   próxima va dentro de una»). Este fichero era el sitio natural: ya hace
+   exactamente esto, juntar el estado de dos aparatos quedándose con lo
+   más reciente.
+
+   Solo viaja la marca: qué trabajo, hecho o no, y cuándo. Nunca el
+   trabajo entero — esos siguen viniendo del informe del correo. Así esto
+   no puede estropear lo que llega cada mañana a las 06:00.
+
+   Se casa por `clave`, no por `id`: el id lo genera cada aparato por su
+   cuenta y sería distinto en el móvil y en el Mac.                    */
+const CAJON_MARCAS = 'centro/marcas.json';
+const TOPE_MARCAS = 4000;
+
+/* El panel vive en otro dominio, así que hace falta abrirle la puerta.
+   Se escribe la lista a mano en vez de poner `*`. */
+const ORIGENES = [
+  'https://centro-operativo-eulen.netlify.app',
+  'http://localhost:8888',
+];
+
+function permiso(req, res) {
+  const o = req.headers?.origin || '';
+  if (ORIGENES.includes(o)) {
+    res.setHeader('Access-Control-Allow-Origin', o);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  }
+}
+
+async function marcas(req, res) {
+  permiso(req, res);
+  if (req.method === 'OPTIONS') return res.status(204).end();
+
+  if (req.method === 'GET') {
+    try {
+      const { dato } = await leerJSON(CAJON_MARCAS, {});
+      const m = dato || {};
+      return res.status(200).json({ ok: true, marcas: m, total: Object.keys(m).length });
+    } catch (e) {
+      /* No poder leer NO es «no hay nada marcado». Si contestara {} el
+         panel daría por reabierto todo lo que él cerró. */
+      return res.status(503).json({ error: String(e?.message || e).slice(0, 120) });
+    }
+  }
+  if (req.method !== 'POST') return res.status(405).json({ error: 'solo GET y POST' });
+
+  try {
+    let cuerpo = req.body;
+    if (typeof cuerpo === 'string') { try { cuerpo = JSON.parse(cuerpo); } catch { cuerpo = {}; } }
+    const entran = Array.isArray(cuerpo?.marcas) ? cuerpo.marcas : [];
+    if (!entran.length) return res.status(400).json({ error: 'no viene ninguna marca' });
+
+    const { dato } = await leerJSON(CAJON_MARCAS, {});
+    const m = dato || {};
+    let puestas = 0;
+
+    for (const x of entran.slice(0, 200)) {
+      const sec = String(x.sec ?? '').trim().slice(0, 40);
+      const clave = String(x.clave ?? '').trim().slice(0, 160).toLowerCase();
+      if (!sec || !clave) continue;
+      const k = sec + '|' + clave;
+      const cuando = String(x.cuando ?? '').trim().slice(0, 40) || new Date().toISOString();
+      /* Gana la más reciente, venga del aparato que venga. */
+      if (m[k] && String(m[k].cuando || '') > cuando) continue;
+      m[k] = { hecho: !!x.hecho, cuando };
+      puestas++;
+    }
+    if (!puestas) return res.status(400).json({ error: 'ninguna marca utilizable' });
+
+    const ks = Object.keys(m);
+    if (ks.length > TOPE_MARCAS) {
+      ks.sort((a, b) => String(m[a].cuando).localeCompare(String(m[b].cuando)));
+      for (const k of ks.slice(0, ks.length - TOPE_MARCAS)) delete m[k];
+    }
+    await guardarJSON(CAJON_MARCAS, m);
+    return res.status(200).json({ ok: true, puestas, total: Object.keys(m).length });
+  } catch (e) {
+    return res.status(500).json({ error: String(e?.message || e).slice(0, 120) });
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
+
+  /* Las marcas de Centro Operativo entran por aquí con ?que=marcas. */
+  if (String(req.query?.que ?? '') === 'marcas') return marcas(req, res);
 
   if (req.method === 'GET') {
     const esPrueba = String(req.query?.prueba ?? '') === '1';
