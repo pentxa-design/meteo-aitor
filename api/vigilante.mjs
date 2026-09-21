@@ -349,7 +349,7 @@ async function pedirTanda(sitios, cel) {
   });
 }
 
-async function unSitio(s, previo = null) {
+async function unSitio(s, previo = null, reloj = null) {
   const pide = async cel => {
     const u = `${APP}/om?api=fc&latitude=${s.lat}&longitude=${s.lon}&timezone=auto`
             + `&hourly=cape,convective_inhibition,precipitation,wind_gusts_10m&forecast_days=2`
@@ -454,8 +454,46 @@ async function unSitio(s, previo = null) {
     dias[dia] = { ini: hs[0], fin: hs.at(-1), tramos: enTramos(hs),
                   cape: d.cape, quien: d.quien, deLado: !!d.deLado };
   }
+  /* ── LO QUE SE ESTÁ ARMANDO, NO SOLO LO QUE YA SALTA (21-09-2026) ──
+     Suyo, de guardia: *«aquí a veces hay un día bueno y al de unas horas
+     entra galerna o truenos»*. Y tenía razón en lo que eso implica: todo
+     lo de arriba solo guarda lo que YA cruza un listón —CAPE 700 con la
+     tapa abierta, racha de 70, agua—. Una tarde que se está armando, con
+     CAPE subiendo y rachas de 55, no dejaba ni rastro: el día seguía
+     «verde» y el vigilante se iba a dormir tres horas.
+
+     Aquí se sacan dos números crudos de las horas que QUEDAN POR DELANTE:
+     el CAPE más alto y la racha más alta, de cualquier modelo, sin filtro
+     de tapa y sin listón. No avisan de nada: solo sirven para que la
+     pasada siguiente sepa si el día está tranquilo de verdad o está
+     cargando. */
+  const ojo = { cape: 0, racha: 0, agua: 0 };
+  if (reloj) {
+    const mira = (H_, campos) => {
+      if (!H_?.time) return;
+      for (const m of campos.modelos) {
+        const v = H_[`${campos.k}_${m}`];
+        if (!v) continue;
+        for (let i = 0; i < H_.time.length; i++) {
+          const t = H_.time[i];
+          if (t.slice(0, 10) !== reloj.dia || Number(t.slice(11, 13)) < reloj.h) continue;
+          const x = v[i];
+          if (x == null) continue;
+          // El agua va con decimal: su escala empieza en 0,3 mm/h.
+          const y = campos.campo === 'agua' ? Math.round(x * 10) / 10 : Math.round(x);
+          if (y > ojo[campos.campo]) ojo[campos.campo] = y;
+        }
+      }
+    };
+    for (const H_ of [H, C]) {
+      mira(H_, { k: 'cape', modelos: MODELOS, campo: 'cape' });
+      mira(H_, { k: 'wind_gusts_10m', modelos: MODELOS_AGUA, campo: 'racha' });
+      mira(H_, { k: 'precipitation',  modelos: MODELOS_AGUA, campo: 'agua'  });
+    }
+  }
+
   /* lat/lon viajan para que el aviso pueda abrir ESE emplazamiento */
-  return { n: s.n, lat: s.lat, lon: s.lon, critico: !!s.critico, dias, agua, racha, horas: H.time };
+  return { n: s.n, lat: s.lat, lon: s.lon, critico: !!s.critico, dias, agua, racha, ojo, horas: H.time };
 }
 
 /* Por la única puerta. Aquí el `null` de «no existe» y el `null` de «no
@@ -720,7 +758,11 @@ export default async function handler(req, res) {
         parteDe: e.parteDe ?? null,
         sitios: Object.keys(e.sitios || {}).length,
         nLista: e.nLista ?? null,
-        noMirados: e.noMirados ?? [] });
+        noMirados: e.noMirados ?? [],
+        /* Lo que se está armando, en crudo: es lo que decide cada cuánto
+           pasa el vigilante, y un número que decide tiene que poder
+           mirarse desde fuera. Ya nos pasó con `envia` y con `nLista`. */
+        ojo: e.ojo ?? null });
     } catch (err) {
       return res.status(200).json({ ultima: null, haceMin: null, fallo: String(err?.message || err).slice(0, 60) });
     }
@@ -883,9 +925,9 @@ export default async function handler(req, res) {
      **cada media hora**, así que el rojo sale cada media, no cada cuarto;
      para que el cuarto de hora sea de verdad hay que bajar el trabajo
      «Vigilante Aitor Meteo» a 15 min en su consola de cron-job.org.
-       verde  — nada guardado en marcha → una pasada cada 3 h
-                (suyo, 21-09-2026, con la semana entera dando bueno: «en
-                días como hoy cada 3 vale»; estaba en 2 h)
+       verde  — nada en marcha Y nada armándose → cada 3 h de noche y por
+                la mañana, pero NUNCA más de una hora entre las 11 y las
+                22 (ver la nota de la galerna, aquí abajo)
        ámbar  — hay rayo, agua o racha apuntados (hoy o mañana) → cada media
        rojo   — rayo de HOY todavía por delante, racha de 70 por delante, o
                 tormenta inminente ya avisada → cada cuarto
@@ -900,16 +942,59 @@ export default async function handler(req, res) {
     || Object.values(antes.sitios || {}).some(d => porDelante(d?.[claveHoy])
          || (h0 >= 21 && d?.[claveManana]))
     || Object.values(antes.rachaSitios || {}).some(r => r?.[claveHoy] && r[claveHoy].kmh >= RACHA_TOPE && porDelante(r[claveHoy]))));
-  const nivel = rojo ? 'rojo' : algoEnMarcha ? 'ambar' : 'verde';
+  /* ══════════════════════════════════════════════════════════════════
+     LA GALERNA (21-09-2026)
+     ──────────────────────────────────────────────────────────────────
+     Él, de guardia, cuando se le bajó la pasada de verde a 3 h: *«en días
+     como hoy cada 3 vale»* … y acto seguido, *«aquí a veces hay un día
+     bueno y al de unas horas entra galerna o truenos»* · *«míralo bien
+     para que no nos pille la tormenta, lluvias… etc»* · *«sentido común
+     siempre»*.
+
+     Tiene toda la razón, y con 3 h planas el arreglo era peor que la
+     enfermedad. La galerna del Cantábrico es exactamente eso: mañana
+     calma y calor, y en media hora el viento del noroeste de golpe. Un
+     hombre a 40 m, o con el 4x4 en una pista, no puede enterarse tres
+     horas tarde.
+
+     Así que la cadencia la manda el RIESGO y la HORA, no el reloj:
+
+       rojo  (cada 15 min) — hay aviso suelto, o rayo o racha de 70 por
+                             delante. Igual que antes.
+       ámbar (cada 30 min) — algo guardado en marcha, **o algo
+                             ARMÁNDOSE**: CAPE de 300 para arriba, racha
+                             de 45 para arriba o agua de 0,3 mm/h para
+                             arriba en las horas que quedan. Esos tres
+                             números están POR DEBAJO de sus listones de
+                             aviso a propósito: la cadencia sube ANTES de
+                             que nada salte, no después.
+       verde (cada 3 h)    — ni una cosa ni la otra. Lo que él pidió.
+                             PERO con suelo: entre las 11 y las 22, nunca
+                             más de una hora. Porque la galerna la
+                             infravaloran los modelos, y ese es justo el
+                             rato en que un día bueno se tuerce aquí.
+
+     Lo que cuesta: de noche y por la mañana, MENOS pasadas que antes. Por
+     la tarde, una por hora. Y cada pasada vale ahora 2 peticiones en vez
+     de 40 (ver `pedirTanda`), así que aun con más pasadas el gasto cae en
+     picado respecto a esta misma mañana. Era lo que él quería ahorrar, y
+     se ahorra donde de verdad estaba el gasto.                        */
+  const CAPE_OJO = 300, RACHA_OJO = 45, AGUA_OJO = 0.3;
+  const o = antes?.ojo || null;
+  const seArma = !!o && ((o.cape ?? 0) >= CAPE_OJO || (o.racha ?? 0) >= RACHA_OJO
+                      || (o.agua ?? 0) >= AGUA_OJO);
+  const nivel = rojo ? 'rojo' : (algoEnMarcha || seArma) ? 'ambar' : 'verde';
   /* 175 y no 180: el cron pasa cada cuarto de hora, así que el primer
      tic que supera 175 min es justo el de las 3 h en punto. Con 180 se
-     iría al siguiente y saldrían pasadas de 3 h 15. */
-  const cadaMin = { verde: 175, ambar: 25, rojo: 10 }[nivel];
+     iría al siguiente y saldrían pasadas de 3 h 15. Lo mismo con el 55
+     de la tarde: el tic de la hora en punto. */
+  const tardeAquí = h0 >= 11 && h0 < 22;
+  const cadaMin = { verde: tardeAquí ? 55 : 175, ambar: 25, rojo: 10 }[nivel];
   const ojeadaAMano = req.query?.mirar === '1' || req.body?.mirar === true;
   if (!ojeadaAMano && !ventanaDelParte && huecoPrevio !== null && huecoPrevio < cadaMin) {
     return res.status(200).json({
       ok: true, saltada: true, nivel,
-      nota: `${nivel}: se pasa cada ${nivel === 'verde' ? 'tres horas' : nivel === 'ambar' ? 'media hora' : 'cuarto de hora'}`,
+      nota: `${nivel}: se pasa cada ${nivel === 'verde' ? (tardeAquí ? 'hora (tarde)' : 'tres horas') : nivel === 'ambar' ? 'media hora' : 'cuarto de hora'}`,
       ultimaPasada: antes.cuando,
     });
   }
@@ -921,7 +1006,7 @@ export default async function handler(req, res) {
   try { tandaC = await pedirTanda(sitios, 'nearest'); } catch { tandaC = null; }
 
   const datos = await Promise.all(sitios.map((s, i) =>
-    unSitio(s, { H: tandaL?.[i] || null, C: tandaC?.[i] || null })
+    unSitio(s, { H: tandaL?.[i] || null, C: tandaC?.[i] || null }, { dia: claveHoy, h: h0 })
       .then(x => ({ ...x, ok: true }))
       .catch(e => ({ n: s.n, critico: !!s.critico, ok: false, fallo: String(e.message || e) }))));
 
@@ -1385,6 +1470,17 @@ export default async function handler(req, res) {
          no se pudieron mirar, y el pulso los canta. */
       nLista: datos.length,
       noMirados: fallos.map(f => f.n).slice(0, 8),
+      /* ── LO QUE SE ESTÁ ARMANDO, PARA LA PASADA SIGUIENTE ──────────
+         El peor de los veinte en las horas que quedan, en crudo y sin
+         listón. La pasada siguiente lo lee para decidir cada cuánto
+         pasar: con esto el día deja de estar «verde» ANTES de que nada
+         salte. Sin guardarlo, `seArma` sería siempre falso y la galerna
+         nos pillaría mirando cada tres horas (21-09-2026). */
+      ojo: buenos.reduce((m, d) => ({
+        cape:  Math.max(m.cape,  d.ojo?.cape  || 0),
+        racha: Math.max(m.racha, d.ojo?.racha || 0),
+        agua:  Math.max(m.agua,  d.ojo?.agua  || 0),
+      }), { cape: 0, racha: 0, agua: 0 }),
       /* Sin guardar esto, la pasada siguiente compararía contra nada y
          soltaría «ahora da agua» en todos los sitios a la vez. */
       aguaSitios: Object.fromEntries(buenos.map(d => [d.n, d.agua || {}])),

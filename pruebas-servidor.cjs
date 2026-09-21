@@ -874,13 +874,14 @@ ok('el marcador tampoco contesta «cero muestras» cuando no puede leer',
 
 console.log('\n  El vigilante afloja cuando no pasa nada');
 const vg = fs.readFileSync(path.join(__dirname, 'api', 'vigilante.mjs'), 'utf8');
-ok('si no hay nada en marcha, se salta la pasada (verde cada 2 h, ámbar cada media, rojo cada cuarto)',
-   /saltada: true/.test(vg) && /const cadaMin = \{ verde: 175, ambar: 25, rojo: 10 \}\[nivel\];/.test(vg)
-   && /huecoPrevio < cadaMin/.test(vg) && !/huecoPrevio < 55/.test(vg),
+ok('si no hay nada en marcha NI armándose, se salta la pasada (verde 3 h de noche, 1 h por la tarde)',
+   /saltada: true/.test(vg) && /const cadaMin = \{ verde: tardeAquí \? 55 : 175, ambar: 25, rojo: 10 \}\[nivel\];/.test(vg)
+   && /huecoPrevio < cadaMin/.test(vg),
    'pasar cada media hora un día tranquilo se llevaba 3,2 de las 4 h de CPU del mes');
 ok('y el rojo es rayo de HOY por delante, racha de 70 por delante o tormenta ya avisada',
    /const rojo = !!\(antes && \(/.test(vg) && /porDelante\(d\?\.\[claveHoy\]\)/.test(vg)
-   && /kmh >= RACHA_TOPE && porDelante/.test(vg) && /nivel = rojo \? 'rojo' : algoEnMarcha \? 'ambar' : 'verde'/.test(vg),
+   && /kmh >= RACHA_TOPE && porDelante/.test(vg)
+   && /nivel = rojo \? 'rojo' : \(algoEnMarcha \|\| seArma\) \? 'ambar' : 'verde'/.test(vg),
    'una tormenta de verano se monta en una hora: con 2 h fijas le pillaría sin aviso');
 ok('pero vuelve a media hora en cuanto hay rayo, agua, racha o aviso vivo',
    /const algoEnMarcha = !!\(antes && \(/.test(vg)
@@ -1104,9 +1105,40 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
      && /pedirTanda\(sitios, 'land'\)/.test(V) && /pedirTanda\(sitios, 'nearest'\)/.test(V),
      'eran cuarenta peticiones a la vez y se caían siete de veinte');
   ok('y si la tanda falla, cada sitio vuelve a pedir lo suyo: un atajo no puede dejarle sin vigilante',
-     /unSitio\(s, \{ H: tandaL\?\.\[i\] \|\| null, C: tandaC\?\.\[i\] \|\| null \}\)/.test(V)
+     /unSitio\(s, \{ H: tandaL\?\.\[i\] \|\| null, C: tandaC\?\.\[i\] \|\| null \}, \{ dia: claveHoy, h: h0 \}\)/.test(V)
      && /const H = previo\?\.H\?\.time \? previo\.H : await pide\('land'\);/.test(V)
      && /if \(!C\) \{ try \{ C = await pide\('nearest'\); \} catch \{ C = null; \} \}/.test(V));
+
+  /* ── LA GALERNA: LA CADENCIA LA MANDA EL RIESGO Y LA HORA ─────────
+     Suyo, 21-09: «en días como hoy cada 3 vale» y, acto seguido, «aquí a
+     veces hay un día bueno y al de unas horas entra galerna o truenos» ·
+     «míralo bien para que no nos pille la tormenta, lluvias… etc». Con 3 h
+     planas el arreglo era peor que la enfermedad. */
+  ok('el día deja de estar en verde ANTES de que nada salte',
+     /const CAPE_OJO = 300, RACHA_OJO = 45, AGUA_OJO = 0\.3;/.test(V)
+     && /const seArma = !!o && \(\(o\.cape \?\? 0\) >= CAPE_OJO \|\| \(o\.racha \?\? 0\) >= RACHA_OJO/.test(V)
+     && /\|\| \(o\.agua \?\? 0\) >= AGUA_OJO\);/.test(V)
+     && /const nivel = rojo \? 'rojo' : \(algoEnMarcha \|\| seArma\) \? 'ambar' : 'verde';/.test(V),
+     'los tres números van POR DEBAJO de sus listones de aviso: la cadencia sube antes, no después');
+  ok('y los tres listones del ojo están por debajo de los de aviso',
+     (() => { const n = t => Number((V.match(new RegExp(t)) || [])[1]);
+       const cape = n('const CAPE_OJO = (\\d+)'), racha = n('RACHA_OJO = (\\d+)');
+       const capeMin = n('const CAPE_MIN = (\\d+)'), rachaTope = n('const RACHA_TOPE = (\\d+)');
+       return cape > 0 && cape < capeMin && racha > 0 && racha < rachaTope; })(),
+     'si el ojo mirase el mismo número que el aviso, no serviría de nada');
+  ok('en verde, por la tarde nunca se pasa más de una hora',
+     /const tardeAquí = h0 >= 11 && h0 < 22;/.test(V)
+     && /const cadaMin = \{ verde: tardeAquí \? 55 : 175, ambar: 25, rojo: 10 \}\[nivel\];/.test(V),
+     'la galerna la infravaloran los modelos, y la tarde es cuando un día bueno se tuerce aquí');
+  ok('lo que se está armando se GUARDA, que si no la pasada siguiente no lo sabe',
+     /ojo: buenos\.reduce\(\(m, d\) => \(\{/.test(V)
+     && /cape:\s+Math\.max\(m\.cape,\s+d\.ojo\?\.cape\s+\|\| 0\)/.test(V)
+     && /ojo: e\.ojo \?\? null/.test(V),
+     'sin guardarlo, `seArma` sería siempre falso y la galerna nos pilla mirando cada tres horas');
+  ok('y el ojo mira solo las horas que QUEDAN, no el día entero',
+     /if \(t\.slice\(0, 10\) !== reloj\.dia \|\| Number\(t\.slice\(11, 13\)\) < reloj\.h\) continue;/.test(V)
+     && /unSitio\(s, \{ H: tandaL\?\.\[i\] \|\| null, C: tandaC\?\.\[i\] \|\| null \}, \{ dia: claveHoy, h: h0 \}\)/.test(V),
+     'una tormenta de esta mañana ya pasada no puede tener al vigilante en ámbar toda la noche');
 
   ok('el aviso de «no he podido mirar» solo suena si puede cambiar algo',
      /const huecoImporta = fallos\.some\(f => f\.critico\) \|\| nivel !== 'verde' \|\| seRepite;/.test(V)
