@@ -166,6 +166,12 @@ function arrancar(op = {}) {
   async function disparar(tipo, ev = {}) {
     const promesas = [];
     ev.waitUntil = p => { promesas.push(p); };
+    /* Y lo que el manejador de `fetch` contesta. Sin esto, `disparar` no
+       podía ejercitar el camino más importante del fichero —el de abrir
+       sin cobertura— y ahí se escondió durante tres semanas el fallo del
+       21-09-2026: la carrera estaba fuera del try y la copia guardada no
+       llegaba a servirse nunca. */
+    ev.respondWith = p => { ev.respuesta = Promise.resolve(p); promesas.push(ev.respuesta.catch(() => {})); };
     let error = null;
     for (const h of manejadores[tipo] || []) {
       try { h(ev); } catch (e) { error = e; }
@@ -531,6 +537,79 @@ const evPush = (datos, ventanas) => ({
        !r.error && sw.registro.suscripciones.length === 0 && !sw.registro.peticiones.some(p => p.metodo === 'POST')
        && sw.registro.mensajes.some(m => m.tipo === 'avisoCaducado'),
        JSON.stringify({ suscripciones: sw.registro.suscripciones.length, peticiones: sw.registro.peticiones, mensajes: sw.registro.mensajes }));
+  }
+
+  /* ═══ SIN COBERTURA, LA APP ABRE (21-09-2026) ═══════════════════
+     EL FALLO MÁS GRAVE DE TODO EL REPASO, y justo en lo que este fichero
+     promete: abrir en el monte sin cobertura.
+
+     La carrera de los 4 segundos estaba FUERA del try, y
+     `red.then(() => 'red')` es una promesa NUEVA que el `red.catch()` de
+     arriba no cubre. Así que un fetch rechazado —sin cobertura, el
+     navegador rechaza en milisegundos— rompía la carrera, el `await`
+     lanzaba, `respondWith()` recibía una promesa rota, y el `catch` que
+     sirve la copia guardada NO SE EJECUTABA NUNCA. Con todo el casco
+     precacheado, la app no arrancaba.
+
+     Solo sobrevivía el caso de red LENTA, que era el único probado. Y
+     estas pruebas no disparaban el manejador de `fetch` ni una vez. */
+  console.log('\n  Sin cobertura: la app tiene que abrir con lo guardado');
+  {
+    /* Como pasa de verdad: se instala EN CASA con cobertura —que es
+       cuando él pulsa «Guardar para el monte»— y luego se va al monte y
+       se queda sin red. */
+    let hayRed = true;
+    const sw = arrancar({ red: () => { if (!hayRed) throw new TypeError('Failed to fetch'); return undefined; } });
+    await sw.disparar('install');
+    await sw.disparar('activate');
+    hayRed = false;                       // sube al repetidor, sin cobertura
+
+    /* Petición de mentira: Node no deja construir un Request con
+       mode:'navigate', que es justo el caso que importa (abrir la app).
+       sw.js solo le lee `url` y `mode`, y su `new Request(request, …)` ya
+       está envuelto en try/catch, así que un objeto llano vale. */
+    const peticion = (url, modo) => ({
+      url: new URL(url, 'https://torre.prueba/').href,
+      mode: modo || 'cors', method: 'GET',
+    });
+    const pedir = async (url, modo) => {
+      const ev = { request: peticion(url, modo) };
+      await sw.disparar('fetch', ev);
+      if (!ev.respuesta) return { falta: true };
+      try { const r = await ev.respuesta; return { r, texto: r && await r.clone().text() }; }
+      catch (e) { return { roto: String(e && e.message || e) }; }
+    };
+
+    const portada = await pedir('/', 'navigate');
+    ok('sin red, la portada se sirve de la copia guardada y NO revienta',
+       !portada.roto && !portada.falta && portada.r && portada.r.status === 200,
+       portada.roto ? `reventó: ${portada.roto}` : portada.falta ? 'el manejador no contestó' : '');
+
+    const app = await pedir('/app.js');
+    ok('y el código de la app también',
+       !app.roto && app.r && app.r.status === 200,
+       app.roto ? `reventó: ${app.roto}` : '');
+
+    const nada = await pedir('/no-guardado-nunca.json');
+    ok('y lo que NO está guardado falla de verdad, sin inventarse una respuesta',
+       !!nada.roto || (nada.r && nada.r.status >= 400) || nada.falta,
+       'un 200 vacío se leería como un dato');
+  }
+
+  console.log('\n  Con red LENTA: no se espera sin límite teniendo copia');
+  {
+    let lenta = false;
+    const sw = arrancar({ red: () => (lenta ? new Promise(() => {}) : undefined) });
+    await sw.disparar('install');
+    await sw.disparar('activate');
+    lenta = true;                          // media rayita: la red no contesta
+    const ev = { request: { url: 'https://torre.prueba/', mode: 'navigate', method: 'GET' } };
+    const t0 = Date.now();
+    await sw.disparar('fetch', ev);
+    let r = null; try { r = await ev.respuesta; } catch {}
+    ok('con la red colgada y copia guardada, contesta con la copia y no se queda esperando',
+       !!r && r.status === 200 && Date.now() - t0 < 9000,
+       `tardó ${Date.now() - t0} ms`);
   }
 
   console.log(`\n  ${bien} bien, ${mal} mal\n`);

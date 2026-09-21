@@ -10,7 +10,7 @@
      pantalla con la hora de la descarga.
    ═══════════════════════════════════════════════════════════════════ */
 
-const V     = 'torre-2026.09.21-0029';
+const V     = 'torre-2026.09.21-0222';
 const SHELL = [
   './', './index.html', './styles.css', './app.js', './maps.js',
   './manifest.webmanifest',
@@ -227,10 +227,33 @@ self.addEventListener('fetch', e => {
     });
     red.catch(() => {});                 // que no cante como no capturada
 
-    // Si tarda más de 4 s y hay copia, se sirve la copia.
+    /* ── Y SI NO HAY RED, LA COPIA. (21-09-2026) ───────────────────────
+       ESTE ERA EL FALLO MÁS GRAVE DE TODOS, y justo en lo que esta app
+       promete: abrir en el monte sin cobertura.
+
+       Esta carrera estaba FUERA del try de abajo, y `red.then(() => 'red')`
+       es una promesa NUEVA: el `red.catch(() => {})` de arriba calla el
+       aviso de consola pero no la cubre. Así que cuando el fetch fallaba
+       —sin cobertura el navegador rechaza en milisegundos— la carrera se
+       rompía, el `await` lanzaba aquí mismo, y `respondWith()` recibía una
+       promesa rota. El navegador enseñaba su pantalla de «no hay conexión»
+       y **el `catch` de abajo, que es el único que sirve la copia guardada,
+       no llegaba a ejecutarse nunca**.
+
+       Resultado medido leyendo el código: con TODO precacheado —index,
+       app.js, maps.js, los mapas, las estaciones— sin red la app no
+       arrancaba. Solo sobrevivía el caso de red LENTA, que es el único que
+       se había probado. Y `prueba-sw.cjs` no disparaba el manejador ni una
+       vez, por eso no lo cazó nadie en tres semanas.
+
+       El arreglo es el segundo argumento del `then`: un fallo de red se
+       convierte en 'falla' en vez de romper la carrera, y entonces sí se
+       busca la copia. Ahora hay prueba que lo ejercita con un fetch que
+       rechaza. */
+    // Si tarda más de 4 s —o si no hay red— y hay copia, se sirve la copia.
     const espera = new Promise(r => setTimeout(() => r('tarde'), 4000));
-    const quien = await Promise.race([red.then(() => 'red'), espera]);
-    if (quien === 'tarde') {
+    const quien = await Promise.race([red.then(() => 'red', () => 'falla'), espera]);
+    if (quien !== 'red') {
       const hit = await conCache();
       if (hit) return hit;
     }
