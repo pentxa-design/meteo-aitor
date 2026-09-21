@@ -336,35 +336,18 @@ const TLAYERS = [
     desc:'Meteosat en visible de alta resolución — la foto tal cual. Solo de día' },
 
   { id:'gusts',  g:'Torre', name:'Ráfagas', v:'wind_gusts_10m', unit:'km/h',
-    escala:'rafagas',
-    desc:'Racha máxima — la capa que decide el ascenso. El color cambia en TUS listones: naranja a los 45, rojo a los 60' },
-  /* ── OJO CON ESTAS CUATRO: EL COLOR ES LA COMPONENTE, NO LA VELOCIDAD
-     Medido el 31-08-2026 contra el catálogo del servicio de teselas: NO
-     publica `wind_speed_*` — solo `wind_u_component_*` y `wind_v_component_*`
-     (y `wind_gusts_10m`, que sí es velocidad). La librería pinta UNA
-     variable por capa, así que el fondo de color es la componente
-     oeste→este CON SIGNO: con viento del sur o del este sale «calma» de
-     color aunque esté soplando.
-
-     LAS BARBAS Y LOS NÚMEROS SÍ SON BUENOS: `componentes()` lee U y V y
-     calcula el módulo de verdad. Así que la capa NO se retira —las barbas
-     son lo que él mira para saber de dónde viene— pero el rótulo dice lo
-     que es, y para la fuerza está «Ráfagas», que es velocidad medida y
-     además es SU dato (su listón está en km/h de racha). */
-  /* Sin color de fondo (14-09-2026): el color era la componente oeste-este
-     de la librería y se leía como fuerza —«todo pintado sin verse las
-     ciudades»—. Ningún modelo publica wind_speed en las teselas (medido:
-     «Primary variable wind_speed_10m not found»), así que la fuerza la
-     dan las barbas y los números, que sí son el módulo de U y V. */
-  { id:'wind10', g:'Torre', arrows:true, name:'Viento 10 m · barbas', v:'wind_u_component_10m', unit:'km/h', escala:'sinColor',
-    desc:'BARBAS y números = viento real (módulo de U y V), sobre el mapa limpio. Para la fuerza de un vistazo, mira Ráfagas' },
-  { id:'wind20', g:'Torre', arrows:true, name:'Viento 20 m · barbas', v:'wind_u_component_20m', unit:'km/h', escala:'sinColor',
-    desc:'Altura baja de torre — nativo en AROME. BARBAS y números = viento real, sobre el mapa limpio' },
-  { id:'wind50', g:'Torre', arrows:true, name:'Viento 50 m · barbas', v:'wind_u_component_50m', unit:'km/h', escala:'sinColor',
-    desc:'Altura típica de torre — nativo en AROME. BARBAS y números = viento real, sobre el mapa limpio' },
-  { id:'wind100', g:'Torre', arrows:true, name:'Viento 100 m · barbas', v:'wind_u_component_100m', unit:'km/h', escala:'sinColor',
-    desc:'Torre alta. BARBAS y números = viento real, sobre el mapa limpio' },
-
+    escala:'rafagas', rumbo: true,
+    desc:'Racha máxima — la capa que decide el ascenso. El color cambia en TUS listones: naranja a los 45, rojo a los 60. Al pinchar, también de dónde viene el viento' },
+  /* ── LAS CUATRO CAPAS DE BARBAS, RETIRADAS EL 21-09-2026 ────────────
+     Eran `wind_u_component_10m/20m/50m/100m`. El color ya se apagó el
+     14-09 (era la componente, no la fuerza) y quedaban «las barbas y los
+     números, que sí son el módulo de U y V». Medido el 21-09: NO lo eran.
+     La librería no devuelve la componente norte-sur, así que u = v, las
+     barbas apuntaban las 33 del suroeste y el número era la componente
+     por 1,41. Sin las dos componentes no hay ni fuerza ni rumbo que
+     pintar, y una capa que miente se retira. Para la fuerza, Ráfagas;
+     para el rumbo, el clic. Vuelven cuando se traiga la rejilla de la
+     API de pronóstico. */
   { id:'cape', g:'Tormenta', name:'CAPE', v:'cape', unit:'J/kg', escala:'capeE',
     /* MEDIDO el 25-08-2026 contra AguaceroWx: NO es el mismo número.
        Ellos pintan MUCAPE (la burbuja más inestable de toda la columna)
@@ -751,20 +734,65 @@ const AEMET_RADAR = {
 
 const KT_POR_MS = 1.943844;
 
-/* ── DE U Y V: CUÁNTO SOPLA Y DE DÓNDE ───────────────────────────────
-   Un solo dueño. Estaba escrito dos veces —la barba y el clic— y eso es
-   exactamente cómo se cría un fallo: el 21-09-2026 el clic ni siquiera
-   hacía la cuenta, se quedaba con la componente oeste-este y la rotulaba
-   «km/h», así que con viento del sur un viento real de 50 salía como 0,3.
+/* ── EL SEGUNDO CIERRE, POR SI ALGUIEN REENCIENDE LAS BARBAS ──────────
+   `componentes()` devuelve null y con eso barbas y motas no llegan ni a
+   empezar. Pero su código sigue ahí, entero, para el día que las dos
+   componentes se traigan de la API de pronóstico. Si alguien lo
+   reenciende sin arreglar el origen, esto lo para: **u y v exactamente
+   iguales no son un viento, son la misma componente leída dos veces**,
+   que es justo lo que devolvía la librería (medido el 21-09-2026; ver la
+   nota larga más abajo). Dos números de coma flotante del modelo no caen
+   bit a bit iguales por casualidad.
 
-   `ms` es el módulo en metros por segundo, y `desde` los grados
-   meteorológicos DE DONDE VIENE (180 = del sur), que es como se nombra
-   el viento en tierra. */
+   `ms` es el módulo en metros por segundo y `desde` los grados de DONDE
+   VIENE (180 = del sur), que es como se nombra el viento en tierra. */
 function vientoDeUV(u, v) {
   if (!Number.isFinite(u) || !Number.isFinite(v)) return null;
+  if (u === v) return null;             // la misma componente dos veces
   return { ms: Math.hypot(u, v),
            desde: (Math.atan2(-u, -v) * 180 / Math.PI + 360) % 360 };
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   LA COMPONENTE NORTE-SUR NO SE PUEDE LEER, Y POR ESO NO HAY BARBAS
+   ──────────────────────────────────────────────────────────────────────
+   MEDIDO el 21-09-2026 en producción, con ARPEGE pintando «Viento 50 m»,
+   en tres puntos (Bermeo, Vitoria, Donostia):
+
+       wind_u_component_50m ... 2,04229   1,005653   2,354973
+       wind_v_component_50m ... 2,04229   1,005653   2,354973   ← LA MISMA
+
+   `OMWeatherMapLayer.getValueFromLatLong` devuelve SIEMPRE la componente
+   oeste-este cuando se le pide la norte-sur. No es cosa de qué capa esté
+   pintando: con Temperatura pintando pasa igual. Y no es que ignore la
+   URL: en el mismo punto `temperature_2m` da 17,0 y `wind_gusts_10m` da
+   3,3, cada uno el suyo. Es el par u/v: la librería guarda una sola
+   entrada por pareja y la segunda devuelve la primera. Lo mismo con las
+   olas: pidiendo `wave_direction` devolvía 1,84, que era la ALTURA (de
+   ahí el famoso «del norte (2°)», que era 1,8 m redondeado).
+
+   Consecuencia, y hay que decirla entera: **todas las barbas del mapa han
+   apuntado siempre del suroeste**. Con u = v, `atan2(-u,-u)` da 225° fijo.
+   Se comprobó contando las 33 barbas en pantalla: las 33 con rotate(225).
+   Y el número del globito era `hypot(u,u)`, o sea la componente por 1,41,
+   que no es el viento. Las motas de viento, por lo mismo, iban todas en
+   la misma diagonal.
+
+   Así que fuera: las cuatro capas de componentes, las barbas y las motas.
+   La regla de esta app lleva escrita desde el 21-08: **es preferible no
+   tener la capa que tenerla mintiendo**, y ya se aplicó el 20-09 al rumbo
+   del clic del mar por esta misma causa, sin saber entonces que era ésta.
+
+   Para la fuerza del viento queda **Ráfagas**, que es una variable de
+   verdad (se lee bien, medido arriba) y además es SU dato, con sus
+   listones. Y la DIRECCIÓN, que es lo que él miraba en las barbas, la da
+   ahora el clic, leída de la API de pronóstico, que sí la publica.
+
+   Para que vuelvan las barbas hace falta traer la rejilla entera de la
+   API de pronóstico en una sola petición (como ya se hace con sus veinte
+   emplazamientos). Eso está sin hacer.
+   ══════════════════════════════════════════════════════════════════════ */
+
 
 
 /** ¿Es un valor real o la marca de "sin dato" del modelo?
@@ -4253,60 +4281,8 @@ const Maps = {
         return;
       }
 
-      /* ── EL NÚMERO DEL CLIC ERA LA COMPONENTE, NO EL VIENTO (21-09-2026)
-         ────────────────────────────────────────────────────────────────
-         Las cuatro capas de barbas pintan `wind_u_component_*`, que es la
-         componente OESTE→ESTE con signo y en m/s. El fondo ya se apagó el
-         14-09 por eso mismo… pero el CLIC seguía leyendo esa variable y
-         escribiéndola con «km/h» al lado, porque `sinColor` declara km/h
-         y no convierte nada.
-
-         Con viento del sur —el que le trae el agua— U vale casi cero:
-         un viento real de 50 km/h a 50 m salía en el globito como
-         «0,3 km/h». Y el rótulo de la propia capa dice «BARBAS y números
-         = viento real», o sea que el número estaba invitando a creerlo.
-
-         Ahora el clic hace lo mismo que la barba: lee U y V, saca el
-         módulo, lo pasa a la unidad que él tenga puesta y dice de dónde
-         viene. Si V no está, no hay número: «sin dato» antes que un
-         número que no es. */
-      let val, uTxt = u, deDondeV = '';
-      const esComponente = /^wind_u_component_/.test(L_.v || '');
-      if (esComponente) {
-        const C = this.componentes(L_);
-        const vUrl = C ? limpiarMarca(this.omUrl(C.v, this.t, R.modelo, R.meta) || '') : '';
-        const leerV = async () => (await OMWeatherMapLayer.getValueFromLatLong(
-          lngLat.lat, lngLat.lng, vUrl))?.value;
-        let vv = null;
-        if (vUrl) {
-          try { vv = await leerV(); } catch {}
-          if (!Number.isFinite(vv)) {
-            const z = Math.min(12, Math.max(0, Math.round(this.map.getZoom())));
-            const n = 2 ** z;
-            const x = Math.floor((lngLat.lng + 180) / 360 * n);
-            const y = Math.floor((1 - Math.asinh(Math.tan(lngLat.lat * Math.PI/180)) / Math.PI) / 2 * n);
-            try {
-              await OMWeatherMapLayer.omProtocol(
-                { url: `${vUrl}/${z}/${x}/${y}`, type: 'image' }, new AbortController());
-              vv = await leerV();
-            } catch {}
-          }
-        }
-        if (!Number.isFinite(vv)) {
-          pop.setHTML(`<b>Sin dato</b><br><small>El modelo ${esc(nombreModelo)} da la
-            componente oeste-este pero no la norte-sur en este punto, y con una sola
-            no hay viento que dar<br>${lngLat.lat.toFixed(3)}, ${lngLat.lng.toFixed(3)}</small>`);
-          return;
-        }
-        const W = vientoDeUV(v, vv);
-        val = W.ms * 3.6 * (typeof wu === 'function' ? wu().f : 1);
-        uTxt = (typeof wu === 'function' ? wu().lbl : 'km/h');
-        const desde = W.desde;
-        const r = typeof rumboLargo === 'function' ? rumboLargo(desde) : null;
-        deDondeV = ` · del ${r ? esc(r) + ' ' : ''}(${Math.round(desde)}°)`;
-      } else {
-        val = e?.conv ? e.conv(v) : v * f;
-      }
+      const val = e?.conv ? e.conv(v) : v * f;
+      const uTxt = u;
       // Con los números apagados esta es la única lectura que hay, así
       // que el aviso de «esto no puede ser» va también aquí. Un número
       // imposible dado sin más se lee como un dato bueno.
@@ -4316,7 +4292,44 @@ const Maps = {
          dirección se lee aquí, en el clic, de la variable hermana
          (`direccion` en la capa) del MISMO modelo y hora. Si ese modelo
          no la publica, no se pone nada: no se inventa un rumbo. */
-      let deDonde = deDondeV;
+      /* ── Y DE DÓNDE VIENE EL VIENTO, LEÍDO DONDE SÍ ESTÁ (21-09-2026)
+         ──────────────────────────────────────────────────────────────
+         Esto es lo que él miraba en las barbas, y las barbas llevaban
+         desde siempre apuntando las 33 del suroeste porque la librería de
+         teselas no sabe dar la componente norte-sur (ver la medición
+         arriba del todo). Así que el rumbo se pide donde SÍ existe: la
+         API de pronóstico, la misma que alimenta Ahora y Horas.
+
+         Va sin `models=`, o sea con el Automático de Open-Meteo, y se
+         DICE en pantalla. Pedirlo con el modelo que pinta obligaría a
+         traducir su nombre de teselas al de la API, y un nombre mal
+         traducido devuelve un error que aquí se leería como «sin rumbo».
+         Antes de inventar un mapa de nombres, el dato con su etiqueta. */
+      let deDonde = '';
+      if (L_.rumbo && R.meta?.valid_times?.[this.t]) {
+        try {
+          const cuando = new Date(R.meta.valid_times[this.t]).getTime();
+          const d = await jget(`${API.fc}&latitude=${lngLat.lat.toFixed(4)}`
+            + `&longitude=${lngLat.lng.toFixed(4)}&timezone=UTC&forecast_days=4`
+            + `&models=best_match&hourly=wind_direction_10m,wind_speed_10m`, {}, { timeout: 9000 });
+          const T = d?.hourly?.time || [];
+          let mejor = -1, dif = Infinity;
+          T.forEach((t_, i2) => {
+            const x = Math.abs(new Date(t_ + 'Z').getTime() - cuando);
+            if (x < dif) { dif = x; mejor = i2; }
+          });
+          const gr = mejor >= 0 ? d.hourly.wind_direction_10m?.[mejor] : null;
+          const vel = mejor >= 0 ? d.hourly.wind_speed_10m?.[mejor] : null;
+          // Solo si es la MISMA hora: un rumbo de otra hora no es el rumbo.
+          if (has(gr) && dif <= 30 * 60e3) {
+            const r2 = typeof rumboLargo === 'function' ? rumboLargo(gr) : null;
+            deDonde = ` · viento <b>del ${r2 ? esc(r2) + ' ' : ''}(${Math.round(gr)}°)</b>`
+              + (has(vel) ? `, ${Math.round(vel)} km/h` : '')
+              + ` <small>a 10 m, ${esc(typeof nombreDeModelo === 'function'
+                    ? nombreDeModelo('best_match') : 'el que elija Open-Meteo')}</small>`;
+          }
+        } catch { /* sin rumbo: antes eso que uno inventado */ }
+      }
       if (RUMBO_EN_CLIC_MAR && L_.direccion && R.meta?.variables?.includes(L_.direccion)) {
         try {
           const uD = limpiarMarca(this.omUrl(L_.direccion, this.t, R.modelo, R.meta) || '');
@@ -4384,9 +4397,13 @@ const Maps = {
        la URL sucia, la librería la rechaza y luego getValueFromLatLong no
        encuentra el fichero. Ahora barbas() limpia la marca (limpiarMarca) y
        las ráfagas llevan dirección: la de 10 m, que es la que hay. */
-    if (L_?.id === 'gusts') return { u: 'wind_u_component_10m', v: 'wind_v_component_10m' };
-    if (!L_?.v?.startsWith('wind_u_component_')) return null;
-    return { u: L_.v, v: L_.v.replace('wind_u_component_', 'wind_v_component_') };
+    /* Devuelve null SIEMPRE desde el 21-09-2026: la librería no sabe dar
+       la componente norte-sur (ver la medición arriba). Con esto, barbas
+       y motas se apagan solas por el camino que ya tenían, sin tocar su
+       código, y no se dibuja ni una flecha inventada. La función se queda
+       —y no se borra— porque es el ÚNICO sitio donde se decide si se
+       pueden sacar u y v: el día que se traigan de la API, se cambia aquí. */
+    return null;
   },
 
   async barbas() {
@@ -4717,16 +4734,12 @@ const Maps = {
     }
   },
 
-  setBarbas(on) {
-    this.verBarbas = !!on; LS.set('tbarbs', this.verBarbas);
-    this.ui();
-    this.verBarbas ? this.barbas() : this.limpiarBarbas();
-  },
-  setParticulas(on) {
-    this.verParticulas = !!on; LS.set('tpart', this.verParticulas);
-    this.ui();
-    this.verParticulas ? this.particulas() : this.pararParticulas();
-  },
+/* `setBarbas` y `setParticulas`, RETIRADOS el 21-09-2026 junto con sus
+   botones. Un método declarado que no llama nadie es de lo que esta app
+   ya se ha quemado tres veces: parece que algo se puede encender y no se
+   puede. Cuando el rumbo se traiga de la API de pronóstico se escriben de
+   nuevo, que son cinco líneas; lo que importa —`barbas()`,
+   `particulas()`, `animarParticulas()`— sigue entero y sin tocar. */
 
   /* ---------- Controles ---------- */
   ui() {
@@ -4783,8 +4796,10 @@ const Maps = {
       BASEMAPS.map(b => `<button class="mbtn${b.id === this.base ? ' is-on' : ''}" data-tb="${b.id}">${b.name}</button>`).join('') +
       `<button class="mbtn${this.terrain ? ' is-on' : ''}" data-tr="1" title="Sombreado del terreno (Esri/USGS)">Relieve</button>` +
       `<button class="mbtn${this.verValores ? ' is-on' : ''}" data-tv="1" title="Números del modelo sobre las ciudades">Valores</button>` +
-      `<button class="mbtn${this.verBarbas ? ' is-on' : ''}" data-tb2="1" title="Barbas de viento — media ≈ 9 km/h, entera ≈ 19, banderola ≈ 93 (el símbolo se dibuja en nudos por convenio)">Barbas</button>` +
-      `<button class="mbtn${this.verParticulas ? ' is-on' : ''}" data-tpart="1" title="Partículas de viento en movimiento (viento a 10 m del modelo), como Windy y Meteored">Partículas</button>` +
+      /* Barbas y Partículas: botones retirados el 21-09-2026. No podían
+         encender nada desde que se supo que la componente norte-sur no se
+         puede leer, y un botón que no hace nada es de los que hacen dudar
+         de todo lo demás. */
       `<button class="mbtn${this.verRayos && this.rayosProceden() ? ' is-on' : ''}" data-tl="1" title="Descargas detectadas por AEMET en las dos últimas horas publicadas, encima del mapa. Solo en las capas de lluvia, radar, satélite y tormenta">⚡ Rayos</button>` +
       `<span class="msel__k" style="margin-left:12px">Paso</span>` +
       [1,3,6].map(h => `<button class="mbtn${h === this.pasoHoras ? ' is-on' : ''}" data-tp="${h}"

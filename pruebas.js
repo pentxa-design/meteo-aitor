@@ -5581,13 +5581,16 @@ grupo('Las barbas: 20 s → medio segundo, y en km/h (01-09-2026)');
   ok('las barbas se leen en tandas, no una detrás de otra',
      /const TANDA = \d+;/.test(fn) && /await Promise\.all\(puntos\.slice/.test(fn),
      '192 await encadenados costaban 20 s en la capa que decide');
-  /* 15-09-2026 19:30 (portátil): las ráfagas llevan barbas (dirección a 10 m). La causa del
-     «State not found» era la marca de escala en la URL que barbas() pasaba directa a la librería. */
-  ok('las ráfagas llevan barbas: componentes() da u/v de 10 m para gusts y barbas() limpia la marca de la URL',
-     /if \(L_\?\.id === 'gusts'\) return \{ u: 'wind_u_component_10m', v: 'wind_v_component_10m' \};/.test(M)
-     && /const uUrl = limpiarMarca\(this\.omUrl\(C\.u, this\.t, R\.modelo, R\.meta\) \|\| ''\);/.test(M)
-     && /const vUrl = limpiarMarca\(this\.omUrl\(C\.v, this\.t, R\.modelo, R\.meta\) \|\| ''\);/.test(M),
-     'sin la marca limpia la librería rechaza la URL y luego no encuentra el fichero: ni una barba');
+  /* 21-09-2026: NO hay barbas. Medido en producción, la librería devuelve
+     la componente oeste-este cuando se le pide la norte-sur, así que u = v
+     y las 33 barbas de la pantalla apuntaban todas del suroeste. Esta
+     prueba pedía lo contrario: pedía el fallo. */
+  ok('componentes() no promete unas componentes que la librería no sabe dar',
+     (() => { const i = M.indexOf('  componentes(L_) {');
+       const cuerpo = M.slice(i, M.indexOf('\n  },', i));
+       return i > 0 && /\n\s*return null;\s*$/.test(cuerpo)
+           && !/return \{ u:/.test(cuerpo); })(),
+     'con u = v, atan2(-u,-u) da 225° fijo: todas las barbas del suroeste, siempre');
   ok('y las dos componentes de cada barba, a la vez',
      /await Promise\.all\(\[\s*\n\s*OMWeatherMapLayer\.getValueFromLatLong/.test(fn));
   ok('sigue pudiendo abandonar si él cambia de capa o mueve el mapa',
@@ -6112,11 +6115,14 @@ grupo('La revisión de las tres pasadas (31-08-2026, noche)');
        return m[1].split(',').map(x=>x.trim().replace(/'/g,''))
          .every(id => new RegExp("id:'"+id+"'").test(M)); })(),
      'llevaba tres IDs inventados: gfs_global, gfs025, icon_global');
-  /* G2 — el color de las capas de viento es la componente, no el módulo.
-     El servicio NO publica wind_speed (comprobado contra su catálogo). */
-  ok('las capas de viento dicen que las barbas son lo real y el color una componente',
-     /BARBAS y números = viento real/.test(M) && /componente oeste-este/.test(M),
-     'con viento del sur el color pintaba calma bajo un rótulo de km/h');
+  /* G2 — las cuatro capas de componentes, RETIRADAS el 21-09-2026: el
+     servicio no publica wind_speed y la librería no sabe dar la componente
+     norte-sur, así que no había ni fuerza ni rumbo que pintar. */
+  ok('no queda ninguna capa cuyo valor sea una componente de viento',
+     !/\{ id:'wind(10|20|50|100)'/.test(M)
+     && !/BARBAS y números = viento real/.test(M)
+     && /RETIRADAS EL 21-09-2026/.test(M),
+     'una capa que enseña la componente oeste-este bajo un rótulo de km/h engaña, y se retira');
   /* PRECALENTADO DE MODELOS: probado el 31-08 y RETIRADO por medición
      (ARPEGE 10,3 → 20,1 s; ICON-EU 1,2 → 20,7 s). Esta prueba impide que
      vuelva sin números nuevos que lo justifiquen. */
@@ -6971,40 +6977,50 @@ grupo('Los tres del mapa: el clic del viento, el cartel pegado y el «Ahora» (2
 {
   const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
 
-  /* ── 1 · LA CUENTA, CORRIENDO DE VERDAD ──────────────────────────── */
+  /* ── 1 · EL VIENTO DEL MAPA, Y LO QUE SE MIDIÓ ───────────────────
+     MEDIDO el 21-09-2026 en producción, ARPEGE pintando «Viento 50 m»,
+     tres puntos: `wind_u_component_50m` y `wind_v_component_50m`
+     devolvían EL MISMO número (2,04229 · 1,005653 · 2,354973). No es la
+     capa pintando: con Temperatura pasa igual. Y no es que se ignore la
+     URL: en el mismo punto `temperature_2m` da 17,0 y `wind_gusts_10m`
+     da 3,3. Es el par u/v. Con u = v, `atan2(-u,-u)` = 225° fijo: las 33
+     barbas de la pantalla apuntaban todas del suroeste, y el globito
+     ponía `hypot(u,u)`, la componente por 1,41. */
   const vientoDeUV = new Function(
     M.slice(M.indexOf('function vientoDeUV(u, v) {'),
             M.indexOf('\n}', M.indexOf('function vientoDeUV(u, v) {')) + 2)
     + ' return vientoDeUV;')();
 
-  const r = (x, n = 1) => Math.round(x * 10 ** n) / 10 ** n;
-  const sur   = vientoDeUV(0, 11.11);      // sopla hacia el norte: viene del SUR
-  const oeste = vientoDeUV(11.11, 0);      // sopla hacia el este: viene del OESTE
-  ok('con viento del sur el módulo es el viento entero, no la componente',
-     r(sur.ms * 3.6) === 40 && r(sur.desde) === 180,
-     `${r(sur.ms * 3.6)} km/h del ${r(sur.desde)}°`);
-  ok('y del oeste, igual, con su rumbo',
-     r(oeste.ms * 3.6) === 40 && r(oeste.desde) === 270,
-     `${r(oeste.ms * 3.6)} km/h del ${r(oeste.desde)}°`);
-  ok('sin una de las dos componentes no hay viento que dar',
-     vientoDeUV(5, null) === null && vientoDeUV(null, 5) === null
-     && vientoDeUV(5, NaN) === null,
-     'con una sola componente el número sería mentira, y medio dato se lee como dato');
+  ok('dos componentes IGUALES no son un viento: no se dibuja nada',
+     vientoDeUV(2.04229, 2.04229) === null && vientoDeUV(1.005653, 1.005653) === null,
+     'es la firma exacta de lo medido: la librería devolviendo la misma componente dos veces');
+  ok('y con dos componentes de verdad sí sale el viento, con su rumbo',
+     (() => { const a = vientoDeUV(0, 11.11), b = vientoDeUV(11.11, 0);
+       const r = (x, n = 1) => Math.round(x * 10 ** n) / 10 ** n;
+       return a && b && r(a.ms * 3.6) === 40 && r(a.desde) === 180
+                     && r(b.ms * 3.6) === 40 && r(b.desde) === 270; })(),
+     'del sur 180°, del oeste 270°: si esto se mueve, el rumbo del mapa deja de ser el rumbo');
+  ok('sin una de las dos componentes tampoco hay viento',
+     vientoDeUV(5, null) === null && vientoDeUV(null, 5) === null && vientoDeUV(5, NaN) === null);
 
-  /* Y que lo usen LOS DOS sitios donde él lee un número de viento: el
-     globito de la barba y el clic. Escrito dos veces es como nació. */
-  ok('la barba y el clic sacan el viento del MISMO sitio',
-     (M.match(/vientoDeUV\(/g) || []).length >= 3
-     && !/const ms = Math\.hypot\(u, v\);/.test(M)
-     && !/Math\.atan2\(-u, -v\)/.test(M.slice(M.indexOf('async barbas()'))),
-     'la cuenta duplicada es exactamente cómo se crió este fallo');
-  ok('el clic de una capa de barbas lee la componente que falta y convierte a SU unidad',
-     /const esComponente = \/\^wind_u_component_\/\.test\(L_\.v \|\| ''\);/.test(M)
-     && /val = W\.ms \* 3\.6 \* \(typeof wu === 'function' \? wu\(\)\.f : 1\);/.test(M)
-     && /uTxt = \(typeof wu === 'function' \? wu\(\)\.lbl : 'km\/h'\);/.test(M),
-     'el número del clic era la componente oeste-este en m/s rotulada km/h');
-  ok('y si no está la componente norte-sur, dice «sin dato» en vez de dar un número que no es',
-     /no hay viento que dar/.test(M));
+  /* Y las dos puertas cerradas: la de arriba es la segunda, por si alguien
+     reenciende las barbas; la primera es que ni se llega a pedir. */
+  ok('las barbas y las motas no llegan ni a pedir las componentes',
+     (() => { const i = M.indexOf('  componentes(L_) {');
+       const cuerpo = M.slice(i, M.indexOf('\n  },', i));
+       return /\n\s*return null;\s*$/.test(cuerpo); })()
+     && /if \(!this\.verBarbas \|\| !C \|\| !this\.usando\)/.test(M)
+     && /if \(!this\.verParticulas \|\| !C \|\|/.test(M),
+     'el código de barbas y motas se conserva entero para el día que se traiga la rejilla de la API');
+
+  ok('el rumbo del clic sale de la API de pronóstico, no de la tesela, y se dice de quién es',
+     /if \(L_\.rumbo && R\.meta\?\.valid_times\?\.\[this\.t\]\)/.test(M)
+     && /hourly=wind_direction_10m,wind_speed_10m/.test(M)
+     && /a 10 m, \$\{esc\(typeof nombreDeModelo === 'function'/.test(M),
+     'la tesela no sabe dar el rumbo; la API sí, y poner de quién es no cuesta nada');
+  ok('y un rumbo de OTRA hora no vale como rumbo',
+     /if \(has\(gr\) && dif <= 30 \* 60e3\)/.test(M),
+     'el deslizador puede estar en una hora que la API no tenga: antes sin rumbo que con el de otra hora');
 
   /* ── 2 · EL CARTEL SE APAGA ANTES DE LOS CUATRO ATAJOS ───────────── */
   const ap = M.indexOf('  async apply() {');
@@ -8291,11 +8307,14 @@ grupo('Agua precipitable en Lluvia, presión por bandas de 4 hPa y HRES solo de 
 grupo('Barbas sin color de fondo, Isocero de 0 a 5500 con el rojo abajo, tapa cero transparente (14-09-2026)');
 {
   const M = mapsSrc;
-  ok('las capas de barbas no pintan color: el fondo es transparente y mandan las barbas y los números (viento real)',
-     ['wind10', 'wind20', 'wind50', 'wind100'].every(id => new RegExp(`id:'${id}'[^\\n]*escala:'sinColor'`).test(M))
-     && /const sinColor = \{/.test(M) && /\['#000000',0\], \['#000000',0\]/.test(M)
-     && !/El COLOR de fondo es solo la componente oeste-este/.test(M),
-     'pintar la componente oeste-este como si fuera fuerza engañaba, y wind_speed no existe en las teselas');
+  /* 21-09-2026: ya no hay capas de barbas. Ni fuerza (la tesela solo tiene
+     una componente) ni rumbo (la librería no da la otra). Quien quiera la
+     fuerza tiene Ráfagas; quien quiera el rumbo, el clic. */
+  ok('las capas de barbas están retiradas y ninguna capa declara flechas',
+     !['wind10', 'wind20', 'wind50', 'wind100'].some(id => new RegExp(`id:'${id}'`).test(M))
+     && !/arrows:\s*true/.test(M.replace(/\/\*[\s\S]*?\*\//g, ''))   // en código, no en el comentario que lo cuenta
+     && /rumbo: true/.test(M),
+     'las 33 barbas de la pantalla apuntaban todas del suroeste: medido el 21-09-2026');
   ok('el Isocero va de 0 a 5500 m con el rojo en lo bajo (hielo cerca de la torre) y lo alto pálido',
      /id:'frz'[^\n]*escala:'isocero'/.test(M) && /const izm = \[0, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500\];/.test(M)
      && /const izc = \[\['#7a0020',1\], \['#e11400',1\]/.test(M) && /const isocero = \{/.test(M),
