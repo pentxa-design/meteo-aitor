@@ -476,7 +476,21 @@ async function unSitio(s, previo = null, reloj = null) {
         if (!v) continue;
         for (let i = 0; i < H_.time.length; i++) {
           const t = H_.time[i];
-          if (t.slice(0, 10) !== reloj.dia || Number(t.slice(11, 13)) < reloj.h) continue;
+          /* ── Y LA MEDIANOCHE NO CORTA EL OJO (22-09-2026) ────────
+             Esto era `t.slice(0,10) !== reloj.dia`, o sea SOLO horas de
+             hoy. A las 21:00 miraba tres horas; a las 23:00, UNA. Una
+             línea nocturna armándose para las 02:00 —CAPE 600, rachas de
+             62, 0,2 mm/h, ninguno cruzando listón de aviso— no dejaba
+             rastro: el ojo no la veía por ser de mañana, así que el día
+             seguía VERDE y con h0=23 la pasada siguiente caía a las
+             01:55. Lo de las 02:00 se ve cuando ya está encima.
+
+             Todo el resto del fichero ya cruza la medianoche —`hastaManana`
+             en los inminentes, `rojo` con `claveManana` desde las 21:00—
+             y el ojo, que es lo ÚNICO que sube la cadencia antes de que
+             nada salte, se quedó atado al día. Ahora es una ventana que
+             empieza en esta hora y sigue de largo. */
+          if (t < reloj.desde) continue;
           const x = v[i];
           if (x == null) continue;
           // El agua va con decimal: su escala empieza en 0,3 mm/h.
@@ -988,7 +1002,27 @@ export default async function handler(req, res) {
      tic que supera 175 min es justo el de las 3 h en punto. Con 180 se
      iría al siguiente y saldrían pasadas de 3 h 15. Lo mismo con el 55
      de la tarde: el tic de la hora en punto. */
-  const tardeAquí = h0 >= 11 && h0 < 22;
+  /* ── EL SUELO LO MANDA EL HUECO, NO EL TIC (22-09-2026) ────────────
+     MEDIDO en producción la misma noche que se puso: la última pasada
+     fue a las 21:00:51 y a las 22:21 no había vuelto a pasar. La
+     siguiente caía a las 23:56. **Dos horas y cincuenta y seis minutos
+     de silencio**, empezados dentro de la franja que él pidió proteger.
+
+     Por qué: `h0 >= 11 && h0 < 22` se miraba en el TIC. A las 21:15,
+     21:30 y 21:45 el listón era 55 y el hueco (15, 30, 45) no llegaba. A
+     las 22:00 el tic entra con h0=22, el listón salta a 175 de golpe, y
+     el hueco de 60 min se queda corto. Y así hasta las 23:56.
+
+     O sea que la cadencia de tarde moría a las 21:00, una hora antes de
+     lo prometido, y se llevaba por delante el anochecer —que en julio
+     aquí es a las 21:45— justo cuando él trabaja de noche.
+
+     Ahora el suelo vale si la franja protegida la toca EL TIC **o LA
+     ÚLTIMA PASADA**: mientras el hueco que se está abriendo arranque
+     dentro de las 11-22, manda el 55. */
+  const enFranja = h => h >= 11 && h < 22;
+  const hPrevia = antes?.cuando ? new Date(antes.cuando).getHours() : null;
+  const tardeAquí = enFranja(h0) || (hPrevia !== null && enFranja(hPrevia));
   const cadaMin = { verde: tardeAquí ? 55 : 175, ambar: 25, rojo: 10 }[nivel];
   const ojeadaAMano = req.query?.mirar === '1' || req.body?.mirar === true;
   if (!ojeadaAMano && !ventanaDelParte && huecoPrevio !== null && huecoPrevio < cadaMin) {
@@ -1006,7 +1040,8 @@ export default async function handler(req, res) {
   try { tandaC = await pedirTanda(sitios, 'nearest'); } catch { tandaC = null; }
 
   const datos = await Promise.all(sitios.map((s, i) =>
-    unSitio(s, { H: tandaL?.[i] || null, C: tandaC?.[i] || null }, { dia: claveHoy, h: h0 })
+    unSitio(s, { H: tandaL?.[i] || null, C: tandaC?.[i] || null },
+            { desde: `${claveHoy}T${String(h0).padStart(2, '0')}` })
       .then(x => ({ ...x, ok: true }))
       .catch(e => ({ n: s.n, critico: !!s.critico, ok: false, fallo: String(e.message || e) }))));
 
@@ -1272,12 +1307,46 @@ export default async function handler(req, res) {
 
      El origen del tropiezo, además, se arregló el mismo día: eran cuarenta
      peticiones a la vez. Ver la nota de `pedirTanda`. */
+  /* ── DOS ARREGLOS DEL 22-09-2026, LOS DOS DE AYER MISMO ────────────
+
+     UNO. EL CRÍTICO HABÍA PERDIDO SU PUERTA. Ayer esto era
+     `fallos.some(f => f.critico) || fallos.length >= 4`, y al meter el
+     filtro de ruido quedó `fallos.length >= 4 && huecoImporta`: el
+     crítico pasó a ser una de las tres razones DENTRO de la Y. Con
+     MATIENA o SANTAMAÑA caídos ellos solos —`fallos.length = 1`— no
+     sonaba nada, y el comentario de aquí arriba seguía prometiendo por
+     escrito que un crítico suena. Son los dos únicos marcados así, y
+     SANTAMAÑA está ahí porque él dijo «es un crítico muy importante que
+     tenemos». Encima, desde que los veinte van en una tanda, el fallo
+     SUELTO es el caso frecuente y la caída en masa el raro: el cambio
+     desactivó el aviso justo en lo que pasa a menudo.
+
+     DOS. «¿ESTÁ EL DÍA EN VERDE?» MIRABA LA PASADA ANTERIOR. `nivel` se
+     calcula ANTES de pedir los datos, solo con el estado guardado. O sea
+     que es un indicador retrasado: el primer momento en que un día se
+     tuerce es justo el momento en que el hueco se calla. Escenario: se
+     caen 6 de 20, entre ellos Sollube y Oiz, y los 14 que sí contestan
+     traen CAPE 900 con tapa 40 para esta tarde. Le sonaba «se está
+     armando en 8» y NI UNA PALABRA de los seis que no se miraron. Eso es
+     literal el «callarse un hueco es afirmar que está tranquilo».
+     Ahora también cuenta lo que se acaba de ver en ESTA pasada. */
   const seRepite = fallos.some(f => (antes?.noMirados || []).includes(f.n));
-  const huecoImporta = fallos.some(f => f.critico) || nivel !== 'verde' || seRepite;
-  if (fallos.length >= 4 && huecoImporta) {
-    const porQue = fallos.some(f => f.critico) ? ' Hay alguno de los que no pueden faltar.'
+  const hayCritico = fallos.some(f => f.critico);
+  const loQueAcaboDeVer = buenos.some(d =>
+    (d.dias && (d.dias[claveHoy] || d.dias[claveManana]))
+    || (d.racha && (d.racha[claveHoy] || d.racha[claveManana]))
+    || (d.agua && (d.agua[claveHoy] || d.agua[claveManana]))
+    || (d.ojo && ((d.ojo.cape ?? 0) >= CAPE_OJO || (d.ojo.racha ?? 0) >= RACHA_OJO
+               || (d.ojo.agua ?? 0) >= AGUA_OJO)));
+  /* Sin poder leer el estado no se puede comparar, y ahí el hueco pesa
+     MÁS, no menos: `nivel` valdría verde por defecto y callaría. */
+  const aCiegas = !antes;
+  const huecoImporta = nivel !== 'verde' || seRepite || loQueAcaboDeVer || aCiegas;
+  if (hayCritico || (fallos.length >= 4 && huecoImporta)) {
+    const porQue = hayCritico ? ' Hay alguno de los que no pueden faltar.'
                  : seRepite ? ' No es un tropiezo: ya no se pudieron mirar en la pasada anterior.'
-                 : ' Y hoy hay algo apuntado, así que el hueco pesa.';
+                 : aCiegas ? ' Y encima no he podido leer lo de la pasada anterior para comparar.'
+                 : ' Y hay algo apuntado, así que el hueco pesa.';
     avisos.push({
       titulo: `⚠ No he podido mirar ${fallos.length} emplazamiento(s)`,
       url: './?v=torres',

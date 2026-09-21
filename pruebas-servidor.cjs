@@ -1105,7 +1105,7 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
      && /pedirTanda\(sitios, 'land'\)/.test(V) && /pedirTanda\(sitios, 'nearest'\)/.test(V),
      'eran cuarenta peticiones a la vez y se caían siete de veinte');
   ok('y si la tanda falla, cada sitio vuelve a pedir lo suyo: un atajo no puede dejarle sin vigilante',
-     /unSitio\(s, \{ H: tandaL\?\.\[i\] \|\| null, C: tandaC\?\.\[i\] \|\| null \}, \{ dia: claveHoy, h: h0 \}\)/.test(V)
+     /unSitio\(s, \{ H: tandaL\?\.\[i\] \|\| null, C: tandaC\?\.\[i\] \|\| null \},\s*\n\s*\{ desde: `\$\{claveHoy\}T\$\{String\(h0\)\.padStart\(2, '0'\)\}` \}\)/.test(V)
      && /const H = previo\?\.H\?\.time \? previo\.H : await pide\('land'\);/.test(V)
      && /if \(!C\) \{ try \{ C = await pide\('nearest'\); \} catch \{ C = null; \} \}/.test(V));
 
@@ -1126,32 +1126,51 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
        const capeMin = n('const CAPE_MIN = (\\d+)'), rachaTope = n('const RACHA_TOPE = (\\d+)');
        return cape > 0 && cape < capeMin && racha > 0 && racha < rachaTope; })(),
      'si el ojo mirase el mismo número que el aviso, no serviría de nada');
-  ok('en verde, por la tarde nunca se pasa más de una hora',
-     /const tardeAquí = h0 >= 11 && h0 < 22;/.test(V)
+  /* 22-09: el suelo lo manda el HUECO, no el tic. MEDIDO en producción la
+     misma noche: última pasada 21:00:51, a las 22:21 sin volver a pasar, y
+     la siguiente caía a las 23:56. Dos horas y 56 minutos de silencio
+     empezados dentro de la franja que él pidió proteger. */
+  ok('en verde, por la tarde nunca se pasa más de una hora, y el suelo lo manda el hueco',
+     /const enFranja = h => h >= 11 && h < 22;/.test(V)
+     && /const hPrevia = antes\?\.cuando \? new Date\(antes\.cuando\)\.getHours\(\) : null;/.test(V)
+     && /const tardeAquí = enFranja\(h0\) \|\| \(hPrevia !== null && enFranja\(hPrevia\)\);/.test(V)
      && /const cadaMin = \{ verde: tardeAquí \? 55 : 175, ambar: 25, rojo: 10 \}\[nivel\];/.test(V),
-     'la galerna la infravaloran los modelos, y la tarde es cuando un día bueno se tuerce aquí');
+     'mirado solo en el tic, la cadencia de tarde moría a las 21:00, una hora antes de lo prometido');
   ok('lo que se está armando se GUARDA, que si no la pasada siguiente no lo sabe',
      /ojo: buenos\.reduce\(\(m, d\) => \(\{/.test(V)
      && /cape:\s+Math\.max\(m\.cape,\s+d\.ojo\?\.cape\s+\|\| 0\)/.test(V)
      && /ojo: e\.ojo \?\? null/.test(V),
      'sin guardarlo, `seArma` sería siempre falso y la galerna nos pilla mirando cada tres horas');
-  ok('y el ojo mira solo las horas que QUEDAN, no el día entero',
-     /if \(t\.slice\(0, 10\) !== reloj\.dia \|\| Number\(t\.slice\(11, 13\)\) < reloj\.h\) continue;/.test(V)
-     && /unSitio\(s, \{ H: tandaL\?\.\[i\] \|\| null, C: tandaC\?\.\[i\] \|\| null \}, \{ dia: claveHoy, h: h0 \}\)/.test(V),
+  /* 22-09: y la medianoche no lo corta. Atado al día, a las 23:00 el ojo
+     miraba UNA hora, y una línea nocturna armándose para las 02:00 no
+     dejaba rastro: verde, y la pasada siguiente a las 01:55. */
+  ok('el ojo mira desde esta hora hacia delante, y la medianoche no lo corta',
+     /if \(t < reloj\.desde\) continue;/.test(V)
+     && !/t\.slice\(0, 10\) !== reloj\.dia/.test(V)
+     && /\{ desde: `\$\{claveHoy\}T\$\{String\(h0\)\.padStart\(2, '0'\)\}` \}/.test(V),
      'una tormenta de esta mañana ya pasada no puede tener al vigilante en ámbar toda la noche');
 
   ok('el aviso de «no he podido mirar» solo suena si puede cambiar algo',
-     /const huecoImporta = fallos\.some\(f => f\.critico\) \|\| nivel !== 'verde' \|\| seRepite;/.test(V)
-     && /const seRepite = fallos\.some\(f => \(antes\?\.noMirados \|\| \[\]\)\.includes\(f\.n\)\);/.test(V)
-     && /if \(fallos\.length >= 4 && huecoImporta\)/.test(V),
+     /const huecoImporta = nivel !== 'verde' \|\| seRepite \|\| loQueAcaboDeVer \|\| aCiegas;/.test(V)
+     && /const seRepite = fallos\.some\(f => \(antes\?\.noMirados \|\| \[\]\)\.includes\(f\.n\)\);/.test(V),
      'suyo, 21-09: «si dan bueno y no dan nada malo, ni hace falta»');
+  /* 22-09, dos agujeros de ayer mismo. */
+  ok('pero un CRÍTICO caído suena SIEMPRE, aunque sea él solo',
+     /if \(hayCritico \|\| \(fallos\.length >= 4 && huecoImporta\)\)/.test(V)
+     && /const hayCritico = fallos\.some\(f => f\.critico\);/.test(V),
+     'MATIENA y SANTAMAÑA son los dos únicos críticos, y con los 20 en una tanda el fallo SUELTO es lo frecuente');
+  ok('y el hueco mira lo que se acaba de ver, no solo la pasada anterior',
+     /const loQueAcaboDeVer = buenos\.some\(d =>/.test(V)
+     && /const aCiegas = !antes;/.test(V),
+     '`nivel` se calcula ANTES de pedir datos: el momento en que el día se tuerce es justo cuando el hueco se callaba');
   ok('pero el hueco se sigue apuntando y se sigue viendo en la pantalla',
      /noMirados: fallos\.map\(f => f\.n\)\.slice\(0, 8\)/.test(V),
      'callarse un hueco es afirmar que está tranquilo, y eso no se hace');
   ok('y cuando suena, dice POR QUÉ importa',
      /Hay alguno de los que no pueden faltar/.test(V)
      && /ya no se pudieron mirar en la pasada anterior/.test(V)
-     && /hoy hay algo apuntado, así que el hueco pesa/.test(V));
+     && /no he podido leer lo de la pasada anterior para comparar/.test(V)
+     && /hay algo apuntado, así que el hueco pesa/.test(V));
 }
 
 console.log(`\n  ${bien} bien, ${mal} mal`);
