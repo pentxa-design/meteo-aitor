@@ -269,16 +269,36 @@ const TMODELS = [
 /** Orden en que las capas de mar buscan modelo: el fino de Europa primero. */
 const MODELOS_OLAS = ['dwd_ewam', 'ecmwf_wam025', 'ncep_gfswave016'];
 
-/* ── EL RUMBO DEL CLIC DE MAR, APAGADO (20-09-2026) ─────────────────────
-   Medido en el Chrome del iMac (EWAM, «Altura de ola», dom 20 a las 11:00):
-   el clic decía «1,8 m · del norte (2°)» en 43,60/-2,90 Y en 43,90/-3,50,
-   mientras la API marina del mismo modelo y hora daba 318° y 319°
-   (noroeste) en esos dos puntos. La altura cuadra; el rumbo sale siempre
-   ~2°: lo que devuelve getValueFromLatLong sobre la variable hermana no
-   son grados (o no es la tesela que se cree). Hasta que se arregle
-   (opción B, en el MacBook, TRASPASO §27), sin rumbo en el clic: mejor
-   sin él que con uno inventado. La pestaña Mar no usa este camino. */
-const RUMBO_EN_CLIC_MAR = false;
+/* ══════════════════════════════════════════════════════════════════════
+   LO QUE ESTA LIBRERÍA NO SABE DAR, EN UN SOLO SITIO
+   ──────────────────────────────────────────────────────────────────────
+   El 20-09-2026 se apagó el rumbo del clic de las capas de Mar con un
+   interruptor, `RUMBO_EN_CLIC_MAR = false`, porque el número no cuadraba:
+   «1,8 m · del norte (2°)» en dos puntos donde la API marina daba 318° y
+   319°. No se sabía POR QUÉ, así que se puso un interruptor y a otra cosa.
+
+   El 21-09-2026 se midió, y la causa no era del mar: era de toda la
+   lectura punto a punto. `OMWeatherMapLayer.getValueFromLatLong` guarda
+   UNA entrada por pareja de variables y devuelve la primera cuando se le
+   pide la segunda. Pedir `wave_direction` devolvía la ALTURA (1,84 → «2°»
+   al redondear) y pedir `wind_v_component_50m` devolvía la componente
+   oeste-este, la misma que la u, en los tres puntos que se probaron.
+
+   Un interruptor tapa un caso; esto es una CLASE. Así que en vez del
+   interruptor, la regla: **estas familias de variables no se pueden leer
+   por ahí**, y quien vaya a leer una tiene que preguntarlo antes. Si
+   algún día la librería lo arregla, se toca aquí y en ningún otro sitio.
+
+   Lo que sí se lee bien, medido el mismo día en el mismo punto:
+   `temperature_2m` 17,0 · `wind_gusts_10m` 3,3 · `wave_period` 10,25.
+   O sea que no es que ignore la URL: es la pareja.
+   ══════════════════════════════════════════════════════════════════════ */
+/* El `_10m` del final también cuenta: `wind_direction_10m` es una
+   dirección igual que `wave_direction`, y este servicio de teselas ni
+   siquiera la publica —el viento va en componentes u/v—. Rechazarla aquí
+   es más barato que descubrirlo con un número raro en pantalla. */
+const NO_LAS_SABE_DAR = /(?:_v_component_\d+m|_direction(?:_\d+m)?)$/;
+const puedeLeerse = v => !!v && !NO_LAS_SABE_DAR.test(v);
 
 
 /* `v` es el nombre EXACTO de la variable en el servicio de teselas.
@@ -4330,7 +4350,7 @@ const Maps = {
           }
         } catch { /* sin rumbo: antes eso que uno inventado */ }
       }
-      if (RUMBO_EN_CLIC_MAR && L_.direccion && R.meta?.variables?.includes(L_.direccion)) {
+      if (puedeLeerse(L_.direccion) && R.meta?.variables?.includes(L_.direccion)) {
         try {
           const uD = limpiarMarca(this.omUrl(L_.direccion, this.t, R.modelo, R.meta) || '');
           const leerD = async () => (await OMWeatherMapLayer.getValueFromLatLong(lngLat.lat, lngLat.lng, uD))?.value;
@@ -4412,7 +4432,7 @@ const Maps = {
     if (!cont) return;
     const L_ = TLAYERS.find(l => l.id === this.layer);
     const C = this.componentes(L_);
-    if (!this.verBarbas || !C || !this.usando) { cont.innerHTML = ''; return; }
+    if (!this.verBarbas || !C || !puedeLeerse(C.v) || !this.usando) { cont.innerHTML = ''; return; }
 
     const R = this.usando;
     /* Sin la marca de escala: estas URL van DIRECTAS a la librería (ver componentes). */
@@ -4527,7 +4547,7 @@ const Maps = {
     }
     const L_ = TLAYERS.find(l => l.id === this.layer);
     const C = this.componentes(L_);
-    if (!this.verParticulas || !C || !this.usando || !this.map || document.hidden) { this.pararParticulas(); return; }
+    if (!this.verParticulas || !C || !puedeLeerse(C.v) || !this.usando || !this.map || document.hidden) { this.pararParticulas(); return; }
     const R = this.usando;
     const uUrl = limpiarMarca(this.omUrl(C.u, this.t, R.modelo, R.meta) || '');
     const vUrl = limpiarMarca(this.omUrl(C.v, this.t, R.modelo, R.meta) || '');

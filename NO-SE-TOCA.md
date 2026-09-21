@@ -241,6 +241,28 @@ estaba escrito a unas líneas, en la función de al lado, y no se aplicó aquí.
 | **Dos componentes iguales no son un viento** | Que se dibuje un rumbo con la misma componente leída dos veces. MEDIDO el 21-09-2026: la librería de teselas devuelve la componente oeste-este cuando se le pide la norte-sur, así que u = v y las 33 barbas de la pantalla apuntaban todas del suroeste (225° fijo), con el globito poniendo la componente por 1,41. Se retiraron las cuatro capas de componentes, las barbas y las motas; el rumbo lo da ahora el clic, leído de la API de pronóstico. | `dos componentes IGUALES no son un viento: no se dibuja nada` |
 | **«Ahora» es del modelo que pinta** | Que el botón Ahora calcule el índice en la lista del modelo elegido y lo aplique a la del que pinta. Todo lo demás del deslizador ya iba así. | `nowIndex() va por el modelo que PINTA, como el resto del deslizador` |
 
+### Un número que da una librería ajena no es un dato hasta que se contrasta
+
+**El fallo que más caro salió, y el que peor pinta tenía: nadie lo había
+comprobado nunca contra nada.** Las barbas de viento del mapa llevaban desde
+que existen apuntando TODAS del suroeste, y el número de su globito no era el
+viento. Ninguna prueba lo cazó porque todas miraban el CÓDIGO —que estaba bien
+escrito— y ninguna miraba el NÚMERO.
+
+Lo que lo destapó fue medirlo: pedir `wind_v_component_50m` en tres puntos y
+ver que devolvía lo mismo que `wind_u_component_50m`. Y lo mismo con las olas:
+`wave_direction` devolvía la altura.
+
+| Guardia | Qué impide | La prueba que la guarda |
+|---|---|---|
+| **Lo que la librería no sabe dar** | Que alguien vuelva a leer una dirección o una componente v de la tesela. `puedeLeerse()` es el único dueño de esa lista, la prueba la EJECUTA con los nombres reales, y toda capa que declare una `direccion` entra sola. Sustituye al interruptor `RUMBO_EN_CLIC_MAR`, que tapaba el caso del mar y dejaba el resto abierto. | `las que la librería NO sabe dar se rechazan` |
+
+**Y la lección, que vale para lo que venga:** cuando un número sale de una
+librería o de una API que no es nuestra, hay que contrastarlo contra OTRA
+fuente antes de enseñarlo. En el mapa eso se hace pidiendo el mismo punto y la
+misma hora a la API de pronóstico y viendo si cuadran. Cuesta cinco minutos y
+habría ahorrado semanas.
+
 Y el 75 de la tapa: `TAPA_ROMPE` se creó el 20-09 «porque el 75 vivía escrito a
 pelo en ocho sitios»… y se quedó usado en UNO. La guardia de un solo dueño lo
 lleva en el nombre y no lo miraba. Ahora sí, y solo sobre código, no sobre

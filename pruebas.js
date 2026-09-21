@@ -7009,8 +7009,8 @@ grupo('Los tres del mapa: el clic del viento, el cartel pegado y el «Ahora» (2
      (() => { const i = M.indexOf('  componentes(L_) {');
        const cuerpo = M.slice(i, M.indexOf('\n  },', i));
        return /\n\s*return null;\s*$/.test(cuerpo); })()
-     && /if \(!this\.verBarbas \|\| !C \|\| !this\.usando\)/.test(M)
-     && /if \(!this\.verParticulas \|\| !C \|\|/.test(M),
+     && /if \(!this\.verBarbas \|\| !C \|\| !puedeLeerse\(C\.v\) \|\| !this\.usando\)/.test(M)
+     && /if \(!this\.verParticulas \|\| !C \|\| !puedeLeerse\(C\.v\) \|\|/.test(M),
      'el código de barbas y motas se conserva entero para el día que se traiga la rejilla de la API');
 
   ok('el rumbo del clic sale de la API de pronóstico, no de la tesela, y se dice de quién es',
@@ -8595,13 +8595,53 @@ grupo('El modelo de olas de 9 km (ecmwf_wam) NO entra en el mapa: medido que rev
    puntos. La altura cuadra; el rumbo sale siempre ~2°. Un rumbo inventado en la
    víspera de la prueba de fuego no se publica: mejor sin él (opción A). La lectura
    buena (opción B) queda para el MacBook, TRASPASO §27. */
-grupo('El rumbo del clic de Mar está apagado: medido 2° donde la API decía 318° (20-09-2026)');
+grupo('Lo que esta librería NO sabe dar, en un solo sitio (21-09-2026)');
 {
   const M = mapsSrc;
-  ok('la lectura del rumbo en el clic va detrás de un interruptor, y el interruptor está en false',
-     /const RUMBO_EN_CLIC_MAR = false;/.test(M)
-     && /if \(RUMBO_EN_CLIC_MAR && L_\.direccion && R\.meta\?\.variables\?\.includes\(L_\.direccion\)\) \{/.test(M),
-     'con el rumbo puesto, el clic decía «del norte (2°)» con la ola viniendo del noroeste');
+  /* ── DE UN INTERRUPTOR A UNA REGLA ────────────────────────────────
+     El 20-09 se apagó el rumbo del clic de Mar con un interruptor, porque
+     el número no cuadraba y no se sabía por qué. El 21-09 se midió: no era
+     del mar, era de toda la lectura punto a punto. `getValueFromLatLong`
+     guarda UNA entrada por pareja de variables y devuelve la primera
+     cuando se le pide la segunda:
+
+         wave_direction ........ devolvía 1,84 = la ALTURA («2°» al redondear)
+         wind_v_component_50m .. devolvía la componente u, en tres puntos
+
+     Un interruptor tapa un caso; esto es una clase. Por eso ahora hay una
+     regla, `puedeLeerse()`, y la prueba la EJECUTA con los nombres de
+     verdad en vez de mirar si el texto está escrito. */
+  const puedeLeerse = new Function(
+    M.slice(M.indexOf('const NO_LAS_SABE_DAR = '),
+            M.indexOf('\n', M.indexOf('const puedeLeerse = ')))
+    + '; return puedeLeerse;')();
+
+  ok('las que la librería NO sabe dar se rechazan',
+     !puedeLeerse('wind_v_component_50m') && !puedeLeerse('wind_v_component_10m')
+     && !puedeLeerse('wave_direction') && !puedeLeerse('swell_wave_direction')
+     && !puedeLeerse('wind_wave_direction') && !puedeLeerse('wind_direction_10m'),
+     'pedirlas devuelve la variable HERMANA sin avisar: la altura por el rumbo, la u por la v');
+  ok('y las que sí sabe dar pasan',
+     puedeLeerse('wind_gusts_10m') && puedeLeerse('temperature_2m')
+     && puedeLeerse('wave_period') && puedeLeerse('wave_height')
+     && puedeLeerse('wind_u_component_50m') && puedeLeerse('cape'),
+     'medido el 21-09 en el mismo punto: 3,3 · 17,0 · 10,25, cada uno el suyo');
+  ok('sin nombre de variable tampoco se lee', !puedeLeerse('') && !puedeLeerse(null));
+
+  /* Y toda capa que declare una `direccion` tiene que caer del lado de las
+     rechazadas: si mañana alguien añade una capa de mar nueva, entra sola. */
+  const dirs = [...M.matchAll(/direccion:\s*'([a-z0-9_]+)'/g)].map(x => x[1]);
+  ok('se han encontrado capas con dirección que revisar', dirs.length >= 3, `${dirs.length}`);
+  ok('ninguna dirección declarada en el mapa se puede leer de la tesela',
+     dirs.every(v => !puedeLeerse(v)), dirs.filter(v => puedeLeerse(v)).join(', '));
+
+  /* Y los tres sitios que iban a leerlas preguntan antes. */
+  ok('el clic, las barbas y las motas preguntan antes de leer',
+     /if \(puedeLeerse\(L_\.direccion\) && R\.meta\?\.variables\?\.includes\(L_\.direccion\)\) \{/.test(M)
+     && /if \(!this\.verBarbas \|\| !C \|\| !puedeLeerse\(C\.v\) \|\| !this\.usando\)/.test(M)
+     && /if \(!this\.verParticulas \|\| !C \|\| !puedeLeerse\(C\.v\) \|\|/.test(M)
+     && !/RUMBO_EN_CLIC_MAR/.test(M.replace(/\/\*[\s\S]*?\*\//g, '')),   // en código, no en la nota que lo cuenta
+     'el interruptor tapaba el caso del mar y dejaba el resto abierto');
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -8919,9 +8959,12 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /const ESCALAS_SUAVES = new Set\(\[[^\]]*'ola', 'periodo',[^\]]*\]\);/.test(M)
      && !/const INTERPOLACION_SUAVE = new Set\(\[[^\]]*'ola'/.test(M)
      && /ola:\s+\[0, 30, 'm'\]/.test(M) && /periodo: \[0, 30, 's'\]/.test(M));
-  /* 20-09-2026: la lectura sigue escrita pero detrás de RUMBO_EN_CLIC_MAR (false): medido «del norte (2°)» donde la API daba 318°. Ver el grupo «El rumbo del clic de Mar está apagado». */
-  ok('el clic en una capa de mar tiene escrita la lectura de dónde viene la ola (mismo modelo y hora, sin inventar si falta), hoy apagada por el interruptor',
-     /if \(RUMBO_EN_CLIC_MAR && L_\.direccion && R\.meta\?\.variables\?\.includes\(L_\.direccion\)\)/.test(M)
+  /* 21-09-2026: la lectura sigue escrita, pero ya no detrás de un interruptor
+     sino detrás de la REGLA: `puedeLeerse()` rechaza las direcciones porque
+     la librería devuelve la variable hermana. Ver el grupo «Lo que esta
+     librería NO sabe dar». */
+  ok('el clic en una capa de mar tiene escrita la lectura de dónde viene la ola (mismo modelo y hora, sin inventar si falta), hoy cerrada por la regla',
+     /if \(puedeLeerse\(L_\.direccion\) && R\.meta\?\.variables\?\.includes\(L_\.direccion\)\)/.test(M)
      && /deDonde = ` · del \$\{r \? esc\(r\) \+ ' ' : ''\}\(\$\{Math\.round\(d\)\}°\)`;/.test(M)
      && /if \(!!L_\.modelos !== !!this\.usando\.mar\) return;/.test(M)
      && /this\.model !== 'ecmwf_ifs' \|\| !this\.usando \|\| this\.usando\.mar\) return;/.test(M));
