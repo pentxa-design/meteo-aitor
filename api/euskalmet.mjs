@@ -356,6 +356,24 @@ async function leerDeVerdad(est, jwt, notas) {
       temperatura: tem ? Math.round(tem.valor * 10) / 10 : null,
       humedad: hum ? Math.round(hum.valor) : null,
       lluvia: llu ? Math.round(llu.valor * 10) / 10 : null,
+      /* ── Y CUÁNTO RATO CUBRE ESA LLUVIA (21-09-2026) ───────────────
+         Euskalmet sirve esta serie en huecos de DIEZ MINUTOS, y aquí se
+         cogía el último hueco con valor. Eso NO es lo mismo que el
+         milímetro por hora del modelo, ni que el `prec` de AEMET, que es
+         la lluvia de la última hora entera — y los tres se metían en el
+         mismo saco y en el mismo marcador.
+
+         El efecto era sistemático y siempre en la misma dirección: el
+         aparato «medía» una fracción de lo que decía el modelo, así que
+         en el recuento de aciertos los modelos salían exagerados en
+         lluvia, que es SU prioridad número uno.
+
+         No se toca el número: se dice el rato que cubre, y quien compare
+         que mire esto antes. Mientras no esté medido contra un día de
+         agua de verdad cuál de las dos cosas publica Euskalmet —el hueco
+         de diez minutos o el acumulado de la hora—, esta lluvia NO
+         puntúa a nadie. Un dato que no se sabe comparar no se compara. */
+      lluviaMin: llu ? (llu.i + 1) * 10 : null,
       /* Euskalmet mide la racha a la altura que diga la ficha —20 m en el
          Oiz— y AEMET siempre a 10. No es un detalle: a 20 sopla más, y
          mezclarlas sin decirlo sería comparar peras con manzanas justo

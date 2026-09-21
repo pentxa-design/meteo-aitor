@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.21-0501';
+const BUILD = '2026.09.21-0531';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -1192,7 +1192,7 @@ function chipsOtrosHora(h, parte) {
     if (nb) out.push(nb.trim());
   }
   if (parte === 'tormenta') {
-    const rompe = has(h.cape) && h.cape >= CAPE_COMBINACION && has(h.cin) && h.cin < 75;
+    const rompe = has(h.cape) && h.cape >= CAPE_COMBINACION && has(h.cin) && h.cin < TAPA_ROMPE;
     const t = rompe ? null : tormentaQueNoVesTu(h, h.sitio || null);
     if (t) out.push(`<span class="nd__ojo">⚠ ${esc(t.quien)} ve tormenta: CAPE ${Math.round(t.cape)} · tapa ${Math.round(t.cin)}</span>`);
   }
@@ -1805,7 +1805,14 @@ async function contrastarConModelos(estaciones) {
       if (has(x.lluvia)) {
         const agua = COMPARAR.map(m => ({ n: m.name, v: H[`precipitation_${m.om}`]?.[i] }))
                              .filter(f => has(f.v));
-        if (agua.length >= 2) paraElMarcador.push({
+        /* ── LA LLUVIA DE EUSKALMET NO PUNTÚA (21-09-2026) ──────────
+           Viene en huecos de diez minutos y se estaba comparando contra
+           el milímetro de la HORA del modelo. El aparato salía siempre
+           corto, así que el marcador castigaba a todos los modelos en
+           lluvia —su prioridad número uno— por una cuenta que no era.
+           Se sigue enseñando en pantalla, con su hora; lo que no hace es
+           decidir qué modelo acierta. Ver `lluviaMin` en api/euskalmet.mjs. */
+        if (agua.length >= 2 && !esDeDiezMinutos(x)) paraElMarcador.push({
           estacion: x.nombre, altitud: x.altitud, hora: iso,
           red: x.red || x.fuente || 'sin red',
           magnitud: 'lluvia',
@@ -1991,7 +1998,7 @@ function tormentaQueNoVesTu(h, place = null) {
     if (!has(cape) || !has(cin)) continue;
     const auto = m.om === 'best_match';
     // A igual gasolina, antes un modelo con nombre que el «Automático», que es una mezcla.
-    if (cape >= CAPE_COMBINACION && cin < 75
+    if (cape >= CAPE_COMBINACION && cin < TAPA_ROMPE
         && (!peor || cape > peor.cape || (cape === peor.cape && peor.auto && !auto)))
       peor = { quien: m.name, cape, cin, auto };
   }
@@ -2836,12 +2843,12 @@ function avisoCeldaLejos(f, ahora = Date.now()) {
           kilómetros. Así que si al lado hay gasolina de sobra y aquí
           TRES VECES MENOS, se dice — y se dice **sin afirmar que vaya a
           romper**, porque sin la tapa eso no se puede saber. */
-    const combinaAlLado = has(cin) && cin < 75;
-    const combinaAqui   = has(capeT) && has(cinT) && capeT >= CAPE_COMBINACION && cinT < 75;
+    const combinaAlLado = has(cin) && cin < TAPA_ROMPE;
+    const combinaAqui   = has(capeT) && has(cinT) && capeT >= CAPE_COMBINACION && cinT < TAPA_ROMPE;
     /* Y el «solo gasolina» vale ÚNICAMENTE cuando la tapa de al lado no se
        sabe. Si se sabe y está PUESTA, no hay riesgo y avisar sería ruido —
        lo cazó una prueba anterior al meter este segundo motivo. */
-    const tapaPuestaAlLado = has(cin) && cin >= 75;
+    const tapaPuestaAlLado = has(cin) && cin >= TAPA_ROMPE;
     const muchoMas = has(capeT) && capeT < CAPE_COMBINACION
                   && cape >= capeT * 3 && !tapaPuestaAlLado;
 
@@ -4909,7 +4916,7 @@ function renderStorm(c) {
   const tonoLi   = !has(c.li) ? '' : c.li <= -6 ? 'no' : c.li <= -2 ? 'warn' : 'go';
   // La tapa solo se pone en rojo si HAY gasolina que soltar.
   const hayGas   = has(c.cape) && c.cape >= CAPE_COMBINACION;
-  const tonoCin  = !has(c.cin) ? '' : (hayGas && c.cin < 75) ? 'no'
+  const tonoCin  = !has(c.cin) ? '' : (hayGas && c.cin < TAPA_ROMPE) ? 'no'
                  : hayGas ? 'warn' : 'dato';
   // El isocero no es bueno ni malo: es referencia… salvo que caiga sobre
   // la cota del sitio, que entonces es hielo en la pista.
@@ -6165,7 +6172,7 @@ function tablaTormenta(H, i, hora) {
   if (!filas.length) return '';
 
   const sabe = f => has(f.cin);
-  const salta = f => sabe(f) && f.cape >= CAPE_COMBINACION && f.cin < 75;
+  const salta = f => sabe(f) && f.cape >= CAPE_COMBINACION && f.cin < TAPA_ROMPE;
   const alFilo = f => sabe(f) && f.cape >= CAPE_COMBINACION && !salta(f);
 
   const losQueSaben = filas.filter(sabe);
@@ -6183,7 +6190,7 @@ function tablaTormenta(H, i, hora) {
     /* «Sigue puesta» con la tapa en 18 (abierta) y CAPE 130 (Calpe,
        12-09-2026 00:34): la tapa no estaba puesta, lo que no había era
        gasolina. Se dice cuál de las dos falta. */
-    const abiertos = losQueSaben.filter(f => f.cin < 75);
+    const abiertos = losQueSaben.filter(f => f.cin < TAPA_ROMPE);
     /* DE LOS ABIERTOS, NO DE TODOS. Con ICON en 2.500 y la tapa puesta, y
        GFS en 120 con la tapa abierta, esto escribía «está abierta, pero no
        hay gasolina: CAPE máximo 2.500, y hacen falta 700» — una frase que
@@ -7305,7 +7312,8 @@ function apuntarTorresEnMarcador() {
       const agua = MODELOS_TORMENTA
         .map(m => ({ n: m.nom, v: H[`precipitation_${m.om}`]?.[i] }))
         .filter(f => has(f.v));
-      if (agua.length >= 2) muestras.push({
+      // Misma razón que en la otra muestra de lluvia: ver `esDeDiezMinutos`.
+      if (agua.length >= 2 && !esDeDiezMinutos(x)) muestras.push({
         estacion: x.nombre, altitud: x.altitud, hora: iso,
         red: x.fuente || x.red || 'sin red',
         magnitud: 'lluvia',
@@ -7778,15 +7786,29 @@ function calcularParte(sitios, arr) {
   const TOPE_ACCESO = 70;        // suyo: con esa racha vuelca el 4x4
   const LLUVIA_FUERTE = 2.0;     // su escala: «llueve bien» de 2 mm/h
 
+  /* ── Y LA VENTANA ES LA DEL DÍA QUE ESTÁ MIRANDO (21-09-2026) ───────
+     Esto iba SIEMPRE de ahora a dentro de 24 h, mirase el día que
+     mirase. O sea que al tocar la pestaña «MAR 23» la tarjeta cambiaba
+     la lluvia, la racha y el CAPE al día 23 y dejaba debajo, en verde,
+     «Nada te frena para llegar» — que era de HOY. Dos verdades de
+     ventanas distintas sin etiquetar, pegadas: el mismo fallo que esta
+     misma función avisa cuatro comentarios más abajo, y el de la lluvia
+     del 31-08.
+
+     Y le pega justo cuando más lo usa: programa las tareas de noche
+     para el día siguiente, así que la pestaña que mira NO es la de hoy.
+
+     El dueño de «qué día cubre el parte» ya existe y es `ventanaParte()`:
+     el arreglo estaba a ochenta líneas de aquí y no se había aplicado a
+     esta rama hermana. */
   S.cuandoTorres = sitios.map((p, n) => {
     const H = arr[n]?.hourly;
     if (!H?.time) return null;
 
-    const ahora = Date.now();
     const horas = [];
     for (let i = 0; i < H.time.length; i++) {
       const t = new Date(H.time[i]).getTime();
-      if (t + 3600e3 < ahora || t > ahora + 24 * 3600e3) continue;
+      if (t < desde || t > finVentana) continue;
 
       // El PEOR de los modelos en cada cosa: aquí no se promedia.
       let racha = null, lluvia = null, rayo = false;
@@ -7797,7 +7819,7 @@ function calcularParte(sitios, arr) {
         if (has(l) && (lluvia === null || l > lluvia)) lluvia = l;
         const c = H[`cape_${m.om}`]?.[i], k2 = H[`convective_inhibition_${m.om}`]?.[i];
         if (isStormCode(H[`weather_code_${m.om}`]?.[i])) rayo = true;
-        if (has(c) && c >= CAPE_COMBINACION && has(k2) && k2 < 75) rayo = true;
+        if (has(c) && c >= CAPE_COMBINACION && has(k2) && k2 < TAPA_ROMPE) rayo = true;
       }
 
       const frenos = [];
@@ -7815,6 +7837,14 @@ function calcularParte(sitios, arr) {
     let dura = 0;
     if (i0 >= 0) { let j = i0; while (j < horas.length && !horas[j].frenos.length) { dura++; j++; } }
 
+    /* Con el día entero por delante no vale con mirar la primera hora:
+       hay que poder decir CUÁNTAS horas frena y de qué, que es lo que
+       él necesita para repartir gente la noche de antes. */
+    const frenadas = horas.filter(h => h.frenos.length);
+    const hay = new Set(frenadas.flatMap(h => h.frenos));
+    const peorDe = c => horas.reduce((m, h) =>
+      has(h[c]) && (m === null || h[c] > m) ? h[c] : m, null);
+
     return {
       k: key(p),
       ahora: horas[0],
@@ -7823,6 +7853,12 @@ function calcularParte(sitios, arr) {
       // Si ya está libre ahora, cuándo se estropea
       seEstropeaEn: horas[0].frenos.length ? null
         : (horas.slice(1).find(h => h.frenos.length)?.t ?? null),
+      // De qué día habla esta ventana, y qué trae el día entero
+      esHoy: v_.salto === 0,
+      nFrenadas: frenadas.length,
+      tiposFreno: ['rayo', 'racha', 'lluvia'].filter(f => hay.has(f)),
+      peorRacha: peorDe('racha'),
+      peorLluvia: peorDe('lluvia'),
     };
   }).filter(Boolean);
 
@@ -7847,7 +7883,7 @@ function calcularParte(sitios, arr) {
         if (t.getTime() < desde || t.getTime() > finVentana) continue;
         const c = cape[i], k = cin[i];
         if (has(c) && has(k)) podian.add(m);
-        if (!has(c) || !has(k) || c < CAPE_COMBINACION || k >= 75) continue;
+        if (!has(c) || !has(k) || c < CAPE_COMBINACION || k >= TAPA_ROMPE) continue;
         venlo.add(m);
         if (!ini || t < ini) ini = t;
         if (!fin || t > fin) fin = t;
@@ -8146,7 +8182,7 @@ function fraseCambio(antes, ahora) {
   }
   /* Ninguno de los dos da rayo: solo se avisa si se ha acercado de
      verdad al filo. Un sube y baja de CAPE sin tapa no es noticia. */
-  const alFilo = x => x.c >= CAPE_COMBINACION && has(x.t) && x.t < 75;
+  const alFilo = x => x.c >= CAPE_COMBINACION && has(x.t) && x.t < TAPA_ROMPE;
   if (!alFilo(antes) && alFilo(ahora)) return { txt: 'antes no se acercaba y ahora se queda al filo', peor: true };
   if (alFilo(antes) && !alFilo(ahora)) return { txt: 'antes se quedaba al filo y ahora ni eso', peor: false };
   return null;
@@ -8726,7 +8762,7 @@ function renderParte() {
       if (isStormCode(cod)) return { n: m.nom, v: 2, txt: 'sí' };
       if (!has(c)) return null;
       if (!has(k)) return { n: m.nom, v: -1, txt: 'no la publica', mudo: true };
-      return c >= CAPE_COMBINACION && k < 75
+      return c >= CAPE_COMBINACION && k < TAPA_ROMPE
         ? { n: m.nom, v: 2, txt: `${c.toFixed(0)}·${k.toFixed(0)}` }
         : { n: m.nom, v: 0, txt: 'no' };
     }).filter(Boolean).sort((a, b) => b.v - a.v);
@@ -8963,6 +8999,33 @@ function renderParte() {
     const hh = d => String(new Date(d).getHours()).padStart(2, '0') + ':00';
     const A = C.ahora;
 
+    const dice = {
+      rayo:   `<b>rayo</b>`,
+      racha:  r => `<b>racha ${has(r) ? wtxt(r, true) : ''}</b> (vuelcas con el 4x4)`,
+      lluvia: l => `<b>lluvia fuerte</b>${has(l) ? ` (${mmTxt(l)} mm/h)` : ''}`,
+    };
+
+    /* ── SI NO ES HOY, NO SE DICE «AHORA» ───────────────────────────
+       En la pestaña de otro día no hay «ahora» que valga: la ventana es
+       el día entero, de 00:00 a 23:59. Se dice cuántas horas frena, de
+       qué, y cuándo se abre el hueco. Que es con lo que programa. */
+    if (!C.esHoy) {
+      if (!C.nFrenadas) return `<div class="pt__ventana" data-v="abierta">
+        <b>Nada te frena para llegar</b> en todo el día.</div>`;
+      const lista = C.tiposFreno.map(f =>
+        f === 'rayo' ? dice.rayo
+        : f === 'racha' ? dice.racha(C.peorRacha) : dice.lluvia(C.peorLluvia)).join(' · ');
+      const cola = !A.frenos.length
+        ? (C.seEstropeaEn ? `Libre desde primera hora y hasta las <b>${hh(C.seEstropeaEn)}</b>.` : '')
+        : (C.libreDesde
+            ? `Se despeja a las <b>${hh(C.libreDesde.t)}</b>`
+              + (C.horasLibres > 1 ? `, y aguanta <b>${C.horasLibres} h</b>.` : ', pero solo esa hora.')
+            : '<b>No se despeja en todo el día.</b>');
+      return `<div class="pt__ventana" data-v="${C.tiposFreno.includes('rayo') ? 'rayo' : 'cerrada'}">
+        <b>Para llegar te frena:</b> ${lista} — <b>${C.nFrenadas} h</b> del día.
+        ${cola}</div>`;
+    }
+
     if (!A.frenos.length) {
       /* ── LA FRASE DICE DE QUÉ HABLA: DE LLEGAR ──────────────────────
          Cazado el 01-09-2026 en su pantallazo de Sollube: arriba «Racha
@@ -8985,12 +9048,9 @@ function renderParte() {
           ? ` El camino se estropea a las <b>${hh(C.seEstropeaEn)}</b>.` : ''}</div>`;
     }
 
-    const dice = {
-      rayo:   `<b>rayo</b>`,
-      racha:  `<b>racha ${has(A.racha) ? wtxt(A.racha, true) : ''}</b> (vuelcas con el 4x4)`,
-      lluvia: `<b>lluvia fuerte</b>${has(A.lluvia) ? ` (${mmTxt(A.lluvia)} mm/h)` : ''}`,
-    };
-    const lista = A.frenos.map(f => dice[f]).join(' · ');
+    const lista = A.frenos.map(f =>
+      f === 'rayo' ? dice.rayo
+      : f === 'racha' ? dice.racha(A.racha) : dice.lluvia(A.lluvia)).join(' · ');
 
     return `<div class="pt__ventana" data-v="${A.frenos.includes('rayo') ? 'rayo' : 'cerrada'}">
       <b>Ahora te frena:</b> ${lista}.
@@ -9127,28 +9187,51 @@ function renderParte() {
      foto guardada de ESTE día, y solo si tiene un rato: ver el aviso no
      puede borrarlo si él acaba de abrirla. */
   const claveHoy = claveDia(ventanaParte().dia);
-  const guardado = LS.get('visto', {})[claveHoy] || null;
+  const reg      = LS.get('visto', {});
+  const guardado = reg[claveHoy] || null;
   const minutos  = guardado ? (Date.now() - guardado.ts) / 60000 : null;
 
-  const cambios = new Map();
+  /* ── UN AVISO NO SE BORRA POR REPINTAR (21-09-2026) ─────────────────
+     Aquí se hacían DOS cosas en la misma pasada: enseñarle «HA CAMBIADO
+     desde que lo miraste» y, tres líneas más abajo, renovar la foto
+     contra la que se compara. O sea que la pintada que ENSEÑA el aviso
+     era la misma que lo borraba: en el siguiente repintado —tocar una
+     pestaña de día, volver de Mis estaciones, que entren datos nuevos—
+     `minutos` valía cero, no había con qué comparar, y el aviso
+     desaparecía para siempre.
+
+     Y eso rompe la regla escrita ochenta líneas más arriba, en esta
+     misma función: **la app nunca borra en silencio lo que ya te había
+     dicho**, «porque puede que ya hayas mandado a alguien con aquello».
+     El aviso que más importa —«antes NO daba rayo y ahora sí, de 15:00 a
+     21:00»— se lo podía comer un toque de pestaña.
+
+     Ahora el aviso se GUARDA con la foto y se sigue enseñando hasta que
+     cambie el día, que es cuando el trabajo de ese día ya está hecho. La
+     limpieza de días pasados que ya había se lo lleva solo. */
+  const avisos = { ...(guardado?.avisos || {}) };
   if (guardado && minutos >= VISTO_MIN) {
     filas.forEach(({ p, d }) => {
       const f = fraseCambio(guardado.sitios?.[key(p)], huellaParte(d));
-      if (f) cambios.set(key(p), { ...f, cuando: new Date(guardado.ts) });
+      if (f) avisos[key(p)] = { ...f, desde: guardado.ts };
     });
   }
+  const cambios = new Map(Object.entries(avisos)
+    .map(([k_, a_]) => [k_, { ...a_, cuando: new Date(a_.desde) }]));
 
   /* La foto se renueva cuando ya ha pasado el rato — o si no había
-     ninguna. Nunca en medio, para no comerse un aviso a medio leer. */
+     ninguna. Nunca en medio, para no comerse un aviso a medio leer. Los
+     avisos viajan con ella en los dos casos. */
   if (!guardado || minutos >= VISTO_MIN) {
-    const todo = LS.get('visto', {});
-    todo[claveHoy] = { ts: Date.now(),
-                       sitios: Object.fromEntries(filas.map(({ p, d }) => [key(p), huellaParte(d)])) };
-    /* Se tiran los días pasados: esto no es un archivo histórico. */
-    const hoyClave = claveDia(new Date());
-    Object.keys(todo).forEach(k_ => { if (k_ < hoyClave) delete todo[k_]; });
-    LS.set('visto', todo);
+    reg[claveHoy] = { ts: Date.now(), avisos,
+                      sitios: Object.fromEntries(filas.map(({ p, d }) => [key(p), huellaParte(d)])) };
+  } else {
+    reg[claveHoy] = { ...guardado, avisos };
   }
+  /* Se tiran los días pasados: esto no es un archivo histórico. */
+  const hoyClave = claveDia(new Date());
+  Object.keys(reg).forEach(k_ => { if (k_ < hoyClave) delete reg[k_]; });
+  LS.set('visto', reg);
 
   /* ── «NINGUNO VE AGUA» NO ES «NO VA A LLOVER» ─────────────────────
      Avisado por la sesión de mediciones el 27-08-2026, y es la regla 2 de
@@ -9321,7 +9404,7 @@ function renderParte() {
     /* Con el techo y el suelo del día, no con la pareja: «al filo» es
        justamente que las dos cosas pasen, pero no a la vez (20-09-2026). */
     const alFilo = has(d.capeTecho) && d.capeTecho >= CAPE_COMBINACION
-                   && has(d.tapaSuelo) && d.tapaSuelo < 75;
+                   && has(d.tapaSuelo) && d.tapaSuelo < TAPA_ROMPE;
     const sinDatoTormenta = !has(d.capeTecho);
 
     const etq = alFilo ? 'AL FILO'
@@ -9356,7 +9439,7 @@ function renderParte() {
        alto y la tapa baja le pasan A HORAS DISTINTAS. Y eso no es lo
        mismo que estar a salvo — basta con que se junten una hora. */
     const hayGasolina = has(d.capeTecho) && d.capeTecho >= CAPE_COMBINACION;
-    const tapaSeAbre = has(d.tapaSuelo) && d.tapaSuelo < 75;
+    const tapaSeAbre = has(d.tapaSuelo) && d.tapaSuelo < TAPA_ROMPE;
     /* El CAPE del día en rojo desde su «avisar desde» (Ajustes, 300 por
        defecto): «si ve CAPE, en rojo» (20-09-2026). */
     const rojoSi = v => has(v) && v >= (S.thr?.capeWarn ?? 300) ? ' class="rojo"' : '';
@@ -9648,7 +9731,7 @@ function renderTorres() {
     const nivelRacha = v => !has(v) ? null
       : v >= listonRafaga().no ? 'no' : v >= listonRafaga().warn ? 'warn' : null;
     const nivelCape = (c, t) => (has(c) && c >= CAPE_COMBINACION
-      && has(t) && t < 75) ? 'no' : (has(c) && c >= CAPE_COMBINACION) ? 'warn' : null;
+      && has(t) && t < TAPA_ROMPE) ? 'no' : (has(c) && c >= CAPE_COMBINACION) ? 'warn' : null;
     const cifras = x =>
       /* Sin el `?? 0`: `mmTxt` ya devuelve «—» cuando no hay dato, y el
          `?? 0` pisaba esa protección pintando «0,0 mm» donde lo que pasa
@@ -10078,6 +10161,18 @@ const nCape = v => Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'
    pantalla que explica por qué no hay dato también necesita contarlos. */
 const CON_TAPA = ['best_match', 'icon_seamless', 'gfs_seamless'];
 
+/* ── ¿ESTA LLUVIA MEDIDA CUBRE LA HORA DEL MODELO? ───────────────────
+   El `prec` de AEMET es la lluvia de la última hora entera, y con eso sí
+   se puede comparar contra el milímetro por hora del modelo. Euskalmet
+   sirve la suya en huecos de diez minutos (`lluviaMin`), y compararla
+   con la hora del modelo hacía que el aparato saliera siempre corto: el
+   marcador castigaba a todos los modelos en lluvia, que es lo primero
+   que él mira. Hasta que esté medido contra un día de agua de verdad,
+   esa lluvia se enseña pero no puntúa (21-09-2026). */
+function esDeDiezMinutos(x) {
+  return has(x?.lluviaMin) && x.lluviaMin < 60;
+}
+
 const MODELOS_TORMENTA = [
   { om: 'ecmwf_ifs025',                nom: 'ECMWF' },
   { om: 'icon_seamless',               nom: 'ICON' },
@@ -10249,7 +10344,7 @@ function horasEnDiscrepancia() {
       if (!cin || !cin.some(v => has(v))) return;   // ese modelo no la publica
       o.porCape.forEach(x => {
         const i = H.time.findIndex(t => new Date(t).getTime() === x.d.getTime());
-        if (i >= 0 && has(cin[i]) && cin[i] < 75) meter(x.d);
+        if (i >= 0 && has(cin[i]) && cin[i] < TAPA_ROMPE) meter(x.d);
       });
     });
   }
@@ -13726,7 +13821,7 @@ function renderDiaDetalle(desplazar = false) {
    que el pulso del vigilante: sin dato se dice sin dato. */
 function lineaCapeHora(h) {
   if (!has(h.cape) && !has(h.cin)) return '';
-  const rompe = has(h.cape) && h.cape >= CAPE_COMBINACION && has(h.cin) && h.cin < 75;
+  const rompe = has(h.cape) && h.cape >= CAPE_COMBINACION && has(h.cin) && h.cin < TAPA_ROMPE;
   const cape = has(h.cape) ? `CAPE ${h.cape.toFixed(0)}` : 'CAPE: no lo publica';
   /* OJO CON LA PALABRA CUANDO SALTA LA REGLA, que si no se repite el lío
      que él cazó esta misma mañana. `textoTapa()` llama «aguanta» a todo
@@ -14350,7 +14445,7 @@ function avisoTormentaFranja(horas) {
 
   // Sin la combinación: se valora igual, en corto.
   let lectura, clase = 'part__ray--ojo';
-  const tapaAbierta = has(pico.cin) && pico.cin < 75;
+  const tapaAbierta = has(pico.cin) && pico.cin < TAPA_ROMPE;
 
   /* CON SU LISTÓN, NO CON UN 200 Y UN 500 ESCRITOS A MANO. Encontrado el
      20-09-2026: con un pico de CAPE 450 y la tapa en 300, la ficha de la

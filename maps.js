@@ -751,6 +751,22 @@ const AEMET_RADAR = {
 
 const KT_POR_MS = 1.943844;
 
+/* ── DE U Y V: CUÁNTO SOPLA Y DE DÓNDE ───────────────────────────────
+   Un solo dueño. Estaba escrito dos veces —la barba y el clic— y eso es
+   exactamente cómo se cría un fallo: el 21-09-2026 el clic ni siquiera
+   hacía la cuenta, se quedaba con la componente oeste-este y la rotulaba
+   «km/h», así que con viento del sur un viento real de 50 salía como 0,3.
+
+   `ms` es el módulo en metros por segundo, y `desde` los grados
+   meteorológicos DE DONDE VIENE (180 = del sur), que es como se nombra
+   el viento en tierra. */
+function vientoDeUV(u, v) {
+  if (!Number.isFinite(u) || !Number.isFinite(v)) return null;
+  return { ms: Math.hypot(u, v),
+           desde: (Math.atan2(-u, -v) * 180 / Math.PI + 360) % 360 };
+}
+
+
 /** ¿Es un valor real o la marca de "sin dato" del modelo?
  *
  *  Algunas variables (tope y base de nube convectiva) traen −500 cuando
@@ -1896,7 +1912,7 @@ const Maps = {
       const n = (m.valid_times || []).length;
       const sl = document.querySelector('#mapTime');
       sl.max = Math.max(0, n - 1);
-      this.t = Math.min(this.nowIndex(), Math.max(0, n - 1));
+      this.t = Math.min(this.nowIndex(m), Math.max(0, n - 1));
       sl.value = this.t;
       // Si venimos de una recarga por falta de memoria, a la hora de antes
       if (!this._recuperado) { this._recuperado = true; this.recuperarTrasRecarga(); }
@@ -2000,7 +2016,28 @@ const Maps = {
     return best;
   },
 
-  nowIndex(meta = this.meta) {
+  /* ── «AHORA» ES DEL MODELO QUE PINTA, NO DEL SELECCIONADO (21-09-2026)
+     ──────────────────────────────────────────────────────────────────
+     Todo lo demás del deslizador ya iba por `this.usando?.meta ?? this.meta`
+     —`indices()`, la tira de horas, el sello, las barbas, los valores—.
+     Esto se quedó con `this.meta`, el modelo ELEGIDO. Y en una capa
+     sustituida no son el mismo: eliges ECMWF HRES, la capa la pinta
+     ICON-EU, y sus listas de horas ni tienen la misma longitud ni el
+     mismo paso.
+
+     Dos sitios lo leen, y los dos son de los que él usa:
+       · el botón **Ahora**, que calculaba el índice en la lista del
+         elegido y lo aplicaba al deslizador del que pinta: te llevaba a
+         otra hora, sin decir nada;
+       · el sello verde «Hora actual», que se encendía sobre el
+         fotograma equivocado — y un «ahora» en verde sobre una previsión
+         de dentro de seis horas es peor que no tener sello.
+
+     El arreglo estaba escrito veinte líneas más abajo, en `indices()`, y
+     no se había aplicado a esta hermana. `loadMeta()` sí quiere el
+     elegido, y por eso se lo pasa a mano: allí acaba de leer su ficha y
+     el deslizador ya está dimensionado con ella. */
+  nowIndex(meta = this.usando?.meta ?? this.meta) {
     const T = meta?.valid_times ?? [];
     if (!T.length) return 0;
     const now = Date.now();
@@ -2402,6 +2439,16 @@ const Maps = {
     // que un hueco.
     this.limpiarValores();
     this.limpiarBarbas();
+    /* ── Y EL CARTEL DE «CAPA SUSTITUIDA», TAMBIÉN (21-09-2026) ───────
+       Se apagaba solo en el camino largo, al final de apply(). Pero
+       Radar, Radar+previsión, AEMET y los satélites salen por las cuatro
+       líneas de aquí abajo ANTES de llegar allí: venías de una capa
+       sustituida —CAPE con ICON, por ejemplo—, pulsabas Radar observado,
+       y el cartel «lo pinta ICON porque tu modelo no publica esta capa»
+       se quedaba clavado encima del radar, que no lo pinta ningún
+       modelo. El mismo fallo que los números de la capa anterior bajo la
+       etiqueta de la nueva, y aquí al lado está su arreglo. */
+    this.avisoSustitucion(null);
 
     /* Los rayos van encima de cualquier capa, también de las dos que
        salen por aquí antes de llegar al final de apply() (09-09-2026). */
@@ -4206,7 +4253,60 @@ const Maps = {
         return;
       }
 
-      const val = e?.conv ? e.conv(v) : v * f;
+      /* ── EL NÚMERO DEL CLIC ERA LA COMPONENTE, NO EL VIENTO (21-09-2026)
+         ────────────────────────────────────────────────────────────────
+         Las cuatro capas de barbas pintan `wind_u_component_*`, que es la
+         componente OESTE→ESTE con signo y en m/s. El fondo ya se apagó el
+         14-09 por eso mismo… pero el CLIC seguía leyendo esa variable y
+         escribiéndola con «km/h» al lado, porque `sinColor` declara km/h
+         y no convierte nada.
+
+         Con viento del sur —el que le trae el agua— U vale casi cero:
+         un viento real de 50 km/h a 50 m salía en el globito como
+         «0,3 km/h». Y el rótulo de la propia capa dice «BARBAS y números
+         = viento real», o sea que el número estaba invitando a creerlo.
+
+         Ahora el clic hace lo mismo que la barba: lee U y V, saca el
+         módulo, lo pasa a la unidad que él tenga puesta y dice de dónde
+         viene. Si V no está, no hay número: «sin dato» antes que un
+         número que no es. */
+      let val, uTxt = u, deDondeV = '';
+      const esComponente = /^wind_u_component_/.test(L_.v || '');
+      if (esComponente) {
+        const C = this.componentes(L_);
+        const vUrl = C ? limpiarMarca(this.omUrl(C.v, this.t, R.modelo, R.meta) || '') : '';
+        const leerV = async () => (await OMWeatherMapLayer.getValueFromLatLong(
+          lngLat.lat, lngLat.lng, vUrl))?.value;
+        let vv = null;
+        if (vUrl) {
+          try { vv = await leerV(); } catch {}
+          if (!Number.isFinite(vv)) {
+            const z = Math.min(12, Math.max(0, Math.round(this.map.getZoom())));
+            const n = 2 ** z;
+            const x = Math.floor((lngLat.lng + 180) / 360 * n);
+            const y = Math.floor((1 - Math.asinh(Math.tan(lngLat.lat * Math.PI/180)) / Math.PI) / 2 * n);
+            try {
+              await OMWeatherMapLayer.omProtocol(
+                { url: `${vUrl}/${z}/${x}/${y}`, type: 'image' }, new AbortController());
+              vv = await leerV();
+            } catch {}
+          }
+        }
+        if (!Number.isFinite(vv)) {
+          pop.setHTML(`<b>Sin dato</b><br><small>El modelo ${esc(nombreModelo)} da la
+            componente oeste-este pero no la norte-sur en este punto, y con una sola
+            no hay viento que dar<br>${lngLat.lat.toFixed(3)}, ${lngLat.lng.toFixed(3)}</small>`);
+          return;
+        }
+        const W = vientoDeUV(v, vv);
+        val = W.ms * 3.6 * (typeof wu === 'function' ? wu().f : 1);
+        uTxt = (typeof wu === 'function' ? wu().lbl : 'km/h');
+        const desde = W.desde;
+        const r = typeof rumboLargo === 'function' ? rumboLargo(desde) : null;
+        deDondeV = ` · del ${r ? esc(r) + ' ' : ''}(${Math.round(desde)}°)`;
+      } else {
+        val = e?.conv ? e.conv(v) : v * f;
+      }
       // Con los números apagados esta es la única lectura que hay, así
       // que el aviso de «esto no puede ser» va también aquí. Un número
       // imposible dado sin más se lee como un dato bueno.
@@ -4216,7 +4316,7 @@ const Maps = {
          dirección se lee aquí, en el clic, de la variable hermana
          (`direccion` en la capa) del MISMO modelo y hora. Si ese modelo
          no la publica, no se pone nada: no se inventa un rumbo. */
-      let deDonde = '';
+      let deDonde = deDondeV;
       if (RUMBO_EN_CLIC_MAR && L_.direccion && R.meta?.variables?.includes(L_.direccion)) {
         try {
           const uD = limpiarMarca(this.omUrl(L_.direccion, this.t, R.modelo, R.meta) || '');
@@ -4237,7 +4337,7 @@ const Maps = {
           }
         } catch { /* sin dirección: se enseña la altura sola */ }
       }
-      pop.setHTML(`<b>${val.toFixed(Math.abs(val) < 10 ? 1 : 0)} ${esc(u)}</b>${deDonde}
+      pop.setHTML(`<b>${val.toFixed(Math.abs(val) < 10 ? 1 : 0)} ${esc(uTxt)}</b>${deDonde}
          ${imposible ? `<small style="color:var(--no);font-weight:700">${esc(imposible)}</small>` : ''}
          <br><small>${esc(L_.name)} · ${esc(hora)}
          <br>${lngLat.lat.toFixed(3)}, ${lngLat.lng.toFixed(3)}
@@ -4370,11 +4470,12 @@ const Maps = {
         } catch { return { px, py, u: null, v: null }; }
       }));
       for (const { px, py, u, v } of leidos) {
-        if (!has(u) || !has(v)) continue;             // sin dato: no se dibuja nada
-        const ms = Math.hypot(u, v);
+        const W = vientoDeUV(u, v);
+        if (!W) continue;                            // sin dato: no se dibuja nada
+        const ms = W.ms;
         const kt = ms * KT_POR_MS;
-        // Dirección DE DONDE viene, en grados meteorológicos
-        const desde = (Math.atan2(-u, -v) * 180 / Math.PI + 360) % 360;
+        // Dirección DE DONDE viene, en grados meteorológicos: vientoDeUV
+        const desde = W.desde;
         /* El globito va en KM/H: su norma desde el 27-08 y sin matices.
            El DIBUJO de la barba se sigue calculando en nudos, que es
            como está definido el símbolo — pero el número que él lee, no. */

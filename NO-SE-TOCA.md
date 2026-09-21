@@ -229,6 +229,23 @@ catálogo.
 | **La ficha no se esconde sola** | Que el bloque de rayos y el veredicto se queden callados con la tormenta encima. | `y el veredicto se pisa a NO APTO por rayos` |
 | **Las horas dichas son las miradas** | Decir «en las últimas 24 h» habiendo leído 6. Se corre `Rayos.cerca()` entera contra un AEMET de mentira de 24 marcos. | `se leen 6 marcos y se dicen 6, no las 24 horas del catálogo de AEMET` |
 
+### La rama hermana que no se arregló (21-09-2026)
+
+Cuatro fallos del mismo día, y los cuatro son el mismo patrón: **el arreglo ya
+estaba escrito a unas líneas, en la función de al lado, y no se aplicó aquí.**
+
+| Guardia | Qué impide | La prueba que la guarda |
+|---|---|---|
+| **La ventana es la del día que mira** | Que «Nada te frena para llegar» hable de hoy mientras la tarjeta enseña el martes. El dueño de qué día cubre el parte es `ventanaParte()`, y `S.cuandoTorres` lo ignoraba. Se mueve el cálculo real con horas de hoy y de mañana. | `y ya NO canta el verde de hoy en la pestaña de mañana` |
+| **Un aviso no se borra al repintar** | Que la pintada que ENSEÑA «HA CAMBIADO desde que lo miraste» renueve la foto y se lo coma en el siguiente repintado. La regla es que la app no borra en silencio lo que ya te dijo. | `y el aviso que ya estaba en pantalla SIGUE ahí después de repintar` |
+| **El número del mapa es el viento** | Que el clic de las capas de barbas dé la componente oeste-este en m/s con «km/h» al lado. `vientoDeUV()` es el único dueño del módulo y el rumbo, y lo usan la barba y el clic. | `con viento del sur el módulo es el viento entero, no la componente` |
+| **«Ahora» es del modelo que pinta** | Que el botón Ahora calcule el índice en la lista del modelo elegido y lo aplique a la del que pinta. Todo lo demás del deslizador ya iba así. | `nowIndex() va por el modelo que PINTA, como el resto del deslizador` |
+
+Y el 75 de la tapa: `TAPA_ROMPE` se creó el 20-09 «porque el 75 vivía escrito a
+pelo en ocho sitios»… y se quedó usado en UNO. La guardia de un solo dueño lo
+lleva en el nombre y no lo miraba. Ahora sí, y solo sobre código, no sobre
+comentarios.
+
 **COMPROBADAS ROMPIÉNDOLAS.** No se dieron por buenas: se reintrodujeron los
 cuatro fallos a propósito sobre una copia, y cada uno quedó parado por al
 menos una guardia. Una guardia que no puede parar nada es un adorno.

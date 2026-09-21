@@ -57,7 +57,10 @@ const tiene = firma => src.includes(firma);
 globalThis.has = v => v !== null && v !== undefined && !Number.isNaN(v);
 globalThis.esc = v => String(v);
 globalThis.key = p => `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`;
-globalThis.CAPE_COMBINACION = 700;
+/* Los listones salen de app.js, su dueño: copiarlos aquí a mano deja el
+   banco midiendo con el número viejo el día que se recalibren (21-09). */
+eval(sacarConst('CAPE_COMBINACION'));
+eval(sacarConst('TAPA_ROMPE'));
 globalThis.RANK = { go: 0, warn: 1, no: 2, nd: 3 };
 globalThis.worst = (a, b) => (RANK[b] > RANK[a] ? b : a);
 globalThis.wtxt = v => `${v.toFixed(0)} km/h`;

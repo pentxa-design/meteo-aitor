@@ -92,7 +92,14 @@ globalThis.LS = {
 /* La comparación «esto ha cambiado» la usan la prueba del parte y la
    suya propia: se saca una vez para las dos. */
 globalThis.has = globalThis.has || (v => v !== null && v !== undefined && !Number.isNaN(v));
-globalThis.CAPE_COMBINACION = 700;
+/* ── LOS LISTONES SE SACAN DE app.js, NO SE COPIAN AQUÍ (21-09-2026) ──
+   Estaban escritos a pelo en el banco: `globalThis.CAPE_COMBINACION = 700`.
+   O sea que el día que se recalibren —el CAPE ya se recalibró una vez, de
+   800 a 700— la app cambiaría y las pruebas seguirían midiendo con el
+   número viejo, en verde. Un banco que no mide lo que hay es peor que no
+   tenerlo. Ahora salen de su dueño. */
+eval(sacarConst('CAPE_COMBINACION'));
+eval(sacarConst('TAPA_ROMPE'));
 eval(sacarConst('nCape'));
 eval(sacar('function claveDia(d) {'));
 eval(sacar('function huellaParte(d) {'));
@@ -116,7 +123,6 @@ eval(sacarConst('cercaDelMar'));
 globalThis.has = v => v !== null && v !== undefined && !Number.isNaN(v);
 globalThis.esc = v => String(v);
 globalThis.key = p => `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`;
-globalThis.CAPE_COMBINACION = 700;
 globalThis.RANK = { go: 0, warn: 1, no: 2, nd: 3 };
 globalThis.worst = (a, b) => (RANK[b] > RANK[a] ? b : a);
 globalThis.wtxt = v => `${v.toFixed(0)} km/h`;
@@ -595,15 +601,42 @@ ok('solo lo lleva la torre que cambió',
 ok('y se avisa arriba', /ha cambiado 1 torre/.test(pintado['#parteHint'] || ''),
    pintado['#parteHint']);
 
-/* Recién mirado: si vuelve a abrir a los cinco minutos no se le puede
-   haber comido el aviso ni aparecer uno nuevo a medias. */
+/* Recién mirado: a los cinco minutos NO puede salir un aviso NUEVO… y el
+   que ya estaba en pantalla tampoco puede desaparecer.
+
+   ── LAS DOS COSAS, Y ANTES SOLO SE MIRABA UNA (21-09-2026) ──────────
+   Esta prueba pedía que a los cinco minutos NO hubiera ningún «HA
+   CAMBIADO». Y eso era pedir el fallo: la pintada que enseñaba el aviso
+   renovaba la foto en la misma pasada, así que el aviso de la torre que
+   SÍ había cambiado se borraba al primer repintado —tocar una pestaña de
+   día, volver de Mis estaciones— y no volvía nunca. La regla escrita en
+   la propia función es la contraria: la app no borra en silencio lo que
+   ya te había dicho, porque puede que ya hayas mandado a alguien con
+   aquello. Ahora se comprueban las dos mitades. */
 S.parteTorres = S.parteTorres.map(d => d.k === k(sitios[3])
   ? { k: d.k, salta: true, ini: Hh(0, 10), fin: Hh(0, 12), cape: 1900, cin: 20, hora: Hh(0, 11), modelo: 'ICON' }
   : d);
 renderParte();
-ok('si acaba de mirarlo, no le salta un aviso a los cinco minutos',
-   !/HA CAMBIADO/.test(pintado['#parte'] || ''),
-   'la foto se está renovando en cada pintada');
+const html5 = pintado['#parte'] || '';
+const tras5 = html5.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+/* Solo los RENGLONES de aviso: el cuerpo de la tarjeta también escribe la
+   ventana de rayo del sitio, y eso no es un aviso de cambio. */
+const renglones5 = (html5.match(/<div class="pt__cam[\s\S]*?<\/div>/g) || [])
+  .map(x => x.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '));
+ok('a los cinco minutos NO aparece un aviso nuevo',
+   renglones5.length === 1 && !renglones5.some(r => /de 10:00 a 12:00/.test(r)),
+   renglones5.join(' || ') || 'sin renglones');
+ok('y el aviso que ya estaba en pantalla SIGUE ahí después de repintar',
+   /antes NO daba rayo y ahora sí, de 15:00 a 21:00/.test(tras5),
+   'un toque en la pestaña de día se comía el aviso de rayo para siempre');
+
+/* Y aguanta varias pintadas seguidas, que es lo que pasa de verdad al
+   cambiar de día y volver. */
+renderParte(); renderParte();
+ok('y aguanta tres repintados seguidos',
+   /antes NO daba rayo y ahora sí, de 15:00 a 21:00/
+     .test((pintado['#parte'] || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')),
+   'cambiar de pestaña y volver repinta dos veces');
 
 /* Los días pasados no se acumulan: esto no es un archivo. */
 const conViejo = LS.get('visto', {});
@@ -2097,7 +2130,6 @@ ok('y el pie explica quién publica las suyas y quién no',
    Esta prueba está para que no vuelva. */
 console.log('\n  CAPE y tapa, hora a hora');
 
-globalThis.CAPE_COMBINACION = 700;
 eval(sacar('function textoTapa(cin) {'));
 eval(sacar('function lineaCapeHora(h) {'));
 
@@ -2399,19 +2431,19 @@ const H0b = h => { const d = new Date(); d.setHours(h, 0, 0, 0); return d; };
 const libre = { racha: 30, lluvia: 0, rayo: false, frenos: [] };
 
 S.cuandoTorres = [{ k: 'ok', ahora: libre, libreDesde: libre, horasLibres: 9,
-                    seEstropeaEn: null }];
+                    seEstropeaEn: null, esHoy: true }];
 ok('si nada le frena, se dice y punto — y desde el 01-09, con su ámbito: llegar',
    /Nada te frena para llegar/.test(cuandoSePuede('ok')), cuandoSePuede('ok'));
 
 S.cuandoTorres = [{ k: 'luego', ahora: libre, libreDesde: libre, horasLibres: 3,
-                    seEstropeaEn: H0b(18) }];
+                    seEstropeaEn: H0b(18), esHoy: true }];
 ok('y si se va a estropear, a qué hora',
    /El camino se estropea a las <b>18:00/.test(cuandoSePuede('luego')), cuandoSePuede('luego'));
 
 /* EL CASO SUYO: no puede salir ahora, ¿a qué hora sí? */
 S.cuandoTorres = [{ k: 'espera',
   ahora: { racha: 78, lluvia: 0, rayo: false, frenos: ['racha'] },
-  libreDesde: { t: H0b(19) }, horasLibres: 4, seEstropeaEn: null }];
+  libreDesde: { t: H0b(19) }, horasLibres: 4, seEstropeaEn: null, esHoy: true }];
 const esp = cuandoSePuede('espera');
 ok('con racha de 78 dice que le frena la racha',
    /racha/.test(esp) && /78/.test(esp), esp);
@@ -2425,14 +2457,14 @@ ok('y cuánto le dura la ventana, que cargar el grupo lleva rato',
 /* UNA HORA SUELTA NO ES UNA VENTANA */
 S.cuandoTorres = [{ k: 'corta',
   ahora: { racha: 80, lluvia: 0, rayo: false, frenos: ['racha'] },
-  libreDesde: { t: H0b(15) }, horasLibres: 1, seEstropeaEn: null }];
+  libreDesde: { t: H0b(15) }, horasLibres: 1, seEstropeaEn: null, esHoy: true }];
 ok('una sola hora libre se dice que es UNA, no se vende como ventana',
    /solo esa hora/.test(cuandoSePuede('corta')), cuandoSePuede('corta'));
 
 /* EL RAYO VA EN ROJO Y NO DEPENDE DE NADA MÁS */
 S.cuandoTorres = [{ k: 'rayo',
   ahora: { racha: 20, lluvia: 0, rayo: true, frenos: ['rayo'] },
-  libreDesde: null, horasLibres: 0, seEstropeaEn: null }];
+  libreDesde: null, horasLibres: 0, seEstropeaEn: null, esHoy: true }];
 const conRayo = cuandoSePuede('rayo');
 ok('el rayo se marca aparte de los demás frenos',
    /data-v="rayo"/.test(conRayo), conRayo);
@@ -2443,6 +2475,101 @@ ok('en ninguno de los casos se le dice qué hacer',
    !['ok','luego','espera','corta','rayo'].some(() => false)
    && !/no salgas|no vayas|debes|espera a|no subas/i.test(esp + conRayo),
    'la hora es un dato; salir o no, lo decide él');
+
+/* ══════════════════════════════════════════════════════════════════════
+   Y LA VENTANA ES LA DEL DÍA QUE ESTÁ MIRANDO (21-09-2026)
+   ──────────────────────────────────────────────────────────────────────
+   `S.cuandoTorres` se calculaba SIEMPRE de ahora a dentro de 24 h,
+   mirase el día que mirase. Al tocar la pestaña «MAR 23» la tarjeta
+   cambiaba lluvia, racha y CAPE al día 23 y dejaba debajo, en verde,
+   «Nada te frena para llegar» — que era de HOY. Dos verdades de ventanas
+   distintas sin etiquetar, pegadas.
+
+   Y le pega justo cuando más lo usa: programa las tareas de noche para
+   el día siguiente, así que la pestaña que mira NO es la de hoy.
+
+   El dueño de «qué día cubre el parte» ya existía —`ventanaParte()`— y
+   estaba a ochenta líneas: el arreglo no se había aplicado a esta rama
+   hermana. Igual que AL FILO.
+
+   Estas pruebas MUEVEN EL CÁLCULO DE VERDAD: el bloque que construye
+   `S.cuandoTorres` sale de app.js tal cual y se le dan horas de hoy y de
+   mañana; después el texto se pinta con ESO, no con un objeto a mano.
+   ══════════════════════════════════════════════════════════════════════ */
+{
+  const solo = (n) => new Function(
+    'const g = {};' + sacarConst(n).replace('globalThis.', 'g.') + ` return g.${n};`)();
+  const MT = solo('MODELOS_TORMENTA'), TA = solo('TOPE_ACCESO'), LF = solo('LLUVIA_FUERTE');
+
+  const calcularCuando = new Function(
+    'S', 'sitios', 'arr', 'v_', 'desde', 'finVentana', 'has', 'key',
+    'MODELOS_TORMENTA', 'isStormCode', 'CAPE_COMBINACION', 'TOPE_ACCESO', 'LLUVIA_FUERTE',
+    sacar('  S.cuandoTorres = sitios.map((p, n) => {', '\n  }).filter(Boolean);')
+    + '\n  return S.cuandoTorres;');
+
+  /* Reloj clavado a las 10:00 de hoy, como el resto del fichero. */
+  const T10 = _hoy10.getTime();
+  const dd  = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const HOY = dd(_hoy10), MAN = dd(new Date(T10 + 24 * 3600e3));
+
+  /* 48 horas: hoy tranquilo hasta las 18:00, y MAÑANA cerrado de 00 a 08.
+     Con la ventana vieja (ahora → +24 h) la pestaña de mañana veía las
+     horas buenas de hoy y cantaba verde. */
+  const time = [], gust = [], lluv = [], cape = [], cin = [], code = [];
+  for (const dia of [HOY, MAN]) for (let h = 0; h < 24; h++) {
+    time.push(`${dia}T${String(h).padStart(2, '0')}:00`);
+    const cierra = (dia === HOY && h >= 18) || (dia === MAN && h < 9);
+    gust.push(cierra ? 80 : 30); lluv.push(0); cape.push(100); cin.push(200); code.push(3);
+  }
+  const H = { time,
+    'wind_gusts_10m_ecmwf_ifs025': gust, 'precipitation_ecmwf_ifs025': lluv,
+    'cape_ecmwf_ifs025': cape, 'convective_inhibition_ecmwf_ifs025': cin,
+    'weather_code_ecmwf_ifs025': code };
+  const SITIO = [{ lat: 43.412976, lon: -2.718316, name: 'BI BERMEO' }];
+  const K = globalThis.key(SITIO[0]);
+
+  const paraElDia = sel => {
+    const antes = S.parteSel; S.parteSel = sel;
+    const v_ = ventanaParte(T10);
+    S.parteSel = antes;
+    return calcularCuando(S, SITIO, [{ hourly: H }], v_, v_.desde, v_.hasta,
+      globalThis.has, globalThis.key, MT, globalThis.isStormCode,
+      globalThis.CAPE_COMBINACION, TA, LF);
+  };
+
+  /* ── HOY ─────────────────────────────────────────────────────────── */
+  S.cuandoTorres = paraElDia(0);
+  const hoy = cuandoSePuede(K);
+  ok('en la pestaña de HOY la ventana empieza ahora y la frase sigue siendo la suya',
+     /Nada te frena para llegar/.test(hoy) && /se estropea a las <b>18:00/.test(hoy), hoy);
+  ok('y la ventana de hoy NO se mete en el día siguiente',
+     S.cuandoTorres[0].esHoy === true
+     && S.cuandoTorres[0].ahora.t.getHours() === 9,   // la hora en curso entra entera
+     JSON.stringify(S.cuandoTorres[0]?.ahora?.t));
+
+  /* ── MAÑANA: ESTO ES LO QUE ESTABA MAL ───────────────────────────── */
+  S.cuandoTorres = paraElDia(1);
+  const man = cuandoSePuede(K);
+  ok('en la pestaña de MAÑANA la ventana es el día entero, de 00:00 a 23:59',
+     S.cuandoTorres[0].esHoy === false && S.cuandoTorres[0].nFrenadas === 9,
+     String(S.cuandoTorres[0]?.nFrenadas));
+  ok('y dice lo que frena ESE día, con sus horas y su hueco',
+     /Para llegar te frena/.test(man) && /9 h<\/b> del día/.test(man)
+     && /Se despeja a las <b>09:00/.test(man) && /15 h/.test(man), man);
+  ok('y ya NO canta el verde de hoy en la pestaña de mañana',
+     !/Nada te frena para llegar/.test(man) && !/18:00/.test(man),
+     'esto es EXACTAMENTE lo que hacía la app hasta el 21-09-2026: mirabas mañana y leías hoy');
+
+  /* Un día limpio entero sí se dice, y se dice que es el día entero. */
+  const limpio = { ...H, 'wind_gusts_10m_ecmwf_ifs025': gust.map(() => 30) };
+  S.parteSel = 1;
+  const v1 = ventanaParte(T10); S.parteSel = 0;
+  S.cuandoTorres = calcularCuando(S, SITIO, [{ hourly: limpio }], v1, v1.desde, v1.hasta,
+    globalThis.has, globalThis.key, MT, globalThis.isStormCode,
+    globalThis.CAPE_COMBINACION, TA, LF);
+  ok('un día entero sin frenos se dice como lo que es: todo el día',
+     /Nada te frena para llegar<\/b> en todo el día/.test(cuandoSePuede(K)), cuandoSePuede(K));
+}
 
 /* ── RESULTADO ──────────────────────────────────────────────────── */
 /* ── CADA APARATO CON SU NOMBRE ──────────────────────────────────
@@ -4714,7 +4841,7 @@ grupo('El parte juntaba el CAPE de un modelo con la tapa de otro (30-08)');
      && /if \(tapaSuelo === null \|\| cin\[i\] < tapaSuelo\) tapaSuelo = cin\[i\];/.test(src),
      'sin ellos, «AL FILO» es código muerto');
   ok('y «AL FILO» se decide con esos extremos, no con la pareja',
-     /const alFilo = has\(d\.capeTecho\) && d\.capeTecho >= CAPE_COMBINACION\s*\n\s*&& has\(d\.tapaSuelo\) && d\.tapaSuelo < 75;/.test(src));
+     /const alFilo = has\(d\.capeTecho\) && d\.capeTecho >= CAPE_COMBINACION\s*\n\s*&& has\(d\.tapaSuelo\) && d\.tapaSuelo < TAPA_ROMPE;/.test(src));
   ok('un hueco de CAPE ya no se escribe como «0 de CAPE»',
      !/maxCape: peorPar \? peorPar\.cape : 0/.test(src)
      && /Ninguno de los \$\{CON_TAPA\.length\} que publican la tapa da el CAPE aquí/.test(src),
@@ -6822,6 +6949,83 @@ grupo('Los rayos son de ESTE sitio, y si fallan se dice (01-09-2026)');
 }
 
 /* ══════════════════════════════════════════════════════════════════════
+   LOS TRES DEL MAPA (21-09-2026)
+   ──────────────────────────────────────────────────────────────────────
+   Los tres son el mismo patrón que AL FILO: el arreglo ya estaba escrito
+   a unas líneas, en la rama hermana, y no se había aplicado aquí.
+
+   1. El CLIC de las cuatro capas de barbas leía `wind_u_component_*` —la
+      componente oeste-este, CON SIGNO y en m/s— y la escribía con «km/h»
+      al lado. Con viento del sur, que es el que le trae el agua, U vale
+      casi cero: un viento real de 50 km/h a 50 m salía como «0,3 km/h».
+      Y el rótulo de la capa dice «BARBAS y números = viento real».
+   2. El cartel de «capa sustituida» se apagaba al final de `apply()`,
+      pero Radar, Radar+previsión, AEMET y los satélites salen antes por
+      cuatro `return`: el cartel se quedaba clavado encima del radar.
+   3. `nowIndex()` iba por el modelo ELEGIDO cuando todo lo demás del
+      deslizador va por el que PINTA. En una capa sustituida el botón
+      «Ahora» te llevaba a otra hora y el sello verde «Hora actual» se
+      encendía sobre una previsión.
+   ══════════════════════════════════════════════════════════════════════ */
+grupo('Los tres del mapa: el clic del viento, el cartel pegado y el «Ahora» (21-09-2026)');
+{
+  const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+
+  /* ── 1 · LA CUENTA, CORRIENDO DE VERDAD ──────────────────────────── */
+  const vientoDeUV = new Function(
+    M.slice(M.indexOf('function vientoDeUV(u, v) {'),
+            M.indexOf('\n}', M.indexOf('function vientoDeUV(u, v) {')) + 2)
+    + ' return vientoDeUV;')();
+
+  const r = (x, n = 1) => Math.round(x * 10 ** n) / 10 ** n;
+  const sur   = vientoDeUV(0, 11.11);      // sopla hacia el norte: viene del SUR
+  const oeste = vientoDeUV(11.11, 0);      // sopla hacia el este: viene del OESTE
+  ok('con viento del sur el módulo es el viento entero, no la componente',
+     r(sur.ms * 3.6) === 40 && r(sur.desde) === 180,
+     `${r(sur.ms * 3.6)} km/h del ${r(sur.desde)}°`);
+  ok('y del oeste, igual, con su rumbo',
+     r(oeste.ms * 3.6) === 40 && r(oeste.desde) === 270,
+     `${r(oeste.ms * 3.6)} km/h del ${r(oeste.desde)}°`);
+  ok('sin una de las dos componentes no hay viento que dar',
+     vientoDeUV(5, null) === null && vientoDeUV(null, 5) === null
+     && vientoDeUV(5, NaN) === null,
+     'con una sola componente el número sería mentira, y medio dato se lee como dato');
+
+  /* Y que lo usen LOS DOS sitios donde él lee un número de viento: el
+     globito de la barba y el clic. Escrito dos veces es como nació. */
+  ok('la barba y el clic sacan el viento del MISMO sitio',
+     (M.match(/vientoDeUV\(/g) || []).length >= 3
+     && !/const ms = Math\.hypot\(u, v\);/.test(M)
+     && !/Math\.atan2\(-u, -v\)/.test(M.slice(M.indexOf('async barbas()'))),
+     'la cuenta duplicada es exactamente cómo se crió este fallo');
+  ok('el clic de una capa de barbas lee la componente que falta y convierte a SU unidad',
+     /const esComponente = \/\^wind_u_component_\/\.test\(L_\.v \|\| ''\);/.test(M)
+     && /val = W\.ms \* 3\.6 \* \(typeof wu === 'function' \? wu\(\)\.f : 1\);/.test(M)
+     && /uTxt = \(typeof wu === 'function' \? wu\(\)\.lbl : 'km\/h'\);/.test(M),
+     'el número del clic era la componente oeste-este en m/s rotulada km/h');
+  ok('y si no está la componente norte-sur, dice «sin dato» en vez de dar un número que no es',
+     /no hay viento que dar/.test(M));
+
+  /* ── 2 · EL CARTEL SE APAGA ANTES DE LOS CUATRO ATAJOS ───────────── */
+  const ap = M.indexOf('  async apply() {');
+  const apagar = M.indexOf('this.avisoSustitucion(null);', ap);
+  const radar  = M.indexOf("if (L_.id === 'radar')", ap);
+  const sat    = M.indexOf('if (L_.sat) { this.applySatelite', ap);
+  ok('en apply() el cartel de «capa sustituida» se apaga ANTES de los atajos de radar y satélite',
+     ap >= 0 && apagar > ap && radar > apagar && sat > apagar,
+     'venías de una capa sustituida, pulsabas Radar, y el cartel se quedaba encima del radar');
+
+  /* ── 3 · «AHORA» ES DEL QUE PINTA ────────────────────────────────── */
+  ok('nowIndex() va por el modelo que PINTA, como el resto del deslizador',
+     /nowIndex\(meta = this\.usando\?\.meta \?\? this\.meta\) \{/.test(M)
+     && /indices\(meta = this\.usando\?\.meta \?\? this\.meta\)/.test(M),
+     'el botón Ahora calculaba el índice en la lista del elegido y lo aplicaba a la del que pinta');
+  ok('y loadMeta pide el suyo a mano, que ahí el deslizador ya está hecho con esa ficha',
+     /this\.t = Math\.min\(this\.nowIndex\(m\), Math\.max\(0, n - 1\)\);/.test(M),
+     'en loadMeta() `usando` puede ser todavía el de la capa anterior');
+}
+
+/* ══════════════════════════════════════════════════════════════════════
    QUE NO VUELVA A PASAR · EL VETO DE RAYOS ES DE TODO LO VIGENTE
    ──────────────────────────────────────────────────────────────────────
    Cazado el 21-09-2026, de madrugada, con él entrando de guardia a las 7.
@@ -8468,6 +8672,14 @@ grupo('QUE NO VUELVA A PASAR · las tres guardias de clase (20-09-2026)');
      una excusa huérfana es una puerta abierta. */
   const REGLAS = [
     { num: '700', dueno: 'CAPE_COMBINACION', cerca: /cape/i },
+    /* ── EL 75 TAMBIÉN TIENE DUEÑO, Y NO LO TENÍA (21-09-2026) ───────
+       `TAPA_ROMPE` se creó el 20-09 «porque el 75 vivía escrito a pelo en
+       ocho sitios» … y se quedó usado en UNO. Los otros diecisiete
+       siguieron con el número suelto, y esta guardia —que lleva
+       `TAPA_ROMPE` EN SU PROPIO NOMBRE— no lo miraba. Una guardia que
+       nombra lo que no comprueba es peor que no tenerla: se lee como
+       cubierto. */
+    { num: '75',  dueno: 'TAPA_ROMPE', cerca: /cin|tapa/i },
     { num: '70',  dueno: 'listonRafaga()/rafagaBestia', cerca: /gust|racha/i },
     { num: '49',  dueno: 'listonRafaga()', cerca: /gust|racha/i },
   ];
@@ -8478,10 +8690,16 @@ grupo('QUE NO VUELVA A PASAR · las tres guardias de clase (20-09-2026)');
     'rafagaBestia: 90': 'la tabla de perfiles',
     'hace falta ${CAPE_COMBINACION} con la tapa': 'texto que YA usa la constante',
   };
+  /* Los comentarios NO son código: ahí el número es la explicación, y
+     confundirlos llenaba esto de falsos positivos. Se borran dejando
+     espacios, que no mueve ni una línea de sitio. */
+  const soloCodigo = A_
+    .replace(/\/\*[\s\S]*?\*\//g, c => c.replace(/[^\n]/g, ' '))
+    .replace(/^([^'"\n]*?)\/\/.*$/gm, (l, pre) => pre + ' '.repeat(l.length - pre.length));
   const pillados = [];
   for (const { num, dueno, cerca } of REGLAS) {
     const rx = new RegExp(`[^\\n]*(?:>=|<=|>|<|===)\\s*${num}(?![\\d.])[^\\n]*`, 'g');
-    for (const l of (A_.match(rx) || [])) {
+    for (const l of (soloCodigo.match(rx) || [])) {
       const t = l.trim();
       if (!cerca.test(t)) continue;
       if (t.includes(dueno.split('/')[0])) continue;
