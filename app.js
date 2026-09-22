@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.22-0013';
+const BUILD = '2026.09.22-1128';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -1297,9 +1297,39 @@ function cieloRaro(nubes) {
   const dueno = quienLoMide('cloud_cover') || modeloDato().om;
   const nomDueno = (COMPARAR.find(m => m.om === dueno) || {}).name
                  || modeloDato().name;
+  /* ── UN TOTAL QUE SE CONTRADICE CON SUS PROPIAS CAPAS NO VOTA ──────
+     MEDIDO el 22-09-2026 a las 11:17 en Bermeo, con sus fotos del cielo
+     delante —azul limpio, *«algunas estelas sueltas altas blancas, poca
+     cosa»*—:
+
+         ECMWF ........  3 %      GFS ..........  11 %
+         ICON .........  26 %     Automático ...  95 %   ← y a las 12h, 98
+
+     Y el 98 % del Automático venía con **bajas 0 · medias 5 · altas 0**.
+     Un cielo tapado al 98 % con las tres capas a cero no existe: la unión
+     nunca puede ser mayor que la suma de las partes. Con ese número
+     imposible, y solo con él, a él le salió en la franja de la mañana
+     «⚠ Automático lo ve cubierto» sobre un cielo despejado.
+
+     La app YA sabe cazar ese disparate —`sinExplicar` en `loQueTapa()`,
+     con su margen de 10 puntos medido a tres días— pero este aviso no lo
+     miraba: cogía el total de cada modelo a pelo. Así que un modelo con
+     la aritmética rota podía disparar él solo el triángulo.
+
+     Ahora no vota quien no cuadra consigo mismo. Si al quitarlo ya no
+     queda desacuerdo, no hay aviso: avisar con un número imposible es
+     gastar el aviso, y el que se lo come es el que está subiendo a un
+     monte. El mismo margen de 10 puntos, que sale de la misma medición.  */
+  const cuadraConsigo = om => {
+    const cs = ['low', 'mid', 'high']
+      .map(k => C[`cloud_cover_${k}_${om}`]?.[i]).filter(has);
+    if (cs.length < 3) return true;              // sin capas no se juzga
+    const tot = C[`cloud_cover_${om}`]?.[i];
+    return !has(tot) || tot - cs.reduce((a2, b2) => a2 + b2, 0) <= 10;
+  };
   const otros = COMPARAR
     .map(m => ({ n: m.name, om: m.om, v: C[`cloud_cover_${m.om}`]?.[i] }))
-    .filter(x => has(x.v) && x.om !== dueno && x.n !== nomDueno);
+    .filter(x => has(x.v) && x.om !== dueno && x.n !== nomDueno && cuadraConsigo(x.om));
   if (otros.length < 3) return null;
 
   const ord = [...otros].sort((a, b) => a.v - b.v);

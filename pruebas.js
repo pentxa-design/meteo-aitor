@@ -273,6 +273,66 @@ grupo('El CAPE de uno con la tapa de otro no es una pareja (21-09-2026)');
      'y en null cuando la tapa es del propio modelo, para que nada cambie en ese caso');
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   UN TOTAL QUE SE CONTRADICE CONSIGO MISMO NO PUEDE DISPARAR UN AVISO
+   ──────────────────────────────────────────────────────────────────────
+   MEDIDO el 22-09-2026 a las 11:17 en Bermeo, con sus fotos del cielo
+   delante —azul limpio, «algunas estelas sueltas altas blancas, poca cosa»:
+
+       ECMWF  3 %   ·  GFS  11 %  ·  ICON  26 %  ·  Automático  95 %
+       (a las 12h el Automático subía a 98)
+
+   Y ese 98 % venía con **bajas 0 · medias 5 · altas 0**. La unión no puede
+   ser mayor que la suma de las partes: ese total no existe. Con ese número
+   imposible, y solo con él, le salió «⚠ Automático lo ve cubierto» encima
+   de un cielo despejado.
+
+   La app YA cazaba el disparate en `loQueTapa()` (`sinExplicar`, margen de
+   10 puntos medido a tres días), pero `cieloRaro` no lo miraba: cogía el
+   total de cada modelo a pelo.
+   ══════════════════════════════════════════════════════════════════════ */
+grupo('Un total de nubes que no cuadra con sus capas no vota (22-09-2026)');
+{
+  const cuadra = new Function('C', 'i', 'has', `
+    const cuadraConsigo = ${sacar('  const cuadraConsigo = om => {', '\n  };').trim().replace('const cuadraConsigo = ', '')}
+    return cuadraConsigo;`);
+
+  const C = {
+    // El Automático de ese día: 98 con las capas a cero. Imposible.
+    'cloud_cover_best_match': [98], 'cloud_cover_low_best_match': [0],
+    'cloud_cover_mid_best_match': [5], 'cloud_cover_high_best_match': [0],
+    // ECMWF, coherente: 5 de total con 5 de altas.
+    'cloud_cover_ecmwf_ifs025': [5], 'cloud_cover_low_ecmwf_ifs025': [0],
+    'cloud_cover_mid_ecmwf_ifs025': [0], 'cloud_cover_high_ecmwf_ifs025': [5],
+    // Solapadas: bajas 40 y altas 40 con total 70 es CORRECTO, no descuadre.
+    'cloud_cover_icon_seamless': [70], 'cloud_cover_low_icon_seamless': [40],
+    'cloud_cover_mid_icon_seamless': [0], 'cloud_cover_high_icon_seamless': [40],
+    // Sin capas publicadas: no se juzga, vota.
+    'cloud_cover_gfs_seamless': [90],
+  };
+  const f = cuadra(C, 0, globalThis.has);
+
+  ok('el 98 % con las capas a cero NO vota: ese total no existe',
+     f('best_match') === false,
+     'la unión no puede ser mayor que la suma de las partes');
+  ok('pero el que cuadra sí vota',
+     f('ecmwf_ifs025') === true);
+  ok('y las capas que se solapan NO son un descuadre: bajas 40 + altas 40 con total 70 es correcto',
+     f('icon_seamless') === true,
+     'la regla no es «el total por encima de todas las capas», es «por encima de la SUMA»');
+  ok('un modelo que no publica sus capas no se juzga: sigue votando',
+     f('gfs_seamless') === true,
+     'no tener capas no es tener la aritmética rota');
+
+  ok('y `cieloRaro` filtra de verdad con esa regla',
+     /&& x\.om !== dueno && x\.n !== nomDueno && cuadraConsigo\(x\.om\)\);/.test(src),
+     'avisar con un número imposible es gastar el aviso, y lo paga el que está subiendo al monte');
+  ok('el margen es el mismo 10 que ya estaba medido, no uno nuevo a ojo',
+     /return !has\(tot\) \|\| tot - cs\.reduce\(\(a2, b2\) => a2 \+ b2, 0\) <= 10;/.test(src)
+     && /C\.cloud_cover - capas\.reduce\(\(a2, x\) => a2 \+ x\.v, 0\) > 10/.test(src),
+     'dos sitios con el mismo listón: si se cambia uno hay que cambiar el otro');
+}
+
 grupo('El ocaso: de noche es de noche en cuanto se pone el sol (21-09-2026)');
 {
   const hora = (t, day) => ({ date: new Date(t), t, day, code: 4, cloud: 60,
