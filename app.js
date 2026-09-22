@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.22-2004';
+const BUILD = '2026.09.22-2021';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -1924,16 +1924,55 @@ async function cargarMarcador() {
       const esAgua = e.magnitud === 'lluvia';
       const G = d.porMagnitud?.[e.magnitud || 'racha'] || {};
       const txt = v => esAgua ? `${mmTxt(v)} mm/h` : wtxt(v, true);
-      const raya = esAgua ? 1 : 10;
+      /* ── LA RAYA DE LA LLUVIA SALE DE SUS LISTONES (22-09-2026) ────
+         Era un `1` redondo puesto a ojo en el cliente, y con eso las 42
+         filas de lluvia que había en producción —7 estaciones por 6
+         modelos— decían las 42 «cuadra» en verde. Ni una ámbar.
+
+         Sus listones de lluvia son 0,2 (llueve) y 2,0 (llueve bien). Un
+         sesgo de 0,7 mm/h es TRES VECES Y MEDIA su primer listón, y
+         quedarse 1,3 corto es la diferencia entre abrir la caseta y no
+         abrirla. Una pantalla que existe para decirle de quién fiarse en
+         lluvia —su prioridad número uno— le contestaba «todos cuadran».
+
+         Ahora la raya de lluvia es su primer listón. La de la racha sigue
+         en 10 km/h, que es la que ya estaba medida. */
+      const raya = esAgua ? (S.thr?.rainWarn ?? 0.2) : 10;
       const minimo = G.minimo ?? d.minimoParaFiarse;
       const conBastante = e.modelos.filter(m => m.bastante);
-      const cuerpo = conBastante.length
+      /* ── EL QUE NO LLEGA A CINCO NO DESAPARECE (22-09-2026) ────────
+         `conBastante` se pintaba y el resto se tiraba SIN DECIR NADA; el
+         aviso de «faltan comparaciones» solo salía cuando no llegaba
+         ninguno. En producción había seis filas borradas así, y la peor
+         en su cabo: Matxitxako 433 m enseñaba cinco modelos, cuatro en
+         verde, y ARPEGE no aparecía — con 4 muestras, sesgo −13,2 km/h y
+         lo peor 22,1 corto. La ficha se veía completa y el que iba 13
+         corto sencillamente no estaba.
+
+         Es la regla de la casa: un hueco no puede parecer «aquí no pasa
+         nada». Ahora sale, sin número, diciendo lo que le falta. */
+      const cortos = e.modelos.filter(m => !m.bastante);
+      const cuerpo = (conBastante.length
         ? conBastante.map(m => {
             const corto = m.sesgo <= -raya, pasa = m.sesgo >= raya;
             const st = corto ? 'no' : pasa ? 'warn' : 'go';
+            /* ── EL SIGNO NO SE BORRA (22-09-2026) ──────────────────
+               `Math.abs()` hacía que «cuadra (10 km/h)» en verde y «se
+               queda 10 corto» en rojo pudieran ser el mismo número
+               impreso. En el Oiz, ARPEGE salía «cuadra (10 km/h)» en
+               verde con un sesgo REAL de −9,9: se queda casi diez corto
+               y la pantalla decía que acertaba. De 187 filas, 176 decían
+               «cuadra» y 56 de esas verdes tenían el sesgo negativo.
+
+               La cabecera de api/marcador.mjs lo dice con todas las
+               letras: el sesgo es la media CON SIGNO, «y quedarse corto
+               es lo que le manda a alguien a una torre con más viento
+               del que creía». */
             const dice = corto ? `se queda <b>${txt(-m.sesgo)} corto</b>`
                       : pasa  ? `se pasa <b>${txt(m.sesgo)}</b>`
-                              : `cuadra (${txt(Math.abs(m.sesgo))})`;
+                      : m.sesgo < 0 ? `cuadra, va ${txt(-m.sesgo)} corto`
+                      : m.sesgo > 0 ? `cuadra, va ${txt(m.sesgo)} largo`
+                                    : 'cuadra, clavado';
             return `<div class="marc__m" data-s="${st}">
               <span class="marc__mn">${esc(m.modelo)}</span>
               <span class="marc__md">${dice}</span>
@@ -1943,7 +1982,12 @@ async function cargarMarcador() {
             </div>`;
           }).join('')
         : `<p class="note">Solo ${e.muestras} comparación${e.muestras > 1 ? 'es' : ''}.
-           Hacen falta ${minimo} para decir algo de un modelo.</p>`;
+           Hacen falta ${minimo} para decir algo de un modelo.</p>`)
+        + cortos.map(m => `<div class="marc__m" data-s="nd">
+            <span class="marc__mn">${esc(m.modelo)}</span>
+            <span class="marc__md">todavía no dice nada</span>
+            <span class="marc__me">${m.n} de ${minimo} comparaciones</span>
+          </div>`).join('');
 
       return `<div class="marc">
         <div class="marc__k"><b>${esc(e.estacion)}</b>${

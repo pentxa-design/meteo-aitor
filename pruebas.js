@@ -331,6 +331,69 @@ grupo('El CAPE de uno con la tapa de otro no es una pareja (21-09-2026)');
    NO se cambia qué modelo manda: eso lo decidió él el 02-09 («yo quiero
    como Windy»). Se cambia lo que el rótulo afirma.
    ══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════
+   EL MARCADOR PINTABA DE VERDE AL QUE SE QUEDA CORTO (22-09-2026)
+   ──────────────────────────────────────────────────────────────────────
+   Tres fallos de la misma pantalla, medidos sobre lo que servía ese día.
+
+   1. EL SIGNO SE BORRABA. `Math.abs()` hacía que «cuadra (10 km/h)» en
+      verde y «se queda 10 corto» en rojo fueran el mismo número impreso.
+      En el Oiz —998 m, donde se sube a torre— ARPEGE salía «cuadra
+      (10 km/h)» en VERDE con sesgo real −9,9: casi diez corto. De 187
+      filas, 176 decían «cuadra» (94 %) y 56 de esas verdes tenían el
+      sesgo NEGATIVO. Un marcador con el 94 % en verde no separa nada.
+
+   2. LA RAYA DE LA LLUVIA ERA UN 1 REDONDO puesto a ojo. Sus listones
+      son 0,2 y 2,0. Con el 1, las 42 filas de lluvia de producción —7
+      estaciones × 6 modelos— decían las 42 «cuadra» en verde.
+
+   3. EL QUE NO LLEGABA A 5 MUESTRAS DESAPARECÍA SIN DECIR NADA. Seis
+      filas borradas, la peor en su cabo: Matxitxako enseñaba cinco
+      modelos, cuatro verdes, y ARPEGE no estaba — 4 muestras, sesgo
+      −13,2, lo peor 22,1 corto.
+
+   La cabecera de api/marcador.mjs ya lo decía: el sesgo es la media CON
+   SIGNO, «y quedarse corto es lo que le manda a alguien a una torre con
+   más viento del que creía».
+   ══════════════════════════════════════════════════════════════════════ */
+grupo('El marcador pintaba de verde al que se queda corto (22-09-2026)');
+{
+  const frase = (sesgo, raya) => {
+    const txt = v => `${v} km/h`;
+    const corto = sesgo <= -raya, pasa = sesgo >= raya;
+    return corto ? `se queda ${txt(-sesgo)} corto`
+         : pasa  ? `se pasa ${txt(sesgo)}`
+         : sesgo < 0 ? `cuadra, va ${txt(-sesgo)} corto`
+         : sesgo > 0 ? `cuadra, va ${txt(sesgo)} largo`
+                     : 'cuadra, clavado';
+  };
+
+  ok('el que va corto por debajo de la raya lo DICE, no sale como si clavara',
+     frase(-9.9, 10) === 'cuadra, va 9.9 km/h corto',
+     'en el Oiz salía «cuadra (10 km/h)» en verde con el sesgo real en −9,9');
+  ok('y el que se pasa también lo dice',
+     frase(4, 10) === 'cuadra, va 4 km/h largo');
+  ok('clavado es clavado, y solo el cero',
+     frase(0, 10) === 'cuadra, clavado');
+  ok('y por encima de la raya no cambia nada de lo que ya estaba',
+     frase(-12, 10) === 'se queda 12 km/h corto' && frase(12, 10) === 'se pasa 12 km/h',
+     'esto es lo que impide que el arreglo se coma los rojos que ya salían');
+
+  ok('el signo ya no se borra con Math.abs',
+     !/cuadra \(\$\{txt\(Math\.abs\(m\.sesgo\)\)\}\)/.test(src)
+     && /m\.sesgo < 0 \? `cuadra, va \$\{txt\(-m\.sesgo\)\} corto`/.test(src),
+     '«cuadra (10)» verde y «se queda 10 corto» rojo eran el mismo número');
+  ok('la raya de la lluvia sale de SU listón, no de un 1 redondo',
+     /const raya = esAgua \? \(S\.thr\?\.rainWarn \?\? 0\.2\) : 10;/.test(src)
+     && !/const raya = esAgua \? 1 : 10;/.test(src),
+     'con el 1, las 42 filas de lluvia decían las 42 «cuadra» en verde');
+  ok('y el que no llega a las cinco comparaciones sale, sin número',
+     /const cortos = e\.modelos\.filter\(m => !m\.bastante\);/.test(src)
+     && /todavía no dice nada/.test(src)
+     && /\$\{m\.n\} de \$\{minimo\} comparaciones/.test(src),
+     'un hueco no puede parecer «aquí no pasa nada»: ARPEGE con −13,2 no estaba');
+}
+
 grupo('El rótulo no jura un modelo que no es (22-09-2026)');
 {
   ok('la cabecera de ESTA HORA dice el modelo cargado, no «los 5 juntos»',
