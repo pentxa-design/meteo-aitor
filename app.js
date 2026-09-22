@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.22-2115';
+const BUILD = '2026.09.22-2127';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -5175,11 +5175,7 @@ function renderStorm(c) {
   // Zarautz). En esta app la inhibición sale en POSITIVO; en AguaceroWx
   // y otros visores la verás en negativo: es lo mismo, con el signo
   // cambiado.
-  const cinTxt = !has(c.cin) ? nd
-    : c.cin < 25  ? 'Sin tapa: si hay CAPE, rompe'
-    : c.cin < 50  ? 'Tapa floja'
-    : c.cin < 200 ? 'Tapa que aguanta'
-    :               'Tapa fuerte';
+  const cinTxt = !has(c.cin) ? nd : fraseTapa(c.cin, c);
 
   // De dónde salen estos números, si no los publica el modelo elegido
   const fcAct = S.data?.fc;
@@ -7881,6 +7877,33 @@ function textoTapa(cin, h) {
   if (cin < 50)  return 'floja';
   if (cin < 200) return 'aguanta';
   return 'fuerte';
+}
+
+/* La misma escala, con las palabras largas de las fichas de Riesgo
+   eléctrico y de Detalles. ESTABA COPIADA DOS VECES (líneas 5179 y
+   13510 del 22-09-2026), y por eso el arreglo del cero mudo no llegó
+   ahí: se ve en su propia pantalla de esa noche, donde la casilla de la
+   tapa seguía diciendo «Sin tapa: si hay CAPE, rompe» sobre un 0 que
+   había puesto ICON porque no veía nada.
+
+   Aquí y en `textoTapa()` está TODA la escala de la tapa de la app. Una
+   guarda de pruebas.js cuenta cada palabra de la escala y falla si
+   aparece una tercera copia: es la única forma de que el próximo
+   arreglo de la tapa llegue a todos los sitios a la vez.
+
+   Los cortes salen de lo medido el 23-08-2026: Bermeo con 130-141 oyó
+   truenos lejanos y no le cayó nada; Durango, Amorebieta y Zarautz, con
+   la tapa en 0, descargaron (con granizo en Zarautz). En esta app la
+   inhibición sale en POSITIVO; en AguaceroWx y otros visores la verás
+   en negativo: es lo mismo, con el signo cambiado. */
+function fraseTapa(cin, h) {
+  if (!has(cin)) return '';
+  if (h !== undefined && !tapaVale(h))
+    return `La tapa no dice nada aquí: ese 0 lo pone ${h.tapaDe}, que no ve gasolina`;
+  if (cin < 25)  return 'Sin tapa: si hay CAPE, rompe';
+  if (cin < 50)  return 'Tapa floja';
+  if (cin < 200) return 'Tapa que aguanta';
+  return 'Tapa fuerte';
 }
 
 /* ── El tablero también tiene que enterarse ───────────────────────────
@@ -13506,10 +13529,7 @@ function renderNow() {
      hace días. Solo faltaba enseñarlos. */
   const capeTxt = !has(c?.cape) ? '' : c.cape >= (S.thr?.capeNo ?? 1000) ? 'alta'
     : c.cape >= (S.thr?.capeWarn ?? 300) ? 'moderada' : 'baja';
-  const tapaTxt = !has(c?.cin) ? ''
-    : c.cin < 25 ? 'Sin tapa: si hay CAPE, rompe'
-    : c.cin < 50 ? 'Tapa floja'
-    : c.cin < 200 ? 'Tapa que aguanta' : 'Tapa fuerte';
+  const tapaTxt = fraseTapa(c?.cin, c);
   /* El mismo listón que usa el vigilante: CAPE ≥ 700 con la tapa por
      debajo de 75. Un número distinto aquí y allí sería otro renglón que
      dice una cosa mientras el aviso dice otra. */

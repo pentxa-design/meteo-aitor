@@ -275,6 +275,7 @@ grupo('Una tapa en 0 de quien no ve gasolina no dice nada (22-09-2026)');
 {
   /* La escala de la tapa, que más abajo se saca otra vez para lo suyo. */
   eval(sacar('function textoTapa(cin, h) {'));
+  eval(sacar('function fraseTapa(cin, h) {'));
   const h = (cape, cin, tapaDe, capeTapa) => ({ cape, cin, tapaDe, capeTapa });
 
   ok('la tapa del propio modelo SIEMPRE cuenta',
@@ -348,6 +349,52 @@ grupo('Una tapa en 0 de quien no ve gasolina no dice nada (22-09-2026)');
        sinHora.length === 0,
        sinHora.length ? `sin hora: textoTapa(${sinHora.join('), textoTapa(')})` : `${llamadas.length} llamadas, todas con hora`);
   }
+  /* ── LA ESCALA DE LA TAPA VIVE EN UN SOLO SITIO ───────────────────
+     Y ésta es la guarda que faltaba. La de arriba vigila las llamadas a
+     `textoTapa()`, así que el arreglo del cero mudo llegó a los sitios
+     que la llaman… y se quedó fuera de los DOS que tenían la escala
+     copiada a mano con las palabras largas («Sin tapa: si hay CAPE,
+     rompe»). Se vio en su propia pantalla, en vivo, después de publicar
+     el arreglo: la ficha de Riesgo eléctrico lo seguía diciendo.
+
+     Él, esa noche: *«otro fallo tonto diario, que no pase»*. La forma de
+     que no pase no es vigilar la función: es **prohibir la copia**. Si
+     cualquiera de estas palabras aparece dos veces fuera de comentario,
+     hay una segunda escala suelta y el próximo arreglo volverá a dejarla
+     atrás. La puerta se cierra aquí. */
+  {
+    const codigo = src.replace(/\/\*[\s\S]*?\*\//g, '');
+    /* Las frases largas son inconfundibles: una sola vez cada una. */
+    const LARGAS = ['Sin tapa: si hay CAPE, rompe', 'Tapa floja', 'Tapa que aguanta',
+                    'Tapa fuerte'];
+    const repes = LARGAS.filter(t => codigo.split(t).length - 1 !== 1);
+    ok('cada frase larga de la escala de la tapa aparece UNA sola vez en el código',
+       repes.length === 0,
+       repes.length ? `copiada o perdida: ${repes.join(' · ')}` : 'las cuatro, una vez cada una');
+    /* Las cortas (abierta/floja/aguanta/fuerte) se usan para otras cosas
+       —«lluvia fuerte» en los iconos—, así que aquí no vale contar la
+       palabra suelta: lo que se prohíbe es la ESCALERA, las cuatro
+       seguidas, que es la forma que tiene una escala copiada. */
+    const escaleras = [...codigo.matchAll(/'abierta'/g)].filter(m => {
+      const v = codigo.slice(m.index, m.index + 400);
+      return /'floja'/.test(v) && /'aguanta'/.test(v) && /'fuerte'/.test(v);
+    });
+    ok('la escalera corta abierta/floja/aguanta/fuerte existe en UN solo sitio',
+       escaleras.length === 1,
+       `hay ${escaleras.length}; si son dos, el próximo arreglo de la tapa dejará una atrás`);
+    ok('y las dos fichas la piden a fraseTapa(), con la hora',
+       /const cinTxt = !has\(c\.cin\) \? nd : fraseTapa\(c\.cin, c\);/.test(src)
+       && /const tapaTxt = fraseTapa\(c\?\.cin, c\);/.test(src),
+       'Riesgo eléctrico y Detalles: los dos sitios donde él lo vio el 22-09');
+  }
+  ok('fraseTapa dice quién puso el cero, y se calla la escala',
+     fraseTapa(0, { cape: 800, cin: 0, tapaDe: 'ICON', capeTapa: 0 })
+       === 'La tapa no dice nada aquí: ese 0 lo pone ICON, que no ve gasolina'
+     && fraseTapa(0, { cape: 800, cin: 0, tapaDe: null }) === 'Sin tapa: si hay CAPE, rompe'
+     && fraseTapa(100, { cape: 0, cin: 100, tapaDe: null }) === 'Tapa que aguanta'
+     && fraseTapa(null, {}) === '',
+     'la escala entera intacta cuando la tapa sí vale');
+
   ok('los tres avisos de assess() se bifurcan con la regla, no la ignoran',
      (src.match(/bump\('(?:warn|no)', \(tapaVale\(h\)/g) || []).length === 3,
      'si alguno deja de mirarla, vuelve a escribir «la tapa está abierta» sobre un cero mudo');
