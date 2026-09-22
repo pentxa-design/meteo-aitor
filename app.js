@@ -9931,10 +9931,30 @@ function renderTorres() {
              al lado. Él lo vio en cuanto salió: *«en vez de vertical, con
              todo el sitio que tienes a la derecha»*. -->
         <span class="tor__hora">${(() => {
+          /* ── «LA HORA EN CURSO» SIN MIRAR EL RELOJ (22-09-2026) ──────
+             Esto afirmaba «la hora en curso» SIEMPRE, sin comparar nada
+             contra el reloj. Y las tarjetas no se rehacen solas: `S.torres`
+             solo se reconstruye cuando él entra en la pestaña, guarda o
+             quita un sitio, o cambia la lista en el servidor. No hay ningún
+             temporizador que lo repita.
+
+             Escenario suyo, y de los que pasan: entra a las 20:50, baja los
+             datos, y se queda ahí repartiendo. A las 21:40 las veinte
+             tarjetas siguen diciendo «de 20:00 a 21:00 · la hora en curso»
+             con la lluvia, la racha y el CAPE de las 20:00 — y con ellas el
+             badge y el rojo de alarma, que salen de esa misma hora pasada.
+
+             En la pestaña Torre esto ya estaba bien hecho desde el
+             principio, con TRES casos y no dos. Es el mismo reparto, traído
+             a la pantalla que más pesa, que es con la que reparte gente. */
           const d = h?.date;
           if (!d) return '';
           const z = n => String(n).padStart(2, '0') + ':00';
-          return `de ${z(d.getHours())} a ${z((d.getHours() + 1) % 24)} · la hora en curso`;
+          const a_ = d.getTime(), b_ = a_ + 3600e3, ahora = Date.now();
+          const cola = ahora < a_ ? ' · la próxima hora'
+                     : ahora < b_ ? ' · la hora en curso'
+                     : ` · <b>de hace ${Math.floor((ahora - b_) / 3600e3) + 1} h</b>, recarga`;
+          return `de ${z(d.getHours())} a ${z((d.getHours() + 1) % 24)}${cola}`;
         })()}</span>
       </div>
       <div class="tor__ds">${(() => {

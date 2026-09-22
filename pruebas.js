@@ -4989,9 +4989,22 @@ grupo('«Me pasan a las 2 de la mañana: Arbaiza» — el viaje entra en la resp
      /const cuando = d => \(d\.getDay\(\) === hoyD \? '' : `\$\{DIAS\[d\.getDay\(\)\]\} `\) \+ hh\(d\)/.test(src)
      && /const DIAS = \['domingo', 'lunes'/.test(src),
      'a las nueve de la noche, «las 09:00» son de mañana');
-  ok('y la fila de cifras de la tarjeta dice de qué hora es',
-     /class="tor__hora"/.test(src) && /la hora en curso`/.test(src),
-     'la misma fila sin hora parece de otro momento');
+  /* 22-09-2026: y lo dice MIRANDO EL RELOJ. Antes afirmaba «la hora en
+     curso» siempre, y las tarjetas no se rehacen solas: entraba a las
+     20:50 y a las 21:40 seguían diciendo «de 20:00 a 21:00 · la hora en
+     curso» con los datos de las 20:00, badge y rojo de alarma incluidos.
+     Es el mismo reparto de tres casos que la pestaña Torre ya tenía. */
+  ok('y la fila de cifras de la tarjeta dice de qué hora es, mirando el reloj',
+     /class="tor__hora"/.test(src)
+     && /const cola = ahora < a_ \? ' · la próxima hora'/.test(src)
+     && /: ahora < b_ \? ' · la hora en curso'/.test(src)
+     && /de hace \$\{Math\.floor\(\(ahora - b_\) \/ 3600e3\) \+ 1\} h<\/b>, recarga/.test(src),
+     'afirmar la hora equivocada en la pantalla con la que reparte gente');
+  ok('y son TRES casos, no dos: la copia del monte puede ser de una hora ya pasada',
+     (() => { const i = src.indexOf('class="tor__hora"');
+       const t = src.slice(i, i + 1800);
+       return /la próxima hora/.test(t) && /la hora en curso/.test(t) && /recarga/.test(t); })(),
+     'decir «la hora en curso» sin cobertura es mentir justo cuando no se puede comprobar');
   ok('ya NO se le da la hora de mañana cuando pregunta por ahora',
      !/al empezar la jornada: /.test(src),
      'a las 19:13 le decía «a las 07:00 de mañana», que no es lo que mira');
