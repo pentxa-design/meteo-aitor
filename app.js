@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.22-2021';
+const BUILD = '2026.09.22-2053';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -461,6 +461,25 @@ const LS = {
    una nube bajo tierra. */
 const NUBE_ALTA = 9000;
 const NUBE_BAJA = 7000;
+
+/* ── QUIÉN PRESTA LA TAPA, EN UN SOLO SITIO (22-09-2026) ───────────────
+   AROME HD —el modelo de la cabecera— publica CAPE pero NO publica tapa:
+   no sale en `convective_inhibition` de `data/cobertura.json`, donde solo
+   están ICON, GFS y el Automático. Con AROME puesto la tapa viene
+   prestada el 100 % de las horas.
+
+   La app la pintaba en diez sitios distintos y solo tres decían de quién
+   era. Los otros siete escribían «CAPE 800 y la tapa en 0» como si lo
+   dijera un modelo solo — una pareja que no pronostica nadie, que es
+   justo el fallo que se arregló el 21-09 en la tarjeta y que seguía vivo
+   en las frases de al lado.
+
+   Esto NO apaga ningún aviso: ante la duda se avisa. Solo firma la cifra.
+   Devuelve '' cuando la tapa es del propio modelo (ahí `tapaDe` es null,
+   por `extrasDe`) y cuando la hora viene armada a mano en las pruebas. */
+function firmaTapa(h) {
+  return h?.tapaDe ? ` (la da ${h.tapaDe})` : '';
+}
 
 function loQueMideLaNube(h, place) {
   /* Se aceptan LOS DOS nombres: el corto que produce `buildHours` (que
@@ -2343,6 +2362,19 @@ function assess(h, thr, quePerfil, place = null) {
      cual estaba. Ver el comentario largo en HOURLY para el porqué. */
   const laCombinacion = has(h.cape) && has(h.cin)
                      && h.cape >= TAPA_CAPE && h.cin < TAPA_ABIERTA;
+  /* ── Y SI LA TAPA ES PRESTADA, SE DICE (22-09-2026) ───────────────
+     Estas tres frases pegan el CAPE de un modelo a la tapa de otro y lo
+     escriben como si lo dijera uno solo. Con AROME HD puesto —el de la
+     cabecera— pasa SIEMPRE: AROME publica CAPE pero no publica tapa, así
+     que la tapa la presta ICON en el 100 % de las horas.
+
+     El aviso NO se apaga por eso: aquí el listón es «mira el radar», y
+     ante la duda se avisa. Lo que se arregla es la firma, no la regla —
+     el rojo de la tarjeta sí exige que la pareja sea del mismo modelo.
+     Queda vacío cuando la tapa es del propio modelo, y también cuando
+     la hora viene armada a mano (pruebas), donde `tapaDe` no existe.
+     Se llama en las tres frases, no en una variable de arriba: la firma
+     tiene que leerse al lado de la cifra que firma. */
   /* Y si YA ESTÁ LLOVIENDO, hay chispa aunque la probabilidad diga 0 %.
      El agua que cae es una medida; la probabilidad es una previsión. Ante
      una contradicción entre las dos, manda lo que está pasando. Sin esto,
@@ -2358,7 +2390,7 @@ function assess(h, thr, quePerfil, place = null) {
   const rompiendo = laCombinacion && lloviendo && h.cape >= thr.capeNo;
 
   if (tapaAbierta && !tormentaAhora && !rompiendo)
-    bump('warn', `CAPE ${h.cape.toFixed(0)} J/kg y la tapa en ${h.cin.toFixed(0)} — `
+    bump('warn', `CAPE ${h.cape.toFixed(0)} J/kg y la tapa en ${h.cin.toFixed(0)}${firmaTapa(h)} — `
                + `hay gasolina Y la tapa está abierta. Es la combinación que rompe: `
                + `mira el radar y el oído: si se oye el trueno, ya estás dentro del alcance`
                + loQueMideLaNube(h, place));
@@ -2369,7 +2401,7 @@ function assess(h, thr, quePerfil, place = null) {
      nadie. Lo que sobraba era el TITULAR de rayo, no el ámbar.
      Lo único que se le quita es el «⚡», que es lo que gritaba de más. */
   if (laCombinacion && !hayChispa && !tormentaAhora)
-    bump('warn', `CAPE ${h.cape.toFixed(0)} J/kg y la tapa en ${h.cin.toFixed(0)}, `
+    bump('warn', `CAPE ${h.cape.toFixed(0)} J/kg y la tapa en ${h.cin.toFixed(0)}${firmaTapa(h)}, `
                + `pero solo ${h.pop} % de probabilidad de lluvia — hay ambiente `
                + `cargado y nada que lo dispare de momento. Si cambia el cielo, `
                + `cambia esto: vigila el radar`);
@@ -2393,7 +2425,7 @@ function assess(h, thr, quePerfil, place = null) {
   } else if (rompiendo) {
     // Con la tapa abierta, gasolina de sobra Y lloviendo ya, esto no es
     // «puede romper»: está rompiendo. Eso sí es rojo, como antes.
-    bump('no', `CAPE ${h.cape.toFixed(0)} J/kg, tapa ${h.cin.toFixed(0)} y lloviendo — `
+    bump('no', `CAPE ${h.cape.toFixed(0)} J/kg, tapa ${h.cin.toFixed(0)}${firmaTapa(h)} y lloviendo — `
              + `tormenta en marcha, riesgo eléctrico`);
   }
   /* ── SIN DATO DE CAPE NO SE CALLA ─────────────────────────────────
@@ -4571,7 +4603,7 @@ function renderTower() {
     kpi('Riesgo eléctrico',
         has(c.cape) ? `${c.cape.toFixed(0)}<i>J/kg</i>` : nd,
         isStormCode(c.code) ? 'Tormenta en la previsión horaria'
-          : has(c.cin) ? `CAPE · tapa ${c.cin.toFixed(0)} — ${textoTapa(c.cin)}`
+          : has(c.cin) ? `CAPE · tapa ${c.cin.toFixed(0)}${firmaTapa(c)} — ${textoTapa(c.cin)}`
           : 'CAPE — energía convectiva disponible',
         isStormCode(c.code) ? 'no' : cSt);
   const kSensacion =
@@ -8644,9 +8676,21 @@ function renderParte() {
       + fila('CAPE y tapa',
              /* El CAPE y la tapa solo tienen columna de modelo, y se dice por
                 qué: no existe el aparato que los mida. «tapa 104» va dentro de
-                su propio <span> que no se parte (Ulefone, 29-08-2026). */
+                su propio <span> que no se parte (Ulefone, 29-08-2026).
+
+                QUIÉN PRESTA LA TAPA, TAMBIÉN AQUÍ (22-09-2026). La cabecera
+                de esta columna firma «AROME HD · a 10 m», y AROME **no
+                publica tapa**: no sale en `convective_inhibition` de
+                `data/cobertura.json` (solo la dan ICON, GFS y el
+                Automático), así que con AROME puesto viene SIEMPRE
+                prestada de ICON. La tarjeta de arriba ya lo decía —«LA DA
+                ICON, NO AROME HD»— y esta tabla no, de modo que la pareja
+                «30 · tapa 0» salía firmada por un modelo que solo pone la
+                primera mitad. Mismo arreglo que en la tarjeta, función
+                hermana; se calla cuando la tapa es del propio modelo. */
              has(H?.cape) ? `<b>${H.cape.toFixed(0)}</b>${has(H?.cin)
-               ? ` <span class="pt__tab__par">· tapa ${H.cin.toFixed(0)}</span>` : ''}` : '',
+               ? ` <span class="pt__tab__par">· tapa ${H.cin.toFixed(0)}${
+                   H?.tapaDe ? ` <small>la da ${esc(H.tapaDe)}</small>` : ''}</span>` : ''}` : '',
              '<span class="pt__tab__no">ningún aparato lo mide</span>')
       + fila('Cielo',
              (has(H?.code) || has(H?.cloud))
@@ -14074,8 +14118,8 @@ function lineaCapeHora(h) {
      se quedan como están —la palabra es de la escala del mapa y el 75 es
      de lo medido—, pero no se pisan en la misma frase. */
   const tapa = !has(h.cin) ? 'tapa: no la publica'
-             : rompe       ? `tapa ${h.cin.toFixed(0)}`
-                           : `tapa ${h.cin.toFixed(0)} (${textoTapa(h.cin)})`;
+             : rompe       ? `tapa ${h.cin.toFixed(0)}${firmaTapa(h)}`
+                           : `tapa ${h.cin.toFixed(0)}${firmaTapa(h)} (${textoTapa(h.cin)})`;
   return `<div class="hcard__c${rompe ? ' hcard__c--ojo' : ''}">${cape} · ${tapa}${
     rompe ? ` — los dos a la vez: CAPE de ${CAPE_COMBINACION} para arriba`
           + ' y tapa por debajo de 75' : ''}</div>`;
@@ -14622,7 +14666,7 @@ function avisoTormentaFranja(horas) {
      seis horas no se sabe si es a las cuatro o a las nueve. */
   const hPico = String(pico.date.getHours()).padStart(2, '0');
   const cifras = `CAPE ${pico.cape.toFixed(0)}`
-    + (has(pico.cin) ? ` · tapa ${pico.cin.toFixed(0)}` : '')
+    + (has(pico.cin) ? ` · tapa ${pico.cin.toFixed(0)}${firmaTapa(pico)}` : '')
     + ` · lo peor a las ${hPico}:00`;
 
   /* La combinación que rompe, Y ALGO QUE LA ENCIENDA.
@@ -14642,7 +14686,7 @@ function avisoTormentaFranja(horas) {
     const hh = String(peor.date.getHours()).padStart(2, '0');
     return `<br><span class="part__ray">⚡ Riesgo de tormenta ${rangoDeHoras(malas)}</span>`
          + `<br><span class="part__ray--cif">lo peor a las ${hh}:00: CAPE ${peor.cape.toFixed(0)} y la tapa en `
-         + `${peor.cin.toFixed(0)}, hay gasolina y está abierta</span>`;
+         + `${peor.cin.toFixed(0)}${esc(firmaTapa(peor))}, hay gasolina y está abierta</span>`;
   }
 
   /* ── SI OTRO MODELO VE TORMENTA EN LA FRANJA, EL TITULAR NO PUEDE
@@ -14680,7 +14724,7 @@ function avisoTormentaFranja(horas) {
     const hh = String(peor.date.getHours()).padStart(2, '0');
     return `<br><span class="part__ray--ojo">Ambiente cargado, sin nada que lo dispare ${rangoDeHoras(combinacion)}</span>`
          + `<br><span class="part__ray--cif">CAPE ${peor.cape.toFixed(0)} y la tapa en `
-         + `${peor.cin.toFixed(0)}, pero ${peor.pop} % de probabilidad de lluvia</span>`;
+         + `${peor.cin.toFixed(0)}${esc(firmaTapa(peor))}, pero ${peor.pop} % de probabilidad de lluvia</span>`;
   }
 
   // Sin la combinación: se valora igual, en corto.

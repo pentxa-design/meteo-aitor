@@ -158,6 +158,8 @@ globalThis.S = { perfil: 'hierro' };
 eval(sacarConst('NUBE_ALTA'));
 eval(sacarConst('NUBE_BAJA'));
 eval(sacar('function loQueMideLaNube(h, place) {'));
+/* Y `firmaTapa`, que `assess` usa en las tres frases de la tapa. */
+eval(sacar('function firmaTapa('));
 /* `assess` llama a `peorRacha`, así que va antes. Y necesita `COMPARAR`,
    que se declara aquí abajo con los dos modelos de la prueba. */
 globalThis.COMPARAR = globalThis.COMPARAR || [];
@@ -266,6 +268,52 @@ grupo('El CAPE de uno con la tapa de otro no es una pareja (21-09-2026)');
   ok('y la casilla dice de quién es la tapa cuando no es del que da el CAPE',
      /h\.tapaDe \? ` · la da \$\{esc\(h\.tapaDe\)\}, no \$\{esc\(modeloDato\(\)\?\.name \?\? ''\)\}` : ''/.test(src),
      'sin decirlo, dos modelos distintos se leen como una pareja');
+  /* ── LA GUARDA DE CLASE, no de este sitio (22-09-2026) ─────────────
+     El 21-09 se arregló la TARJETA. El 22-09, con sus pantallazos de las
+     20:26 delante, la misma pareja sin firmar seguía saliendo en la tabla
+     de «ESTA HORA», en el KPI de Riesgo eléctrico, en la tarjeta de hora,
+     en las cifras del pico de la franja y en los dos titulares del parte:
+     siete sitios más. Se arreglan de uno en uno y luego se cierra la
+     clase entera, que es lo que él pidió: «que no vuelvan a salir».
+
+     La regla: si una plantilla pinta una tapa Y un CAPE cerca, tiene que
+     decir de quién es la tapa. Vale cualquiera de las firmas de la casa
+     —`firmaTapa()`, `tapaDe`, `dueñoCin`, `.quien`, `.modelo`— o ser el
+     caso de la comparativa (`cmp__tap`), que pide los campos POR MODELO
+     —`convective_inhibition_${m.om}`, línea 6313— y cuyo encabezado ya
+     dice «CAPE con su tapa»: ahí cada fila es un modelo entero, con su
+     CAPE y su tapa, y no hay nada prestado que firmar.
+
+     Si mañana alguien añade un sitio nuevo que pinte la pareja sin
+     firmarla, esta cuenta sube y la publicación se para. */
+  {
+    const re = /\$\{[^}]*\b(?:cin|cinT)\b[^}]*\}/g;
+    const FIRMAS = /firmaTapa|tapaDe|due(?:ñ|n)oCin|\.quien|\.modelo\b|cmp__tap/;
+    let m, parejas = 0; const sinFirmar = [];
+    while ((m = re.exec(src))) {
+      const v = src.slice(Math.max(0, m.index - 500), m.index + 300);
+      if (!/\bcape\b/.test(v)) continue;      // una tapa sola no es pareja
+      parejas++;
+      if (!FIRMAS.test(v)) sinFirmar.push(src.slice(0, m.index).split('\n').length);
+    }
+    ok('ninguna pareja CAPE+tapa se pinta sin decir de quién es la tapa',
+       sinFirmar.length === 0,
+       sinFirmar.length ? `sin firmar en las líneas ${sinFirmar.join(', ')} de app.js` : '');
+    ok('y la cuenta de sitios donde se pinta la pareja no se ha movido a ciegas',
+       parejas >= 18 && parejas <= 24,
+       `hay ${parejas}; el 22-09-2026 eran 20. Si cambia mucho, mirar qué se ha añadido`);
+  }
+
+  ok('el ayudante de la firma existe y se calla con la tapa propia',
+     /function firmaTapa\(h\) \{\s*\n\s*return h\?\.tapaDe \? ` \(la da \$\{h\.tapaDe\}\)` : '';\s*\n\}/.test(src),
+     'un solo sitio donde se escribe la frase, para que no vuelva a haber diez');
+  ok('la tabla de ESTA HORA firma su tapa, que es la que él mira a diario',
+     /· tapa \$\{H\.cin\.toFixed\(0\)\}\$\{\s*\n?\s*H\?\.tapaDe \? ` <small>la da \$\{esc\(H\.tapaDe\)\}<\/small>` : ''\}/.test(src),
+     'la cabecera de esa columna firma AROME HD y AROME no publica tapa');
+  ok('los tres avisos de assess() firman la tapa en la propia frase',
+     (src.match(/\$\{h\.cin\.toFixed\(0\)\}\$\{firmaTapa\(h\)\}/g) || []).length >= 3,
+     'son los que le salen en ámbar: «CAPE 800 y la tapa en 0» sin decir de quién');
+
   ok('la hora lleva el dueño de la tapa, como ya llevaba el del cielo',
      /const dueñoTapa = presta\('convective_inhibition'\)/.test(src)
      && /const tapaDe = dueñoTapa && dueñoTapa !== mio \? dueñoTapa : null;/.test(src)
