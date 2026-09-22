@@ -160,6 +160,8 @@ eval(sacarConst('NUBE_BAJA'));
 eval(sacar('function loQueMideLaNube(h, place) {'));
 /* Y `firmaTapa`, que `assess` usa en las tres frases de la tapa. */
 eval(sacar('function firmaTapa('));
+/* Y `tapaVale`, que es la regla del cero. */
+eval(sacar('function tapaVale('));
 /* `assess` llama a `peorRacha`, así que va antes. Y necesita `COMPARAR`,
    que se declara aquí abajo con los dos modelos de la prueba. */
 globalThis.COMPARAR = globalThis.COMPARAR || [];
@@ -246,6 +248,118 @@ for (const f of ['listonRafaga', 'veladoSiToca', 'medianaPonderada', 'cieloVotad
    pareja se enseña «misma hora, mismo modelo, para enseñar cifras que de
    verdad ocurrieron juntas».
    ══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════
+   UNA TAPA EN 0 DE QUIEN NO VE GASOLINA NO ES UNA TAPA ABIERTA
+   ──────────────────────────────────────────────────────────────────────
+   El 21-09 esto se arregló SOLO en `parteTorres`. El 22-09 por la noche
+   volvió a salir en sus seis tarjetas a la vez —«40 de CAPE · 0 TAPA ·
+   ABIERTA»— y él lo dijo como hay que decirlo: *«lo reparas, dices que
+   encuentras el fallo para que no pase, pasan 24 horas y lo mismo»*.
+   No era el mismo fallo volviendo: era yo arreglando una puerta de seis.
+
+   MEDIDO el 22-09-2026 contra la API, 432 horas (6 sitios × 72 h, ICON):
+
+       cuando ICON daba CAPE 0   →  tapa 0 en 379 de 386 horas (98 %)
+       cuando ICON daba CAPE >0  →  tapa 0 en   8 de  46 horas (17 %)
+
+       Bermeo 70/72 h · Orduña 67/72 · Matiena 70/72 · Girona 68/72
+
+   Así que el 0 es «aquí no veo nada», no «la tapa está abierta». Y con
+   AROME HD puesto la tapa viene prestada SIEMPRE (AROME no la publica
+   ni una hora), de modo que ese 0 es lo que él veía cada día.
+
+   LO QUE NO SE TOCA: el ámbar sigue saliendo igual. Ante la duda se
+   avisa. Lo que cambia es la frase, no el color.
+   ══════════════════════════════════════════════════════════════════════ */
+grupo('Una tapa en 0 de quien no ve gasolina no dice nada (22-09-2026)');
+{
+  /* La escala de la tapa, que más abajo se saca otra vez para lo suyo. */
+  eval(sacar('function textoTapa(cin, h) {'));
+  const h = (cape, cin, tapaDe, capeTapa) => ({ cape, cin, tapaDe, capeTapa });
+
+  ok('la tapa del propio modelo SIEMPRE cuenta',
+     tapaVale(h(800, 10, null, null)) === true && tapaVale(h(800, 10, null, 0)) === true,
+     'ahí el CAPE y la tapa salen del mismo sitio: no hay nada que dudar');
+  ok('la prestada cuenta si el que la presta veía gasolina',
+     tapaVale(h(800, 10, 'ICON', 240)) === true);
+  ok('y NO cuenta si el que la presta veía CAPE 0',
+     tapaVale(h(800, 0, 'ICON', 0)) === false,
+     'es el caso de sus seis tarjetas del 22-09 a las 20:26');
+  ok('sin saber qué veía el que la presta, se cuenta: nunca se apaga por una duda',
+     tapaVale(h(800, 0, 'ICON', null)) === true && tapaVale(h(800, 0, 'ICON', undefined)) === true,
+     'respuesta vieja guardada, u hora armada a mano; ante la duda, como estaba');
+
+  ok('la palabra se calla cuando la cifra no dice nada',
+     textoTapa(0, h(800, 0, 'ICON', 0)) === 'no dice nada',
+     '«abierta» al lado de 40 de CAPE se lee como la combinación que rompe');
+  ok('y la escala entera sigue igual cuando la tapa sí cuenta',
+     textoTapa(0, h(800, 0, null, null)) === 'abierta'
+     && textoTapa(30, h(0, 30, null, null)) === 'floja'
+     && textoTapa(100, h(0, 100, null, null)) === 'aguanta'
+     && textoTapa(300, h(0, 300, null, null)) === 'fuerte'
+     && textoTapa(0) === 'abierta',
+     'sin la hora se comporta como siempre: no se rompe ninguna llamada vieja');
+
+  /* ── LO QUE DE VERDAD IMPORTA: que el aviso NO se apague ──────────── */
+  {
+    const base = { date: new Date(2026, 7, 26, 16), pop: 80, prec: 0, code: 1,
+                   wind: 12, gust: 20, h: 3, temp: 24, rh: 60, vis: 20000,
+                   li: null, nieve: 0, nieveSuelo: 0, dew: 14 };
+    const conTapaMuda = assess({ ...base, cape: 1200, cin: 0, tapaDe: 'ICON', capeTapa: 0 },
+                               THR, 'hierro');
+    const conTapaBuena = assess({ ...base, cape: 1200, cin: 0, tapaDe: null, capeTapa: null },
+                                THR, 'hierro');
+    const txtMuda = conTapaMuda.reasons.map(r => r.txt).join(' | ');
+    const txtBuena = conTapaBuena.reasons.map(r => r.txt).join(' | ');
+
+    ok('con la tapa muda el aviso SIGUE saliendo, y del mismo color',
+       conTapaMuda.st === conTapaBuena.st && conTapaMuda.st !== 'go',
+       `muda=${conTapaMuda.st} buena=${conTapaBuena.st} — si esto se cae, se pierde un aviso de verdad`);
+    ok('pero ya NO dice «la tapa está abierta»',
+       !/la tapa está abierta/.test(txtMuda),
+       txtMuda.slice(0, 160));
+    ok('y dice por qué no lo dice, con el nombre del que la presta',
+       /la tapa no la sabe nadie/.test(txtMuda) && /ICON/.test(txtMuda),
+       txtMuda.slice(0, 160));
+    ok('con la tapa buena la frase de siempre no se ha movido',
+       /hay gasolina Y la tapa está abierta/.test(txtBuena),
+       txtBuena.slice(0, 160));
+  }
+
+  /* ── LA GUARDA DE CLASE ───────────────────────────────────────────── */
+  ok('la regla vive en UNA función, no repartida por la app',
+     /function tapaVale\(h\) \{/.test(src)
+     && /if \(!h\?\.tapaDe\) return true;/.test(src)
+     && /if \(!has\(h\.capeTapa\)\) return true;/.test(src)
+     && /return h\.capeTapa > 0;/.test(src));
+  {
+    /* Todas las llamadas a textoTapa() tienen que pasar la hora: sin ella
+       la función no puede aplicar la regla y vuelve a decir «abierta». */
+    /* SIN LOS COMENTARIOS. La casa documenta mucho —y bien—, así que en
+       app.js hay tres sitios donde `textoTapa()` aparece explicado en
+       prosa. Una guarda que los cuente como llamadas es una guarda que
+       da la lata sin motivo, y una guarda pesada acaba desactivada. */
+    const codigo = src.replace(/\/\*[\s\S]*?\*\//g, '');
+    const llamadas = [...codigo.matchAll(/textoTapa\(([^)]*)\)/g)]
+      .filter(m => !/^cin, h$/.test(m[1]))          // la propia definición
+      .map(m => m[1]);
+    const sinHora = llamadas.filter(a => !/,/.test(a));
+    ok('todas las llamadas a textoTapa() pasan la hora',
+       sinHora.length === 0,
+       sinHora.length ? `sin hora: textoTapa(${sinHora.join('), textoTapa(')})` : `${llamadas.length} llamadas, todas con hora`);
+  }
+  ok('los tres avisos de assess() se bifurcan con la regla, no la ignoran',
+     (src.match(/bump\('(?:warn|no)', \(tapaVale\(h\)/g) || []).length === 3,
+     'si alguno deja de mirarla, vuelve a escribir «la tapa está abierta» sobre un cero mudo');
+  ok('el CAPE del que presta la tapa se pide en la MISMA llamada y se guarda aparte',
+     /const conTapa = ks\.includes\('convective_inhibition'\);/.test(src)
+     && /\+ \(conTapa && !ks\.includes\('cape'\) \? ',cape' : ''\)/.test(src)
+     && /if \(conTapa && traeAlgo\(d\.hourly\?\.cape\)\) f\.hourly\.cape_de_la_tapa = d\.hourly\.cape;/.test(src),
+     'sin una petición de más, y sin pisar el CAPE del modelo cargado');
+  ok('y la hora lo lleva, como lleva el dueño de la tapa',
+     /capeTapa: H\.cape_de_la_tapa\?\.\[i\],/.test(src));
+}
+
 grupo('El CAPE de uno con la tapa de otro no es una pareja (21-09-2026)');
 {
   const hora = (cape, cin, tapaDe) => ({ cape, cin, tapaDe });
@@ -2514,7 +2628,7 @@ ok('y el pie explica quién publica las suyas y quién no',
    Esta prueba está para que no vuelva. */
 console.log('\n  CAPE y tapa, hora a hora');
 
-eval(sacar('function textoTapa(cin) {'));
+eval(sacar('function textoTapa(cin, h) {'));
 eval(sacar('function lineaCapeHora(h) {'));
 
 const sinEtiquetas = t => t.replace(/<[^>]*>/g, '');
