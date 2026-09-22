@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.22-1128';
+const BUILD = '2026.09.22-1424';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -8027,7 +8027,33 @@ function calcularParte(sitios, arr) {
             peorPar = { cape: cape[i], cin: cin[i] };
           }
           if (capeTecho === null || cape[i] > capeTecho) capeTecho = cape[i];
-          if (tapaSuelo === null || cin[i] < tapaSuelo) tapaSuelo = cin[i];
+          /* ── UNA TAPA SIN GASOLINA DEBAJO NO ES UNA TAPA (22-09-2026) ──
+             `tapaSuelo` cogía el CIN más bajo de CUALQUIER hora, incluidas
+             aquellas en las que ese mismo modelo da CAPE 0. Y los modelos
+             publican la tapa en 0 justo cuando no ven convección: ICON lo
+             hace el 69 % de las horas y GFS el 73 % (medido el 21-09).
+
+             MEDIDO en Lekeitio, siete días seguidos, con los tres modelos
+             que publican la tapa:
+
+                 tapaSuelo como estaba .... 0,0 los SIETE días
+                 tapaSuelo con esta línea .. 478 · 486 · 335 · 0 · 157 · 12 · 11
+
+             O sea que la condición de AL FILO —`capeTecho >= 700 && tapaSuelo
+             < 75`— se reducía en la práctica a `capeTecho >= 700`: la tapa
+             no filtraba NADA y el rojo salía por el CAPE suelto, que es
+             justo lo que esta casa tiene prohibido («un CAPE suelto
+             engaña»). Y la rama contraria, «la tapa no baja de X: aguanta»,
+             no podía salir casi nunca.
+
+             Es el mismo cero del 26-08 que él cazó —«una tapa en 0 no
+             aguanta nada»— pero por la otra cara: allí empujaba al verde y
+             aquí empujaba al rojo.
+
+             Ojo a lo que NO cambia: el reparto por horas distintas es una
+             decisión del 20-09, medida y documentada, y sigue igual. Lo
+             único que se descarta son las horas sin nada que tapar. */
+          if (cape[i] > 0 && (tapaSuelo === null || cin[i] < tapaSuelo)) tapaSuelo = cin[i];
         }
       }
       /* UN HUECO NO ES UN CERO. Antes esto devolvía `maxCape: 0` cuando

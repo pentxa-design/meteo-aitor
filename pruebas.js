@@ -291,6 +291,50 @@ grupo('El CAPE de uno con la tapa de otro no es una pareja (21-09-2026)');
    10 puntos medido a tres días), pero `cieloRaro` no lo miraba: cogía el
    total de cada modelo a pelo.
    ══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════
+   UNA TAPA SIN GASOLINA DEBAJO NO ES UNA TAPA (22-09-2026)
+   ──────────────────────────────────────────────────────────────────────
+   `tapaSuelo` cogía el CIN más bajo de CUALQUIER hora del día, incluidas
+   aquellas en las que ese mismo modelo da CAPE 0. Y los modelos publican
+   la tapa en 0 justo cuando no ven convección: ICON el 69 % de las horas,
+   GFS el 73 % (medido el 21-09).
+
+   MEDIDO en Lekeitio, siete días seguidos, los tres modelos con tapa:
+
+       tapaSuelo como estaba .... 0,0 los SIETE días
+       tapaSuelo arreglado ...... 478 · 486 · 335 · 0 · 157 · 12 · 11
+
+   O sea que `alFilo` —capeTecho >= 700 Y tapaSuelo < 75— se reducía en la
+   práctica a capeTecho >= 700: la tapa no filtraba NADA y el rojo salía
+   por el CAPE suelto, que es lo que esta casa tiene prohibido. Es el
+   mismo cero del 26-08 que él cazó, pero por la otra cara: allí empujaba
+   al verde, aquí al rojo.
+   ══════════════════════════════════════════════════════════════════════ */
+grupo('Una tapa sin gasolina debajo no es una tapa (22-09-2026)');
+{
+  const suelo = (horas, conArreglo) => {
+    let t = null;
+    for (const [cape, cin] of horas) {
+      if (conArreglo ? (cape > 0 && (t === null || cin < t)) : (t === null || cin < t)) t = cin;
+    }
+    return t;
+  };
+  const dia = [[0, 0], [120, 478], [970, 296], [0, 0]];
+
+  ok('sin el arreglo, el suelo de la tapa se lo lleva la hora SIN gasolina',
+     suelo(dia, false) === 0,
+     'los modelos ponen la tapa en 0 cuando no ven convección: ICON el 69 % de las horas');
+  ok('con el arreglo, el suelo es el de las horas que SÍ tienen gasolina',
+     suelo(dia, true) === 296,
+     'medido en Lekeitio: 0,0 los siete días antes; 478·486·335·0·157·12·11 después');
+  ok('y si de verdad hay una hora con gasolina y la tapa abierta, el suelo sigue bajando',
+     suelo([[800, 10], [0, 0], [120, 400]], true) === 10,
+     'esto es lo que impide que el arreglo se coma un AL FILO de verdad');
+  ok('un día entero sin gasolina se queda sin suelo, no en cero',
+     suelo([[0, 0], [0, 5]], true) === null,
+     'un hueco no es un cero: sin gasolina no hay nada que tapar');
+}
+
 grupo('Un total de nubes que no cuadra con sus capas no vota (22-09-2026)');
 {
   const cuadra = new Function('C', 'i', 'has', `
@@ -5022,7 +5066,7 @@ grupo('El parte juntaba el CAPE de un modelo con la tapa de otro (30-08)');
      NUNCA y en su lugar se escribía «aguanta» en verde. */
   ok('además se guardan el techo de CAPE y el suelo de la tapa del día entero',
      /if \(capeTecho === null \|\| cape\[i\] > capeTecho\) capeTecho = cape\[i\];/.test(src)
-     && /if \(tapaSuelo === null \|\| cin\[i\] < tapaSuelo\) tapaSuelo = cin\[i\];/.test(src),
+     && /if \(cape\[i\] > 0 && \(tapaSuelo === null \|\| cin\[i\] < tapaSuelo\)\) tapaSuelo = cin\[i\];/.test(src),
      'sin ellos, «AL FILO» es código muerto');
   ok('y «AL FILO» se decide con esos extremos, no con la pareja',
      /const alFilo = has\(d\.capeTecho\) && d\.capeTecho >= CAPE_COMBINACION\s*\n\s*&& has\(d\.tapaSuelo\) && d\.tapaSuelo < TAPA_ROMPE;/.test(src));
