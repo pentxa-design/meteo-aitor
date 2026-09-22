@@ -117,6 +117,7 @@ async function medir() {
   const cobertura = {};
   for (const c of CAMPOS) cobertura[c] = [];
   const globales = [];
+  const sinMedir = [];
 
   for (const [om, nombre] of MODELOS) {
     /* Un modelo que falla NO se apunta como «no publica nada»: eso sería
@@ -141,6 +142,28 @@ async function medir() {
       if (vale) cobertura[c].push(om);
     }
     const n = CAMPOS.filter(c => cobertura[c].includes(om)).length;
+    /* ── CERO DE 28 NO ES «NO PUBLICA», ES «NO MEDIDO» (22-09-2026) ───
+       Aquí arriba ya se protege al modelo que NO CONTESTA NADA. Faltaba
+       el que contesta VACÍO, que es lo que hace esta API cuando está
+       tocada: devuelve 200 con las series a null.
+
+       Pasó ese mismo día, con un 503 de Open-Meteo en mitad de una
+       publicación: `best_match`, `icon_seamless` y `meteofrance_arome_hd`
+       salieron los tres a 0 de 28, y con ellos el reparto dejó de saber a
+       quién pedir la TAPA y la NIEVE — media decisión de rayo y una de sus
+       cuatro prioridades. La tabla se escribió a ceros en el fichero Y en
+       el bloque que va dentro de app.js. Lo pararon cuatro guardias, pero
+       eso es suerte, no diseño.
+
+       El guardia de más abajo no llegaba: mira si MÁS DE LA MITAD de los
+       campos se quedan huérfanos, y con los demás modelos cubriéndolos no
+       saltaba. Éste mira modelo a modelo, que es donde pasa. */
+    if (n === 0) {
+      for (const c of CAMPOS) cobertura[c] = cobertura[c].filter(x => x !== om);
+      sinMedir.push(om);
+      console.log(`  ⚠ ${nombre.padEnd(10)} 0 de ${CAMPOS.length} — eso no es «no publica», es «no medido». Se queda como estaba.`);
+      continue;
+    }
 
     /* ¿Llega fuera de Europa? Se mira un campo que publica TODO el
        mundo —la temperatura—: si ahí no da nada, es que el modelo no
@@ -155,7 +178,7 @@ async function medir() {
     console.log(`  ${nombre.padEnd(10)} publica ${String(n).padStart(2)} de ${CAMPOS.length}`
               + `  ·  ${global ? 'llega a ' + FUERA.n : 'solo Europa'}`);
   }
-  return { cobertura, globales };
+  return { cobertura, globales, sinMedir };
 }
 
 /** Lo que cambia respecto a la última medida. Es el aviso que él pidió. */
@@ -178,7 +201,7 @@ function comparar(antes, ahora) {
 
 (async () => {
   console.log('\n▸ Midiendo qué publica cada modelo…');
-  const { cobertura, globales } = await medir();
+  const { cobertura, globales, sinMedir } = await medir();
 
   const publican = CAMPOS.filter(c => cobertura[c].length);
   if (publican.length < CAMPOS.length / 2) {
@@ -189,6 +212,26 @@ function comparar(antes, ahora) {
 
   let antes = null;
   try { antes = JSON.parse(fs.readFileSync(FICHERO, 'utf8')); } catch { /* la primera vez no hay */ }
+
+  /* ── LO QUE NO SE HA MEDIDO SE QUEDA COMO ESTABA ───────────────────
+     Un modelo que hoy no se ha podido medir conserva lo que tenía. Si no
+     hay tabla anterior —la primera vez— no hay nada que conservar y se
+     dice, porque ahí sí quedaría un hueco de verdad. */
+  if (sinMedir.length) {
+    if (!antes?.cobertura) {
+      console.log(`\n  ✗ Sin medir: ${sinMedir.join(', ')}, y no hay tabla anterior que conservar.`);
+      console.log('    NO se escribe nada: una tabla a medias reparte mal la tapa y la nieve.\n');
+      process.exit(1);
+    }
+    for (const om of sinMedir) {
+      for (const c of CAMPOS) {
+        if ((antes.cobertura[c] || []).includes(om) && !cobertura[c].includes(om)) cobertura[c].push(om);
+      }
+      if ((antes.globales || []).includes(om) && !globales.includes(om)) globales.push(om);
+    }
+    console.log(`\n  ⚠ conservado de la medida anterior: ${sinMedir.join(', ')}`);
+  }
+
   const cambios = comparar(antes, { ...cobertura, globales });
 
   const huerfanos = CAMPOS.filter(c => !cobertura[c].length);

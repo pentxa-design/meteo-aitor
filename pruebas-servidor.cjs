@@ -1173,5 +1173,57 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
      && /hay algo apuntado, así que el hueco pesa/.test(V));
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════
+   CERO DE 28 NO ES «NO PUBLICA», ES «NO MEDIDO» (22-09-2026)
+   ──────────────────────────────────────────────────────────────────────
+   Pasó de verdad, en mitad de una publicación: un 503 de Open-Meteo y
+   `best_match`, `icon_seamless` y `meteofrance_arome_france_hd` salieron
+   los tres a 0 de 28 campos. La tabla del reparto se escribió a ceros en
+   `data/cobertura.json` Y en el bloque que va dentro de app.js, y con ella
+   `quienLoMide` dejó de saber a quién pedir la TAPA —media decisión de
+   rayo— y la NIEVE, que es una de sus cuatro prioridades.
+
+   El guardia que había mira si MÁS DE LA MITAD de los campos se quedan
+   huérfanos; con los demás modelos cubriéndolos, no saltaba. Y el otro
+   protege al modelo que NO CONTESTA NADA, no al que contesta vacío, que
+   es lo que hace esta API cuando está tocada: 200 con las series a null.
+
+   Lo pararon cuatro guardias de pantalla antes de publicar. Eso es suerte,
+   no diseño, y por eso está esto.
+   ══════════════════════════════════════════════════════════════════════ */
+{
+  const M = fs.readFileSync(path.join(__dirname, 'medir-cobertura.cjs'), 'utf8');
+
+  ok('un modelo que sale a 0 de 28 se marca como NO MEDIDO, no como «no publica»',
+     /if \(n === 0\) \{/.test(M)
+     && /for \(const c of CAMPOS\) cobertura\[c\] = cobertura\[c\]\.filter\(x => x !== om\);/.test(M)
+     && /sinMedir\.push\(om\);/.test(M),
+     'con la tabla a ceros el reparto no sabe a quién pedir la tapa ni la nieve');
+  ok('y lo que no se ha medido conserva lo que tenía',
+     /if \(\(antes\.cobertura\[c\] \|\| \[\]\)\.includes\(om\) && !cobertura\[c\]\.includes\(om\)\) cobertura\[c\]\.push\(om\);/.test(M)
+     && /if \(\(antes\.globales \|\| \[\]\)\.includes\(om\) && !globales\.includes\(om\)\) globales\.push\(om\);/.test(M),
+     'mejor la medida de ayer que un hueco de hoy');
+  ok('y sin tabla anterior que conservar, NO se escribe nada',
+     /if \(!antes\?\.cobertura\) \{/.test(M)
+     && /NO se escribe nada: una tabla a medias reparte mal la tapa y la nieve/.test(M),
+     'ahí sí quedaría un hueco de verdad, y un hueco no se publica');
+  ok('el guardia viejo sigue en pie: una medida casi vacía tampoco se escribe',
+     /if \(publican\.length < CAMPOS\.length \/ 2\) \{/.test(M)
+     && /mejor la de ayer que una en blanco/.test(M),
+     'son dos redes distintas: ésta mira el total, la nueva mira modelo a modelo');
+
+  /* Y que la tabla que hay AHORA no tenga ningún campo huérfano: si esto
+     salta, es que se coló una medida mala y hay que restaurarla de git. */
+  const T = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'cobertura.json'), 'utf8'));
+  const vacios = Object.entries(T.cobertura || {}).filter(([, v]) => !v || !v.length).map(([k]) => k);
+  ok('y la tabla que hay ahora no deja ningún campo sin modelo',
+     vacios.length === 0, vacios.join(', '));
+  ok('la tapa y la nieve tienen quien las publique',
+     (T.cobertura?.convective_inhibition || []).length > 0
+     && (T.cobertura?.snowfall || []).length > 0,
+     'son media decisión de rayo y una de sus cuatro prioridades');
+}
+
 console.log(`\n  ${bien} bien, ${mal} mal`);
 if (mal) process.exit(1);
