@@ -310,6 +310,51 @@ grupo('El CAPE de uno con la tapa de otro no es una pareja (21-09-2026)');
    mismo cero del 26-08 que él cazó, pero por la otra cara: allí empujaba
    al verde, aquí al rojo.
    ══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════
+   EL RÓTULO NO PUEDE JURAR UN MODELO QUE NO ES (22-09-2026)
+   ──────────────────────────────────────────────────────────────────────
+   Tres frases de «Mis estaciones» que afirmaban lo contrario de lo que
+   hace el código. Salieron del barrido con agentes sobre sus pantallazos.
+
+   1. La cabecera de ESTA HORA decía «los 5 juntos» para las SIETE filas.
+      El cuerpo sale de las horas de S.torres, cargadas con UN modelo: el
+      suyo. Solo la fila de la racha usa `rachaCinco`, que sí es el máximo
+      de los cinco (se arregló así el 31-08 y se quedó sola). El 26-08
+      AROME HD daba 0,0 mm en Durango con ICON dando 1,3 esa misma hora, y
+      la fila de lluvia —su prioridad 1— salía «0,0» bajo ese rótulo.
+
+   2. El pie de las barras prometía «el más alto es el que usa el
+      semáforo». No: `assess()` lee la lluvia y la racha del modelo
+      CARGADO. Con las barras enseñando ICON 1,3, ese pie y la chapa en
+      SIN NADA, lo que se concluye es lo contrario de la verdad.
+
+   NO se cambia qué modelo manda: eso lo decidió él el 02-09 («yo quiero
+   como Windy»). Se cambia lo que el rótulo afirma.
+   ══════════════════════════════════════════════════════════════════════ */
+grupo('El rótulo no jura un modelo que no es (22-09-2026)');
+{
+  ok('la cabecera de ESTA HORA dice el modelo cargado, no «los 5 juntos»',
+     /<th>LOS MODELOS<span>\$\{\(\(\) => \{/.test(src)
+     && /\}\)\(\)\}\$\{esc\(model\(\)\.name\)\} · a 10 m<br>/.test(src)
+     && !/los \$\{MODELOS_TORMENTA\.length\} juntos · a 10 m<\/span>/.test(src),
+     'seis de las siete filas son del modelo cargado, no de los cinco');
+  ok('y la racha se señala como lo que es: la excepción',
+     /<i>la racha, la más alta de los \$\{MODELOS_TORMENTA\.length\}<\/i>/.test(src),
+     'esa sí es el máximo de los cinco desde el 31-08');
+  /* OJO, y por poco: en la RACHA el pie SÍ era verdad. `assess` usa
+     `gMax = max(cargado, peorRacha)`. El que mentía era el de la LLUVIA,
+     que lee `h.prec` del cargado quince veces sin máximo ninguno. Se
+     cambia ese y SOLO ese: cambiar el de la racha habría metido un fallo
+     nuevo arreglando uno viejo. */
+  ok('el pie de la LLUVIA dice con qué modelo va el semáforo',
+     /en mm\/h · el semáforo va con \$\{esc\(model\(\)\.name\)\}; aquí tienes lo que ven los demás/.test(src),
+     'la lluvia del semáforo es la del cargado, no la más alta: su prioridad 1');
+  ok('y el de la RACHA se queda como estaba, porque ahí SÍ usa el más alto',
+     /'el más alto es el que usa el semáforo', '',/.test(src)
+     && /const gMax = has\(h\.gust\) \? Math\.max\(h\.gust, otra\?\.v \?\? 0\)/.test(src),
+     'si se cambian los dos a la vez, se mete un fallo nuevo arreglando uno viejo');
+}
+
 grupo('Una tapa sin gasolina debajo no es una tapa (22-09-2026)');
 {
   const suelo = (horas, conArreglo) => {

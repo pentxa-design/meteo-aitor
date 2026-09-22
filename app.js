@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.22-1542';
+const BUILD = '2026.09.22-1914';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -8690,7 +8690,25 @@ function renderParte() {
                columna dice su altura y la otra no, parecen lo mismo y no
                lo son — suyo, medido ese día con su anemómetro en la mano:
                *«allí, cinco metros más es el doble»*. -->
-          <th>LOS MODELOS<span>los ${MODELOS_TORMENTA.length} juntos · a 10 m</span></th>
+          <th>LOS MODELOS<span>${(() => {
+            /* ── «LOS 5 JUNTOS» SOLO ERA VERDAD EN UNA FILA (22-09-2026) ──
+               La cabecera prometía «los 5 juntos» para las siete filas, y el
+               cuerpo sale de las horas de S.torres, que se cargan con UN
+               modelo: el suyo. Solo la fila de la racha usa rachaCinco, que
+               sí es el máximo de los cinco — se arregló así el 31-08 y se
+               quedó ahí sola.
+
+               Las otras seis (lluvia, viento, CAPE y tapa, cielo,
+               temperatura, humedad) son del modelo cargado. Y eso importa en
+               la primera de todas: el 26-08 AROME HD daba 0,0 mm en Durango
+               con ICON dando 1,3 esa misma hora, y la fila salía «0,0 mm»
+               bajo un rótulo que juraba que eran los cinco.
+
+               No se cambia QUÉ modelo manda —eso lo decidió él el 02-09,
+               «yo quiero como Windy»— se cambia lo que el rótulo afirma. */
+            return '';
+          })()}${esc(model().name)} · a 10 m<br>
+              <i>la racha, la más alta de los ${MODELOS_TORMENTA.length}</i></span></th>
           <!-- El «·» va pegado con espacio duro: en el móvil se quedaba
                solo en su propia línea —«ESTACIÓN» / «·» / «Matxitxako»—
                y parecía un fallo de la app. Visto en sus capturas del
@@ -8858,7 +8876,21 @@ function renderParte() {
 
     const lluvia = hayAgua
       ? fila('LLUVIA DE CADA MODELO, ESTA HORA',
-             'en mm/h · el más alto es el que usa el semáforo', 'agua',
+             /* ── EN LA LLUVIA EL PIE PROMETÍA LO QUE NO HACE (22-09-2026)
+                Decía «el más alto es el que usa el semáforo». En la RACHA eso
+                es verdad: `assess` usa `gMax = max(cargado, peorRacha)`. En la
+                LLUVIA no: lee `h.prec` del modelo cargado quince veces y no
+                toma el máximo de nadie.
+
+                Y esa es su prioridad número uno. El 26-08, con AROME HD
+                cargado dando 0,0 mm en Durango e ICON dando 1,3 esa misma
+                hora, las barras enseñaban el 1,3 de ICON, este pie juraba que
+                el semáforo usa el más alto, y la chapa decía SIN NADA. Lo que
+                se concluye de eso es lo contrario de la verdad.
+
+                No se cambia quién manda —decisión suya del 02-09— se cambia
+                lo que el pie afirma. */
+             `en mm/h · el semáforo va con ${esc(model().name)}; aquí tienes lo que ven los demás`, 'agua',
              ls.map(x => ({ ...x, txt: mmTxt(x.v) })))
       : (ls24.length >= 2 && ls24.some(x => x.v > 0))
         ? fila('LLUVIA QUE VE CADA MODELO EN 24 H',
