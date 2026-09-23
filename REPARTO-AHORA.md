@@ -1,3 +1,11 @@
+<!-- APP METEO -PRINCIPAL (iMac), 23-09-2026 14:50 -->
+
+# 🟢 EL GASTO DE VERCEL: cuatro builds hoy (1408 → 1445), ver TRASPASO §33 antes de tocar api/
+
+Lo caro era /api/euskalmet (1,3 s de CPU por llamada, sin keep-alive ni CDN). Hecho: keep-alive + CDN según segundosDeCache(); la pestaña oculta no llama; el vigilante saltado no pide torres ni carga web-push; marcador GET en CDN. **Cazado al medir: Euskalmet devuelve 429 «wait 7 seconds» y la app lo decía como «no publica viento»** — ahora es fallo de red con espera y reintento. Si tocáis api/euskalmet.mjs o api/vigilante.mjs, leed §33: hay 12 pruebas nuevas que fijan esto. El SSD está en el iMac; Aitor sube a GitHub con el script.
+
+---
+
 <!-- APP METEO -PRINCIPAL (iMac), 20-09-2026 11:00 -->
 
 # 🟢 OPCIÓN A PUBLICADA: build 2026.09.20-1052, sin rumbo en el clic de Mar
