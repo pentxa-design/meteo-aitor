@@ -81,10 +81,38 @@ import { cabeceras } from '../lib/cabeceras.mjs';
    ejecutar nada. Las respuestas con fallo o sin clave no se guardan: un
    «no he podido preguntar» pegado cinco minutos sería mentir a todos los
    móviles a la vez. */
-const AGENTE = new Agent({ keepAlive: true, maxSockets: 8, ca: CA_IZENPE });
+/* Revisión adversaria del 23-09-2026 sobre este mismo cambio: con 8
+   sockets, un lote de 20 sitios en frío son cientos de peticiones en cola
+   sin plazo (el timeout de 12 s solo corre cuando la petición tiene
+   socket); con keep-alive el socket ya no cuesta CPU, así que 24. Y un
+   socket ocioso muere aquí a los 9 s, antes que en el servidor: si lo
+   cierra el servidor primero, la petición que lo reutiliza muere con
+   ECONNRESET (medido en Node 22) — y para ese caso hay un reintento. */
+const AGENTE = new Agent({ keepAlive: true, maxSockets: 24, timeout: 9000, ca: CA_IZENPE });
 const CDN_SEGUNDOS = 300;
-function contestar(res, cuerpo, bueno) {
-  const h = bueno ? cabeceras(CDN_SEGUNDOS, { cors: false, revalidar: 600 }) : { 'cache-control': 'no-store' };
+const PLAZO_MS = 15000;
+
+/* Plazo global: si Euskalmet acepta y se cuelga, no se espera a que
+   Vercel corte a los 60 s. Lo que no ha contestado a los 15 s se da por
+   «no se ha podido preguntar», y esa respuesta no se guarda. */
+const conPlazo = (p, ms) => new Promise(resolve => {
+  const t = setTimeout(() => resolve(false), ms); t.unref?.();
+  p.then(() => { clearTimeout(t); resolve(true); }, () => { clearTimeout(t); resolve(true); });
+});
+
+/** Cuánto puede vivir la respuesta en el CDN. Exportada para probarla.
+    Las estaciones que NO MIDEN viento son una respuesta válida (5 min);
+    las que NO CONTESTARON (red, 5xx, plazo) la hacen parcial (1 min); y
+    si no se leyó ninguna habiendo caídas, Euskalmet no está: no se guarda. */
+export function segundosDeCache({ leidas, pedidas, fallosRed }) {
+  if (pedidas > 0 && leidas === 0 && fallosRed > 0) return 0;
+  if (fallosRed > 0) return 60;
+  return CDN_SEGUNDOS;
+}
+function contestar(res, cuerpo, segundos) {
+  /* revalidar 60: el peor caso queda en 6 min, por debajo de los 10 con
+     los que publica Euskalmet (con 600 eran 15). */
+  const h = segundos > 0 ? cabeceras(segundos, { cors: false, revalidar: 60 }) : { 'cache-control': 'no-store' };
   for (const [k, v] of Object.entries(h)) if (k !== 'content-type') res.setHeader(k, v);
   return res.status(200).json(cuerpo);
 }
@@ -138,7 +166,7 @@ function firmar() {
 
    El aviso de Node cuando falla esto es «fetch failed», sin decir que es
    de certificados. Por eso queda escrito aquí. */
-function pedir(ruta, jwt) {
+function pedir(ruta, jwt, intento = 0) {
   return new Promise((ok, mal) => {
     const req = pedirHttps({
       host: 'api.euskadi.eus', path: ruta, method: 'GET', ca: CA_IZENPE, agent: AGENTE,
@@ -163,14 +191,23 @@ function pedir(ruta, jwt) {
         const juego = /charset=\s*([\w-]+)/i.exec(tipo)?.[1]?.toLowerCase();
         const comoLeer = (juego === 'iso-8859-1' || juego === 'latin1') ? 'latin1' : 'utf8';
         const cuerpo = Buffer.concat(trozos).toString(comoLeer);
-        if (res.statusCode < 200 || res.statusCode >= 300)
-          return mal(new Error(`${res.statusCode} en ${ruta.split('/measures')[0]} ${cuerpo.slice(0, 120)}`));
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          const e = new Error(`${res.statusCode} en ${ruta.split('/measures')[0]} ${cuerpo.slice(0, 120)}`);
+          e.red = res.statusCode >= 500;      // un 5xx es «no he podido»; un 404 es «no hay»
+          return mal(e);
+        }
         try { ok(JSON.parse(cuerpo)); }
-        catch (e) { mal(new Error(`respuesta ilegible de ${ruta.split('/measures')[0]}`)); }
+        catch (e) { const e2 = new Error(`respuesta ilegible de ${ruta.split('/measures')[0]}`); e2.red = true; mal(e2); }
       });
     });
-    req.on('timeout', () => req.destroy(new Error(`sin respuesta en 12 s de ${ruta.split('/measures')[0]}`)));
-    req.on('error', mal);
+    req.on('timeout', () => { const e = new Error(`sin respuesta en 12 s de ${ruta.split('/measures')[0]}`); e.red = true; req.destroy(e); });
+    req.on('error', e => {
+      /* Socket reutilizado que el servidor había cerrado: se reintenta UNA
+         vez (patrón documentado en Node). Lo demás es fallo de red. */
+      if (intento === 0 && req.reusedSocket && (e.code === 'ECONNRESET' || e.code === 'EPIPE'))
+        return pedir(ruta, jwt, 1).then(ok, mal);
+      e.red = true; mal(e);
+    });
     req.end();
   });
 }
@@ -208,7 +245,7 @@ function km(aLat, aLon, bLat, bLon) {
    plantados en un monte, no cambian de un minuto para otro. */
 
 /** La última foto de la ficha, que es la que vale. */
-async function ficha(cod, jwt, apunta) {
+async function ficha(cod, jwt, apunta, fallos) {
   if (cacheFicha.has(cod)) return cacheFicha.get(cod);
   let f = null;
   try {
@@ -216,13 +253,19 @@ async function ficha(cod, jwt, apunta) {
     const keys = (Array.isArray(hist) ? hist : []).map(x => x?.key).filter(Boolean).sort();
     if (!keys.length) apunta?.(`el historial de fichas vino vacío (${typeof hist})`);
     if (keys.length) f = await pedir(`/${keys[keys.length - 1]}`, jwt);
-  } catch (e) { apunta?.(`ficha: ${e.message || e}`); f = null; }
+  } catch (e) {
+    apunta?.(`ficha: ${e.message || e}`);
+    /* Un null que viene de un fallo de red NO se guarda: quedaría «sin
+       ficha» mientras viva la instancia y el CDN lo repetiría. */
+    if (e?.red) { fallos?.add(cod); return null; }
+    f = null;
+  }
   cacheFicha.set(cod, f);
   return f;
 }
 
 /** Qué mide un sensor. Se pregunta una vez por sensor y se guarda. */
-async function queMide(ref, jwt) {
+async function queMide(ref, jwt, fallos, cod) {
   const id = String(ref || '').split('/').pop();
   if (!id) return [];
   if (cacheSensor.has(id)) return cacheSensor.get(id);
@@ -230,7 +273,7 @@ async function queMide(ref, jwt) {
   try {
     const d = await pedir(`/euskalmet/sensors/${id}`, jwt);
     m = Array.isArray(d?.meteors) ? d.meteors : [];
-  } catch { m = []; }
+  } catch (e) { if (e?.red) { fallos?.add(cod); return []; } m = []; }
   cacheSensor.set(id, m);
   return m;
 }
@@ -241,11 +284,11 @@ async function queMide(ref, jwt) {
     del emplazamiento —más cerca que ninguna— pero es de marea y oleaje.
     Aquí no se elige por distancia, se elige por lo que mide, así que una
     estación sin sensor de viento sencillamente no entra. */
-async function sensoresDe(f, jwt) {
+async function sensoresDe(f, jwt, fallos, cod) {
   const ss = Array.isArray(f?.sensors) ? f.sensors : [];
   const out = {};
   await Promise.all(ss.map(async s => {
-    const meteors = await queMide(s?.sensorKey, jwt);
+    const meteors = await queMide(s?.sensorKey, jwt, fallos, cod);
     for (const m of meteors) {
       if (!m?.measureType) continue;
       out[m.measureType] ??= { id: String(s.sensorKey).split('/').pop(), at: s.at, mide: [] };
@@ -308,7 +351,7 @@ const cacheLee = new Map();
 const VIVE_BUENA = 5 * 60e3;
 const VIVE_VACIA = 60e3;
 
-async function leer(est, jwt, notas) {
+async function leer(est, jwt, notas, fallos) {
   const apunta = t => { if (notas) notas.push(`${est.Codigo} (${est.Nombre}): ${t}`); };
 
   const guardada = cacheLee.get(est.Codigo);
@@ -317,20 +360,22 @@ async function leer(est, jwt, notas) {
        al cachear el null se perdería la explicación y volvería a salir el
        «0 lecturas» sin motivo que ya costó una tarde entera. */
     for (const n of guardada.notas) if (notas) notas.push(n);
+    if (guardada.red) fallos?.add(est.Codigo);       // un null de red sigue siendo «no pude»
     return guardada.v;
   }
-  const mias = [];
-  const res = await leerDeVerdad(est, jwt, mias);
-  cacheLee.set(est.Codigo, { t: Date.now(), v: res, notas: mias });
+  const mias = [], mios = new Set();
+  const res = await leerDeVerdad(est, jwt, mias, mios);
+  if (mios.size) fallos?.add(est.Codigo);
+  cacheLee.set(est.Codigo, { t: Date.now(), v: res, notas: mias, red: mios.size > 0 });
   for (const n of mias) if (notas) notas.push(n);
   return res;
 }
 
-async function leerDeVerdad(est, jwt, notas) {
+async function leerDeVerdad(est, jwt, notas, fallos) {
   const apunta = t => { if (notas) notas.push(`${est.Codigo} (${est.Nombre}): ${t}`); };
-  const f = await ficha(est.Codigo, jwt, apunta);
+  const f = await ficha(est.Codigo, jwt, apunta, fallos);
   if (!f) { apunta('no se ha podido leer la ficha'); return null; }
-  const sens = await sensoresDe(f, jwt);
+  const sens = await sensoresDe(f, jwt, fallos, est.Codigo);
   const viento = sens.measuresForWind;
   if (!viento) { apunta(`sin sensor de viento; tiene: ${Object.keys(sens).join(', ') || 'ninguno'}`); return null; }
 
@@ -347,7 +392,7 @@ async function leerDeVerdad(est, jwt, notas) {
     const opc = async (sen, fam, medida) => {
       if (!sen || !sen.mide.includes(medida)) return null;
       try { return ultima(await pedir(rutaMedida(est.Codigo, sen.id, fam, medida, d), jwt)); }
-      catch { return null; }
+      catch (e) { if (e?.red) fallos?.add(est.Codigo); return null; }
     };
 
     const max = await opc(viento, 'measuresForWind', 'max_speed');
@@ -451,7 +496,7 @@ export default async function handler(req, res) {
       ok: true, hayClave: false, estaciones: [],
       reason: 'Falta la clave de Euskalmet en Vercel (EUSKALMET_KEY y EUSKALMET_ISS). '
             + 'Mientras tanto la app sigue con las estaciones de AEMET.',
-    }, false);
+    }, 0);
   }
 
   if (puntos.length) {
@@ -506,13 +551,16 @@ export default async function handler(req, res) {
          El camino de UN punto, en este mismo fichero, ya lo distingue:
          faltaba aplicarlo aquí. */
       const noLeidas = new Set();
-      await Promise.all(necesarias.map(async cod => {
+      const fallosRed = new Set();      // las que NO se pudieron leer (red, 5xx, plazo)
+      const aTiempo = await conPlazo(Promise.all(necesarias.map(async cod => {
         const e = ESTACIONES_EUSKALMET.find(x => x.c === cod);
         try {
-          const r = await leer({ Codigo: cod, Nombre: e.n, LATWGS84: e.la, LONWGS84: e.lo }, jwt2, null);
+          const r = await leer({ Codigo: cod, Nombre: e.n, LATWGS84: e.la, LONWGS84: e.lo }, jwt2, null, fallosRed);
           if (r) leidas.set(cod, r); else noLeidas.add(cod);   // sin viento en esta hora
-        } catch { noLeidas.add(cod); }                          // no se ha podido preguntar
-      }));
+        } catch { noLeidas.add(cod); fallosRed.add(cod); }     // no se ha podido preguntar
+      })), PLAZO_MS);
+      if (!aTiempo) for (const cod of necesarias)
+        if (!leidas.has(cod) && !noLeidas.has(cod)) { noLeidas.add(cod); fallosRed.add(cod); }
       /* Si NINGUNA de las que hacían falta se pudo leer, no es que no
          midan: es que Euskalmet no está contestando. */
       const euskalmetCaido = leidas.size === 0 && necesarias.length > 0;
@@ -531,6 +579,7 @@ export default async function handler(req, res) {
             mejor = { ...r, km: Math.round(c.km * 10) / 10, desnivel: desn };
           }
         }
+        const cayeron = cs.filter(c => fallosRed.has(c.c)).length;
         if (!mejor) {
           /* NINGUNA DE LAS OCHO SIRVE, y se dice por qué. Pasa de verdad:
              en LEKEITIO las cuatro más cercanas —Oleta, Arbina,
@@ -539,10 +588,12 @@ export default async function handler(req, res) {
              puede es callarse, que entonces parece que allí no hay
              estaciones cuando lo que no hay es una que mida viento. */
           return { sinEstacion: true, miradas: cs.length,
-                   noSePudo: euskalmetCaido || undefined,
+                   noSePudo: (euskalmetCaido || cayeron > 0) || undefined,
                    porque: euskalmetCaido
                      ? 'no se ha podido preguntar a Euskalmet'
-                     : 'ninguna de las cercanas mide viento' };
+                     : cayeron
+                       ? `no se ha podido preguntar a ${cayeron} de las ${cs.length} cercanas`
+                       : 'ninguna de las cercanas mide viento' };
         }
         return mejor;
       });
@@ -552,11 +603,11 @@ export default async function handler(req, res) {
         reason: euskalmetCaido
           ? `no he podido leer ninguna de las ${necesarias.length} estaciones de Euskalmet`
           : undefined,
-        estacionesLeidas: leidas.size, estacionesPedidas: necesarias.length,
-        puntos: salida }, !euskalmetCaido);
+        estacionesLeidas: leidas.size, estacionesPedidas: necesarias.length, estacionesCaidas: fallosRed.size,
+        puntos: salida }, segundosDeCache({ leidas: leidas.size, pedidas: necesarias.length, fallosRed: fallosRed.size }));
     } catch (e) {
       return contestar(res, { ok: false, hayClave: true, puntos: [],
-                              reason: `${e.message || e} (al hablar con api.euskadi.eus)` }, false);
+                              reason: `${e.message || e} (al hablar con api.euskadi.eus)` }, 0);
     }
   }
 
@@ -589,36 +640,45 @@ export default async function handler(req, res) {
     const notas = [];
     const caidas = [];
 
-    const leidas = await Promise.all(cerca.map(async s => {
+    const fallosRed = new Set();
+    const resultados = [];
+    const aTiempo = await conPlazo(Promise.all(cerca.map(async (s, i) => {
       try {
-        const r = await leer(s, jwt, depurar ? notas : null);
+        const r = await leer(s, jwt, depurar ? notas : null, fallosRed);
         if (!r) caidas.push({ nombre: s.Nombre, km: Math.round(s.km * 10) / 10,
-                              porque: 'no publica viento en esta hora' });
-        return r ? { ...r, km: Math.round(s.km * 10) / 10 } : null;
+                              porque: fallosRed.has(s.Codigo) ? 'no se ha podido preguntar' : 'no publica viento en esta hora' });
+        resultados[i] = r ? { ...r, km: Math.round(s.km * 10) / 10 } : null;
       } catch (e) {
         if (depurar) notas.push(`${s.Codigo}: reventó — ${e.message || e}`);
+        fallosRed.add(s.Codigo);
         caidas.push({ nombre: s.Nombre, km: Math.round(s.km * 10) / 10,
                       porque: 'no se ha podido preguntar' });
-        return null;
+        resultados[i] = null;
       }
-    }));
+    })), PLAZO_MS);
+    if (!aTiempo) cerca.forEach((s, i) => {
+      if (resultados[i] !== undefined) return;
+      fallosRed.add(s.Codigo); resultados[i] = null;
+      caidas.push({ nombre: s.Nombre, km: Math.round(s.km * 10) / 10, porque: `sin respuesta en ${PLAZO_MS / 1000} s` });
+    });
+    const leidas = resultados;
 
     const estaciones = leidas.filter(Boolean).sort((a, b) => a.km - b.km);
     return contestar(res, {
       ok: true, hayClave: true,
       fuente: 'Euskalmet · Gobierno Vasco',
       consultado: new Date().toISOString(),
-      miradas: cerca.length,
+      miradas: cerca.length, estacionesCaidas: fallosRed.size,
       estaciones,
       caidas,
       debug: depurar ? notas : undefined,
       nota: estaciones.length ? undefined
         : 'Ninguna de las estaciones cercanas publica viento en esta hora.',
-    }, estaciones.length > 0);
+    }, segundosDeCache({ leidas: estaciones.length, pedidas: cerca.length, fallosRed: fallosRed.size }));
   } catch (e) {
     /* «fetch failed» a secas no dice nada y cuesta media hora. Se pone
        de dónde venía. */
     return contestar(res, { ok: false, hayClave: true, estaciones: [],
-                            reason: `${e.message || e} (al hablar con api.euskadi.eus)` }, false);
+                            reason: `${e.message || e} (al hablar con api.euskadi.eus)` }, 0);
   }
 }

@@ -9467,15 +9467,36 @@ grupo('Euskalmet reutiliza conexiones y guarda la respuesta buena en el CDN (23-
   const EUS = fs.readFileSync(path.join(__dirname, 'api', 'euskalmet.mjs'), 'utf8');
   ok('pedir() va por un agente keep-alive con la CA de IZENPE: las conexiones TLS se reutilizan en vez de abrirse una por petición',
      /import \{ request as pedirHttps, Agent \} from 'node:https';/.test(EUS)
-     && /const AGENTE = new Agent\(\{ keepAlive: true, maxSockets: 8, ca: CA_IZENPE \}\);/.test(EUS)
+     && /const AGENTE = new Agent\(\{ keepAlive: true, maxSockets: 24, timeout: 9000, ca: CA_IZENPE \}\);/.test(EUS)
      && /host: 'api\.euskadi\.eus', path: ruta, method: 'GET', ca: CA_IZENPE, agent: AGENTE,/.test(EUS),
      'un apretón de manos TLS por petición, diez o veinte por llamada, es CPU tirada');
-  ok('las respuestas buenas van 5 min al CDN y las malas (sin clave, caída) NO se guardan',
-     /const CDN_SEGUNDOS = 300;/.test(EUS) && /function contestar\(res, cuerpo, bueno\)/.test(EUS)
+  ok('las respuestas van al CDN con los segundos que decide segundosDeCache(); sin clave y caída, no-store',
+     /const CDN_SEGUNDOS = 300;/.test(EUS) && /function contestar\(res, cuerpo, segundos\)/.test(EUS)
      && (EUS.match(/return contestar\(res, /g) || []).length >= 5
      && (EUS.match(/res\.status\(200\)\.json\(/g) || []).length === 1
-     && /puntos: salida \}, !euskalmetCaido\);/.test(EUS) && /\}, estaciones\.length > 0\);/.test(EUS),
+     && (EUS.match(/segundosDeCache\(\{ leidas: /g) || []).length === 2,
      'un «no he podido preguntar» pegado cinco minutos en el CDN sería mentir a todos los móviles a la vez');
+  /* Revisión adversaria del 23-09-2026 sobre el primer parche: un lote con
+     estaciones caídas por red se guardaba 5 min como bueno, y con la excusa
+     equivocada («ninguna mide viento»). Ahora la decisión es una función pura. */
+  const { segundosDeCache } = require('./api/euskalmet.mjs');
+  ok('segundosDeCache: todo leído → 5 min; alguna caída por red → 1 min; nada leído y caídas → no se guarda',
+     typeof segundosDeCache === 'function'
+     && segundosDeCache({ leidas: 12, pedidas: 12, fallosRed: 0 }) === 300
+     && segundosDeCache({ leidas: 10, pedidas: 12, fallosRed: 2 }) === 60
+     && segundosDeCache({ leidas: 0, pedidas: 12, fallosRed: 12 }) === 0
+     && segundosDeCache({ leidas: 0, pedidas: 12, fallosRed: 0 }) === 300
+     && segundosDeCache({ leidas: 0, pedidas: 0, fallosRed: 0 }) === 300,
+     'las que no miden viento son una respuesta válida; las que no contestaron, no');
+  ok('un fallo de red se distingue de «no hay»: e.red en pedir(), reintento único con socket reutilizado, y ficha/sensor no guardan un null que vino de la red',
+     /e\.red = res\.statusCode >= 500;/.test(EUS)
+     && /if \(intento === 0 && req\.reusedSocket && \(e\.code === 'ECONNRESET' \|\| e\.code === 'EPIPE'\)\)/.test(EUS)
+     && /if \(e\?\.red\) \{ fallos\?\.add\(cod\); return null; \}/.test(EUS)
+     && /if \(e\?\.red\) \{ fallos\?\.add\(cod\); return \[\]; \}/.test(EUS)
+     && /catch \(e\) \{ if \(e\?\.red\) fallos\?\.add\(est\.Codigo\); return null; \}/.test(EUS)
+     && /const PLAZO_MS = 15000;/.test(EUS) && (EUS.match(/await conPlazo\(Promise\.all\(/g) || []).length === 2
+     && /no se ha podido preguntar a \$\{cayeron\} de las \$\{cs\.length\} cercanas/.test(EUS),
+     'antes un timeout de una estación salía como «no publica viento», y con la caché eso se repetía cinco minutos');
   const { cabeceras } = require('./lib/cabeceras.mjs');
   const h = typeof cabeceras === 'function' ? cabeceras(300, { cors: false, revalidar: 600 }) : null;
   ok('y la cabecera que sale es la de 5 min en el borde con 10 de revalidación, sin CORS de más',

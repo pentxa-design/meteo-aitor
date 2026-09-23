@@ -171,6 +171,7 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **Tocar un día en «10 días» abre ese día entero, hora a hora, con las mismas tarjetas de «Horas» (una sola plantilla, tarjetaHora); en la app y en la agenda (17-09-2026, «los de casa lo prefieren, Apple lo tiene así»)** | `al tocar una tarjeta de «10 días» se abre debajo el día entero con esas mismas tarjetas, y se cierra al volver a tocar` |
 | **La comparación entre modelos de un sitio se pide a 10 días, y cada hora dice también si otro modelo ve nubes (regla de la franja): el día abierto lleva sus chips de nube, agua, racha y tormenta cualquier día (17-09-2026 12:40, «que ponga también si alguno ve nube o agua»)** | `la comparación entre modelos se pide a 10 días (antes 2): el día abierto lleva sus chips también del sábado en adelante` |
 | **La capa de encima (sombra de lluvia) va ENCIMA de la nube, y la costa por encima de todas las capas propias** | `la capa de encima (sombra de lluvia) se monta ENCIMA de la nube, no debajo: justo detrás de omLayer` |
+| **Euskalmet reutiliza conexiones (keep-alive) y guarda en el CDN solo lo que decide `segundosDeCache()`: 5 min entera, 1 min parcial, nada si no contesta** | `segundosDeCache: todo leído → 5 min; alguna caída por red → 1 min; nada leído y caídas → no se guarda` |
 
 ---
 
@@ -273,4 +274,3 @@ cuatro fallos a propósito sobre una copia, y cada uno quedó parado por al
 menos una guardia. Una guardia que no puede parar nada es un adorno.
 
 **Si alguna de estas guardias molesta, NO se quita: se arregla el código.**
-| **Euskalmet reutiliza conexiones (keep-alive) y guarda la respuesta buena 5 min en el CDN; la mala no** | `las respuestas buenas van 5 min al CDN y las malas (sin clave, caída) NO se guardan` |
