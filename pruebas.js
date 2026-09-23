@@ -4511,8 +4511,9 @@ grupo('Los ajustes viajan: el Mac, una calca del móvil (30-08-2026, 19:50)');
   /* 7 — Y la app pregunta: al arrancar, cada 5 min y al volver a ella. */
   ok('se sincroniza al arrancar, junto a las torres',
      /setTimeout\(\(\) => sincronizarAjustes\(\), 0\)/.test(src));
-  ok('y cada 5 min, con el pulso de la versión',
-     /setInterval\(\(\) => sincronizarAjustes\(\), 5 \* 60e3\)/.test(src));
+  /* 23-09-2026: sigue siendo cada 5 min, pero solo con la pestaña a la vista («si no entro que no gaste»). */
+  ok('y cada 5 min, con el pulso de la versión (solo con la pestaña a la vista)',
+     /setInterval\(\(\) => \{ if \(document\.visibilityState === 'visible'\) sincronizarAjustes\(\); \}, 5 \* 60e3\)/.test(src));
   ok('y al sacar el móvil del bolsillo (visibilitychange)',
      /if \(!document\.hidden\) \{ comprobarVersion\(\); sincronizarAjustes\(\); \}/.test(src));
 
@@ -9503,6 +9504,37 @@ grupo('Euskalmet reutiliza conexiones y guarda la respuesta buena en el CDN (23-
      !!h && /s-maxage=300/.test(h['cdn-cache-control'] || '') && /stale-while-revalidate=600/.test(h['cdn-cache-control'] || '')
      && !h['access-control-allow-origin'],
      JSON.stringify(h));
+}
+
+/* ═══ «SI NO ENTRO, QUE NO GASTE» (23-09-2026) ═══════════════════════════
+   Suyo, con el panel de Vercel delante (7 h 31 min de CPU en 30 días, 4 h en
+   el plan): «si no entro que no gaste» · «haz lo que sea para que no nos capen».
+   Auditoría de la tarde: una pestaña abierta en segundo plano en el Mac mandaba
+   los ajustes cada 5 min y el pulso cada 10 sin que nadie la mirase (~216
+   llamadas en 12 h, más de la mitad de las del vigilante); y el vigilante,
+   cuando NO le tocaba pasar, aun así llamaba a /api/torres (otra invocación
+   Node entera), leía el estado dos veces y cargaba web-push. */
+grupo('Si no entro, que no gaste: la pestaña oculta no llama, y una pasada saltada del vigilante no hace trabajo de balde (23-09-2026)');
+{
+  const VIG = fs.readFileSync(path.join(__dirname, 'api', 'vigilante.mjs'), 'utf8');
+  ok('los dos temporizadores de la app (pulso cada 10 min, ajustes cada 5) solo llaman con la pestaña a la vista',
+     /setInterval\(\(\) => \{ if \(document\.visibilityState === 'visible'\) mirarPulso\(\); \}, 10 \* 60e3\);/.test(src)
+     && /setInterval\(\(\) => \{ if \(document\.visibilityState === 'visible'\) sincronizarAjustes\(\); \}, 5 \* 60e3\);/.test(src)
+     && !/setInterval\(mirarPulso, 10 \* 60e3\);/.test(src),
+     'una pestaña olvidada en el Mac era el mayor gasto sin que él entrara');
+  ok('y al volver a primer plano el pulso se mira al momento, no hasta 10 min después',
+     /if \(!document\.hidden\) mirarPulso\(\);/.test(src));
+  const iSalta = VIG.indexOf("ok: true, saltada: true, nivel,"), iTorres = VIG.indexOf("const rt = await fetch(`${APP}/api/torres`);"), iTandas = VIG.indexOf("tandaL = await pedirTanda(sitios, 'land')");
+  ok('la lista de torres se pide DESPUÉS del portero de cadencia: una pasada saltada ya no invoca /api/torres',
+     iSalta > 0 && iTorres > iSalta && iTandas > iTorres,
+     `saltada@${iSalta} torres@${iTorres} tandas@${iTandas}`);
+  ok('el estado que ya se leyó para el freno de 20 min se reutiliza, no se lee dos veces',
+     /estadoDeFuera = e;/.test(VIG) && /antes = estadoDeFuera \?\? await leerEstado\(\);/.test(VIG));
+  ok('web-push se carga solo cuando hay algo que enviar: el pulso y las pasadas saltadas no lo pagan',
+     !/^import webpush from 'web-push';/m.test(VIG) && /const \{ default: webpush \} = await import\('web-push'\);/.test(VIG)
+     && VIG.indexOf("await import('web-push')") > VIG.indexOf('async function empujar('));
+  ok('y el pulso y la pasada saltada dicen lo que han costado (cpuMs, frio): lo estimado pasa a medido',
+     /const medida = \(\) => \(\{ cpuMs:/.test(VIG) && (VIG.match(/\.\.\.medida\(\)/g) || []).length >= 3);
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');

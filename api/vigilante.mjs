@@ -25,7 +25,6 @@
    sirve el día que acierta.
    ═══════════════════════════════════════════════════════════════════ */
 
-import webpush from 'web-push';
 import { leerJSON, guardarJSON } from '../lib/almacen.mjs';
 import { leer, guardar } from './suscribir.mjs';
 
@@ -532,6 +531,10 @@ const guardarEstado = e => guardarJSON(ESTADO, e);
    ÚNICAMENTE cuando él abre la pestaña. El vigilante no toca España. */
 
 async function empujar(titulo, cuerpo, tag, importante, url) {
+  /* Perezoso (23-09-2026): el pulso y las pasadas saltadas —que son casi
+     todas las llamadas— no cargan web-push (27 ms de CPU medidos en local
+     por arranque, más en Vercel). Solo se paga cuando hay algo que enviar. */
+  const { default: webpush } = await import('web-push');
   const { VAPID_PUBLICA, VAPID_PRIVADA, VAPID_CONTACTO } = process.env;
   if (!VAPID_PUBLICA || !VAPID_PRIVADA) return { enviados: 0, nota: 'sin claves de firma' };
   webpush.setVapidDetails(VAPID_CONTACTO || 'mailto:pentxa@gmail.com', VAPID_PUBLICA, VAPID_PRIVADA);
@@ -683,7 +686,14 @@ async function apuntarEnElMarcador(sitios) {
   return { apuntadas: muestras.length, estaciones: unicas.size };
 }
 
+let peticiones = 0;   // para saber si la instancia estaba fría
 export default async function handler(req, res) {
+  /* Lo que cuesta esta llamada, en CPU de verdad (23-09-2026): sale en el
+     pulso y en la pasada saltada, que es lo que más veces se llama. Así
+     lo estimado en la auditoría del gasto pasa a ser medido. */
+  peticiones++;
+  const cpu0 = process.cpuUsage();
+  const medida = () => ({ cpuMs: (u => Math.round((u.user + u.system) / 1000))(process.cpuUsage(cpu0)), frio: peticiones === 1 });
   /* ── ¿CUÁNDO PASÓ POR ÚLTIMA VEZ? ─────────────────────────────────────
      Sin clave y sin datos: solo la hora. Lo pregunta la app cada vez que
      él la abre.
@@ -746,7 +756,7 @@ export default async function handler(req, res) {
         const base = `${APP}/api/vigilante`;
         fetch(base, { method: 'POST', headers: { 'x-clave': process.env.CRON_SECRET || '', 'x-revivido': '1' } })
           .catch(() => {});
-        return res.status(200).json({ ultima: e.cuando, haceMin, envia,
+        return res.status(200).json({ ...medida(), ultima: e.cuando, haceMin, envia,
           parteDe: e.parteDe ?? null,
           sitios: Object.keys(e.sitios || {}).length, revivido: true });
       }
@@ -767,7 +777,7 @@ export default async function handler(req, res) {
          pero que no se puede mirar es un dato que acaba contándose de
          memoria, y de memoria ya me he equivocado dos veces esta semana.
          Sale la fecha del último parte, que no dice nada de nadie. */
-      return res.status(200).json({ ultima: e.cuando, haceMin, envia,
+      return res.status(200).json({ ...medida(), ultima: e.cuando, haceMin, envia,
         lista: e.listaDeRespaldo ? 'respaldo' : 'la tuya',
         parteDe: e.parteDe ?? null,
         sitios: Object.keys(e.sitios || {}).length,
@@ -830,12 +840,14 @@ export default async function handler(req, res) {
   const deFuera = !deCasa && trae(externa);
   if (secreto && !deCasa && !deFuera) return res.status(401).json({ error: 'sin permiso' });
 
+  let estadoDeFuera = null;
   if (deFuera) {
     /* Si el almacén no contesta no se sabe cuándo fue la última pasada.
        Se sigue adelante: el freno de 20 min es una cortesía, y perder una
        pasada por no poder leer el reloj sería el remedio peor. */
     let e = null;
     try { e = await leerEstado(); } catch { e = null; }
+    estadoDeFuera = e;   // se reutiliza más abajo: no se lee dos veces (23-09-2026)
     const desde = e?.cuando ? Math.round((Date.now() - new Date(e.cuando).getTime()) / 60000) : null;
     if (desde !== null && desde < 20) {
       return res.status(200).json({ ok: true, saltado: true, haceMin: desde,
@@ -866,21 +878,6 @@ export default async function handler(req, res) {
   const claveManana = `${manana.getFullYear()}-${String(manana.getMonth() + 1).padStart(2, '0')}-${String(manana.getDate()).padStart(2, '0')}`;
   const h0 = ahora.getHours();
 
-  /* Su lista de verdad, la que guarda la app. Si falla, la de respaldo. */
-  let sitios = SITIOS, listaDeRespaldo = true;
-  try {
-    const rt = await fetch(`${APP}/api/torres`);
-    const t = rt.ok ? (await rt.json())?.torres : null;
-    if (Array.isArray(t) && t.length) {
-      sitios = t.map(x => ({
-        n: String(x.name || '').replace(/^(BI|VI|SS|NA)\s+/, '').split(' · ')[0].trim() || 'sin nombre',
-        lat: x.lat, lon: x.lon,
-        /* Lo crítico sigue saliendo de aquí, que eso no lo marca la app. */
-        critico: SITIOS.some(v => v.critico && cerca(v, x)),
-      })).filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lon));
-      listaDeRespaldo = false;
-    }
-  } catch { /* nos quedamos con la de respaldo, y se dice */ }
 
   /* ── MEDIA HORA CUANDO HAY ALGO, UNA HORA CUANDO NO ────────────────
      Suyo, 01-09-2026, viendo que la CPU salía justo en el límite del plan
@@ -917,7 +914,7 @@ export default async function handler(req, res) {
      no hay vigilancia ninguna. Se sigue, y se enciende el modo ciego de
      más abajo, que avisa por lo que HAY en vez de por lo que cambia. */
   let antes = null, noPudeLeerElEstado = false;
-  try { antes = await leerEstado(); }
+  try { antes = estadoDeFuera ?? await leerEstado(); }
   catch (e) { noPudeLeerElEstado = String(e?.message || e).slice(0, 60); }
 
   const huecoPrevio = antes?.cuando
@@ -1027,11 +1024,30 @@ export default async function handler(req, res) {
   const ojeadaAMano = req.query?.mirar === '1' || req.body?.mirar === true;
   if (!ojeadaAMano && !ventanaDelParte && huecoPrevio !== null && huecoPrevio < cadaMin) {
     return res.status(200).json({
-      ok: true, saltada: true, nivel,
+      ok: true, saltada: true, nivel, ...medida(),
       nota: `${nivel}: se pasa cada ${nivel === 'verde' ? (tardeAquí ? 'hora (tarde)' : 'tres horas') : nivel === 'ambar' ? 'media hora' : 'cuarto de hora'}`,
       ultimaPasada: antes.cuando,
     });
   }
+
+  /* (23-09-2026) La lista de torres se pide AQUÍ, después del portero de
+     cadencia: una pasada saltada —la mayoría de las llamadas— no tiene por
+     qué invocar /api/torres, que es otra función Node entera. */
+  /* Su lista de verdad, la que guarda la app. Si falla, la de respaldo. */
+  let sitios = SITIOS, listaDeRespaldo = true;
+  try {
+    const rt = await fetch(`${APP}/api/torres`);
+    const t = rt.ok ? (await rt.json())?.torres : null;
+    if (Array.isArray(t) && t.length) {
+      sitios = t.map(x => ({
+        n: String(x.name || '').replace(/^(BI|VI|SS|NA)\s+/, '').split(' · ')[0].trim() || 'sin nombre',
+        lat: x.lat, lon: x.lon,
+        /* Lo crítico sigue saliendo de aquí, que eso no lo marca la app. */
+        critico: SITIOS.some(v => v.critico && cerca(v, x)),
+      })).filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lon));
+      listaDeRespaldo = false;
+    }
+  } catch { /* nos quedamos con la de respaldo, y se dice */ }
 
   /* Dos peticiones para los veinte. Si alguna tanda falla, sus huecos los
      rellena cada sitio por su cuenta dentro de `unSitio` (ver la nota). */

@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.23-0003';
+const BUILD = '2026.09.23-1408';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -17430,7 +17430,10 @@ function bind() {
   // Avisos al móvil
   montarAvisos();
   mirarPulso();
-  setInterval(mirarPulso, 10 * 60e3);
+  /* Solo con la pestaña a la vista (23-09-2026): una pestaña olvidada en el
+     Mac era el mayor gasto de Vercel sin que él entrara — suyo: «si no
+     entro que no gaste». Al volver a primer plano se mira al momento. */
+  setInterval(() => { if (document.visibilityState === 'visible') mirarPulso(); }, 10 * 60e3);
   montarCampo();
   pintarRecibidos();
   /* Si llega uno con la app abierta, se pinta al momento en vez de
@@ -17448,6 +17451,7 @@ function bind() {
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && S.data && Date.now() - S.data.at > 20 * 60e3 && S.place) go(S.place, { silent: true });
     if (!document.hidden) seguirSiEsMiUbicacion();   // sacar el móvil del bolsillo en otro sitio
+    if (!document.hidden) mirarPulso();
   });
 }
 
@@ -17713,7 +17717,7 @@ async function init() {
   /* Y los ajustes con el mismo pulso: es lo que hace que el Mac abierto
      toda la tarde adopte lo que él tocó en el móvil, y al revés. El
      gesto real es sacar el móvil del bolsillo: visibilitychange. */
-  setInterval(() => sincronizarAjustes(), 5 * 60e3);
+  setInterval(() => { if (document.visibilityState === 'visible') sincronizarAjustes(); }, 5 * 60e3);   // no con la pestaña oculta (23-09-2026)
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) { comprobarVersion(); sincronizarAjustes(); }
   });

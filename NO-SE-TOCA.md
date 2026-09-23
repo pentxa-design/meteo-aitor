@@ -172,6 +172,8 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 | **La comparación entre modelos de un sitio se pide a 10 días, y cada hora dice también si otro modelo ve nubes (regla de la franja): el día abierto lleva sus chips de nube, agua, racha y tormenta cualquier día (17-09-2026 12:40, «que ponga también si alguno ve nube o agua»)** | `la comparación entre modelos se pide a 10 días (antes 2): el día abierto lleva sus chips también del sábado en adelante` |
 | **La capa de encima (sombra de lluvia) va ENCIMA de la nube, y la costa por encima de todas las capas propias** | `la capa de encima (sombra de lluvia) se monta ENCIMA de la nube, no debajo: justo detrás de omLayer` |
 | **Euskalmet reutiliza conexiones (keep-alive) y guarda en el CDN solo lo que decide `segundosDeCache()`: 5 min entera, 1 min parcial, nada si no contesta** | `segundosDeCache: todo leído → 5 min; alguna caída por red → 1 min; nada leído y caídas → no se guarda` |
+| **Con la pestaña oculta la app no llama: ni el pulso cada 10 min ni los ajustes cada 5 («si no entro, que no gaste»)** | `los dos temporizadores de la app (pulso cada 10 min, ajustes cada 5) solo llaman con la pestaña a la vista` |
+| **Una pasada saltada del vigilante no pide la lista de torres ni carga web-push** | `la lista de torres se pide DESPUÉS del portero de cadencia: una pasada saltada ya no invoca /api/torres` |
 
 ---
 
