@@ -88,7 +88,10 @@ import { cabeceras } from '../lib/cabeceras.mjs';
    socket ocioso muere aquí a los 9 s, antes que en el servidor: si lo
    cierra el servidor primero, la petición que lo reutiliza muere con
    ECONNRESET (medido en Node 22) — y para ese caso hay un reintento. */
-const AGENTE = new Agent({ keepAlive: true, maxSockets: 24, timeout: 9000, ca: CA_IZENPE });
+/* 24 sockets fue demasiado para Euskalmet: con el lote de 20 sitios llegó
+   «429 Please wait 7 seconds» a todas las fichas a la vez (medido el
+   23-09-2026 a las 14:45). Seis en vuelo, y el 429 se respeta (abajo). */
+const AGENTE = new Agent({ keepAlive: true, maxSockets: 6, timeout: 9000, ca: CA_IZENPE });
 const CDN_SEGUNDOS = 300;
 const PLAZO_MS = 15000;
 
@@ -166,7 +169,30 @@ function firmar() {
 
    El aviso de Node cuando falla esto es «fetch failed», sin decir que es
    de certificados. Por eso queda escrito aquí. */
-function pedir(ruta, jwt, intento = 0) {
+/* ── EL LÍMITE DE EUSKALMET (23-09-2026) ─────────────────────────────
+   Medido en producción al medir el gasto: «429 Please wait 7 seconds
+   before retrying» en las cuatro fichas de Bermeo a la vez, y la app
+   decía de las cuatro «no publica viento en esta hora». Un 429 es «no he
+   podido», no «no hay»: se marca como fallo de red (no se guarda en
+   ninguna caché), se espera lo que pide el servidor —todas las peticiones
+   en vuelo, no solo la que lo recibió— y se reintenta UNA vez. */
+let pausaHasta = 0;
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+async function pedir(ruta, jwt, intento = 0) {
+  const falta = pausaHasta - Date.now();
+  if (falta > 0) await esperar(Math.min(falta, 8000));
+  try { return await pedirUnaVez(ruta, jwt, intento); }
+  catch (e) {
+    if (e.status === 429 && intento === 0) {
+      const seg = Math.min(8, Math.max(1, e.espera || 7));
+      pausaHasta = Math.max(pausaHasta, Date.now() + seg * 1000);
+      await esperar(seg * 1000);
+      return pedir(ruta, jwt, 1);
+    }
+    throw e;
+  }
+}
+function pedirUnaVez(ruta, jwt, intento) {
   return new Promise((ok, mal) => {
     const req = pedirHttps({
       host: 'api.euskadi.eus', path: ruta, method: 'GET', ca: CA_IZENPE, agent: AGENTE,
@@ -193,7 +219,10 @@ function pedir(ruta, jwt, intento = 0) {
         const cuerpo = Buffer.concat(trozos).toString(comoLeer);
         if (res.statusCode < 200 || res.statusCode >= 300) {
           const e = new Error(`${res.statusCode} en ${ruta.split('/measures')[0]} ${cuerpo.slice(0, 120)}`);
-          e.red = res.statusCode >= 500;      // un 5xx es «no he podido»; un 404 es «no hay»
+          e.status = res.statusCode;
+          e.red = res.statusCode >= 500 || res.statusCode === 429;   // 5xx y 429 son «no he podido»; un 404 es «no hay»
+          if (res.statusCode === 429)
+            e.espera = parseInt(/wait (\d+) seconds/i.exec(cuerpo)?.[1] || res.headers['retry-after'] || '7', 10);
           return mal(e);
         }
         try { ok(JSON.parse(cuerpo)); }
@@ -205,7 +234,7 @@ function pedir(ruta, jwt, intento = 0) {
       /* Socket reutilizado que el servidor había cerrado: se reintenta UNA
          vez (patrón documentado en Node). Lo demás es fallo de red. */
       if (intento === 0 && req.reusedSocket && (e.code === 'ECONNRESET' || e.code === 'EPIPE'))
-        return pedir(ruta, jwt, 1).then(ok, mal);
+        return pedirUnaVez(ruta, jwt, 1).then(ok, mal);
       e.red = true; mal(e);
     });
     req.end();
