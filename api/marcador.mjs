@@ -64,6 +64,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 import { leerJSON, guardarJSON } from '../lib/almacen.mjs';
+import { cabeceras } from '../lib/cabeceras.mjs';
 
 const LIBRO = 'marcador-modelos.json';
 
@@ -299,6 +300,10 @@ export default async function handler(req, res) {
         nota: 'no he podido leer el marcador; esto NO quiere decir que esté vacío' });
     }
     const est = contar(muestras);
+    /* 5 min en el CDN (23-09-2026): 0,23 s de CPU por GET —lee, reparsea y
+       recuenta 1,1 MB de muestras— y el libro solo cambia cuando escribe el
+       vigilante. El 500 de arriba no se guarda. */
+    for (const [k, v] of Object.entries(cabeceras(300, { cors: false, revalidar: 60 }))) if (k !== 'content-type') res.setHeader(k, v);
     return res.status(200).json({
       ok: true,
       muestras: muestras.length,

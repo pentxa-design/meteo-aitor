@@ -9540,6 +9540,14 @@ grupo('Si no entro, que no gaste: la pestaña oculta no llama, y una pasada salt
   ok('web-push se carga solo cuando hay algo que enviar: el pulso y las pasadas saltadas no lo pagan',
      !/^import webpush from 'web-push';/m.test(VIG) && /const \{ default: webpush \} = await import\('web-push'\);/.test(VIG)
      && VIG.indexOf("await import('web-push')") > VIG.indexOf('async function empujar('));
+  const MARC = fs.readFileSync(path.join(__dirname, 'api', 'marcador.mjs'), 'utf8');
+  /* 0,23 s de CPU por GET (lee, reparsea y recuenta 1,1 MB de muestras) y crece con
+     el libro; el libro solo cambia cuando entra el vigilante. 5 min en el CDN. */
+  ok('el GET del marcador se guarda 5 min en el CDN (el libro solo cambia cuando escribe el vigilante); el 500 no',
+     /import \{ cabeceras \} from '\.\.\/lib\/cabeceras\.mjs';/.test(MARC)
+     && /for \(const \[k, v\] of Object\.entries\(cabeceras\(300, \{ cors: false, revalidar: 60 \}\)\)\) if \(k !== 'content-type'\) res\.setHeader\(k, v\);/.test(MARC)
+     && MARC.indexOf("cabeceras(300, { cors: false, revalidar: 60 })") > MARC.indexOf("const est = contar(muestras);"),
+     'cada apertura de Mis torres recontaba 3.884 muestras de balde');
   ok('y el pulso y la pasada saltada dicen lo que han costado (cpuMs, frio): lo estimado pasa a medido',
      /const medida = \(\) => \(\{ cpuMs:/.test(VIG) && (VIG.match(/\.\.\.medida\(\)/g) || []).length >= 3);
 }
