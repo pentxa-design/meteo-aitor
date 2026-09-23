@@ -23,13 +23,45 @@ pone roja**. Si no se puede poner roja, no vale y no se apunta.
 
 ---
 
+## UNA GUARDA QUE FIJA EL TEXTO DE UN ARREGLO PASADO NO PROTEGE DE NADA
+
+**22-09-2026, y costó una regresión en producción.** El 01-09 una clave
+inventada (`weather_code_lluvia`) tumbó el relleno de los diez días: la API
+contesta HTTP 400 a la petición entera si le mandas un nombre que no conoce, y
+el catch se lo tragaba. Se arregló, y se puso esta guarda:
+
+    /Object\.keys\(H\)\.filter\(k => k !== 'time'
+     && !k\.endsWith\('_lluvia'\)\)/.test(src)
+
+Comprobaba, letra por letra, que siguiera escrita **la línea de aquel arreglo**.
+El 22-09 se añadió otra clave inventada, `cape_de_la_tapa`. La línea seguía ahí,
+la guarda siguió verde, la puerta dejó publicar, y **ocho de los diez días se
+quedaron en blanco esa misma noche**.
+
+Al lado había otra peor: una prueba que decía «EJERCITA el caso que fallaba» y
+que **se reimplementaba el filtro dentro**. Comprobaba su propia copia: se podía
+borrar el filtro de app.js entero y seguía verde.
+
+**Las tres formas de guarda, de peor a mejor:**
+
+1. **Fijar el texto del arreglo.** No protege de la siguiente. Da verde falso.
+2. **Reimplementar la lógica en la prueba.** No protege de nada en absoluto.
+3. **Obligar a registrar, y ejecutar lo que hay en app.js.** Esta es la buena:
+   toda clave con nombre propio tiene que estar en `CLAVES_NUESTRAS`, y el
+   filtro se SACA de app.js y se EJECUTA, no se copia.
+
+Vale para cualquier regla de esta casa, no solo para las claves. Suyo, esa
+noche: *«lo reparas, dices que encuentras el fallo para que no pase, pasan 24
+horas y lo mismo»*. Tenía razón: la guarda tapaba la puerta por la que ya había
+entrado, no la clase.
+
 ## LAS REGLAS QUE NO SE TOCAN
 
 | lo que se decidió | prueba que lo guarda |
 |---|---|
 | El agua es de ECMWF y el cielo de ARPEGE, por acierto medido | `el modelo se sella ANTES de repartir, no después` |
 | El modelo por defecto es AROME, y en un solo sitio | `el modelo se sella ANTES de repartir, no después` |
-| Ninguna clave inventada sale a la red (los 10 días se quedaban vacíos) | `ninguna clave sintética sale a la red en el relleno de 10 días` |
+| Toda clave que la app se invente va en `CLAVES_NUESTRAS`, y ninguna sale a la red (los 10 días se quedaban vacíos) | `ninguna clave inventada se escribe en hourly sin registrar` |
 | Un hueco JAMÁS se pinta de cero | `ningún «0,0» inventado donde no hay dato de lluvia` |
 | Ninguna tarjeta anuncia agua y la niega a la vez | `NINGUNA tarjeta anuncia agua y la niega a secas a la vez (familia, no instancia)` |
 | La calma de lluvia lleva dueño cuando otros ven agua | `la calma de la franja lleva dueño cuando otros ven agua` |

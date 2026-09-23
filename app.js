@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.23-1445';
+const BUILD = '2026.09.23-1653';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -3627,6 +3627,23 @@ const COMPLEMENTOS = [
 /* Quién rellena más allá del alcance del modelo elegido. ECMWF: llega a
    10 días, es global —vale en Calpe, Miami y Brasil— y en el marcador va
    por delante de GFS, que es el otro que llega tan lejos. */
+/* ── LAS CLAVES QUE NOS INVENTAMOS NOSOTROS (22-09-2026) ──────────────
+   Viven en `hourly` al lado de las de la API, pero **la API no las
+   conoce**: si una sola se cuela en una petición, Open-Meteo contesta
+   400 a la petición ENTERA y se pierde todo lo que traía.
+
+   Ya pasó el 01-09-2026 con `weather_code_lluvia`: ocho de los diez días
+   en blanco, y el catch se lo tragaba en silencio. Se arregló con un
+   filtro `!k.endsWith('_lluvia')` — una LISTA NEGRA. Y una lista negra
+   no protege de la clave siguiente: el 22-09-2026 añadí
+   `cape_de_la_tapa` y el relleno de los diez días volvió a romperse esa
+   misma noche, con el mismo 400 y el mismo silencio.
+
+   Así que aquí se registran TODAS, y una guarda de pruebas.js exige que
+   cualquier clave con nombre propio que la app escriba en `hourly` esté
+   en esta lista. Registrarla o no publicar. */
+const CLAVES_NUESTRAS = ['weather_code_lluvia', 'cape_de_la_tapa'];
+
 const RELLENO_LARGO = 'ecmwf_ifs025';
 /* Y detrás, el que recoge lo que ni siquiera el europeo publica. Medido
    el 29-08-2026 pidiendo los diez días a los cuatro: el **índice UV
@@ -3698,7 +3715,7 @@ async function completarLargo(f, p) {
      `rellenoDesde` a null y **OCHO de los diez días en blanco**, con el
      UV al lado (que llega por otra puerta) para que pareciera avería.
      Es la regla «vacío jamás» rota por una clave de más. */
-  const campos = Object.keys(H).filter(k => k !== 'time' && !k.endsWith('_lluvia'));
+  const campos = Object.keys(H).filter(k => k !== 'time' && !CLAVES_NUESTRAS.includes(k));
   try {
     const d = await jget(API.fc, {
       latitude: p.lat, longitude: p.lon, timezone: 'auto', wind_speed_unit: 'kmh',

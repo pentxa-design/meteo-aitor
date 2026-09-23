@@ -271,6 +271,65 @@ for (const f of ['listonRafaga', 'veladoSiToca', 'medianaPonderada', 'cieloVotad
    LO QUE NO SE TOCA: el ámbar sigue saliendo igual. Ante la duda se
    avisa. Lo que cambia es la frase, no el color.
    ══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════
+   UNA CLAVE QUE NOS INVENTAMOS NOSOTROS NO PUEDE VIAJAR A LA API
+   ──────────────────────────────────────────────────────────────────────
+   `completarLargo()` manda a Open-Meteo TODAS las claves que tiene en
+   memoria. Las que nos inventamos nosotros no existen allí, y la API
+   contesta **400 a la petición entera**: ocho de los diez días en blanco,
+   con el catch tragándoselo en silencio.
+
+   Pasó el 01-09-2026 con `weather_code_lluvia`. Se puso un filtro de
+   lista negra. Y el 22-09-2026 volvió a pasar con `cape_de_la_tapa`,
+   añadida esa misma noche: la lista negra no protege de la siguiente.
+
+   Esta guarda es la que cierra la clase: cualquier clave con nombre
+   propio que la app escriba en `hourly` tiene que estar registrada en
+   `CLAVES_NUESTRAS`, y ninguna de ellas puede salir en la petición.
+   ══════════════════════════════════════════════════════════════════════ */
+grupo('Una clave inventada por nosotros no puede viajar a la API (22-09-2026)');
+{
+  const codigo = src.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  const lista = (codigo.match(/const CLAVES_NUESTRAS = \[([^\]]*)\]/) || [])[1] || '';
+  const registradas = [...lista.matchAll(/'([^']+)'/g)].map(m => m[1]);
+
+  ok('la lista de claves nuestras existe y no está vacía',
+     registradas.length >= 2,
+     `registradas: ${registradas.join(', ') || '¡ninguna!'}`);
+
+  /* Toda clave que la app escriba en hourly con nombre propio. Las que
+     llevan el nombre de un modelo detrás (`cape_icon_seamless`) las
+     escribe el bucle de la comparativa y sí existen en la API. */
+  const escritas = [...codigo.matchAll(/\.hourly\.([a-z_0-9]+)\s*=/g)]
+    .map(m => m[1])
+    .filter(k => k !== 'time');
+  const sinRegistrar = [...new Set(escritas)]
+    .filter(k => !registradas.includes(k))
+    .filter(k => !/_(?:icon|gfs|ecmwf|arome|arpege|knmi|gem|best)_/.test(k));
+  ok('ninguna clave inventada se escribe en hourly sin registrar',
+     sinRegistrar.length === 0,
+     sinRegistrar.length
+       ? `sin registrar: ${sinRegistrar.join(', ')} — o es real, o va a CLAVES_NUESTRAS`
+       : `${escritas.length} escrituras, todas conocidas`);
+
+  ok('el relleno de los diez días las quita por la lista, no por el sufijo',
+     /const campos = Object\.keys\(H\)\.filter\(k => k !== 'time' && !CLAVES_NUESTRAS\.includes\(k\)\);/.test(src),
+     'con `!k.endsWith(\'_lluvia\')` la siguiente clave vuelve a romperlo');
+
+  /* Y la prueba de verdad: se arma el filtro y se comprueba que ninguna
+     de las nuestras pasa. Leer el código no basta: esto lo ejecuta. */
+  {
+    const H = { time: [], temperature_2m: [], cape: [] };
+    for (const k of registradas) H[k] = [];
+    const campos = Object.keys(H).filter(k => k !== 'time' && !registradas.includes(k));
+    ok('ejecutado: el filtro deja fuera TODAS las nuestras y ninguna real',
+       registradas.every(k => !campos.includes(k))
+       && campos.includes('temperature_2m') && campos.includes('cape'),
+       `pasa: ${campos.join(', ')}`);
+  }
+}
+
 grupo('Una tapa en 0 de quien no ve gasolina no dice nada (22-09-2026)');
 {
   /* La escala de la tapa, que más abajo se saca otra vez para lo suyo. */
@@ -6439,21 +6498,52 @@ grupo('Los tres graves del repaso de modelos (01-09-2026, dos equipos)');
      API y esa no existe → HTTP 400 a la petición entera → catch mudo →
      relleno sin hacer. MEDIDO en producción con AROME (el de fábrica):
      rellenoDesde null y OCHO de diez días en blanco. */
-  ok('ninguna clave sintética sale a la red en el relleno de 10 días',
-     /Object\.keys\(H\)\.filter\(k => k !== 'time' && !k\.endsWith\('_lluvia'\)\)/.test(src),
-     'weather_code_lluvia devolvía HTTP 400 y el relleno no se hacía');
+  /* ── ESTA GUARDA ERA FALSA Y COSTÓ UNA REGRESIÓN (22-09-2026) ──────
+     Decía esto:
+
+         /Object\.keys\(H\)\.filter\(k => k !== 'time'
+          && !k\.endsWith\('_lluvia'\)\)/.test(src)
+
+     O sea: comprobaba, letra por letra, que siguiera escrita la línea
+     del arreglo del 01-09. Comprobaba que el PARCHE seguía puesto, no
+     que la CLASE estuviera cerrada.
+
+     Y el 22-09 se añadió `cape_de_la_tapa` a `hourly`. La línea seguía
+     ahí, la guarda siguió verde, la puerta dejó publicar — y el relleno
+     de los diez días se rompió esa misma noche con el mismo HTTP 400.
+     Ocho días en blanco en producción, vistos en su app.
+
+     Una guarda que fija el texto de un arreglo pasado no protege de la
+     clave siguiente. La de verdad está en el grupo «Una clave inventada
+     por nosotros no puede viajar a la API»: obliga a REGISTRAR toda
+     clave que la app se invente. Aquí solo queda el ancla del filtro. */
+  ok('el filtro del relleno quita las claves nuestras por la lista, no por el sufijo',
+     /Object\.keys\(H\)\.filter\(k => k !== 'time' && !CLAVES_NUESTRAS\.includes\(k\)\)/.test(src),
+     'con un sufijo a mano, la siguiente clave inventada vuelve a tumbar los 10 días');
   ok('y el fallo del relleno ya no se traga en silencio',
      /f\.rellenoFallo = String/.test(src) && !/catch \{ \/\* si falla, se queda como estaba/.test(src),
      'un catch mudo escondió esto días enteros');
-  ok('la prueba EJERCITA el caso que fallaba, no solo el que pasa',
+  ok('la prueba EJERCITA EL FILTRO DE LA APP, no una copia suya',
      (() => {
-       /* Se simula la lista de campos con la clave sintética dentro y se
-          exige que el filtro la deje fuera. Si alguien quita el filtro,
-          esto se pone rojo. */
-       const H = { time: [], temperature_2m: [], precipitation: [], weather_code_lluvia: [] };
-       const campos = Object.keys(H).filter(k => k !== 'time' && !k.endsWith('_lluvia'));
-       return !campos.includes('weather_code_lluvia') && campos.includes('precipitation');
-     })());
+       /* LO QUE HABÍA AQUÍ TAMPOCO SERVÍA (22-09-2026): la prueba se
+          reescribía el filtro dentro y comprobaba SU PROPIA COPIA. Podía
+          borrarse el filtro de app.js entero y esto seguía verde.
+
+          Ahora se saca de app.js la línea de verdad —la lista y el
+          filtro— y se ejecuta. Si alguien la cambia, esto lo nota. */
+       eval(sacarConst('CLAVES_NUESTRAS'));
+       const linea = (src.match(/const campos = Object\.keys\(H\)\.filter\([^;]+\);/) || [])[0];
+       if (!linea) return false;
+       const H = { time: [], temperature_2m: [], precipitation: [],
+                   ...Object.fromEntries(CLAVES_NUESTRAS.map(k => [k, []])) };
+       /* Se le quita el `const` para que asigne a la de fuera: un
+          `const` dentro de un eval se queda dentro del eval. */
+       let campos;
+       eval(linea.replace(/^const /, ''));
+       return CLAVES_NUESTRAS.every(k => !campos.includes(k))
+           && campos.includes('precipitation') && campos.includes('temperature_2m');
+     })(),
+     'sacada de app.js y ejecutada: ninguna clave nuestra sale, las reales sí');
 
   /* 2 · EL REPARTO USABA EL MODELO DE LA CARGA ANTERIOR.
      `completar()` lee `modeloDato()` (= f._modelo) y el sello se ponía

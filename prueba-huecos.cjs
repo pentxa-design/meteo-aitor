@@ -155,6 +155,10 @@ console.log('\n  Un hueco no es verde — perfil hierro, el de fábrica');
 console.log('\n  Si el relleno largo se cae, se dice desde qué hora y por qué');
 eval(sacar('function nombreDeDia(d) {'));
 eval(sacarConst('VT'));
+/* Las claves que nos inventamos nosotros: `completarLargo` las quita de
+   la petición por esta lista. Si no está, la API contesta 400 a la
+   petición entera y los diez días se quedan vacíos (22-09-2026). */
+eval(sacarConst('CLAVES_NUESTRAS'));
 eval(sacarConst('RELLENO_LARGO'));
 eval(sacarConst('RELLENO_2'));
 globalThis.DAILY = 'uv_index_max';
@@ -183,6 +187,34 @@ const partirDe = () => ({
 const sitio = { lat: 43.42, lon: -2.72 };
 
 (async () => {
+  /* ── LO QUE SALE A LA RED, MIRADO EN LA PETICIÓN (22-09-2026) ───────
+     La guarda definitiva de la clase, y la única que habría parado la
+     regresión de esa noche: aquí `completarLargo` es la función DE
+     VERDAD, sacada de app.js, y la API es de mentira — así que se puede
+     leer el `hourly` que pide y comprobar que no lleva ninguna clave
+     nuestra.
+
+     Si una se cuela, Open-Meteo contesta **HTTP 400 a la petición
+     entera** y los diez días se quedan vacíos. Pasó el 01-09 con
+     `weather_code_lluvia` y volvió a pasar el 22-09 con
+     `cape_de_la_tapa`, porque la guarda de entonces solo miraba que
+     siguiera escrita la línea del arreglo viejo. Ésta mira el hecho. */
+  {
+    let pedido = null;
+    globalThis.jget = async (_u, q) => { pedido = q; throw new Error('corta aquí'); };
+    const f = partirDe();
+    for (const k of CLAVES_NUESTRAS) f.hourly[k] = horas.map(() => 1);
+    await completarLargo(f, sitio);
+    const campos = String(pedido?.hourly || '').split(',');
+    const coladas = CLAVES_NUESTRAS.filter(k => campos.includes(k));
+    ok('ninguna clave nuestra sale en la petición del relleno de 10 días',
+       coladas.length === 0,
+       coladas.length ? `se coló: ${coladas.join(', ')} — la API contesta 400 a TODO`
+                      : `${CLAVES_NUESTRAS.length} claves metidas a propósito, ninguna sale`);
+    ok('y las de verdad sí salen: el filtro no se ha pasado de frenada',
+       campos.includes('wind_gusts_10m') && campos.includes('precipitation'),
+       `pidió: ${campos.join(', ')}`);
+  }
   {
     globalThis.jget = async () => { throw new Error('HTTP 502 del relleno'); };
     const f = partirDe();
