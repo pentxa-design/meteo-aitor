@@ -9453,6 +9453,37 @@ grupo('La portada no se sale de la pantalla del móvil (21-09-2026)');
      'a lo ancho sobra sitio: la regla vale siempre');
 }
 
+/* ═══ EUSKALMET ERA LA FUNCIÓN QUE SE COMÍA LA CPU DE VERCEL (23-09-2026) ═══
+   Medido en Vercel → Observability → Functions (12 h, producción): 26 llamadas
+   a /api/euskalmet, 34 s de CPU activa, 1,3 s CADA UNA; el resto de funciones
+   juntas, 50 s. Y en Uso: 7 h 31 min en 30 días con 4 h/mes en el plan
+   gratuito; 20-33 min/día hasta el 18-09 y 6-13 desde el 19, justo cuando la
+   línea «Medido de verdad» de Ahora dejó de pedir Euskalmet en cada pintado.
+   Suyo: «esto es mucho consumo para la app del tiempo». Dos causas: cada
+   llamada abría 10-20 conexiones TLS nuevas con la CA de IZENPE (nada de
+   keep-alive) y la respuesta no se guardaba en el CDN. */
+grupo('Euskalmet reutiliza conexiones y guarda la respuesta buena en el CDN (23-09-2026)');
+{
+  const EUS = fs.readFileSync(path.join(__dirname, 'api', 'euskalmet.mjs'), 'utf8');
+  ok('pedir() va por un agente keep-alive con la CA de IZENPE: las conexiones TLS se reutilizan en vez de abrirse una por petición',
+     /import \{ request as pedirHttps, Agent \} from 'node:https';/.test(EUS)
+     && /const AGENTE = new Agent\(\{ keepAlive: true, maxSockets: 8, ca: CA_IZENPE \}\);/.test(EUS)
+     && /host: 'api\.euskadi\.eus', path: ruta, method: 'GET', ca: CA_IZENPE, agent: AGENTE,/.test(EUS),
+     'un apretón de manos TLS por petición, diez o veinte por llamada, es CPU tirada');
+  ok('las respuestas buenas van 5 min al CDN y las malas (sin clave, caída) NO se guardan',
+     /const CDN_SEGUNDOS = 300;/.test(EUS) && /function contestar\(res, cuerpo, bueno\)/.test(EUS)
+     && (EUS.match(/return contestar\(res, /g) || []).length >= 5
+     && (EUS.match(/res\.status\(200\)\.json\(/g) || []).length === 1
+     && /puntos: salida \}, !euskalmetCaido\);/.test(EUS) && /\}, estaciones\.length > 0\);/.test(EUS),
+     'un «no he podido preguntar» pegado cinco minutos en el CDN sería mentir a todos los móviles a la vez');
+  const { cabeceras } = require('./lib/cabeceras.mjs');
+  const h = typeof cabeceras === 'function' ? cabeceras(300, { cors: false, revalidar: 600 }) : null;
+  ok('y la cabecera que sale es la de 5 min en el borde con 10 de revalidación, sin CORS de más',
+     !!h && /s-maxage=300/.test(h['cdn-cache-control'] || '') && /stale-while-revalidate=600/.test(h['cdn-cache-control'] || '')
+     && !h['access-control-allow-origin'],
+     JSON.stringify(h));
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');

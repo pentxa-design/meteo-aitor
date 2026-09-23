@@ -273,3 +273,4 @@ cuatro fallos a propósito sobre una copia, y cada uno quedó parado por al
 menos una guardia. Una guardia que no puede parar nada es un adorno.
 
 **Si alguna de estas guardias molesta, NO se quita: se arregla el código.**
+| **Euskalmet reutiliza conexiones (keep-alive) y guarda la respuesta buena 5 min en el CDN; la mala no** | `las respuestas buenas van 5 min al CDN y las malas (sin clave, caída) NO se guardan` |

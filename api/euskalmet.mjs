@@ -60,9 +60,34 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 import { createSign } from 'node:crypto';
-import { request as pedirHttps } from 'node:https';
+import { request as pedirHttps, Agent } from 'node:https';
 import { ESTACIONES_EUSKALMET } from '../lib/estaciones-euskalmet.mjs';
 import { CA_IZENPE } from '../lib/ca-izenpe.mjs';
+import { cabeceras } from '../lib/cabeceras.mjs';
+
+/* ── LA FUNCIÓN QUE SE COMÍA LA CPU DE VERCEL (23-09-2026) ──────────────
+   Medido en Vercel → Observability → Functions (12 h de producción): 26
+   llamadas a esta función, 34 s de CPU activa, **1,3 s cada una** — el
+   resto de funciones juntas, 50 s. Y en Uso: 7 h 31 min en 30 días, con
+   4 h al mes en el plan gratuito. Suyo: «esto es mucho consumo para la
+   app del tiempo». Lo que la hacía cara: cada llamada abre entre diez y
+   veinte conexiones TLS NUEVAS con la CA de IZENPE (una por petición a
+   api.euskadi.eus, sin keep-alive), y la respuesta no se guardaba fuera
+   del proceso, así que cada apertura de la app lo repetía entero.
+
+   Dos arreglos: (1) un agente con keep-alive, las conexiones se
+   reutilizan; (2) la respuesta BUENA se guarda 5 min en el CDN (Euskalmet
+   publica cada 10): la misma URL desde cualquier móvil sale del borde sin
+   ejecutar nada. Las respuestas con fallo o sin clave no se guardan: un
+   «no he podido preguntar» pegado cinco minutos sería mentir a todos los
+   móviles a la vez. */
+const AGENTE = new Agent({ keepAlive: true, maxSockets: 8, ca: CA_IZENPE });
+const CDN_SEGUNDOS = 300;
+function contestar(res, cuerpo, bueno) {
+  const h = bueno ? cabeceras(CDN_SEGUNDOS, { cors: false, revalidar: 600 }) : { 'cache-control': 'no-store' };
+  for (const [k, v] of Object.entries(h)) if (k !== 'content-type') res.setHeader(k, v);
+  return res.status(200).json(cuerpo);
+}
 
 const API = 'https://api.euskadi.eus';
 
@@ -116,7 +141,7 @@ function firmar() {
 function pedir(ruta, jwt) {
   return new Promise((ok, mal) => {
     const req = pedirHttps({
-      host: 'api.euskadi.eus', path: ruta, method: 'GET', ca: CA_IZENPE,
+      host: 'api.euskadi.eus', path: ruta, method: 'GET', ca: CA_IZENPE, agent: AGENTE,
       headers: { Authorization: `Bearer ${jwt}`, Accept: 'application/json' },
       timeout: 12000,
     }, res => {
@@ -422,11 +447,11 @@ export default async function handler(req, res) {
     /* SIN CLAVE NO ES UN ERROR, ES UN «TODAVÍA NO». Se dice con todas
        las letras para que se vea en pantalla que falta ponerla, en vez
        de que la pantalla se quede como si Euskalmet no existiera. */
-    return res.status(200).json({
+    return contestar(res, {
       ok: true, hayClave: false, estaciones: [],
       reason: 'Falta la clave de Euskalmet en Vercel (EUSKALMET_KEY y EUSKALMET_ISS). '
             + 'Mientras tanto la app sigue con las estaciones de AEMET.',
-    });
+    }, false);
   }
 
   if (puntos.length) {
@@ -521,17 +546,17 @@ export default async function handler(req, res) {
         }
         return mejor;
       });
-      return res.status(200).json({ ok: euskalmetCaido ? false : true, hayClave: true,
+      return contestar(res, { ok: euskalmetCaido ? false : true, hayClave: true,
         fuente: 'Euskalmet · Gobierno Vasco',
         consultado: new Date().toISOString(),
         reason: euskalmetCaido
           ? `no he podido leer ninguna de las ${necesarias.length} estaciones de Euskalmet`
           : undefined,
         estacionesLeidas: leidas.size, estacionesPedidas: necesarias.length,
-        puntos: salida });
+        puntos: salida }, !euskalmetCaido);
     } catch (e) {
-      return res.status(200).json({ ok: false, hayClave: true, puntos: [],
-                                    reason: `${e.message || e} (al hablar con api.euskadi.eus)` });
+      return contestar(res, { ok: false, hayClave: true, puntos: [],
+                              reason: `${e.message || e} (al hablar con api.euskadi.eus)` }, false);
     }
   }
 
@@ -579,7 +604,7 @@ export default async function handler(req, res) {
     }));
 
     const estaciones = leidas.filter(Boolean).sort((a, b) => a.km - b.km);
-    return res.status(200).json({
+    return contestar(res, {
       ok: true, hayClave: true,
       fuente: 'Euskalmet · Gobierno Vasco',
       consultado: new Date().toISOString(),
@@ -589,11 +614,11 @@ export default async function handler(req, res) {
       debug: depurar ? notas : undefined,
       nota: estaciones.length ? undefined
         : 'Ninguna de las estaciones cercanas publica viento en esta hora.',
-    });
+    }, estaciones.length > 0);
   } catch (e) {
     /* «fetch failed» a secas no dice nada y cuesta media hora. Se pone
        de dónde venía. */
-    return res.status(200).json({ ok: false, hayClave: true, estaciones: [],
-                                  reason: `${e.message || e} (al hablar con api.euskadi.eus)` });
+    return contestar(res, { ok: false, hayClave: true, estaciones: [],
+                            reason: `${e.message || e} (al hablar con api.euskadi.eus)` }, false);
   }
 }
