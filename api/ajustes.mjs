@@ -139,6 +139,34 @@ function juntar(guardado, entra) {
 const CAJON_MARCAS = 'centro/marcas.json';
 const TOPE_MARCAS = 4000;
 
+/* ── LA JORNADA DEL DÍA ───────────────────────────────────────────────
+   Aitor, 22-09-2026, en cuanto vio el planificador nuevo:
+
+     «o sea si planifico en el mac no lo veo en el ulefone que utilizo
+      24x7?» · «claro y muchas veces planifico desde el móvil»
+
+   Y tenía razón: no lo veía. Monta el reparto —qué trabajo va a cada uno
+   de los cuatro— y luego se pasa el día fuera. Un planificador que no
+   llega al otro aparato no sirve de nada.
+
+   SE JUNTA TRABAJO A TRABAJO, NO EL PLAN ENTERO. El primer diseño
+   guardaba el plan completo y mandaba el último guardado; en cuanto dijo
+   que planifica desde los dos lados, eso se cae: bastaba con tener el Mac
+   abierto con el plan de ayer y tocar cualquier cosa para llevarse por
+   delante lo que acababa de montar en el móvil. Aquí cada trabajo lleva
+   su hora y gana el más reciente, uno por uno — que es como ya funcionan
+   las marcas.
+
+   QUITAR TAMBIÉN ES UN DATO. Un trabajo borrado se queda como lápida
+   (`fuera: true`) con su hora: si no, el otro aparato lo volvería a
+   meter en cuanto sincronizara. Se barren a los tres días.
+
+   Sigue sin viajar el TRABAJO, solo su referencia (sección + clave): los
+   datos siguen viniendo del informe del correo de las 06:00.         */
+const CAJON_JORNADA = 'centro/jornada.json';
+const TOPE_TRABAJOS = 200;
+const DIAS_LAPIDA = 3;
+
 /* El panel vive en otro dominio, así que hace falta abrirle la puerta.
    Se escribe la lista a mano en vez de poner `*`. */
 const ORIGENES = [
@@ -208,11 +236,151 @@ async function marcas(req, res) {
   }
 }
 
+const txt = (v, n) => String(v ?? '').trim().slice(0, n);
+/* La llave lleva el DÍA: el mismo trabajo puede estar montado el martes y
+   el jueves, y son dos cosas distintas. Aitor, 22-09-2026: «puedo tener
+   programado 2 días». */
+const DIA = /^\d{4}-\d{2}-\d{2}$/;
+/* La MISMA avería llega de FAUNO con espacios —«tir 20260921 00173»— y del
+   correo con guiones. Si el panel las iguala y aquí no, el mismo trabajo
+   acaba dos veces en el cajón y el reparto sale duplicado. Se iguala con
+   la misma regla que usa el panel. (22-09-2026.) */
+const canon = k => String(k ?? '').trim().toLowerCase().replace(/[\s_-]+/g, '-');
+const llaveTrabajo = t =>
+  txt(t.dia, 10) + '|' + txt(t.sec, 40) + '|' + canon(txt(t.clave, 160));
+
+async function jornada(req, res) {
+  permiso(req, res);
+  if (req.method === 'OPTIONS') return res.status(204).end();
+
+  if (req.method === 'GET') {
+    try {
+      const { dato } = await leerJSON(CAJON_JORNADA, null);
+      return res.status(200).json({ ok: true, jornada: dato || null });
+    } catch (e) {
+      /* Igual que con las marcas: no poder leer NO es «no hay jornada».
+         Si contestara vacío, el aparato que pregunta se creería que el
+         otro no ha repartido nada. */
+      return res.status(503).json({ error: String(e?.message || e).slice(0, 120) });
+    }
+  }
+  if (req.method !== 'POST') return res.status(405).json({ error: 'solo GET y POST' });
+
+  try {
+    let cuerpo = req.body;
+    if (typeof cuerpo === 'string') { try { cuerpo = JSON.parse(cuerpo); } catch { cuerpo = {}; } }
+    const j = cuerpo?.jornada;
+    if (!j || typeof j !== 'object') return res.status(400).json({ error: 'no viene jornada' });
+
+    const { dato } = await leerJSON(CAJON_JORNADA, null);
+    const base = (dato && typeof dato === 'object') ? dato : {};
+    /* Y que sea un MAPA, no una lista: el primer diseño guardaba el plan
+       entero como array, y añadirle claves de texto a un array las tira
+       JSON.stringify — cada POST contestaría «ok» sin guardar nada. */
+    const trabajos = (base.trabajos && typeof base.trabajos === 'object'
+                        && !Array.isArray(base.trabajos)) ? base.trabajos : {};
+    const ahora = new Date().toISOString();
+    let puestos = 0;
+
+    /* NINGUNA HORA PUEDE SER DEL FUTURO.
+       Gana el cambio más reciente, así que una hora adelantada gana
+       SIEMPRE y para siempre: un aparato con el reloj mal —o una prueba
+       mal hecha, que es como salió esto el 22-09-2026— dejaría clavado un
+       reparto que ya nadie puede cambiar desde ningún sitio. Se admite un
+       minuto de margen por los relojes que van algo adelantados, y lo que
+       pase de ahí se trae a la hora de ahora. También lo ya guardado, que
+       si no el cajón se queda envenenado para siempre. */
+    const tope = new Date(Date.now() + 60000).toISOString();
+    const enHora = t => (String(t || '') > tope ? ahora : String(t || '') || ahora);
+    for (const v of Object.values(trabajos)) v.t = enHora(v.t);
+    if (String(base.tAusentes || '') > tope) base.tAusentes = ahora;
+
+    /* Y lo guardado con la grafía vieja se recoge aquí. Hasta hoy la llave
+       no igualaba espacios y guiones, así que «tir 20260921 00173» y
+       «tir-20260921-00173» eran dos entradas para la misma avería y salía
+       repetida en el reparto. Al primer POST se juntan en una, quedándose
+       con la más reciente; si no, se arrastrarían treinta días. */
+    for (const [k, v] of Object.entries(trabajos)) {
+      const bueno = llaveTrabajo(v);
+      if (k === bueno) continue;
+      const otro = trabajos[bueno];
+      if (!otro || String(otro.t || '') < String(v.t || '')) trabajos[bueno] = v;
+      delete trabajos[k];
+    }
+
+    /* Si viene más de lo que cabe, se queda lo MÁS NUEVO. Antes cortaba
+       por el principio —el orden en que se metieron—, así que en cuanto el
+       aparato pasaba de 200 solo subía lo viejo y todo lo que planificara
+       dejaba de llegar al resto, en silencio. */
+    const entran = (Array.isArray(j.trabajos) ? j.trabajos : [])
+      .slice()
+      .sort((a2, b2) => String(b2?.t || '').localeCompare(String(a2?.t || '')))
+      .slice(0, TOPE_TRABAJOS);
+    for (const t of entran) {
+      if (!txt(t?.sec, 40) || !txt(t?.clave, 160) || !DIA.test(txt(t?.dia, 10))) continue;
+      const k = llaveTrabajo(t);
+      const cuando = enHora(txt(t?.t, 40));
+      /* Lo viejo no pisa lo nuevo, venga del aparato que venga. */
+      const antes = trabajos[k];
+      if (antes && String(antes.t || '') > cuando) continue;
+      /* EN EMPATE MANDA LO QUE SIGUE EN PIE, y la misma regla en el panel.
+         Dos horas iguales pasan —y pasó el 22-09-2026 al enderezar unas
+         horas del futuro, que dejó a todas con la misma marca—. Con el
+         servidor dando la razón al que escribe y el panel al que ya tenía,
+         los dos aparatos se pisaban en bucle y un trabajo quitado volvía
+         solo. Que gane lo vivo es además lo que menos daño hace: no se le
+         borra a nadie un reparto por un empate. */
+      if (antes && String(antes.t || '') === cuando && !antes.fuera && t.fuera) continue;
+      trabajos[k] = {
+        dia: txt(t.dia, 10), sec: txt(t.sec, 40), clave: txt(t.clave, 160),
+        quien: (Array.isArray(t.quien) ? t.quien : [])
+                 .slice(0, 8).map(q => txt(q, 60)).filter(Boolean),
+        fuera: !!t.fuera, t: cuando
+      };
+      puestos++;
+    }
+
+    /* Quién no está hoy y de qué día es el plan: eso sí es un valor
+       suelto, y ahí manda el último que lo tocó. */
+    const nuevo = { trabajos, ausentes: base.ausentes, tAusentes: base.tAusentes };
+    const tA = j.tAusentes ? enHora(txt(j.tAusentes, 40)) : '';
+    if (Array.isArray(j.ausentes) && tA && !(String(base.tAusentes || '') > tA)) {
+      nuevo.ausentes = j.ausentes.slice(0, 12).map(q => txt(q, 60)).filter(Boolean);
+      nuevo.tAusentes = tA;
+    }
+
+    /* Las lápidas se barren a los tres días: para entonces los dos
+       aparatos ya se han enterado de sobra de que eso se quitó. Los días
+       ya pasados se van a los treinta, que es historial suyo y no se
+       tira antes de tiempo. */
+    const corte = new Date(Date.now() - DIAS_LAPIDA * 864e5).toISOString();
+    const diaViejo = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+    for (const [k, v] of Object.entries(trabajos)) {
+      if (v.fuera && String(v.t || '') < corte) { delete trabajos[k]; continue; }
+      if (String(v.dia || '') && String(v.dia) < diaViejo) delete trabajos[k];
+    }
+
+    const ks = Object.keys(trabajos);
+    if (ks.length > TOPE_TRABAJOS) {
+      ks.sort((a2, b2) => String(trabajos[a2].t).localeCompare(String(trabajos[b2].t)));
+      for (const k of ks.slice(0, ks.length - TOPE_TRABAJOS)) delete trabajos[k];
+    }
+
+    await guardarJSON(CAJON_JORNADA, nuevo);
+    return res.status(200).json({ ok: true, puestos, total: Object.keys(trabajos).length });
+  } catch (e) {
+    return res.status(500).json({ error: String(e?.message || e).slice(0, 120) });
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
 
-  /* Las marcas de Centro Operativo entran por aquí con ?que=marcas. */
+  /* Las marcas de Centro Operativo entran por aquí con ?que=marcas, y el
+     reparto del día con ?que=jornada. Las dos dentro de esta función a
+     propósito: Vercel solo deja 12 en el plan gratuito y ya están todas. */
   if (String(req.query?.que ?? '') === 'marcas') return marcas(req, res);
+  if (String(req.query?.que ?? '') === 'jornada') return jornada(req, res);
 
   if (req.method === 'GET') {
     const esPrueba = String(req.query?.prueba ?? '') === '1';
