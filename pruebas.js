@@ -9468,7 +9468,7 @@ grupo('Euskalmet reutiliza conexiones y guarda la respuesta buena en el CDN (23-
   const EUS = fs.readFileSync(path.join(__dirname, 'api', 'euskalmet.mjs'), 'utf8');
   ok('pedir() va por un agente keep-alive con la CA de IZENPE: las conexiones TLS se reutilizan en vez de abrirse una por petición',
      /import \{ request as pedirHttps, Agent \} from 'node:https';/.test(EUS)
-     && /const AGENTE = new Agent\(\{ keepAlive: true, maxSockets: 24, timeout: 9000, ca: CA_IZENPE \}\);/.test(EUS)
+     && /const AGENTE = new Agent\(\{ keepAlive: true, maxSockets: 6, timeout: 9000, ca: CA_IZENPE \}\);/.test(EUS)
      && /host: 'api\.euskadi\.eus', path: ruta, method: 'GET', ca: CA_IZENPE, agent: AGENTE,/.test(EUS),
      'un apretón de manos TLS por petición, diez o veinte por llamada, es CPU tirada');
   ok('las respuestas van al CDN con los segundos que decide segundosDeCache(); sin clave y caída, no-store',
@@ -9490,7 +9490,14 @@ grupo('Euskalmet reutiliza conexiones y guarda la respuesta buena en el CDN (23-
      && segundosDeCache({ leidas: 0, pedidas: 0, fallosRed: 0 }) === 300,
      'las que no miden viento son una respuesta válida; las que no contestaron, no');
   ok('un fallo de red se distingue de «no hay»: e.red en pedir(), reintento único con socket reutilizado, y ficha/sensor no guardan un null que vino de la red',
-     /e\.red = res\.statusCode >= 500;/.test(EUS)
+     /e\.red = res\.statusCode >= 500 \|\| res\.statusCode === 429;/.test(EUS)
+     /* 23-09-2026, 14:45, medido en producción: «429 Please wait 7 seconds before
+        retrying» en las cuatro fichas de Bermeo a la vez, y la app decía «no publica
+        viento en esta hora» de las cuatro. Un 429 es «no he podido»: se espera lo que
+        pide el servidor (todas las peticiones en vuelo) y se reintenta una vez. */
+     && /let pausaHasta = 0;/.test(EUS) && /async function pedir\(ruta, jwt, intento = 0\) \{/.test(EUS)
+     && /function pedirUnaVez\(ruta, jwt, intento\) \{/.test(EUS)
+     && /if \(e\.status === 429 && intento === 0\) \{/.test(EUS)
      && /if \(intento === 0 && req\.reusedSocket && \(e\.code === 'ECONNRESET' \|\| e\.code === 'EPIPE'\)\)/.test(EUS)
      && /if \(e\?\.red\) \{ fallos\?\.add\(cod\); return null; \}/.test(EUS)
      && /if \(e\?\.red\) \{ fallos\?\.add\(cod\); return \[\]; \}/.test(EUS)
