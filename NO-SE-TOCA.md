@@ -308,3 +308,7 @@ cuatro fallos a propósito sobre una copia, y cada uno quedó parado por al
 menos una guardia. Una guardia que no puede parar nada es un adorno.
 
 **Si alguna de estas guardias molesta, NO se quita: se arregla el código.**
+| **Cada hora es de día o de noche por el MEDIO de la hora contra el orto y el ocaso (la luna de las 08:00 con el sol saliendo a las 08:01)** | `la hora de las 08:00 con el sol saliendo a las 08:01 es de DÍA (se mira el medio de la hora), y la de las 20:00 con el ocaso a las 20:03 es de noche` |
+| **La mar de la portada es la de ahora: mar de fondo de current y el máximo de las 24 h que vienen, no desde la medianoche** | `el máximo de «las próximas 24 h» se cuenta desde la hora en curso, no desde la medianoche (2,5 m a las 00:00 ya pasó; manda el 1,8 de las 20:00)` |
+| **En 10 días la chapa de racha se colorea por su propio listón, no por el semáforo del día** | `en 10 días la chapa «Racha» se colorea por SU listón, no por el semáforo del día (36 km/h salía en rojo por la tormenta del jueves)` |
+| **La línea de agua de la tarjeta dice quién ve el agua cuando no es tu modelo** | `«Sirimiri de 23:00 a 00:00» dice «lo ve ICON» cuando el que lo ve no es tu modelo, y se calla si es el tuyo` |

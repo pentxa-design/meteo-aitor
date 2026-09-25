@@ -2026,7 +2026,7 @@ async function cargarMarcador() {
               <span class="marc__mn">${esc(m.modelo)}</span>
               <span class="marc__md">${dice}</span>
               <span class="marc__me">error medio ${txt(m.error)} · ${m.n} veces${
-                m.cortas ? ` · <b>${m.cortas}</b> por debajo de ${txt(G.corto ?? 10)}` : ''}${
+                m.cortas ? ` · <b>${m.cortas}</b> veces más de ${txt(G.corto ?? 10)} corto` : ''}${
                 has(m.peor) && m.peor < 0 ? ` · lo peor: ${txt(-m.peor)} corto` : ''}</span>
             </div>`;
           }).join('')
@@ -4156,6 +4156,31 @@ function extrasDe(fc) {
   return { codigoAjeno, cieloDe, tapaDe };
 }
 
+/* ── DE DÍA O DE NOCHE, POR EL MEDIO DE LA HORA (25-09-2026) ──────────
+   Su pantallazo de las 07:13: la tarjeta de las 08:00 con LUNA y 19°, con
+   el sol saliendo a las 08:01. Open-Meteo da `is_day` al principio de la
+   hora, y el principio de las 08:00 es noche por un minuto; la hora
+   entera no: de 08:01 a 09:00 es de día. Se decide por el MEDIO de la
+   hora contra el orto y el ocaso del día (vienen en `daily`); sin ellos,
+   el `is_day` de siempre, y sin `is_day`, el respaldo de 8 a 19 h del
+   31-08. Es el hermano del arreglo del 21-09 (el ocaso a las 20:10 y la
+   hora de las 20:00 entera «de día»), que dejó la tarjeta sin tocar. */
+function diaDeLaHora(fc, i) {
+  const H = fc.hourly, D = fc.daily;
+  const t = new Date(H.time[i]).getTime();
+  const fecha = String(H.time[i]).slice(0, 10);
+  const j = Array.isArray(D?.time) ? D.time.findIndex(x => String(x).slice(0, 10) === fecha) : -1;
+  const orto = j >= 0 ? new Date(D.sunrise?.[j]).getTime() : NaN;
+  const ocaso = j >= 0 ? new Date(D.sunset?.[j]).getTime() : NaN;
+  if (Number.isFinite(orto) && Number.isFinite(ocaso)) {
+    const medio = t + 30 * 60e3;
+    return medio >= orto && medio < ocaso ? 1 : 0;
+  }
+  if (has(H.is_day?.[i])) return H.is_day[i];
+  const hh = new Date(H.time[i]).getHours();
+  return hh >= 8 && hh <= 19 ? 1 : 0;
+}
+
 function horaDe(fc, i, height, place, extra) {
   const H = fc.hourly;
   const { codigoAjeno, cieloDe, tapaDe } = extra || extrasDe(fc);
@@ -4224,8 +4249,7 @@ function horaDe(fc, i, height, place, extra) {
       nubeTop: H.convective_cloud_top?.[i], nubeBase: H.convective_cloud_base?.[i],
       frz: H.freezing_level_height?.[i], pres: H.surface_pressure?.[i],
       nieve: H.snowfall?.[i], nieveSuelo: H.snow_depth?.[i],
-      day: has(H.is_day?.[i]) ? H.is_day[i]
-           : (new Date(H.time[i]).getHours() >= 8 && new Date(H.time[i]).getHours() <= 19 ? 1 : 0),
+      day: diaDeLaHora(fc, i),
       uv: H.uv_index?.[i],
     };
 }
@@ -9940,9 +9964,15 @@ function lineaAguaTorre(k) {
 
   const pico = has(L.pico) && L.pico >= (S.thr?.rainWarn ?? 0.2) && L.hPico
     ? ` · lo más fuerte a las ${hh(L.hPico)}` : '';
+  /* Quién lo ve, si no es tu modelo (25-09-2026): «Sirimiri de 23:00 a
+     00:00» en el Sollube con AROME seco y la franja de al lado diciendo
+     «Sin lluvia». Era ICON, y no lo ponía. La regla de siempre: el modelo,
+     con nombre. */
+  const dueno = typeof modeloDato === 'function' ? modeloDato()?.name : null;
+  const veQuien = L.quien && L.quien !== dueno ? ` · lo ve ${esc(L.quien)}` : '';
 
   return `<div class="tor__agua" data-a="${cayendo ? 'ahora' : 'luego'}">
-    ${tipo} ${cuando}${pico}</div>`;
+    ${tipo} ${cuando}${pico}${veQuien}</div>`;
 }
 
 /* Las cifras de la pista, en una línea. Ver `comoEstaLaPista()` para el
@@ -13990,6 +14020,26 @@ function renderNow() {
    y no decide nada: decide él.
 
    Si el punto no es de costa, no se pinta nada. Nada de huecos. */
+/* ── LA MAR DE «AHORA» ES AHORA, TAMBIÉN EN LA PORTADA (25-09-2026) ───
+   Sus pantallazos de las 07:13: «Mar de fondo 1,1 m» en Sol y aire y
+   «0,9 m» en la pestaña Mar, a la misma hora; y «Sube a 2,0 m en las
+   próximas 24 h» contra «lo más alto 2,1 m mañana a las 04:00». Esta
+   tarjeta leía `hourly[0]` —la MEDIANOCHE— y el máximo de las 24
+   primeras horas de la serie, que empieza a las 00:00 de hoy: ni «ahora»
+   ni «próximas». El mismo despiste que se cazó en la gráfica el 02-09. */
+function iHoraMar(tiempos, ahora = Date.now()) {
+  if (!Array.isArray(tiempos) || !tiempos.length) return 0;
+  let mejor = 0, dif = Infinity;
+  tiempos.forEach((x, i) => { const d = Math.abs(new Date(x).getTime() - ahora); if (d < dif) { dif = d; mejor = i; } });
+  return mejor;
+}
+function picoOleaje24h(alturas, tiempos, ahora = Date.now()) {
+  if (!Array.isArray(alturas) || !alturas.length) return null;
+  const i0 = iHoraMar(tiempos, ahora);
+  const tramo = alturas.slice(i0, i0 + 24).filter(has);
+  return tramo.length ? Math.max(...tramo) : null;
+}
+
 function pintarMarAhora(dt) {
   const el = $('#marAhora');
   if (!el) return;
@@ -14011,8 +14061,7 @@ function pintarMarAhora(dt) {
     : T < 11 ? 'mar de fondo: con forma'
     : 'fondo largo, olas bien formadas';
 
-  const mx = M.hourly?.wave_height?.slice(0, 24).filter(has);
-  const pico = mx?.length ? Math.max(...mx) : null;
+  const pico = picoOleaje24h(M.hourly?.wave_height, M.hourly?.time);
 
   el.innerHTML = [
     dt('Altura de ola', show(C.wave_height, unidadMar(M, 'wave_height'), 1),
@@ -14032,12 +14081,12 @@ function pintarMarAhora(dt) {
          `${esc(e.hora)}`,
          `${esc(e.cuando.toLocaleDateString('es', { weekday: 'short' }))} · ${e.altura.toFixed(2).replace('.', ',')} m · tabla oficial`)),
     dt('Temp. del agua', show(C.sea_surface_temperature, unidadMar(M, 'sea_surface_temperature'), 1)),
-    dt('Mar de fondo', show(M.hourly?.swell_wave_height?.[0], unidadMar(M, 'swell_wave_height'), 1),
+    dt('Mar de fondo', show(C.swell_wave_height ?? M.hourly?.swell_wave_height?.[iHoraMar(M.hourly?.time)], unidadMar(M, 'swell_wave_height'), 1),
        [has(C.swell_wave_period) ? `Periodo ${C.swell_wave_period.toFixed(1).replace('.', ',')} s` : '',
         /* Decía «por debajo de la del viento» con fondo 0,3 y viento 0,0
            (Calpe, 12-09-2026 00:34). Se compara de verdad. */
         (() => {
-          const sw = M.hourly?.swell_wave_height?.[0], wv = C.wind_wave_height;
+          const sw = C.swell_wave_height ?? M.hourly?.swell_wave_height?.[iHoraMar(M.hourly?.time)], wv = C.wind_wave_height;
           if (!has(sw)) return '';
           if (sw < 0.2) return 'La que viene de lejos: casi nada';
           if (has(wv) && sw >= wv) return 'La que viene de lejos, y es la que manda';
@@ -14426,7 +14475,7 @@ function renderDays() {
       <div class="dcard__t"><b>${has(mx)?mx.toFixed(0)+'°':'—'}</b>
         <span>${has(mn)?mn.toFixed(0)+'°':'—'}</span></div>
       <div class="dcard__r">💧 ${has(pop)?pop+'%':'—'}${de('precipitation_probability_max')} · ${has(mm)?mmTxt(mm)+' mm':'sin dato'}${de('precipitation_sum')}</div>
-      <div class="dcard__g">Racha ${has(racha) ? wtxt(racha, true) : '—'}${rachaCuando}${de('wind_gusts_10m_max')}</div>
+      <div class="dcard__g" data-s="${nRacha}">Racha ${has(racha) ? wtxt(racha, true) : '—'}${rachaCuando}${de('wind_gusts_10m_max')}</div>
       ${(() => {
         /* ── Y SI OTRO MODELO TE CRUZA EL LISTÓN, SE DICE ─────────────
            MEDIDO el 01-09-2026: el domingo 6 esta tarjeta pintaba «37»

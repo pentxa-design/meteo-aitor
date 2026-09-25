@@ -3523,6 +3523,9 @@ globalThis.proximasMareas = globalThis.proximasMareas || (() => []);   // la tab
 /* 14-09-2026: la portada del mar imprime con la unidad de la respuesta. */
 try { eval(sacarConst('UNIDADES_MAR')); } catch (e) { console.log(`  (sin UNIDADES_MAR: ${e.message})`); }
 for (const f of ['unidadMar', 'avisoUnidadesMar', 'notaUnidadesMar']) { try { eval(sacar(`function ${f}(`)); } catch (e) { console.log(`  (sin ${f}: ${e.message})`); } }
+/* 25-09-2026: la portada ya lee la mar de AHORA con estos dos ayudantes. */
+eval(sacar('function iHoraMar(tiempos, ahora = Date.now()) {'));
+eval(sacar('function picoOleaje24h(alturas, tiempos, ahora = Date.now()) {'));
 eval(sacar('function pintarMarAhora(dt) {'));
 /* Las de la app que usa por dentro. `show` y `rumboLargo` se sacan tal
    cual para que la prueba mire el texto de verdad, no una imitación. */
@@ -6383,7 +6386,7 @@ grupo('La altura de la nube, por el camino de verdad (01-09-2026)');
     try { eval(sacarConst(c)); } catch { /* si no existe, adelante */ }
   }
   for (const f of ['function windAt', 'function nivelesDe', 'function gustAt',
-                   'function techoDe', 'function alphaDe', 'function buildHours',
+                   'function techoDe', 'function alphaDe', 'function diaDeLaHora', 'function buildHours',
                    'function loQueMideLaNube']) {
     try { eval(sacar(f)); } catch { /* el que no exista, se ignora */ }
   }
@@ -6787,7 +6790,8 @@ grupo('La revisión de las tres pasadas (31-08-2026, noche)');
      !/'0,0'/.test(src.replace(/\/\*[\s\S]*?\*\//g, '')),
      'la probabilidad ya decía «—» y los mm mentían un cero');
   ok('is_day nulo no pinta luna a mediodía: respaldo por hora local',
-     /has\(H\.is_day\?\.\[i\]\) \? H\.is_day\[i\]/.test(src));
+     /* 25-09-2026: el respaldo vive ahora en diaDeLaHora(), detrás del orto y el ocaso. */
+     /if \(has\(H\.is_day\?\.\[i\]\)\) return H\.is_day\[i\];/.test(src) && /return hh >= 8 && hh <= 19 \? 1 : 0;/.test(src));
   ok('iconosDelDia distingue «sin código» de «null» (has, no === null)',
      /const conDato = hs\.filter\(h => has\(codigoQueSeVe\(h, h\.code\)\)\)/.test(src)
      && /if \(!R \|\| !has\(R\.code\)\) return SIN_DIBUJO;/.test(src));
@@ -9640,6 +9644,78 @@ grupo('Si no entro, que no gaste: la pestaña oculta no llama, y una pasada salt
      'cada apertura de Mis torres recontaba 3.884 muestras de balde');
   ok('y el pulso y la pasada saltada dicen lo que han costado (cpuMs, frio): lo estimado pasa a medido',
      /const medida = \(\) => \(\{ cpuMs:/.test(VIG) && (VIG.match(/\.\.\.medida\(\)/g) || []).length >= 3);
+}
+
+/* ═══ SUS DIECISIETE PANTALLAZOS DEL 25-09-2026 A LAS 07:13 («dale una vuelta si hay fallos») ═══
+   Seis cosas, todas de pantalla: la LUNA a las 08:00 con 19° y el sol saliendo
+   a las 08:01; «Mar de fondo 1,1 m» en Sol y aire contra «0,9 m» en Mar a la
+   misma hora, y «Sube a 2,0 m» contra «lo más alto 2,1 m»; «Racha 36 km/h» en
+   ROJO el jueves 1 (por la tormenta del día, no por la racha); «Sirimiri de
+   23:00 a 00:00» en la tarjeta del Sollube sin decir que lo ve ICON y AROME
+   va seco; «Anemómetros de AEMET» encabezando una lista con Euskalmet dentro;
+   y «50 por debajo de 10 km/h» en el marcador, que no se entiende. */
+grupo('Sus pantallazos del 25-09 a las 07:13: seis fallos de pantalla');
+{
+  /* 1. Día o noche, por el medio de la hora contra el orto y el ocaso. */
+  try { eval(sacar('function diaDeLaHora(fc, i) {')); } catch {}
+  const fcDia = { hourly: { time: ['2026-09-25T07:00', '2026-09-25T08:00', '2026-09-25T12:00', '2026-09-25T20:00', '2026-09-25T21:00'],
+                            is_day: [0, 0, 1, 1, 0] },
+                  daily: { time: ['2026-09-25'], sunrise: ['2026-09-25T08:01'], sunset: ['2026-09-25T20:03'] } };
+  ok('la hora de las 08:00 con el sol saliendo a las 08:01 es de DÍA (se mira el medio de la hora), y la de las 20:00 con el ocaso a las 20:03 es de noche',
+     typeof diaDeLaHora === 'function'
+     && diaDeLaHora(fcDia, 0) === 0 && diaDeLaHora(fcDia, 1) === 1 && diaDeLaHora(fcDia, 2) === 1
+     && diaDeLaHora(fcDia, 3) === 0 && diaDeLaHora(fcDia, 4) === 0,
+     'salía una luna a las 08:00 con 19°: Open-Meteo da is_day al principio de la hora');
+  ok('sin orto ni ocaso vale is_day, y sin is_day el respaldo de 8 a 19 h (lo del 31-08 sigue)',
+     typeof diaDeLaHora === 'function'
+     && diaDeLaHora({ hourly: { time: ['2026-09-25T08:00'], is_day: [0] } }, 0) === 0
+     && diaDeLaHora({ hourly: { time: ['2026-09-25T12:00'], is_day: [null] } }, 0) === 1
+     && diaDeLaHora({ hourly: { time: ['2026-09-25T03:00'], is_day: [null] } }, 0) === 0
+     && /day: diaDeLaHora\(fc, i\),/.test(src));
+
+  /* 2. La mar de «Ahora» es ahora, también en la portada. */
+  try { eval(sacar('function iHoraMar(tiempos, ahora = Date.now()) {')); eval(sacar('function picoOleaje24h(alturas, tiempos, ahora = Date.now()) {')); } catch {}
+  const tMar = Array.from({ length: 30 }, (_, i) => new Date(Date.UTC(2026, 8, 25, i)).toISOString());
+  const alturas = tMar.map((_, i) => i === 0 ? 2.5 : i === 20 ? 1.8 : 1.0);
+  const ahoraMar = new Date(Date.UTC(2026, 8, 25, 7, 10)).getTime();
+  ok('el máximo de «las próximas 24 h» se cuenta desde la hora en curso, no desde la medianoche (2,5 m a las 00:00 ya pasó; manda el 1,8 de las 20:00)',
+     typeof picoOleaje24h === 'function' && iHoraMar(tMar, ahoraMar) === 7 && picoOleaje24h(alturas, tMar, ahoraMar) === 1.8
+     && picoOleaje24h([], tMar, ahoraMar) === null,
+     'en pantalla: «Sube a 2,0 m» en Sol y aire y «lo más alto 2,1 m» en Mar, a cuatro dedos');
+  ok('y el mar de fondo de la portada es el de AHORA (current, o la hora en curso), no hourly[0] = medianoche',
+     /dt\('Mar de fondo', show\(C\.swell_wave_height \?\? M\.hourly\?\.swell_wave_height\?\.\[iHoraMar\(M\.hourly\?\.time\)\]/.test(src)
+     && /const sw = C\.swell_wave_height \?\? M\.hourly\?\.swell_wave_height\?\.\[iHoraMar\(M\.hourly\?\.time\)\], wv = C\.wind_wave_height;/.test(src)
+     && !/show\(M\.hourly\?\.swell_wave_height\?\.\[0\]/.test(src),
+     '«Mar de fondo 1,1 m» arriba y «0,9 m» en la pestaña Mar a la misma hora');
+
+  /* 3. El color de la racha en 10 días es el de la racha, no el del día. */
+  const css = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+  ok('en 10 días la chapa «Racha» se colorea por SU listón, no por el semáforo del día (36 km/h salía en rojo por la tormenta del jueves)',
+     /<div class="dcard__g" data-s="\$\{nRacha\}">Racha /.test(src)
+     && /\.dcard__g\[data-s=no\]\{/.test(css) && /\.dcard__g\[data-s=warn\]\{/.test(css)
+     && !/\.dcard\[data-s=no\] \.dcard__g\{/.test(css),
+     'el rojo en una cifra que no cruza nada enseña a no creerse el rojo');
+
+  /* 4. La línea de agua de la tarjeta dice quién lo ve cuando no es tu modelo. */
+  const H0b = h => { const d = new Date(); d.setHours(h, 0, 0, 0); return d.getTime(); };
+  const guardaLT = S.lluviaTorres, guardaMD = globalThis.modeloDato;
+  const hoyH = new Date().getHours();
+  S.lluviaTorres = [{ k: 've-icon', llueve: true, ini: H0b(hoyH + 1), fin: H0b(hoyH + 1), pico: 0.1, hPico: H0b(hoyH + 1),
+                      quien: 'ICON', horasAgua: [], nHoras: 1, sueltas: false, soloSirimiri: true, discrepan: false }];
+  globalThis.modeloDato = () => ({ name: 'AROME HD' });
+  const conIcon = soloTexto(lineaAguaTorre('ve-icon'));
+  globalThis.modeloDato = () => ({ name: 'ICON' });
+  const conElMio = soloTexto(lineaAguaTorre('ve-icon'));
+  S.lluviaTorres = guardaLT; globalThis.modeloDato = guardaMD;
+  ok('«Sirimiri de 23:00 a 00:00» dice «lo ve ICON» cuando el que lo ve no es tu modelo, y se calla si es el tuyo',
+     /Sirimiri/.test(conIcon) && /lo ve ICON/.test(conIcon) && !/lo ve/.test(conElMio),
+     JSON.stringify({ conIcon, conElMio }));
+
+  /* 5 y 6. Dos textos. */
+  ok('la lista de anemómetros dice «de AEMET y Euskalmet», que es lo que lleva dentro',
+     (() => { const ix = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8'); return /Anemómetros de AEMET y Euskalmet cerca de tu emplazamiento/.test(ix) && !/Anemómetros de AEMET cerca/.test(ix); })());
+  ok('el marcador dice «N veces más de 10 km/h corto», no «N por debajo de 10 km/h»',
+     /\$\{m\.cortas\}<\/b> veces más de \$\{txt\(G\.corto \?\? 10\)\} corto/.test(src) && !/por debajo de \$\{txt\(G\.corto \?\? 10\)\}/.test(src));
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
