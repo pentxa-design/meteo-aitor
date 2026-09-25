@@ -8921,8 +8921,28 @@ grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
   ok('si la franja ha perdido horas por el reloj, no se compara: se empieza de nuevo sin decir nada',
      cdc(k4, 0, 0, '2026-09-14T00:15', { n: 1, ini: `${hoyK}T23:00`, votado: true }) === ''
      && cdc(k4, 0, 0, '2026-09-14T00:30', { n: 1, ini: `${hoyK}T23:00`, votado: true }) === '');
+  /* ── LA NOTA DICE LO QUE SE LEE, NO EL CÓDIGO (26-09-2026, 00:43) ──
+     Su pantallazo: titular «Velo de nubes altas · cubierto desde las 02:00»
+     y debajo «Ha cambiado a las 23:09: antes velo de nubes altas». Cambió
+     de verdad (el tramo 2-5 h pasó a cubierto), pero la nota comparaba el
+     código de la franja entera y escribía un «antes» que era el principio
+     del «ahora». Suyo: «¿si está igual, no?». */
+  const k5 = `${hoyK}·Madrugada·prueba`;
+  cdc(k5, 4, 0, 'A', f2, 'Velo de nubes altas');
+  const c6 = cdc(k5, 3, 0, 'B', f2, 'Velo de nubes altas · cubierto desde las 02:00');
+  ok('si el «antes» es el principio del «ahora», dice «antes solo …»',
+     /^Ha cambiado a las \d\d:\d\d: antes solo velo de nubes altas$/.test(c6 || ''), `salió «${c6}»`);
+  const k6 = `${hoyK}·Madrugada2·prueba`;
+  cdc(k6, 4, 0, 'A', f2, 'Velo de nubes altas · cubierto desde las 02:00');
+  ok('si cambia el código pero se lee lo mismo, no dice nada',
+     cdc(k6, 3, 0, 'B', f2, 'Velo de nubes altas · cubierto desde las 02:00') === '');
+  const k7 = `${hoyK}·Madrugada3·prueba`;
+  cdc(k7, 3, 0, 'A', f2, 'Cubierto');
+  const c8 = cdc(k7, 0, 0, 'B', f2, 'Despejado · cubierto desde las 04:00');
+  ok('y si lo de antes era otra cosa, la dice entera',
+     /^Ha cambiado a las \d\d:\d\d: antes cubierto$/.test(c8 || ''), `salió «${c8}»`);
   ok('la franja pinta esa línea junto al titular',
-     /const cambio = cambioDeCielo\(`\$\{String\(sel\[0\]\?\.t \?\? ''\)\.slice\(0, 10\)\}·\$\{name\}·\$\{S\.model\}`, code, R\?\.dia \?\? esDeDia\(sel\),[\s\S]{0,400}S\.data\?\.fc\?\.current\?\.time \?\? null,\n\s*\{ n: sel\.length, ini: sel\[0\]\?\.t \?\? null, votado: !!deEsteSitio\(S\.comparativa\) \}\)/.test(src)
+     /const cambio = cambioDeCielo\(`\$\{String\(sel\[0\]\?\.t \?\? ''\)\.slice\(0, 10\)\}·\$\{name\}·\$\{S\.model\}`, code, R\?\.dia \?\? esDeDia\(sel\),[\s\S]{0,400}S\.data\?\.fc\?\.current\?\.time \?\? null,\n\s*\{ n: sel\.length, ini: sel\[0\]\?\.t \?\? null, votado: !!deEsteSitio\(S\.comparativa\) \},\n\s*tituloFranja\(sel, code\)\)/.test(src)
      && /class="part__cambio">\$\{esc\(cambio\)\}/.test(src));
   ok('todas las pestañas salen de la misma bajada: franjas y 10 días leen S.data.fc',
      /function horasDelDia\(fc, dia\)/.test(src) && /const hs = horasDelDia\(S\.data\?\.fc, dia\);/.test(src)

@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.25-2209';
+const BUILD = '2026.09.26-0050';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -12846,7 +12846,7 @@ function tramosCortos(sel) {
    franja lo dice mientras el nuevo se mantenga. Un cambio de pasada del
    modelo se lee así como cambio del tiempo, no como icono que baila.
    Regla del 13-09-2026. */
-function cambioDeCielo(clave, code, dia = 1, bajada = null, forma = null) {
+function cambioDeCielo(clave, code, dia = 1, bajada = null, forma = null, txtAhora = null) {
   if (!has(code) || !clave) return '';
   /* Antes del voto de modelos no se apunta ni se compara: el primer pintado
      (sin voto) contra el segundo (con voto) NO es un cambio del tiempo. Lo
@@ -12861,19 +12861,33 @@ function cambioDeCielo(clave, code, dia = 1, bajada = null, forma = null) {
      las 23:10 ya solo tiene una hora), no es comparable: se empieza de nuevo
      sin decir nada. */
   const mismaForma = !forma || !antes || (antes.n === forma.n && antes.ini === forma.ini);
-  const base = { n: forma?.n ?? null, ini: forma?.ini ?? null };
-  if (!antes || !mismaForma) reg[clave] = { code, desde: null, antes: null, bajada, ...base };
+  /* Se guarda también LO QUE SE LEE (el titular con sus tramos), no solo
+     el código de la franja entera (26-09-2026, 00:43): «Velo de nubes altas
+     · cubierto desde las 02:00» con «antes velo de nubes altas» debajo era
+     verdad y no se entendía. Suyo: «¿si está igual, no?». */
+  const base = { n: forma?.n ?? null, ini: forma?.ini ?? null, txt: txtAhora ?? null };
+  if (!antes || !mismaForma) reg[clave] = { code, desde: null, antes: null, antesTxt: null, bajada, ...base };
   /* La MISMA bajada de datos repintada —copia guardada y bajada fresca, el
      voto, un cambio de pestaña— no es un cambio del tiempo: se queda lo
      último que se ve y no se apunta nada. */
-  else if (bajada != null && antes.bajada === bajada) reg[clave] = { ...antes, code };
-  else if (has(antes.code) && antes.code !== code) reg[clave] = { code, desde: Date.now(), antes: antes.code, bajada, ...base };
-  else reg[clave] = { ...antes, code, bajada };
+  else if (bajada != null && antes.bajada === bajada) reg[clave] = { ...antes, code, txt: base.txt ?? antes.txt ?? null };
+  else if (has(antes.code) && antes.code !== code) reg[clave] = { code, desde: Date.now(), antes: antes.code, antesTxt: antes.txt ?? null, bajada, ...base };
+  else reg[clave] = { ...antes, code, bajada, txt: base.txt ?? antes.txt ?? null };
   const r = reg[clave];
   let txt = '';
   if (r.desde && has(r.antes) && r.antes !== code) {
     const d = new Date(r.desde);
-    txt = `Ha cambiado a las ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}: antes ${String(textoVisto(r.antes, dia) ?? '').toLowerCase()}`;
+    const hora = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const ahoraTxt = String(r.txt ?? '').toLowerCase().trim(), antesTxt = String(r.antesTxt ?? '').toLowerCase().trim();
+    if (antesTxt && ahoraTxt) {
+      /* Lo que se lee manda: igual → nada que decir; el «antes» es el
+         principio del «ahora» → «antes solo …»; distinto → «antes …». */
+      if (antesTxt === ahoraTxt) txt = '';
+      else if (ahoraTxt.startsWith(antesTxt)) txt = `Ha cambiado a las ${hora}: antes solo ${antesTxt}`;
+      else txt = `Ha cambiado a las ${hora}: antes ${antesTxt}`;
+    } else {
+      txt = `Ha cambiado a las ${hora}: antes ${String(textoVisto(r.antes, dia) ?? '').toLowerCase()}`;
+    }
   }
   // Solo hoy y mañana: lo demás se tira para que no crezca.
   const hoy = new Date(), man = new Date(Date.now() + 86400e3);
@@ -13464,7 +13478,8 @@ function renderNow() {
                                     no por el reloj: la copia guardada, la bajada fresca y el voto se
                                     pintan en segundos y son la misma (falsa alarma del 13-09, 23:54). */
                                  S.data?.fc?.current?.time ?? null,
-                                 { n: sel.length, ini: sel[0]?.t ?? null, votado: !!deEsteSitio(S.comparativa) });
+                                 { n: sel.length, ini: sel[0]?.t ?? null, votado: !!deEsteSitio(S.comparativa) },
+                                 tituloFranja(sel, code));
     /* Con todas las rachas en null esto daba 0 y la línea «Racha máx» no
        se pintaba: silencio donde debería decir «sin dato» (20-09-2026). */
     const gDatos = sel.map(h => h.gust).filter(has);
