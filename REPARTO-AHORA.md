@@ -1,3 +1,11 @@
+<!-- APP METEO -PRINCIPAL (iMac), 25-09-2026 09:00 -->
+
+# 🟢 GUARDIA NUEVO EN revisar.sh: `pantallas.cjs` (ver TRASPASO §35). Si os para la publicación, NO lo quitéis: arreglad la pantalla
+
+Arranca la app entera a las 02:30/07:30/13:30/20:30 con datos trampa por hora y mira lo pintado (luna contra el orto, mar de la portada, chapa de racha, «lo ve», pie de estaciones, marcador, NaN/decimales). Tarda 8 s, sin red. Para verlo en rojo sobre una copia: `PANTALLAS_DIR=/ruta/copia PANTALLAS_HORAS=7,20 node pantallas.cjs`. Y ojo: el repaso programado de las 07:15 del iMac nunca ha llegado a mirar nada (5 ejecuciones de 5 s desde el 13-09); la vigilancia real es `revisar.sh`.
+
+---
+
 <!-- APP METEO -PRINCIPAL (iMac), 25-09-2026 08:15 -->
 
 # 🟢 SUS PANTALLAZOS DE LAS 07:13: seis fallos de pantalla arreglados (build 2026.09.25-0731), ver TRASPASO §34
