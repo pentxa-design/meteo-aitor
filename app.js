@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.25-1515';
+const BUILD = '2026.09.25-1724';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -223,7 +223,27 @@ const DEFAULT_THR = {
 function nivelRacha(v) {
   if (!has(v)) return 'nd';
   const L = listonRafaga();
-  return v >= L.no ? 'no' : v >= L.warn ? 'warn' : 'go';
+  /* ── SE DECIDE CON EL NÚMERO QUE SE VE (25-09-2026) ────────────────
+     Su pantallazo de las 17:01, pestaña «10 días», martes 29 en Bermeo:
+
+         Racha 49 km/h a las 04:00      ← en verde
+         ⚠ Automático da 57 km/h — tu listón es 49 km/h
+
+     O sea: la app le enseña SU PROPIO LISTÓN y lo pinta como si no
+     pasara nada. MEDIDO contra la API esa tarde: el valor de verdad es
+     **48,6**. Se redondea a 49 para enseñarlo y se juzga con el 48,6.
+
+     La regla ya está escrita en esta casa desde el 04-09 —«la
+     diferencia, tal como se ve»: 28,4 y 34,6 se veían 28 y 35 y el
+     texto decía 6—. Aquí faltaba aplicarla al color.
+
+     Se comparan los dos en la unidad y con los decimales en los que se
+     IMPRIMEN, así que vale igual en km/h, en nudos y en m/s: lo que él
+     lee arriba es lo que decide el color. */
+  const ver = x => { const w = wv(x); return has(w) ? Number(w.toFixed(wu().d)) : null; };
+  const g = ver(v);
+  if (!has(g)) return 'nd';
+  return g >= ver(L.no) ? 'no' : g >= ver(L.warn) ? 'warn' : 'go';
 }
 function listonRafaga() {
   const P = perfil();
@@ -1799,8 +1819,7 @@ function otrasMedidas(H, i, x) {
            señal de que el pronóstico de ese sitio no está describiendo
            lo que hay. */
     const tonoMed = c.k === 'racha'
-        ? (medido >= listonRafaga().no ? 'no'
-         : medido >= listonRafaga().warn ? 'warn' : 'go')
+        ? nivelRacha(medido)
       : c.k === 'lluvia' ? (medido >= 0.05 ? 'agua' : '')
       : '';
     const tonoQ = !clavan.length ? 'no'
@@ -4672,7 +4691,7 @@ function renderTower() {
      <div class="kpi__v">${val}</div><div class="kpi__s">${sub}</div></div>`;
 
   const wSt = !has(c.wind) ? 'nd' : c.wind >= S.thr.windNo ? 'no' : c.wind >= S.thr.windWarn ? 'warn' : 'go';
-  const gSt = !has(c.gust) ? 'nd' : c.gust >= listonRafaga().no ? 'no' : c.gust >= listonRafaga().warn ? 'warn' : 'go';
+  const gSt = nivelRacha(c.gust);
   const cSt = !has(c.cape) ? 'nd' : c.cape >= S.thr.capeNo ? 'no' : c.cape >= S.thr.capeWarn ? 'warn' : 'go';
 
   // Delante va SIEMPRE lo que publica el modelo a 10 m, sin cuentas de por
@@ -4682,7 +4701,7 @@ function renderTower() {
   // ¿Tiene el modelo niveles por encima de 10 m para poder estimar?
   const sinPerfil = S.hgt !== 10 && !c.windExact && !has(c.alpha);
   const w10St = !has(w10) ? 'nd' : w10 >= S.thr.windNo ? 'no' : w10 >= S.thr.windWarn ? 'warn' : 'go';
-  const g10St = !has(g10) ? 'nd' : g10 >= listonRafaga().no ? 'no' : g10 >= listonRafaga().warn ? 'warn' : 'go';
+  const g10St = nivelRacha(g10);
 
   /* ── CINCO CASILLAS, EN SU ORDEN Y SIN REPETIR (20-09-2026) ────────
      Suyo, la víspera de la prueba de fuego: «quiero info la justa para
@@ -6094,12 +6113,13 @@ function rachaDelDiaQueNoVesTu(fecha) {
 
   const pinta = has(dela) ? dela : Math.max(...otros.map(o => o.v));
   const cruzan = otros.filter(o =>
-    (o.v >= listonRafaga().no   && pinta <  listonRafaga().no) ||
-    (o.v >= listonRafaga().warn && pinta <  listonRafaga().warn));
+    (nivelRacha(o.v) === 'no'  && nivelRacha(pinta) !== 'no') ||
+    (nivelRacha(o.v) !== 'go'  && nivelRacha(pinta) === 'go'));
   if (!cruzan.length) return null;
 
   cruzan.sort((a, b) => b.v - a.v);
-  return { peor: cruzan[0], pinta, listón: cruzan[0].v >= listonRafaga().no ? listonRafaga().no : listonRafaga().warn };
+  return { peor: cruzan[0], pinta,
+           listón: nivelRacha(cruzan[0].v) === 'no' ? listonRafaga().no : listonRafaga().warn };
 }
 
 /* ── ¿ESA AGUA LA VE ALGUIEN MÁS? ───────────────────────────────────
@@ -6330,14 +6350,14 @@ function renderComparativa() {
   const dif = max - min;
 
   // ¿Alguno supera tus umbrales?
-  const algunoNo   = rachas.some(r => r >= listonRafaga().no);
-  const algunoWarn = rachas.some(r => r >= listonRafaga().warn);
+  const algunoNo   = rachas.some(r => nivelRacha(r) === 'no');
+  const algunoWarn = rachas.some(r => nivelRacha(r) === 'warn' || nivelRacha(r) === 'no');
   /* `[].every(...)` es TRUE, y eso aquí significaba pintar el panel en rojo
      con «Todos los modelos superan tu límite · Coinciden en que no son
      condiciones para subir» SIN UN SOLO DATO DE RACHA — porque las filas
      admiten modelos que publican el viento pero no la racha. Falsa alarma,
      que erosiona la confianza igual que un silencio (20-09-2026). */
-  const todosNo    = rachas.length > 0 && rachas.every(r => r >= listonRafaga().no);
+  const todosNo    = rachas.length > 0 && rachas.every(r => nivelRacha(r) === 'no');
 
   let nivel, titulo, texto;
   if (todosNo) {
@@ -6430,8 +6450,7 @@ function renderComparativa() {
          y no hay forma de confundirlos. -->
     <div class="cmp__h">Ráfaga a 10 metros de altura · ${esc(hora)} h</div>
     ${filas.map(f => {
-      const st = !has(f.racha) ? 'nd'
-        : f.racha >= listonRafaga().no ? 'no' : f.racha >= listonRafaga().warn ? 'warn' : 'go';
+      const st = nivelRacha(f.racha);
       const pc = has(f.racha) ? clamp(f.racha / tope * 100, 2, 100) : 0;
       return `<div class="cmp__f" data-s="${st}">
         <span class="cmp__n">${f.name}<small>${f.res}</small></span>
@@ -7269,9 +7288,7 @@ async function cargarObservacion() {
         ? Math.max(0, Math.round((Date.now() - tMed) / 60000))
         : (has(x.haceMinutos) ? x.haceMinutos : null);
       const viejo = minGenuinos != null && minGenuinos > 120;
-      const st = !has(x.racha) ? 'nd'
-        : x.racha >= listonRafaga().no ? 'no'
-        : x.racha >= listonRafaga().warn ? 'warn' : 'go';
+      const st = nivelRacha(x.racha);
       /* LA HORA DEL DATO, no solo cuánto hace. Avisado el 28-08-2026: el
          retraso de AEMET llegó ese día a 3 h, y un «hace 3 h» sin la hora
          obliga a hacer la resta mentalmente justo cuando no toca. Y sin
@@ -8868,8 +8885,7 @@ function renderParte() {
       ? `<tr${tono ? ` data-t="${tono}"` : ''}><th>${etq}</th>
          <td>${mod || '—'}</td><td>${est || '—'}</td></tr>` : '';
 
-    const tonoRacha = !has(M?.racha) ? ''
-      : M.racha >= listonRafaga().no ? 'no' : M.racha >= listonRafaga().warn ? 'warn' : 'go';
+    const tonoRacha = has(M?.racha) ? nivelRacha(M.racha) : '';
 
     /* En SU orden (20-09-2026): lluvia, viento, CAPE, nieve (no la
        mide ningún aparato de aquí), nubosidad; el resto detrás. */
@@ -9516,7 +9532,7 @@ function renderParte() {
   const lineaRacha = (k) => {
     const R = S.rachaTorres?.find(x => x?.k === k);
     if (!R || !has(R.racha)) return '';
-    const st = R.racha >= listonRafaga().no ? 'no' : R.racha >= listonRafaga().warn ? 'warn' : 'go';
+    const st = nivelRacha(R.racha);
     /* «a 10 m» AQUÍ TAMBIÉN. Ver el porqué en la franja del día: esta
        cifra es la ráfaga cruda de los cinco modelos, sin subir a su
        altura de trabajo, y la de la cabecera sí está subida. Dos
@@ -9878,7 +9894,7 @@ function renderParte() {
        fallo que ya se corrigió dos veces con la lluvia y con el rayo. Y
        encima la tarjeta del mismo sitio sí se marcaba. */
     const R_ = S.rachaTorres?.find(x => x?.k === k);
-    const rachaPasa = has(R_?.racha) && R_.racha >= listonRafaga().no;
+    const rachaPasa = nivelRacha(R_?.racha) === 'no';
     const est = (alFilo || rachaPasa || (mojaDeVerdad && !L_.soloSirimiri)) ? 'no'
       : mojaDeVerdad ? 'warn' : 'go';
 
@@ -10192,8 +10208,9 @@ function renderTorres() {
         nivel ? ` data-n="${nivel}"` : ''}>${txt}</span>`;
     const nivelLluvia = v => !has(v) || v <= 0 ? null
       : v >= (S.thr?.rainNo ?? 2) ? 'no' : v >= (S.thr?.rainWarn ?? 0.2) ? 'warn' : 'ok';
-    const nivelRacha = v => !has(v) ? null
-      : v >= listonRafaga().no ? 'no' : v >= listonRafaga().warn ? 'warn' : null;
+    /* La MISMA decisión que el resto de la app —y con el número que se
+       ve—, solo que aquí un 'go' no pinta nada: la cifra va sin color. */
+    const nivelRachaCifra = v => { const n = nivelRacha(v); return (n === 'no' || n === 'warn') ? n : null; };
     const nivelCape = (c, t) => (has(c) && c >= CAPE_COMBINACION
       && has(t) && t < TAPA_ROMPE) ? 'no' : (has(c) && c >= CAPE_COMBINACION) ? 'warn' : null;
     const cifras = x =>
@@ -10202,7 +10219,7 @@ function renderTorres() {
          es que no ha llegado la lluvia (01-09-2026). */
       cif(`${esc(mmTxt(x.prec))} mm`, nivelLluvia(x.prec), 'agua')
         + ` · ${cif(`racha ${esc(wtxt(x.gust ?? x.wind, true))}`,
-            nivelRacha(x.gust ?? x.wind), 'viento')}`
+            nivelRachaCifra(x.gust ?? x.wind), 'viento')}`
         + (has(x.cape) ? ` · ${cif(`CAPE ${Math.round(x.cape)}`,
             nivelCape(x.cape, x.cin), 'rayo')}` : '')
         /* La nieve solo cuando la hay: un «nieve 0» en cada renglón de
@@ -10258,7 +10275,7 @@ function renderTorres() {
     const P0 = S.parteFilas?.get(key(t.place));
     const alarma = P0?.est === 'no'
       || (has(h.prec) && (h.prec >= (S.thr?.rainWarn ?? 0.2) || esLlovizna(h.codeLluvia ?? h.code)))
-      || (has(h.gust10) && h.gust10 >= listonRafaga().no)
+      || nivelRacha(h.gust10) === 'no'
       || (has(h.cape) && h.cape >= (S.thr?.capeWarn ?? 300))
       || (has(h.nieve) && h.nieve > 0);
     return `<div class="tor" data-s="${h.st}"${D ? ' data-disc="1"' : ''}${alarma ? ' data-alarma="1"' : ''} data-ir="${esc(key(t.place))}">
@@ -10389,7 +10406,7 @@ function renderTorres() {
           const rocioPegado = has(h.dew) && has(h.temp) && (h.temp - h.dew) <= 2;
           const cotaSitio = cfgDe(t.place)?.cota;
           const hielo = has(h.frz) && has(cotaSitio) && h.frz <= cotaSitio + 200;
-          const rachaAltaP = has(h.gust10) && h.gust10 >= listonRafaga().warn;
+          const rachaAltaP = nivelRacha(h.gust10) === 'warn' || nivelRacha(h.gust10) === 'no';
           /* ── EL ÍNDICE DE ELEVACIÓN ─────────────────────────────────
              Suyo, 28-08-2026: *«de estas capas de rayos y de lluvia,
              ¿alguna más podrías añadir en Mis torres que sea interesante
@@ -10447,7 +10464,7 @@ function renderTorres() {
                   y «racha a 10 m de altura» —dos números de lo mismo— y con
                   trabajo a 10 m las dos casillas eran idénticas. */
                + num(has(h.gust10) ? wtxt(h.gust10, true) : '—', 'racha a 10 m · a pie de caseta',
-                     has(h.gust10) && h.gust10 >= listonRafaga().no ? 'rojo' : rachaAltaP, 'decide')
+                     nivelRacha(h.gust10) === 'no' ? 'rojo' : rachaAltaP, 'decide')
                + num(has(h.w10) ? wtxt(h.w10, true) : '—',
                      `viento a 10 m${has(h.dir) ? ' · del ' + rumboLargo(h.dir) : ''}`)
                + num(has(h.cape) ? h.cape.toFixed(0) : '—', 'CAPE J/kg',
@@ -11833,7 +11850,7 @@ function antesDeSalir() {
         const frescasR = conRacha.slice(0, 3).filter(fresca);
         if (frescasR.length) {
           const peor = frescasR.reduce((a, b) => (b.racha > a.racha ? b : a));
-          const st = peor.racha >= listonRafaga().no ? 'no' : peor.racha >= listonRafaga().warn ? 'warn' : 'go';
+          const st = nivelRacha(peor.racha);
           estados.push(st);
           partes.push(`${st === 'go' ? '' : '<b>'}racha ${wtxt(peor.racha, true)}${st === 'go' ? '' : '</b>'} en ${donde(peor)}`);
         } else if (conRacha.length) {
@@ -14860,7 +14877,7 @@ function acceso(horas, cota) {
   /* Su tope de viaje, no un 70 clavado: «con unas rachas de 70 puedo
      volcar con el 4x4». Si algún día lo cambia en Ajustes, esto lo sigue
      (20-09-2026). */
-  if (rachaMax !== null && rachaMax >= listonRafaga().no)
+  if (nivelRacha(rachaMax) === 'no')
     avisos.push({ n: 'warn', t: `Rachas de ${wtxt(rachaMax, true)} — ramas y árboles en la pista` });
 
   // — Niebla —

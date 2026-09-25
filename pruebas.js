@@ -367,6 +367,79 @@ grupo('Una clave inventada por nosotros no puede viajar a la API (22-09-2026)');
    votación. La votación NO se toca por una foto; lo que no puede ser es
    que la contradicción se calle.
    ══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════
+   EL COLOR SE DECIDE CON EL NÚMERO QUE SE VE, NO CON EL DE DENTRO
+   ──────────────────────────────────────────────────────────────────────
+   Su pantallazo del 25-09-2026 a las 17:01, pestaña «10 días», martes 29
+   en Bermeo:
+
+       Racha 49 km/h a las 04:00        ← en verde
+       ⚠ Automático da 57 km/h — tu listón es 49 km/h
+
+   La app le enseñaba SU PROPIO LISTÓN y lo pintaba como si no pasara
+   nada. MEDIDO contra la API esa tarde: el valor de verdad era **48,6**;
+   se redondea a 49 para enseñarlo y se juzgaba con el 48,6.
+
+   Y no era un sitio: había CATORCE comparaciones a mano contra
+   `listonRafaga()`, una de ellas una copia local de `nivelRacha` que
+   tapaba a la buena. Cada una con el número sin redondear.
+
+   La regla ya estaba escrita en esta casa desde el 04-09 —«la
+   diferencia, tal como se ve»—. Faltaba aplicarla al color.
+   ══════════════════════════════════════════════════════════════════════ */
+grupo('El color de la racha se decide con el número que se ve (25-09-2026)');
+{
+  eval(sacarConst('WU'));
+  eval(sacarConst('wu'));
+  eval(sacarConst('wv'));
+  eval(sacar('function listonRafaga('));
+  eval(sacar('function nivelRacha('));
+  globalThis.DEFAULT_THR = globalThis.DEFAULT_THR || { gustWarn: 50, gustNo: 70 };
+  globalThis.PERFILES = { hierro: { rafagaBestia: 70, vientoManda: false } };
+  globalThis.perfil = () => PERFILES.hierro;
+  globalThis.S = { perfil: 'hierro', wunit: 'kmh', thr: {} };
+
+  ok('su caso: 48,6 se enseña 49 y su listón es 49, así que NO puede salir verde',
+     nivelRacha(48.6) === 'warn',
+     `da ${nivelRacha(48.6)} — el martes 29 en Bermeo salía en verde`);
+  ok('y 48,4, que se enseña 48, sigue en verde',
+     nivelRacha(48.4) === 'go');
+  ok('lo mismo arriba: 69,6 se enseña 70, que es su tope',
+     nivelRacha(69.6) === 'no',
+     `da ${nivelRacha(69.6)}`);
+  ok('sin dato no se decide nada',
+     nivelRacha(null) === 'nd' && nivelRacha(undefined) === 'nd');
+
+  /* Y EN SUS OTRAS UNIDADES, que es donde una regla así se rompe sola. */
+  S.wunit = 'kts';
+  ok('en nudos también manda lo que se ve',
+     nivelRacha(48.6) === nivelRacha(48.4),
+     '48,6 y 48,4 se enseñan los dos 26 kt, y su listón también: mismo color');
+  S.wunit = 'ms';
+  ok('y en m/s, con decimal, cada uno el suyo',
+     nivelRacha(48.6) === 'go' && nivelRacha(70.2) === 'no',
+     '13,5 contra un listón de 13,6; y 19,5 contra 19,4');
+  S.wunit = 'kmh';
+
+  /* ── LA GUARDA DE CLASE ───────────────────────────────────────────
+     Nadie compara una ráfaga con el listón a mano. Si alguien lo hace,
+     vuelve a decidir con el número de dentro y el color se despega de
+     la cifra. Se permiten los sitios que solo ENSEÑAN el listón. */
+  {
+    const codigo = src.replace(/\/\*[\s\S]*?\*\//g, '');
+    const re = /[<>]=?\s*listonRafaga\(\)\.(warn|no)|listonRafaga\(\)\.(warn|no)\s*[<>]=?/g;
+    const malas = [];
+    let m;
+    while ((m = re.exec(codigo))) malas.push(codigo.slice(0, m.index).split('\n').length);
+    ok('nadie compara una ráfaga con el listón a mano: todos por nivelRacha()',
+       malas.length === 0,
+       malas.length ? `a mano en ${malas.length} sitios del código sin comentarios` : 'las catorce, por la función');
+  }
+  ok('y no hay una segunda nivelRacha que tape a la buena',
+     (src.replace(/\/\*[\s\S]*?\*\//g, '').match(/nivelRacha\s*=\s*(?:v|\()/g) || []).length === 0,
+     'el 25-09 había una copia local que devolvía null en vez de «go»');
+}
+
 grupo('El número y la palabra de las nubes, cuando no cuadran (25-09-2026)');
 {
   /* EL CUERPO DE LA FUNCIÓN, SACADO DE app.js Y EJECUTADO, con las
@@ -7461,10 +7534,16 @@ grupo('El acceso no cuenta un hueco como un cero (01-09-2026)');
   /* `listonRafaga()` entra como dependencia desde el 20-09-2026: el tope
      del viaje dejó de ser un 70 clavado y pasa a ser el suyo, el de
      Ajustes. Se le da el de fábrica del perfil hierro. */
-  const fn = new Function('has', 'wtxt', 'kmTxt', 'listonRafaga', `
+  /* Y `nivelRacha` desde el 25-09-2026: el color y el aviso ya no se
+     deciden comparando a mano, sino con el número tal como se ve. Se le
+     da la misma decisión, con el mismo listón que se le inyecta aquí. */
+  const listonDePrueba = () => ({ warn: 49, no: 70, de: 'hierro' });
+  const nivelDePrueba = v => !has(v) ? 'nd'
+    : Math.round(v) >= 70 ? 'no' : Math.round(v) >= 49 ? 'warn' : 'go';
+  const fn = new Function('has', 'wtxt', 'kmTxt', 'listonRafaga', 'nivelRacha', `
     ${sacar('function acceso(')}
     return acceso;`)(globalThis.has, x => `${x} km/h`, x => String(x),
-                     () => ({ warn: 49, no: 70, de: 'hierro' }));
+                     listonDePrueba, nivelDePrueba);
 
   const hora = (extra = {}) => ({ temp: 8, hum: 60, vis: 20000, frz: 3000, ...extra });
 
@@ -10050,7 +10129,12 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /horas: buildHours\(copia\.data\.fc, ALTURA_CASETA, p\)/.test(A)
      && !/buildHours\(fc, cfg\.alt, p\)/.test(A) && !/cfgDe\(place\)\.alt, place\)/.test(A));
   ok('la cabecera de la tarjeta lleva UNA racha y UN viento, los de 10 m, sin «(est.)» ni «de altura»',
-     /'racha a 10 m · a pie de caseta',\s*has\(h\.gust10\) && h\.gust10 >= listonRafaga\(\)\.no \? 'rojo' : rachaAltaP, 'decide'/.test(A)
+     /* 25-09-2026: esto fijaba la comparación entera escrita a mano
+        —`h.gust10 >= listonRafaga().no`— y se puso roja al encauzar los
+        catorce sitios por `nivelRacha()`. Lo que esta prueba vigila es
+        LA ETIQUETA; de que el color se decida bien se encarga la guarda
+        de «el color de la racha se decide con el número que se ve». */
+     /'racha a 10 m · a pie de caseta',/.test(A)
      && /\`viento a 10 m\$\{has\(h\.dir\) \? ' · del ' \+ rumboLargo\(h\.dir\) : ''\}\`/.test(A)
      && !/'racha a 10 m de altura'/.test(A)
      && !/racha a \$\{h\.h\} m\$\{h\.gustEst \? ' \(est\.\)' : ''\}\`, rachaAlta/.test(A));
