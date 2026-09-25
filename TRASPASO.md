@@ -1096,3 +1096,48 @@ no pinta nada de rojo, claro».
 **Gasto de Vercel:** no se ha podido medir hoy (Chrome no estaba conectado; el panel de Uso solo se ve con su sesión). Nada de lo de hoy añade una sola llamada: el guardia es local y el repaso programado sigue siendo una carga por pasada. Queda medirlo en cuanto abra Chrome.
 
 **Tres agentes de solo lectura** lanzados en paralelo (más lecturas a índice fijo / reglas de reloj; contradicciones texto-color-fuente; revisión adversaria de `pantallas.cjs`): sus informes, y lo que salga de ellos, en la § siguiente.
+
+### §36 · 25-09-2026, 09:00-10:30, iMac: LOS DIECISÉIS DE LOS AGENTES, Y LA SERIE QUE NO EMPEZABA A MEDIANOCHE
+
+**Suyo, en medio:** *«revisar en paralelo, manda agentes… dejarlo bien de una vez»* · *«¿por qué vuelve a fallar cuando me decís que ya no va a volver a pasar?»* · y a las 08:27, con la portada diciendo «Despejado» bajo un cielo tapado en Munguía: *«Mal»* · *«De momento verán que han fallado casi todos en Bermeo»*.
+
+**Los tres agentes (solo lectura, en paralelo)** sacaron dieciséis fallos más de la misma familia que los seis de §34, y ninguno era nuevo: estaban ya en la app. Arreglados en un solo lote (build 2026.09.25-0848), cada uno con su prueba y **catorce de ellos vistos en rojo** deshaciéndolos sobre una copia con `pantallas.cjs` v2:
+
+| pantalla | lo que decía | qué se ha hecho |
+|---|---|---|
+| Horas | la chapa «Racha 22 km/h» en rojo por el semáforo de la HORA (sirimiri) | `nivelRacha()`: una decisión para la chapa de la hora y la del día; CSS `.hcard__g[data-s]` |
+| Ahora · Tormenta | «Tapa que aguanta · gasolina y sin tapa: puede romper» (tapa 68) | cuando salta la regla, número y listón: «tapa 68 (por debajo de 75)» |
+| Mis estaciones · cifras | «68 tapa J/kg · aguanta» en ROJO | «por debajo de 75: con este CAPE rompe» |
+| Ahora · Próxima lluvia | «no se espera · ninguno de los modelos la ve» en verde SIN comparativa (primer pintado, cambio de sitio, carga caída) | `lluviaQueVieneYNoVesTu()` devuelve `{sabido:false}` y la casilla dice «a los demás todavía no he podido preguntarles» |
+| Mis estaciones · «Lo que se está midiendo» | «No hay estaciones de AEMET a menos de 60 km» (se pregunta también a Euskalmet a 25) | nombra las dos redes, y si Euskalmet no contestó lo dice antes que nada |
+| Mis torres · nota del parte | «ECMWF y AROME HD no la publican» a mano, invisible para `sin-modelos-a-mano.cjs` (línea sin comillas dentro de una plantilla) | leído del reparto (`MODELOS_TORMENTA` − `CON_TAPA`); el guardia ya cuenta acentos graves y mira dentro de las plantillas (7 explicaciones fijas pasaron a BLANCA) |
+| Ahora · Sol y aire | «Sube a 2,0 m en las próximas 24 h» sin hora | `picoOleaje24hCon()` + `aLasHora()`: «Sube a 2,0 m a las 04:00 de mañana sábado» |
+| Ahora / Mar · Mar de viento | 0,2 con rama «picada» en Ahora; 0,3 sin ella en Mar | `fraseMarDeViento()`, una para las dos |
+| Mar · Mar de fondo | `hourly[0]` (medianoche) si `current` no la trae | `iHoraMar()` |
+| Mar · gráfica 48 h | desde la medianoche: a las 20:00, 20 h pasadas y «lo más alto» ya pasado | desde ahora (`i0Ola`) |
+| Mis torres · «Antes de salir» | «No se despeja en las próximas 24 h» mirando solo lo que queda de hoy | «en lo que queda de hoy» / «el sábado» (`ventanaParte()`) |
+| Mis torres · pestañas del parte | HOY encendida sobre el parte de mañana (a partir de ~22:00) | `ventanaParte().salto` |
+| completar() | pegaba las columnas prestadas POR POSICIÓN: dos llamadas a caballo de un cambio de hora desplazaban cielo, tapa, isocero y nieve una hora, sin marca | `alinear()`: cada hora por su tiempo (como ya hacía `completarTorres`) |
+| 10 días · dibujo del día | día/noche fijo por la ventana 6-20 h | el de sus horas (`R.dia`, que sale de `diaDeLaHora`) |
+| Mis torres · pista | «sin agua en las últimas 72 h» **habiendo mirado UNA hora** | ver abajo; y `lineaPista` dice las horas que miró de verdad (`mirados`) |
+| Ahora · Máx/Mín | «Mín 14°» sin hora en cuanto la mínima quedaba antes de la hora de carga | ver abajo |
+| Marcador | «error medio 5 km/h · 7 veces» | «en 7 comparaciones» |
+
+**LO MEDIDO, que es lo que cambia cómo se leen las series (por `/om`, una llamada):**
+
+| petición | primera hora de la serie |
+|---|---|
+| `past_hours=1` (loadAll, cargado a las 07:34) | **06:00** — la hora anterior, NO la medianoche |
+| `past_days=3&past_hours=1` (cargarTorres) | **07:00** — `past_hours` MANDA: los tres días pasados no venían; y trae 16 días |
+| marina | 00:00 de hoy |
+| `daily[0]` | hoy (past_hours no lo mueve) |
+
+Consecuencias: `cargarTorres` y `completarTorres` van con `past_days: 3` **sin** `past_hours` (la pista vuelve a tener 72 h de verdad; el 23-09 CLAUDE.md decía que `fc.hourly` «trae el día desde las 00:00» y era falso); `loadAll` y `completar` con `past_hours: 24`, para que la hora de la mínima exista en la serie (a las 13:00 la de las 05:00 ya no estaba). `S.data.hours` sigue empezando en la hora en curso (`idx0` por tiempo), así que ninguna pantalla que lea de ahí cambia.
+
+**`pantallas.cjs` v2** (lo pidió el agente adversario, que corrió 19 roturas y 13 se le escapaban a la v1): cinco horas (02, 07, 13, 20 y **23**, para el parte de mañana); la trampa empieza la serie donde Open-Meteo (past_hours manda); una sola carga (sitio, lista y modelo en localStorage antes de arrancar); el cargado NO trae la tapa (como AROME de verdad) y se la pide a ICON, que vale 5 solo a las 10:00 y **llega una hora desplazada** (así se ve si se pega por posición); a las 13:30 el cargado lleva CAPE 800 y tapa 68 y `current` no trae la mar de fondo; a las 20:30 la comparativa de los siete modelos **no contesta**; la mínima (14°) a las 05:00 y la máxima (24°) a las 15:00; racha 90 a las 05 y 15; mar de viento 0,25 (donde Ahora y Mar decían cosas distintas). Nuevas comprobaciones: chapa de Horas, `data-dia` del dibujo y el dibujo grande de la portada, `#seaDet` (el `#seaCard` de la v1 no contenía la lista: la comprobación 3b estaba muerta), «Sube a … a las HH:00», paridad de la mar de viento, «lo más alto» de la gráfica, `quien === 'ICON'` y las horas del agua en la tarjeta, Almike/FORUA por nombre, cifra en rojo sin «aguanta», `pista.mirados ≥ 72`, marcador con «se queda 12 km/h corto» y «en 20 comparaciones», Tormenta sin «aguanta», Próxima lluvia con la comparativa caída, «Mín 14° a las 05:00», tapa 5 a las 10:00 y 120 a las 09:00, pestaña del parte, y los avisos `[cielo]` de `vigilarCielo` como fallo. **Tarda 10 s.** Catorce roturas sobre copia, catorce rojos (a-o en `romper2.sh` del scratchpad; el detalle en el commit).
+
+**Banco:** 1311 bien, 0 mal (22 pruebas nuevas). **NO-SE-TOCA:** cinco filas nuevas.
+
+**El cielo de esta mañana (su «Mal», 08:27):** portada «Despejado» / franja «Mayormente despejado ⚠ ICON ve nubes de 08:00 a 13:00 (baja y media hasta el 84 %)» bajo un cielo tapado de nube baja y media en Munguía y Bermeo. Medido en la propia app (la comparativa de las 07:34, nube baja+media a las 08:00): **ECMWF 0, GFS 0, AROME 27, ICON 79** → el cielo votado (mediana de los cuatro) se quedó en 27 → «Mayormente despejado». Dos de cuatro no vieron la nube baja; el aviso salió, pero debajo del titular. Euskalmet a las 07:40 daba «Poco nuboso» con «intervalos nubosos de nubes bajas». La temperatura sí cuadró (19° la app, 18° su coche, 19,9° Matxitxako). **No se ha tocado la regla del cielo**: es el segundo caso medido de la costa en que los de malla gruesa no ven la nube baja (el primero, §«EL CIELO PASA AL EUROPEO»); con dos casos no se recalibra. Queda apuntado como candidato: que el titular pierda la certeza cuando el abanico entre modelos es de más de 60 puntos («Despejado según ECMWF y GFS; ICON ve nube baja al 84 %»), o cruzar con el satélite, que es medida.
+
+**Gasto de Vercel:** sin medir (Chrome sin conectar en toda la mañana). Hoy: una publicación (vacía el CDN), una llamada de medida a `/om`, y las llamadas del panel del navegador al comprobar. Nada nuevo que corra solo.

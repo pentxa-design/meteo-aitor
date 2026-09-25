@@ -443,7 +443,9 @@ grupo('Una tapa en 0 de quien no ve gasolina no dice nada (22-09-2026)');
        `hay ${escaleras.length}; si son dos, el próximo arreglo de la tapa dejará una atrás`);
     ok('y las dos fichas la piden a fraseTapa(), con la hora',
        /const cinTxt = !has\(c\.cin\) \? nd : fraseTapa\(c\.cin, c\);/.test(src)
-       && /const tapaTxt = fraseTapa\(c\?\.cin, c\);/.test(src),
+       /* 25-09-2026: cuando salta la regla la casilla da número y listón, no
+          la palabra; fuera de la regla sigue pidiendo a fraseTapa con la hora */
+       && /const tapaTxt = tormenta\s*\n?\s*\? `tapa \$\{Math\.round\(c\.cin\)\}\$\{firmaTapa\(c\)\} \(por debajo de \$\{TAPA_ROMPE\}\)`\s*\n?\s*: fraseTapa\(c\?\.cin, c\);/.test(src),
        'Riesgo eléctrico y Detalles: los dos sitios donde él lo vio el 22-09');
   }
   ok('fraseTapa dice quién puso el cero, y se calla la escala',
@@ -460,7 +462,7 @@ grupo('Una tapa en 0 de quien no ve gasolina no dice nada (22-09-2026)');
   ok('el CAPE del que presta la tapa se pide en la MISMA llamada y se guarda aparte',
      /const conTapa = ks\.includes\('convective_inhibition'\);/.test(src)
      && /\+ \(conTapa && !ks\.includes\('cape'\) \? ',cape' : ''\)/.test(src)
-     && /if \(conTapa && traeAlgo\(d\.hourly\?\.cape\)\) f\.hourly\.cape_de_la_tapa = d\.hourly\.cape;/.test(src),
+     && /if \(conTapa && traeAlgo\(d\.hourly\?\.cape\)\) f\.hourly\.cape_de_la_tapa = alinear\(d\.hourly\.cape\);/.test(src),   // por hora, no por posición (25-09)
      'sin una petición de más, y sin pisar el CAPE del modelo cargado');
   ok('y la hora lo lleva, como lleva el dueño de la tapa',
      /capeTapa: H\.cape_de_la_tapa\?\.\[i\],/.test(src));
@@ -853,6 +855,7 @@ eval(sacar('function selloParte(ahora = Date.now()) {'));
 eval(sacar('function pintarSelloParte() {'));
 eval(sacar('function cuantosLoVen(d) {'));
 eval(sacar('function aguaCeldaLejos(f, ahora = Date.now()) {'));
+eval(sacarConst('listar')); eval(sacarConst('MODELOS_TORMENTA'));   // la nota del parte lista los modelos sin tapa (25-09-2026)
 eval(sacar('function renderParte() {'));
 
 const P = (n, lat, lon) => ({ name: n, lat, lon });
@@ -3525,7 +3528,10 @@ try { eval(sacarConst('UNIDADES_MAR')); } catch (e) { console.log(`  (sin UNIDAD
 for (const f of ['unidadMar', 'avisoUnidadesMar', 'notaUnidadesMar']) { try { eval(sacar(`function ${f}(`)); } catch (e) { console.log(`  (sin ${f}: ${e.message})`); } }
 /* 25-09-2026: la portada ya lee la mar de AHORA con estos dos ayudantes. */
 eval(sacar('function iHoraMar(tiempos, ahora = Date.now()) {'));
-eval(sacar('function picoOleaje24h(alturas, tiempos, ahora = Date.now()) {'));
+eval(sacar('function picoOleaje24hCon(alturas, tiempos, ahora = Date.now()) {')); eval(sacar('function picoOleaje24h(alturas, tiempos, ahora = Date.now()) {'));
+eval(sacar('function fraseMarDeViento(wv, sw) {'));   // una frase para Ahora y Mar (25-09-2026)
+try { eval(sacar('function nombreDeDia(d) {')); } catch {}
+eval(sacar('function aLasHora(t, ahora = Date.now()) {'));   // «Sube a X m a las HH:00» (25-09-2026)
 eval(sacar('function pintarMarAhora(dt) {'));
 /* Las de la app que usa por dentro. `show` y `rumboLargo` se sacan tal
    cual para que la prueba mire el texto de verdad, no una imitación. */
@@ -9674,7 +9680,7 @@ grupo('Sus pantallazos del 25-09 a las 07:13: seis fallos de pantalla');
      && /day: diaDeLaHora\(fc, i\),/.test(src));
 
   /* 2. La mar de «Ahora» es ahora, también en la portada. */
-  try { eval(sacar('function iHoraMar(tiempos, ahora = Date.now()) {')); eval(sacar('function picoOleaje24h(alturas, tiempos, ahora = Date.now()) {')); } catch {}
+  try { eval(sacar('function iHoraMar(tiempos, ahora = Date.now()) {')); eval(sacar('function picoOleaje24hCon(alturas, tiempos, ahora = Date.now()) {')); eval(sacar('function picoOleaje24h(alturas, tiempos, ahora = Date.now()) {')); } catch {}
   const tMar = Array.from({ length: 30 }, (_, i) => new Date(Date.UTC(2026, 8, 25, i)).toISOString());
   const alturas = tMar.map((_, i) => i === 0 ? 2.5 : i === 20 ? 1.8 : 1.0);
   const ahoraMar = new Date(Date.UTC(2026, 8, 25, 7, 10)).getTime();
@@ -9711,7 +9717,69 @@ grupo('Sus pantallazos del 25-09 a las 07:13: seis fallos de pantalla');
      /Sirimiri/.test(conIcon) && /lo ve ICON/.test(conIcon) && !/lo ve/.test(conElMio),
      JSON.stringify({ conIcon, conElMio }));
 
-  /* ── LAS PANTALLAS, A LA HORA A LA QUE ÉL LAS MIRA (25-09-2026) ───────
+  /* ── LO QUE SACARON LOS AGENTES DEL 25-09 (misma familia que los seis) ──
+   Tres agentes de solo lectura, en paralelo, la misma mañana: más sitios
+   con la forma «leer la hora equivocada» y «una parte de la pantalla
+   desmiente a la de al lado». Cada uno de estos guarda uno de ellos; la
+   prueba de verdad (arrancando la app) está en `pantallas.cjs`, que se
+   vio en rojo con cada uno deshecho sobre una copia. */
+{
+  const C = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+  ok('la chapa «Racha» de la tarjeta de la hora lleva SU color (nivelRacha), no el semáforo de la hora',
+     /<div class="hcard__g" data-s="\$\{nivelRacha\(h\.gust\)\}">Racha/.test(src)
+     && /\.hcard__g\[data-s=no\]\{/.test(C) && !/\.hcard\[data-s=no\] \.hcard__g/.test(C),
+     'con sirimiri salía «Racha 22 km/h» en rojo');
+  ok('y la del día usa la MISMA decisión (una función, dos pantallas)',
+     /const nRacha = nivelRacha\(racha\);/.test(src) && /^function nivelRacha\(v\) \{/m.test(src));
+  ok('la casilla Tormenta de Ahora no dice «Tapa que aguanta» cuando salta la regla',
+     /const tapaTxt = tormenta\s*\n?\s*\? `tapa \$\{Math\.round\(c\.cin\)\}/.test(src));
+  ok('y la cifra de la tapa en rojo de Mis estaciones tampoco',
+     /\(tapaAbierta\s*\n?[^\n]*\n?\s*\? `por debajo de \$\{TAPA_ROMPE\}: con este CAPE rompe` : textoTapa\(h\.cin, h\)\)/.test(src));
+  ok('«Próxima lluvia» distingue «ninguno la ve» de «no he podido preguntar» (sabido:false)',
+     /function lluviaQueVieneYNoVesTu\(\) \{[\s\S]{0,700}?if \(!H\?\.time\) return \{ sabido: false \};/.test(src)
+     && /if \(otra && otra\.sabido === false\)/.test(src),
+     'sin comparativa afirmaba en verde lo que nadie había mirado');
+  ok('«No hay estaciones…» nombra las dos redes y dice si Euskalmet no contestó',
+     /No hay estaciones de Euskalmet a menos de 25 km ni de AEMET a menos de 60 km de/.test(src)
+     && /No he podido preguntar a Euskalmet<\/b> \(\$\{esc\(rEus\._fallo\)\}\), y AEMET no tiene ninguna estación/.test(src));
+  ok('la nota del parte lee del reparto quién no publica la tapa, no lo tiene escrito',
+     /\$\{esc\(listar\(MODELOS_TORMENTA\.filter\(m => !CON_TAPA\.includes\(m\.om\)\)\.map\(m => m\.nom\)\)\)\} no la publican\./.test(src)
+     && !/ECMWF y AROME HD no la publican/.test(src));
+  const GN = fs.readFileSync(path.join(__dirname, 'sin-modelos-a-mano.cjs'), 'utf8');
+  ok('y el guardia de nombres a mano ya mira dentro de las plantillas de varias líneas',
+     /let dentro = false;/.test(GN) && /const enPlantilla = dentro \|\| ticks > 0;/.test(GN) && /if \(!enPlantilla && !\/\['"\]\/\.test\(l\)\) return;/.test(GN),
+     'se saltaba toda línea sin comillas, y la nota del parte era una');
+  ok('«Sube a X m» lleva su hora (aLasHora del pico)',
+     /Sube a <b>\$\{pico\.toFixed\(1\)\.replace\('\.', ','\)\} m<\/b> \$\{aLasHora\(picoC\.t\)\}/.test(src));
+  ok('la mar de viento es UNA frase para Ahora y Mar (fraseMarDeViento), sin listones distintos',
+     (src.match(/fraseMarDeViento\(C\.wind_wave_height, C\.swell_wave_height\)/g) || []).length === 2
+     && !/wind_wave_height < 0\.3/.test(src));
+  ok('la pestaña Mar lee la mar de fondo en la hora en curso, no en la medianoche',
+     /M\.hourly\.swell_wave_height\?\.\[iHoraMar\(M\.hourly\.time\)\], unidadMar\(M, 'swell_wave_height'\)/.test(src)
+     && !/swell_wave_height\?\.\[0\]/.test(src));
+  ok('la gráfica de oleaje de 48 h empieza AHORA (i0Ola), no a medianoche',
+     /const i0Ola = iHoraMar\(M\.hourly\.time\);/.test(src) && /wave_height\?\.slice\(i0Ola, i0Ola \+ 48\)/.test(src));
+  ok('«No se despeja» dice la ventana que se ha mirado, no «las próximas 24 h»',
+     /No se despeja \$\{\(v => v\.salto === 0 \? 'en lo que queda de hoy'/.test(src) && !/No se despeja en las próximas 24 h/.test(src));
+  ok('la pestaña encendida del parte es la del día que se enseña (ventanaParte().salto)',
+     /class="pdia\$\{d\.i === ventanaParte\(\)\.salto \? ' is-on' : ''\}"/.test(src));
+  ok('completar() pega lo prestado POR HORA (alinear), no por posición',
+     /const alinear = col => \{/.test(src) && /f\.hourly\[k\] = alinear\(d\.hourly\[k\]\);/.test(src)
+     && /f\.hourly\.weather_code_lluvia = alinear\(d\.hourly\.weather_code\);/.test(src));
+  ok('el dibujo del día lleva el día/noche de sus horas',
+     /const d = has\(R\.dia\) \? R\.dia : \(deNoche \? 0 : 1\);/.test(src));
+  ok('cargarTorres y completarTorres piden 3 días atrás SIN past_hours (medido: past_hours anulaba past_days)',
+     /forecast_days: 2, past_days: 3, models: model\(\)\.om,/.test(src) && /forecast_days: 2, past_days: 3, models: om,/.test(src)
+     && !/past_days: 3, past_hours: 1/.test(src));
+  ok('la pista dice las horas que ha mirado de verdad (mirados)',
+     /nieveHoy, mirados,/.test(src) && /const mir = has\(P\.mirados\) \? Math\.min\(72, P\.mirados\) : 0;/.test(src));
+  ok('loadAll y completar piden 24 h atrás, para que la mínima del día tenga hora',
+     (src.match(/forecast_days: 10, past_hours: 24, models: /g) || []).length === 3 && !/forecast_days: 10, past_hours: 1, models: /.test(src));
+  ok('el marcador dice «en N comparaciones», no «N veces» a secas',
+     /error medio \$\{txt\(m\.error\)\} en \$\{m\.n\} comparaciones\$\{/.test(src));
+}
+
+/* ── LAS PANTALLAS, A LA HORA A LA QUE ÉL LAS MIRA (25-09-2026) ───────
    Suyo, con diecisiete pantallazos de las 07:13 y seis fallos de
    pantalla dentro: «¿pero todavía seguimos teniendo fallos?» · «que no
    vuelva a pasar, porque me suena que no es la primera vez». Los seis
@@ -9727,8 +9795,15 @@ grupo('Sus pantallazos del 25-09 a las 07:13: seis fallos de pantalla');
   ok('revisar.sh arranca pantallas.cjs y deploy.sh no publica si una pantalla dice lo que no toca',
      /^node pantallas\.cjs \|\| exit 1$/m.test(R),
      'un guardia escrito no es un guardia puesto');
-  ok('el guardia de pantallas corre a las 02, 07, 13 y 20 h, no solo a la hora de quien publica',
-     /'2,7,13,20'/.test(G));
+  ok('el guardia de pantallas corre a las 02, 07, 13, 20 y 23 h, no solo a la hora de quien publica',
+     /'2,7,13,20,23'/.test(G));
+  ok('y su trampa empieza la serie donde Open-Meteo: past_hours manda sobre past_days (medido el 25-09)',
+     /if \(pastH !== null\) \{ inicio = new Date\(horaEnCurso\.getTime\(\) - pastH \* 3600e3\)/.test(G)
+     && /else \{ inicio = new Date\(hoy0\.getTime\(\) - pastD \* 86400e3\)/.test(G));
+  ok('y ejercita lo que dos agentes sacaron el 25-09: chapa de Horas, tormenta sin «aguanta», próxima lluvia sin comparativa, mar de viento, oleaje desde ahora, pegado por hora, 72 h de pista, hora de la mínima, pestaña del parte y marcador',
+     /hcard__g/.test(G) && /HORA_TORMENTA/.test(G) && /HORA_SIN_COMPARATIVA/.test(G) && /fraseViento/.test(G)
+     && /esperadoPico48/.test(G) && /HORA_TAPA_ICON/.test(G) && /pista\.mirados >= 72/.test(G)
+     && /Mín 14°\\s\*a las 05:00/.test(G) && /parteDias \.pdia\.is-on/.test(G) && /en 20 comparaciones/.test(G));
   ok('su trampa cambia con la hora y se planta si no muerde (mar de fondo, pico de ola, is_day de las 08:00)',
      /TRAMPA SIN DIENTES: el pico de las 24 primeras horas/.test(G)
      && /TRAMPA SIN DIENTES: la mar de fondo de medianoche/.test(G)

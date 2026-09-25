@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.25-0731';
+const BUILD = '2026.09.25-0848';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -214,6 +214,17 @@ const DEFAULT_THR = {
    SUBIR. Dos listones a la vista, y el suyo era el que no salía. Desde
    hoy todo lo que enseña o colorea un listón de ráfaga pregunta aquí.
    En el perfil de subir (vientoManda) siguen mandando sus umbrales. */
+/* ── EL COLOR DE UNA RACHA, POR SU LISTÓN, EN UN SOLO SITIO (25-09-2026) ──
+   La chapa «Racha» de la tarjeta de la hora se coloreaba por el semáforo
+   de la HORA (`.hcard[data-s=no] .hcard__g` en styles.css): con sirimiri
+   salía «Racha 22 km/h» en rojo. Es el mismo fallo que esa misma mañana
+   se arregló en la tarjeta del día de «10 días». Una decisión, dos
+   pantallas: si un día cambia el listón, cambian las dos. */
+function nivelRacha(v) {
+  if (!has(v)) return 'nd';
+  const L = listonRafaga();
+  return v >= L.no ? 'no' : v >= L.warn ? 'warn' : 'go';
+}
 function listonRafaga() {
   const P = perfil();
   if (P.vientoManda || !has(P.rafagaBestia))
@@ -2025,7 +2036,7 @@ async function cargarMarcador() {
             return `<div class="marc__m" data-s="${st}">
               <span class="marc__mn">${esc(m.modelo)}</span>
               <span class="marc__md">${dice}</span>
-              <span class="marc__me">error medio ${txt(m.error)} · ${m.n} veces${
+              <span class="marc__me">error medio ${txt(m.error)} en ${m.n} comparaciones${
                 m.cortas ? ` · <b>${m.cortas}</b> veces más de ${txt(G.corto ?? 10)} corto` : ''}${
                 has(m.peor) && m.peor < 0 ? ` · lo peor: ${txt(-m.peor)} corto` : ''}</span>
             </div>`;
@@ -2717,7 +2728,11 @@ async function loadAll(p) {
 
   const fc = jget(API.fc, {
     ...base, current: CURRENT, hourly: HOURLY, daily: DAILY,
-    forecast_days: 10, past_hours: 1, models: M.om,
+    /* 24 horas atrás, no 1 (25-09-2026, MEDIDO): con `past_hours: 1` la
+       serie empieza en la hora ANTERIOR, y la hora de la mínima del día
+       («Mín 14° a las 05:00») se buscaba en una serie que a las 13:00 ya
+       no tenía las 05:00. `daily[0]` sigue siendo hoy: past_hours no lo mueve. */
+    forecast_days: 10, past_hours: 24, models: M.om,
   }).then(d => {
     if (!cubreElPunto(d)) throw new Error(`${M.name} no cubre este punto: contestó sin datos`);
     return d;
@@ -2761,7 +2776,7 @@ async function loadAll(p) {
     toast(`${M.name} no cubre este punto — enseñando ${nRebote} solo aquí`, 4200);
     modeloUsado = MODELS.find(x => x.om === rebote)?.id || 'icon';
     return jget(API.fc, { ...base, current: CURRENT, hourly: HOURLY, daily: DAILY,
-      forecast_days: 10, past_hours: 1, models: rebote });
+      forecast_days: 10, past_hours: 24, models: rebote });
   });
 
   // Los dos siguientes son opcionales: si fallan, la app sigue funcionando.
@@ -4077,15 +4092,28 @@ async function completar(f, p) {
       current: ks.filter(k => k !== 'uv_index').join(','),
       daily: [ks.includes('uv_index') ? 'uv_index_max' : null,
               conAgua ? 'precipitation_sum' : null].filter(Boolean).join(',') || undefined,
-      forecast_days: 10, past_hours: 1, models: om,
+      /* las mismas 24 h atrás que loadAll (25-09-2026); y se casa por hora igualmente */
+      forecast_days: 10, past_hours: 24, models: om,
     }, { timeout: 12000 });
 
     const sinCubrir = [];
+    /* POR HORA, NO POR POSICIÓN (25-09-2026). Las dos llamadas llevan
+       `past_hours`, o sea que cada una empieza N horas antes de la hora en
+       que se hizo: si esta cae al otro lado de un cambio de hora, pegar la
+       columna tal cual desplazaba TODO lo prestado (cielo, tapa, isocero,
+       nieve) una hora sin que nada lo dijera. `completarTorres` ya se
+       negaba a pegar en ese caso; aquí se casa cada hora por su tiempo. */
+    const alinear = col => {
+      if (!Array.isArray(col) || !Array.isArray(d.hourly?.time) || !Array.isArray(f.hourly?.time)) return col;
+      if (d.hourly.time[0] === f.hourly.time[0] && col.length === f.hourly.time.length) return col;
+      const pos = new Map(d.hourly.time.map((t, i) => [t, i]));
+      return f.hourly.time.map(t => { const i = pos.get(t); return i === undefined ? null : col[i]; });
+    };
     /* El CAPE del que presta la tapa, aparte y con nombre propio. */
-    if (conTapa && traeAlgo(d.hourly?.cape)) f.hourly.cape_de_la_tapa = d.hourly.cape;
+    if (conTapa && traeAlgo(d.hourly?.cape)) f.hourly.cape_de_la_tapa = alinear(d.hourly.cape);
     for (const k of ks) {
       if (!traeAlgo(d.hourly?.[k])) { sinCubrir.push(k); continue; }
-      f.hourly[k] = d.hourly[k];
+      f.hourly[k] = alinear(d.hourly[k]);
       prestados.push({ k, de: om, porAcierto: porAcierto.has(k) || undefined });
       if (has(d.current?.[k])) { f.current ??= {}; f.current[k] = d.current[k]; }
       if (k === 'uv_index' && d.daily?.uv_index_max && f.daily) f.daily.uv_index_max = d.daily.uv_index_max;
@@ -4095,7 +4123,7 @@ async function completar(f, p) {
          de otro es juntar dos modelos en un renglón — y el sirimiri se
          clasifica por código, no por milímetros. */
       if (k === 'precipitation' && porAcierto.has(k)) {
-        if (traeAlgo(d.hourly?.weather_code)) f.hourly.weather_code_lluvia = d.hourly.weather_code;
+        if (traeAlgo(d.hourly?.weather_code)) f.hourly.weather_code_lluvia = alinear(d.hourly.weather_code);
         if (f.daily && traeAlgo(d.daily?.precipitation_sum)) {
           f.daily.precipitation_sum = d.daily.precipitation_sum;
           prestados.push({ k: 'precipitation_sum', de: om, porAcierto: true });
@@ -5696,7 +5724,10 @@ function lluviaQueNoVesTu(c) {
  *  de callar. No promedia ni elige: dice quién y cuándo.               */
 function lluviaQueVieneYNoVesTu() {
   const H = deEsteSitio(S.comparativa)?.hourly;   // la de ESTE sitio, no la del anterior
-  if (!H?.time) return null;
+  /* Sin la comparativa no es «ninguno la ve»: es «no lo sé» (25-09-2026).
+     Primer pintado, cambio de sitio o carga fallida: el que llama tiene
+     que distinguirlo, igual que `horasEnDiscrepancia()` con su `sabido`. */
+  if (!H?.time) return { sabido: false };
 
   const ahora = Date.now();
   const i0 = H.time.findIndex(t => new Date(t).getTime() + 3600e3 > ahora);
@@ -7209,8 +7240,14 @@ async function cargarObservacion() {
         Si subes, la medida con tu anemómetro en MAX es el único dato real de este punto.</p>`);
     }
     if (!es.length) {
-      el.innerHTML = `<p class="note">No hay estaciones de AEMET a menos de 60 km de
-        ${esc(p.name || 'aquí')}. No se muestra nada estimado en su lugar.</p>`;
+      /* Se pregunta a DOS redes (Euskalmet a 25 km y AEMET a 60): decir
+         solo AEMET escondía a la otra, y si Euskalmet no contestó, la
+         lista vacía se leía como «no hay» en vez de «no he podido
+         preguntar» (25-09-2026). */
+      el.innerHTML = `<p class="note">${rEus?._fallo
+        ? `<b>No he podido preguntar a Euskalmet</b> (${esc(rEus._fallo)}), y AEMET no tiene ninguna estación a menos de 60 km de ${esc(p.name || 'aquí')}.`
+        : `No hay estaciones de Euskalmet a menos de 25 km ni de AEMET a menos de 60 km de ${esc(p.name || 'aquí')}.`}
+        No se muestra nada estimado en su lugar.</p>`;
       if (hint) hint.textContent = '';
       return;
     }
@@ -7397,7 +7434,7 @@ function comoEstaLaPista(fc) {
       if (has(nv)) nieveHoy += nv; else huecosHoy++;
     }
   }
-  return { agua, horasAgua, nieveAntes, nieveSuelo, nieveHoy,
+  return { agua, horasAgua, nieveAntes, nieveSuelo, nieveHoy, mirados,
            todoHueco: mirados > 0 && huecos === mirados, huecos, huecosHoy };
 }
 
@@ -7662,7 +7699,8 @@ async function completarTorres(sitios, arr) {
       longitude: sitios.map(p => p.lon.toFixed(4)).join(','),
       hourly: ks.join(',') + (conAgua ? ',weather_code' : ''),
       timezone: 'auto', wind_speed_unit: 'kmh',
-      forecast_days: 2, past_hours: 1, models: om,
+      /* las mismas horas que cargarTorres: 3 días atrás, sin past_hours (25-09-2026) */
+      forecast_days: 2, past_days: 3, models: om,
     }, { timeout: 15000 });
     const extra = Array.isArray(d) ? d : [d];
 
@@ -7724,7 +7762,11 @@ async function cargarTorres() {
          pista blanda. Sin `past_days` la app solo sabía mirar hacia
          delante y esa es la mitad de la historia para llegar al sitio.
          No cuesta otra petición: va en la misma. */
-      forecast_days: 2, past_days: 3, past_hours: 1, models: model().om,
+      /* SIN `past_hours` (25-09-2026, MEDIDO por /om): con `past_days: 3`
+         y `past_hours: 1` juntos, Open-Meteo obedece al segundo y la serie
+         empieza en la hora ANTERIOR, no tres días atrás. `comoEstaLaPista`
+         decía «sin agua en las últimas 72 h» habiendo mirado una hora. */
+      forecast_days: 2, past_days: 3, models: model().om,
     }, { timeout: 20000 });
 
     const arr = Array.isArray(d) ? d : [d];
@@ -9437,7 +9479,7 @@ function renderParte() {
       ${C.libreDesde
         ? `Deja de frenarte a las <b>${hh(C.libreDesde.t)}</b>`
           + (C.horasLibres > 1 ? `, y aguanta <b>${C.horasLibres} h</b>.` : ', pero solo esa hora.')
-        : '<b>No se despeja en las próximas 24 h.</b>'}</div>`;
+        : `<b>No se despeja ${(v => v.salto === 0 ? 'en lo que queda de hoy' : `el ${v.etiqueta.trim()}`)(ventanaParte())}.</b>`}</div>`;
   };
 
   const lineaRacha = (k) => {
@@ -9862,7 +9904,7 @@ function renderParte() {
   + `<p class="note">Hacen falta <b>las dos cosas</b>: gasolina (CAPE ≥700) y la
      <b>tapa abierta</b> (por debajo de 75). Una sola no rompe nada — y por eso
      van siempre juntas y con su hora. Sale de los modelos que publican la tapa;
-     ECMWF y AROME HD no la publican. <b>Esto dice si PUEDE, no si ha caído</b>:
+     ${esc(listar(MODELOS_TORMENTA.filter(m => !CON_TAPA.includes(m.om)).map(m => m.nom)))} no la publican. <b>Esto dice si PUEDE, no si ha caído</b>:
      para eso, la pestaña Rayos.</p>`;
   pintarDiasParte();
   card.hidden = false;
@@ -9886,7 +9928,7 @@ function pintarDiasParte() {
     });
   }
   el.innerHTML = dias.map(d =>
-    `<button type="button" class="pdia${d.i === sel ? ' is-on' : ''}" data-dia="${d.i}">
+    `<button type="button" class="pdia${d.i === ventanaParte().salto ? ' is-on' : ''}" data-dia="${d.i}">
        <b>${d.corto}</b><i>${d.num}</i></button>`).join('');
   el.onclick = e => {
     const b = e.target.closest('[data-dia]');
@@ -9981,12 +10023,17 @@ function lineaAguaTorre(k) {
 function lineaPista(P) {
   if (!P) return '';
   const trozos = [];
+  /* Se dicen las horas que DE VERDAD se han mirado (25-09-2026): «72 h»
+     con una sola hora cargada era una afirmación sobre lo que nadie vio. */
+  const mir = has(P.mirados) ? Math.min(72, P.mirados) : 0;
+  const ventana = mir >= 72 ? 'las últimas 72 h' : `las últimas ${mir} h (no hay más horas pasadas cargadas)`;
   if (P.agua >= 1)
-    trozos.push(`<b>${mmTxt(P.agua)} mm</b> en las últimas 72 h`
+    trozos.push(`<b>${mmTxt(P.agua)} mm</b> en ${ventana}`
       + (P.horasAgua ? ` (${P.horasAgua} h de agua)` : ''));
-  else if (P.agua > 0) trozos.push('apenas ha llovido en 72 h');
-  else if (P.todoHueco) trozos.push('<b>no hay dato de lluvia de estas 72 h</b> — no es que no haya llovido');
-  else trozos.push('sin agua en las últimas 72 h'
+  else if (P.agua > 0) trozos.push(`apenas ha llovido en ${ventana}`);
+  else if (P.todoHueco) trozos.push(`<b>no hay dato de lluvia de ${ventana}</b> — no es que no haya llovido`);
+  else if (!mir) trozos.push('<b>sin horas pasadas cargadas</b>: no se sabe lo que ha llovido');
+  else trozos.push(`sin agua en ${ventana}`
     + (P.huecos ? ` (con ${P.huecos} horas sin dato)` : ''));
 
   if (has(P.nieveSuelo) && P.nieveSuelo > 0)
@@ -10375,7 +10422,9 @@ function renderTorres() {
                + num(has(h.cape) ? h.cape.toFixed(0) : '—', 'CAPE J/kg',
                      has(h.cape) && h.cape >= (S.thr?.capeWarn ?? 300) ? 'rojo' : tapaAbierta, 'decide')
                + num(has(h.cin) ? h.cin.toFixed(0) : '—',
-                     'tapa J/kg' + (has(h.cin) ? ' · ' + textoTapa(h.cin, h) : '')
+                     'tapa J/kg' + (has(h.cin) ? ' · ' + (tapaAbierta
+                       /* en rojo no puede poner «aguanta» (25-09-2026): el número y el listón */
+                       ? `por debajo de ${TAPA_ROMPE}: con este CAPE rompe` : textoTapa(h.cin, h)) : '')
                      /* De quién es, si no es del que da el CAPE. Sin esto,
                         dos modelos distintos se leen como una pareja. */
                      + (h.tapaDe ? ` · la da ${esc(h.tapaDe)}, no ${esc(modeloDato()?.name ?? '')}` : ''),
@@ -13576,11 +13625,17 @@ function renderNow() {
      hace días. Solo faltaba enseñarlos. */
   const capeTxt = !has(c?.cape) ? '' : c.cape >= (S.thr?.capeNo ?? 1000) ? 'alta'
     : c.cape >= (S.thr?.capeWarn ?? 300) ? 'moderada' : 'baja';
-  const tapaTxt = fraseTapa(c?.cin, c);
   /* El mismo listón que usa el vigilante: CAPE ≥ 700 con la tapa por
      debajo de 75. Un número distinto aquí y allí sería otro renglón que
      dice una cosa mientras el aviso dice otra. */
   const tormenta = has(c?.cape) && has(c?.cin) && c.cape >= CAPE_COMBINACION && c.cin < TAPA_ROMPE;
+  /* Y cuando salta la regla NO se pone la palabra de la escala
+     (25-09-2026): con la tapa en 68 esta casilla decía «Tapa que aguanta ·
+     gasolina y sin tapa: puede romper», las dos cosas a un centímetro.
+     Lo mismo que arregló `lineaCapeHora` en Horas: el número y el listón. */
+  const tapaTxt = tormenta
+    ? `tapa ${Math.round(c.cin)}${firmaTapa(c)} (por debajo de ${TAPA_ROMPE})`
+    : fraseTapa(c?.cin, c);
 
   /* ── CUÁNDO EMPIEZA A LLOVER, no solo cuánto cae ahora ───────────────
      «0,0 mm» con nubarrones encima no le dice nada. Lo que sirve es la
@@ -13864,6 +13919,12 @@ function renderNow() {
       /* El modelo cargado no ve nada. Antes se cerraba en falso con un
          «no se espera» en verde. Ahora se pregunta a los demás. */
       const otra = lluviaQueVieneYNoVesTu();
+      /* Sin la comparativa (primer pintado, cambio de sitio, o la carga
+         que falló), «no se espera · ninguno de los modelos la ve» en
+         verde afirmaba lo que nadie había mirado (25-09-2026). */
+      if (otra && otra.sabido === false)
+        return dt('Próxima lluvia', 'no la ve tu modelo',
+          `${mmTxt(agua24)} mm en 24 h según ${esc(nombreDeModelo(duenoLluvia()))} · a los demás todavía no he podido preguntarles`);
       if (otra) {
         return dt('Próxima lluvia',
           `${String(otra.hora.getHours()).padStart(2, '0')}:00<small> según otros</small>`,
@@ -14034,12 +14095,34 @@ function iHoraMar(tiempos, ahora = Date.now()) {
   return mejor;
 }
 function picoOleaje24h(alturas, tiempos, ahora = Date.now()) {
+  return picoOleaje24hCon(alturas, tiempos, ahora)?.v ?? null;
+}
+/* El mismo pico, con su hora (25-09-2026): «Sube a 2,0 m» sin hora al lado
+   de un «lo más alto 2,1 m mañana a las 04:00» eran dos verdades a medias. */
+function picoOleaje24hCon(alturas, tiempos, ahora = Date.now()) {
   if (!Array.isArray(alturas) || !alturas.length) return null;
   const i0 = iHoraMar(tiempos, ahora);
-  const tramo = alturas.slice(i0, i0 + 24).filter(has);
-  return tramo.length ? Math.max(...tramo) : null;
+  let mejor = null;
+  for (let i = i0; i < Math.min(alturas.length, i0 + 24); i++)
+    if (has(alturas[i]) && (!mejor || alturas[i] > mejor.v)) mejor = { v: alturas[i], t: tiempos?.[i] ?? null, i };
+  return mejor;
+}
+function aLasHora(t, ahora = Date.now()) {
+  if (!t) return '';
+  const d = new Date(t), h0 = new Date(ahora);
+  const hh = `a las ${String(d.getHours()).padStart(2, '0')}:00`;
+  return d.toDateString() === h0.toDateString() ? hh : `${hh} de ${nombreDeDia(d)}`;
 }
 
+/* «Mar de viento», UNA frase (25-09-2026): Ahora cortaba en 0,2 y tenía la
+   rama «picada»; Mar cortaba en 0,3 y no la tenía. Con 0,25 m decían cosas
+   distintas de la misma ola. */
+function fraseMarDeViento(wv, sw) {
+  if (!has(wv)) return '';
+  if (wv < 0.2) return 'Casi nada: la mar está limpia';
+  if (wv >= (sw ?? 0)) return 'Manda el viento: picada';
+  return 'La levanta el viento de aquí';
+}
 function pintarMarAhora(dt) {
   const el = $('#marAhora');
   if (!el) return;
@@ -14061,13 +14144,14 @@ function pintarMarAhora(dt) {
     : T < 11 ? 'mar de fondo: con forma'
     : 'fondo largo, olas bien formadas';
 
-  const pico = picoOleaje24h(M.hourly?.wave_height, M.hourly?.time);
+  const picoC = picoOleaje24hCon(M.hourly?.wave_height, M.hourly?.time);
+  const pico = picoC?.v ?? null;
 
   el.innerHTML = [
     dt('Altura de ola', show(C.wave_height, unidadMar(M, 'wave_height'), 1),
        [rumboLargo(C.wave_direction) ? `Del ${rumboLargo(C.wave_direction)}` : '',
         has(pico) && pico > C.wave_height + 0.2
-          ? `Sube a <b>${pico.toFixed(1).replace('.', ',')} m</b> en las próximas 24 h` : '',
+          ? `Sube a <b>${pico.toFixed(1).replace('.', ',')} m</b> ${aLasHora(picoC.t)} (en las próximas 24 h)` : '',
        ].filter(Boolean).join('<br>')),
     dt('Periodo', show(T, unidadMar(M, 'wave_period'), 1), forma),
     /* ── LAS MAREAS, PEDIDAS POR ÉL AQUÍ MISMO ──────────────────────
@@ -14101,11 +14185,7 @@ function pintarMarAhora(dt) {
        kayak. Medido en Bermeo esa noche: fondo 1,2 m y viento 0,02 —
        mar limpia—. Con esos dos números al lado se ve solo. */
     dt('Mar de viento', show(C.wind_wave_height, unidadMar(M, 'wind_wave_height'), 1),
-       has(C.wind_wave_height)
-         ? (C.wind_wave_height < 0.2 ? 'Casi nada: la mar está limpia'
-            : C.wind_wave_height >= (C.swell_wave_height ?? 0) ? 'Manda el viento: picada'
-            : 'La levanta el viento de aquí')
-         : ''),
+       fraseMarDeViento(C.wind_wave_height, C.swell_wave_height)),
     dt('Corriente', show(C.ocean_current_velocity, unidadMar(M, 'ocean_current_velocity'), 1),
        'Del agua, no del viento'),
   ].join('') + notaUnidadesMar(M);
@@ -14208,7 +14288,7 @@ function tarjetaHora(h) {
         <span>💨 ${has(h.wind) ? wtxt(h.wind, true) : '—'} · ${has(h.dir) ? 'del ' + rumboLargo(h.dir) : '—'}</span>
         <span class="faint">Rocío ${has(h.dew) ? h.dew.toFixed(0)+'°' : '—'} · HR ${has(h.hum) ? h.hum+'%' : '—'}</span>
       </div>
-      <div class="hcard__g">Racha ${has(h.gust) ? wtxt(h.gust, true) : '—'}</div>${chipsOtrosHora(h, 'racha')}
+      <div class="hcard__g" data-s="${nivelRacha(h.gust)}">Racha ${has(h.gust) ? wtxt(h.gust, true) : '—'}</div>${chipsOtrosHora(h, 'racha')}
       ${lineaCapeHora(h)}${chipsOtrosHora(h, 'tormenta')}
     </div>`;
 }
@@ -14313,7 +14393,7 @@ function iconosDelDia(dia) {
   if (!delDia.length) return SIN_DIBUJO;
   const R = resumenCielo(delDia);
   if (!R || !has(R.code)) return SIN_DIBUJO;
-  const d = deNoche ? 0 : 1;
+  const d = has(R.dia) ? R.dia : (deNoche ? 0 : 1);   // el de sus horas (diaDeLaHora), no el de la ventana (25-09-2026)
   /* Un icono por tramo, sin elegir (09-09-2026): ver la franja de «Ahora».
      En la tarjeta del día el rótulo es la hora en que empieza cada tramo,
      que es lo que cabe. */
@@ -14461,8 +14541,7 @@ function renderDays() {
        la semana — y encima su prioridad número uno es la lluvia, no el
        viento. Ahora manda la peor de las tres. */
     const peorDe = (...ns) => ns.includes('no') ? 'no' : ns.includes('warn') ? 'warn' : ns.includes('go') ? 'go' : 'nd';
-    const nRacha = !has(racha) ? 'nd'
-      : racha >= listonRafaga().no ? 'no' : racha >= listonRafaga().warn ? 'warn' : 'go';
+    const nRacha = nivelRacha(racha);   // la misma decisión que la tarjeta de la hora
     const nLluvia = !has(mm) ? 'nd'
       : mm >= (S.thr?.rainNo ?? 2) ? 'no' : mm >= (S.thr?.rainWarn ?? 0.2) ? 'warn' : 'go';
     const nivel = tormenta ? 'no' : peorDe(nRacha, nLluvia);
@@ -15198,12 +15277,10 @@ function renderSea() {
     dt('Altura de ola', show(C.wave_height, unidadMar(M, 'wave_height'), 1), rumboLargo(C.wave_direction) ? `Del ${rumboLargo(C.wave_direction)}` : ''),
     dt('Periodo', show(C.wave_period, unidadMar(M, 'wave_period'), 1)),
     dt('Temp. del agua', show(C.sea_surface_temperature, unidadMar(M, 'sea_surface_temperature'), 1)),
-    dt('Mar de fondo', show(C.swell_wave_height ?? M.hourly.swell_wave_height?.[0], unidadMar(M, 'swell_wave_height'), 1),
+    dt('Mar de fondo', show(C.swell_wave_height ?? M.hourly.swell_wave_height?.[iHoraMar(M.hourly.time)], unidadMar(M, 'swell_wave_height'), 1),
        has(C.swell_wave_period) ? `Periodo ${C.swell_wave_period.toFixed(1).replace('.', ',')} s` : ''),
     dt('Mar de viento', show(C.wind_wave_height, unidadMar(M, 'wind_wave_height'), 1),
-       has(C.wind_wave_height)
-         ? (C.wind_wave_height < 0.3 ? 'Casi nada: la mar está limpia' : 'La levanta el viento de aquí')
-         : ''),
+       fraseMarDeViento(C.wind_wave_height, C.swell_wave_height)),
     dt('Corriente', show(C.ocean_current_velocity, unidadMar(M, 'ocean_current_velocity'), 1),
        has(C.ocean_current_velocity) ? 'Del agua, no del viento' : ''),
   ].join('') + notaUnidadesMar(M) + notaCeldaMar(M);
@@ -15225,8 +15302,12 @@ function renderSea() {
      un gráfico de 48 horas sin una sola hora escrita no dice si el pico
      es esta tarde o pasado mañana. Él va a hacer surf y kayak: la hora
      del máximo es justo el dato. */
-  const wv = M.hourly.wave_height?.slice(0, 48) ?? [];
-  const wt = M.hourly.time?.slice(0, 48) ?? [];
+  /* Desde AHORA (25-09-2026): la serie empieza a medianoche, y «48 h» desde
+     ahí eran a las 20:00 veinte horas pasadas; «lo más alto» podía ser un
+     pico que ya había pasado, bajo un rótulo que promete lo que viene. */
+  const i0Ola = iHoraMar(M.hourly.time);
+  const wv = M.hourly.wave_height?.slice(i0Ola, i0Ola + 48) ?? [];
+  const wt = M.hourly.time?.slice(i0Ola, i0Ola + 48) ?? [];
   if (wv.filter(has).length) {
     /* ── EL SUELO DE ESCALA NO ES UN DATO ───────────────────────────
        El ,5 está para que la curva no toque el techo. Ese mismo `mx` se

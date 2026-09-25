@@ -1,3 +1,11 @@
+<!-- APP METEO -PRINCIPAL (iMac), 25-09-2026 10:50 -->
+
+# 🟢 BUILD 2026.09.25-0848: dieciséis fallos más de la misma familia (tres agentes), y DOS COSAS QUE CAMBIAN CÓMO SE LEEN LAS SERIES — ver TRASPASO §36
+
+1. **`past_hours` manda sobre `past_days`** (medido por /om): `cargarTorres`/`completarTorres` van ahora con `past_days: 3` sin `past_hours`; `loadAll`/`completar` con `past_hours: 24`. `fc.hourly[0]` NUNCA es «ahora»: buscad la hora por su tiempo. 2. **`completar()` pega lo prestado por hora (`alinear`)**, no por posición. Además: `nivelRacha()` para las dos chapas, `fraseMarDeViento()`, `picoOleaje24hCon()`/`aLasHora()`, `lluviaQueVieneYNoVesTu()` devuelve `{sabido:false}` sin comparativa, la nota del parte lee `CON_TAPA`, y `sin-modelos-a-mano.cjs` mira dentro de las plantillas. `pantallas.cjs` v2 corre a 5 horas y os parará la publicación si una pantalla lee la hora equivocada: no lo quitéis, arreglad la pantalla. Banco 1311. Aitor sube a GitHub con el script.
+
+---
+
 <!-- APP METEO -PRINCIPAL (iMac), 25-09-2026 09:00 -->
 
 # 🟢 GUARDIA NUEVO EN revisar.sh: `pantallas.cjs` (ver TRASPASO §35). Si os para la publicación, NO lo quitéis: arreglad la pantalla

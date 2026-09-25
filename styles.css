@@ -728,8 +728,9 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;
 .hcard__r{display:flex;flex-direction:column;gap:3px;margin-top:8px;font-size:0.8125rem;color:var(--dim)}
 .hcard__g{margin-top:9px;font-size:0.8125rem;font-weight:650;color:var(--dim);white-space:nowrap;
   background:rgba(255,255,255,.07);border-radius:7px;padding:4px 6px}
-.hcard[data-s=no] .hcard__g{background:rgba(255,77,94,.18);color:#ffb9c0}
-.hcard[data-s=warn] .hcard__g{background:rgba(255,176,46,.16);color:#ffd79a}
+/* 25-09-2026: el color de la chapa es el de LA RACHA, no el de la hora (con sirimiri salía «Racha 22 km/h» en rojo) */
+.hcard__g[data-s=no]{background:rgba(255,77,94,.18);color:#ffb9c0}
+.hcard__g[data-s=warn]{background:rgba(255,176,46,.16);color:#ffd79a}
 /* CAPE y tapa de esa hora. Pedido por él el 28-08-2026: «aquí falta
    poner si habrá CAPE, inhibición, etc.». En ámbar solo cuando se
    cumplen las dos condiciones calibradas a la vez; el ámbar NO cambia el

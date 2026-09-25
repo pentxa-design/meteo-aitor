@@ -48,6 +48,16 @@ const BLANCA = [
   'gem_seamless: ',
   /* Explicaciones fijas: lo que ES cada modelo, no lo que sirve hoy. */
   'el más fino que cubre Euskadi',
+  /* Salieron al cerrar el hueco de las plantillas (25-09-2026): son
+     explicaciones de lo que cada modelo ES o de lo que publica según su
+     documentación (capas de nubes), no de quién sirve el dato hoy. */
+  'AROME es el de más resolución sobre Euskadi',
+  'no da ni',
+  'publican sus capas',
+  'no lo tenemos comprobado',
+  'al Automático no se le pide',
+  'Prueba con <b>ICON-EU</b>',
+  'gastan mucha menos memoria',
   'DWD alemán',
   'NOAA · global',
   'Centro Europeo',
@@ -103,14 +113,22 @@ for (const f of ficheros) {
      se comiera medio fichero y señalara líneas que no tenían nada. Un
      detector que grita donde no hay nada se acaba desconectando, que es
      como se pierden los guardias. */
+  /* Las plantillas `…` de varias líneas: la línea de en medio no lleva
+     comilla ninguna y este guardia se la saltaba. Así se le escapó
+     «ECMWF y AROME HD no la publican» en la nota del parte (25-09-2026).
+     Se cuenta el acento grave: uno impar abre o cierra una plantilla. */
+  let dentro = false;
   limpio.split('\n').forEach((l, i) => {
     const linea = i + 1;
+    const ticks = (l.match(/`/g) || []).length;
+    const enPlantilla = dentro || ticks > 0;
+    if (ticks % 2 === 1) dentro = !dentro;
     /* La DEFINICIÓN de los modelos es su sitio: ahí vive el nombre. */
     if (/\b(name|nom|id|om|windy)\s*:/.test(l)) return;
     if (BLANCA.some(b => l.includes(b))) return;
-    /* Y solo si va dentro de comillas: un nombre suelto en código no se
-       pinta. Vale cualquiera de las tres, que en esta app se mezclan. */
-    if (!/['"`]/.test(l)) return;
+    /* Y solo si va dentro de comillas, o dentro de una plantilla abierta en
+       una línea anterior: un nombre suelto en código no se pinta. */
+    if (!enPlantilla && !/['"]/.test(l)) return;
     for (const n of NOMBRES) {
       const rx = new RegExp('(^|[^\\w${])' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\w-])');
       if (rx.test(l)) {
