@@ -79,6 +79,7 @@ const HORA_TAPA_ICON = 10;                      // la tapa de ICON vale 5 solo a
 const HORA_TORMENTA = 13;                       // a esa hora falsa el cargado lleva CAPE 800 y tapa 68 todo el día
 const HORA_SIN_COMPARATIVA = 20;                // a esa hora falsa la comparativa (7 modelos) NO contesta
 const HORA_SIN_FONDO = 13;                      // a esa hora `current` no trae mar de fondo (se lee de la serie)
+const HORA_SIN_EUSKALMET = 7;                   // a esa hora el lote de Euskalmet contesta 200 con ok:false (ninguna leída)
 const RACHA_DIA = [30, 90, 60, 35, 40, 45, 50, 25, 20, 30];   // hoy: tormenta con racha floja
 
 /* ── LOS DATOS TRAMPA, construidos alrededor del reloj falso ────────── */
@@ -232,6 +233,9 @@ function trampa(fijo, hh) {
   const euskalmet = (p) => {
     const puntos = (p.get('puntos') || '').split('|').filter(Boolean);
     if (!puntos.length) return { ok: true, hayClave: true, estaciones: [almike(43.41, -2.72)] };
+    /* Como el 25-09 a las 10:50 en producción: 200, `ok:false`, sin puntos. */
+    if (hh === HORA_SIN_EUSKALMET) return { ok: false, hayClave: true, puntos: [],
+      reason: `no he podido leer ninguna de las ${puntos.length * 4} estaciones de Euskalmet` };
     return { ok: true, hayClave: true, fuente: 'Euskalmet · Gobierno Vasco', consultado: new Date(fijo).toISOString(),
       estacionesLeidas: 1, estacionesPedidas: 1, estacionesCaidas: 0,
       puntos: puntos.map((x, i) => {
@@ -454,10 +458,19 @@ async function unaHora(hh) {
   if (/midiendo…/.test(torres)) falla('Mis estaciones: sigue «midiendo…» con Euskalmet y AEMET ya contestados');
   const cabeceras = [...doc.querySelectorAll('#torres th')].map(t => t.textContent.replace(/\s+/g, ' ').trim()).filter(t => t.startsWith('ESTACIÓN'));
   if (cabeceras.length !== SITIOS.length) falla(`Mis estaciones: ${cabeceras.length} cabeceras ESTACIÓN para ${SITIOS.length} sitios`);
-  if (!/Almike/.test(cabeceras[0] || '')) falla(`Mis estaciones: al primer sitio le toca Almike y la cabecera dice «${cabeceras[0] || ''}»`);
+  if (hh !== HORA_SIN_EUSKALMET && !/Almike/.test(cabeceras[0] || '')) falla(`Mis estaciones: al primer sitio le toca Almike y la cabecera dice «${cabeceras[0] || ''}»`);
   if (!/FORUA/.test(cabeceras[1] || '')) falla(`Mis estaciones: al segundo sitio le toca FORUA y la cabecera dice «${cabeceras[1] || ''}»`);
   const redes = new Set();
   for (const c of cabeceras) { if (/Euskalmet/.test(c)) redes.add('Euskalmet'); if (/AEMET/.test(c)) redes.add('AEMET'); }
+  if (hh === HORA_SIN_EUSKALMET) {
+    /* Euskalmet no contestó: sale AEMET en las dos, y SE DICE que la otra red faltó. */
+    for (const c of cabeceras) {
+      if (!/FORUA/.test(c)) falla(`Mis estaciones: sin Euskalmet le toca FORUA y la cabecera dice «${c}»`);
+      if (!/Euskalmet no contestó/.test(c)) falla(`Mis estaciones: Euskalmet no contestó y la cabecera lo calla: «${c}»`);
+    }
+    if (!/no he podido leer ninguna/.test(A.S.medidoSinEuskalmet || '')) falla(`Mis estaciones: el motivo de Euskalmet no es el del servidor: «${A.S.medidoSinEuskalmet}»`);
+    if (/error 200/.test(A.S.medidoSinEuskalmet || '')) falla('Mis estaciones: «error 200» no es un error, es un 200 con ok:false');
+  }
   const pie = [...doc.querySelectorAll('p')].map(p => p.textContent.replace(/\s+/g, ' ')).find(t => /Anem[oó]metros de/.test(t)) || '';
   if (!pie) falla('Mis estaciones: falta el pie «Anemómetros de …»');
   for (const r of redes) if (pie && !pie.includes(r)) falla(`Mis estaciones: el pie dice «${pie.slice(0, 55).trim()}…» y en la tabla hay una estación de ${r}`);

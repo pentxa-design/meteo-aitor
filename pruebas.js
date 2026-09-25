@@ -9775,6 +9775,12 @@ grupo('Sus pantallazos del 25-09 a las 07:13: seis fallos de pantalla');
      /nieveHoy, mirados,/.test(src) && /const mir = has\(P\.mirados\) \? Math\.min\(72, P\.mirados\) : 0;/.test(src));
   ok('loadAll y completar piden 24 h atrás, para que la mínima del día tenga hora',
      (src.match(/forecast_days: 10, past_hours: 24, models: /g) || []).length === 3 && !/forecast_days: 10, past_hours: 1, models: /.test(src));
+  ok('la cabecera de ESTACIÓN dice si la otra red no contestó, aunque haya aparato de la que sí (visto en producción el 25-09 a las 10:50)',
+     /S\.medidoSinEuskalmet && M\.fuente !== 'Euskalmet' \? ' · <b>Euskalmet no contestó<\/b>' : ''/.test(src)
+     && /S\.medidoSinAemet && M\.fuente === 'Euskalmet' \? ' · <b>AEMET no contestó<\/b>' : ''/.test(src));
+  ok('y el motivo es el del servidor, no «error 200»',
+     /no he podido preguntar a Euskalmet\$\{d\?\.reason \? ` \(\$\{String\(d\.reason\)\.slice\(0, 80\)\}\)`/.test(src)
+     && /r\?\.status && r\.status !== 200 \? ` \(error \$\{r\.status\}\)` : ''/.test(src));
   ok('el marcador dice «en N comparaciones», no «N veces» a secas',
      /error medio \$\{txt\(m\.error\)\} en \$\{m\.n\} comparaciones\$\{/.test(src));
 }

@@ -318,4 +318,5 @@ menos una guardia. Una guardia que no puede parar nada es un adorno.
 | **«Próxima lluvia» no afirma «ninguno de los modelos la ve» sin haber podido preguntar (25-09-2026)** | `«Próxima lluvia» distingue «ninguno la ve» de «no he podido preguntar» (sabido:false)` |
 | **Lo prestado por completar() se pega por HORA, nunca por posición; y Mis torres pide 3 días atrás sin past_hours, que los anulaba (25-09-2026, medido)** | `completar() pega lo prestado POR HORA (alinear), no por posición` |
 | **La gráfica de oleaje y «Sube a» miran desde AHORA y dicen la hora del pico; la pestaña Mar lee la mar de fondo en la hora en curso (25-09-2026)** | `la gráfica de oleaje de 48 h empieza AHORA (i0Ola), no a medianoche` |
+| **Si una red de estaciones no contestó, la cabecera lo dice aunque haya aparato de la otra: «MATXITXAKO · AEMET · a 5,3 km · Euskalmet no contestó» (25-09-2026, visto en producción)** | `la cabecera de ESTACIÓN dice si la otra red no contestó, aunque haya aparato de la que sí (visto en producción el 25-09 a las 10:50)` |
 

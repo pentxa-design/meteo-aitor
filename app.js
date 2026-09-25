@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.25-0848';
+const BUILD = '2026.09.25-0857';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -7530,8 +7530,12 @@ async function medidasDeTodos(sitios) {
        la cabecera lo cuente; que la tabla salga sin ellas, callando, es
        la misma mentira de siempre con otra ropa. */
     const eusOk = !!(d?.ok && Array.isArray(d.puntos));
+    /* Con la razón que manda el servidor: un 200 con `ok:false` es «no he
+       podido leer ninguna estación», no «error 200» (25-09-2026, visto en
+       producción a las 10:50). */
     S.medidoSinEuskalmet = eusOk ? null
-      : `no he podido preguntar a Euskalmet${r?.status ? ` (error ${r.status})` : ''}`;
+      : `no he podido preguntar a Euskalmet${d?.reason ? ` (${String(d.reason).slice(0, 80)})`
+          : r?.status && r.status !== 200 ? ` (error ${r.status})` : ''}`;
     const eus = eusOk ? d.puntos : sitios.map(() => null);
 
     const m = new Map();
@@ -8992,7 +8996,13 @@ function renderParte() {
           <th>${M ? `ESTACIÓN&nbsp;· ${esc(M.nombre)}<span>${esc(M.fuente || 'AEMET')} · a ${
               String(M.km).replace('.', ',')} km${has(M.altitud) ? ` · ${M.altitud} m` : ''}${
               M.alturaAnemometro ? ` · mide a ${M.alturaAnemometro} m` : ''}${
-              hace ? ` · ${hace}` : ''}</span>`
+              hace ? ` · ${hace}` : ''}${
+              /* Si la OTRA red no contestó, se dice aquí mismo (25-09-2026):
+                 en producción salía «MATXITXAKO · AEMET · a 5,3 km» con
+                 Almike (Euskalmet) a 1,1 km sin poder leerse, y nada lo decía.
+                 Un aparato más lejos no es el más cercano: es el que quedó. */
+              S.medidoSinEuskalmet && M.fuente !== 'Euskalmet' ? ' · <b>Euskalmet no contestó</b>' : ''}${
+              S.medidoSinAemet && M.fuente === 'Euskalmet' ? ' · <b>AEMET no contestó</b>' : ''}</span>`
             /* ── TRES ESTADOS, NO DOS ────────────────────────────
                Cazado el 30-08-2026 con un pantallazo suyo de las 10:33,
                recién cargado: BI BERMEO ponía «ninguna cerca» y unos
