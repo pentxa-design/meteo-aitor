@@ -353,6 +353,76 @@ grupo('Una clave inventada por nosotros no puede viajar a la API (22-09-2026)');
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   EL NÚMERO Y LA PALABRA DE LAS NUBES SALEN DE SITIOS DISTINTOS
+   ──────────────────────────────────────────────────────────────────────
+   Su foto de Mundaka, 25-09-2026 a las 14:42: cielo tapado de gris. La
+   tarjeta decía «86 % · NUBES · PARCIALMENTE NUBOSO». El 86 % es el
+   total prestado; la palabra, la votación de los cinco. Por la escala de
+   la propia app un 70 % ya es «cubierto»: el número y la palabra de la
+   misma línea se contradicen.
+
+   MEDIDO esa hora: AROME 100 de nube baja (peso 3), ICON 50, ARPEGE 27,
+   ECMWF 22, GFS 0 → mediana ponderada 50. Acertó el suyo y perdió la
+   votación. La votación NO se toca por una foto; lo que no puede ser es
+   que la contradicción se calle.
+   ══════════════════════════════════════════════════════════════════════ */
+grupo('El número y la palabra de las nubes, cuando no cuadran (25-09-2026)');
+{
+  /* EL CUERPO DE LA FUNCIÓN, SACADO DE app.js Y EJECUTADO, con las
+     dependencias puestas a mano. `cieloVisto` es la tubería entera del
+     cielo —vota, mira la lluvia, el velo…— y aquí no hace falta: lo que
+     se prueba es la DECISIÓN de `nubesPie` con lo que aquélla devuelve.
+     Inyectadas, y no con un global, porque el `cieloVisto` de verdad ya
+     está cargado más arriba y taparía al de mentira. */
+  eval(sacarConst('VELADO'));
+  eval(sacar('function codigoVotado('));
+  eval(sacarConst('tapado'));
+  eval(sacar('function textoVisto('));
+  /* `WMO` y `wmoText` van con `const` en app.js y en este banco se cargan
+     más abajo, así que aquí hay que traerlos antes de usarlos. */
+  eval(sacarConst('WMO'));
+  eval(sacarConst('wmoText'));
+  const fuente = sacar('function nubesPie(');
+  const hacer = (code, txt) => new Function(
+    'cieloVisto', 'VELADO', 'has', 'codigoVotado', 'tapado', 'textoVisto',
+    fuente + '; return nubesPie;'
+  )(() => ({ code, dia: 1, txt }), VELADO, has, codigoVotado, tapado, textoVisto);
+  let nubesPie;
+  const con = (code, txt) => { nubesPie = hacer(code, txt); };
+
+  con(2, 'Parcialmente nuboso');
+  ok('el caso de su foto: el 86 % dice cubierto y la casilla lo cuenta',
+     nubesPie({ cloud: 86 }) === 'nubes · Parcialmente nuboso · el 86 % dice cubierto',
+     nubesPie({ cloud: 86 }));
+
+  con(3, 'Cubierto');
+  ok('si el número y la palabra cuadran, no se dice nada de más',
+     nubesPie({ cloud: 86 }) === 'nubes · Cubierto',
+     nubesPie({ cloud: 86 }));
+
+  con(3, 'Cubierto');
+  ok('y al revés NO se avisa: sería ruido diario',
+     nubesPie({ cloud: 10 }) === 'nubes · Cubierto',
+     'la palabra dice más tapado que el número: eso no le perjudica');
+
+  con(61, 'Llueve poco');
+  ok('con agua no se compara: el código es de lluvia, no de nubes',
+     nubesPie({ cloud: 86 }) === 'nubes · Llueve poco',
+     nubesPie({ cloud: 86 }));
+
+  con(2, 'Parcialmente nuboso');
+  ok('sin total no se inventa nada',
+     nubesPie({}) === 'nubes · Parcialmente nuboso');
+  con(undefined, null);
+  ok('y sin cielo, la casilla se queda en «nubes» como siempre',
+     nubesPie({ cloud: 86 }) === 'nubes');
+
+  ok('la casilla de la tarjeta lo pide a nubesPie, no se lo arma a mano',
+     /num\(has\(h\.cloud\) \? Math\.round\(h\.cloud\) \+ ' %' : '—', nubesPie\(h\)\)/.test(src),
+     'si se vuelve a armar en línea, la contradicción vuelve a callarse');
+}
+
 grupo('Una tapa en 0 de quien no ve gasolina no dice nada (22-09-2026)');
 {
   /* La escala de la tapa, que más abajo se saca otra vez para lo suyo. */

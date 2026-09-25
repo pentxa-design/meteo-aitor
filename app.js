@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.25-1445';
+const BUILD = '2026.09.25-1515';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -10463,8 +10463,7 @@ function renderTorres() {
                + num(has(h.nieve) ? nieveTxt : '—',
                      'nieve cm/h' + (hielo ? ' · isocero a la altura del sitio' : ''),
                      has(h.nieve) && h.nieve > 0 ? 'rojo' : hielo, 'decide')
-               + num(has(h.cloud) ? Math.round(h.cloud) + ' %' : '—',
-                     'nubes' + ((has(h.code) || has(h.cloud)) && cieloVisto(h).txt ? ' · ' + cieloVisto(h).txt : ''))
+               + num(has(h.cloud) ? Math.round(h.cloud) + ' %' : '—', nubesPie(h))
                + num(has(h.temp) ? h.temp.toFixed(0) + '°' : '—',
                      (has(h.dew) ? `rocío ${h.dew.toFixed(0)}°` : 'temperatura')
                      + (has(h.hum) ? ` · HR ${h.hum}%` : ''), rocioPegado)
@@ -16698,6 +16697,46 @@ function avisoCielo(nubes, { corto = false } = {}) {
    Calpe, 08-09-2026 a las 23:49: luna con velo y debajo «Sol velado».
    El código 4 es el mismo, el texto no: de noche es «Velo de nubes
    altas». `dia` es el is_day de la hora (o el 8-19 de esDeDia). */
+/* ── EL NÚMERO Y LA PALABRA DE LAS NUBES SALEN DE SITIOS DISTINTOS ────
+   Su foto de Mundaka, 25-09-2026 a las 14:42: cielo tapado de gris, sin
+   un hueco de azul. La tarjeta decía, en la misma línea:
+
+       86 %  ·  NUBES · PARCIALMENTE NUBOSO
+
+   El **86 %** es `h.cloud`, el total prestado (ese día, de ECMWF). La
+   **palabra** sale de `cieloVisto()`, que es la votación de los cinco.
+   Dos fuentes pegadas sin decirlo — y por la escala de la propia app un
+   70 % ya es «cubierto», así que el número y la palabra de la misma
+   línea se contradicen entre ellos.
+
+   MEDIDO esa hora en Mundaka: AROME 100 de nube baja (peso 3), ICON 50,
+   ARPEGE 27, ECMWF 22, GFS 0. La mediana ponderada da 50 —«parcialmente
+   nuboso»— y la calle decía cubierto. No es un modelo malo: cuatro
+   fallaron y acertó el suyo. Quitando a ARPEGE, o a ECMWF, o dejando
+   solo los que publican capas de verdad, sigue dando 50. Cambiar la
+   votación por una foto sería precipitado; callar la contradicción, no.
+
+   SOLO SE AVISA EN UNA DIRECCIÓN: cuando el total dice MÁS tapado que
+   la palabra. Es la que le perjudica —la app pareciendo más clara de lo
+   que está—, que es justo lo que le pasó esa misma mañana a las 08:27
+   en Munguía con la portada diciendo «Despejado» y él contestando
+   «Mal». Al revés no se avisa: sería ruido diario.
+
+   Y solo con cielo seco: si el código que se ve es de agua, no hay
+   escala de nubes con la que comparar. */
+function nubesPie(h) {
+  const V = cieloVisto(h);
+  if (!V.txt) return 'nubes';
+  let s = 'nubes · ' + V.txt;
+  const seco = c => c === VELADO || (has(c) && c >= 0 && c <= 3);
+  if (has(h?.cloud) && seco(V.code)) {
+    const delTotal = codigoVotado({ bm: h.cloud, alta: null });
+    if (tapado(delTotal) > tapado(V.code))
+      s += ` · el ${Math.round(h.cloud)} % dice ${String(textoVisto(delTotal, V.dia)).toLowerCase()}`;
+  }
+  return s;
+}
+
 function textoVisto(code, dia = 1) {
   if (code === VELADO && dia === 0) return 'Velo de nubes altas';
   return wmoText(code);
