@@ -294,6 +294,29 @@ grupo('Una clave inventada por nosotros no puede viajar a la API (22-09-2026)');
   const lista = (codigo.match(/const CLAVES_NUESTRAS = \[([^\]]*)\]/) || [])[1] || '';
   const registradas = [...lista.matchAll(/'([^']+)'/g)].map(m => m[1]);
 
+  /* ── LAS CLAVES NUESTRAS SE ESCRIBEN EN LOS MISMOS SITIOS ─────────
+     El 25-09: `cape_de_la_tapa` se guardaba en `completar()` (la pestaña
+     Ahora) y NO en el camino de Mis estaciones, que presta la tapa
+     exactamente igual. Dos días enseñando «0 TAPA · ABIERTA» en la
+     pestaña con la que reparte gente mientras Ahora decía «no dice
+     nada». La misma forma de siempre: arreglar una función y no su
+     hermana.
+
+     Hay tantos caminos que prestan campos como veces se escribe
+     `weather_code_lluvia` —la clave nuestra más vieja, que sí está en
+     los dos—. Si una clave nuestra aparece en menos sitios que esa, es
+     que se ha quedado fuera de algún camino. */
+  {
+    const sitios = k => (codigo.match(new RegExp('hourly\\.' + k + '\\s*=', 'g')) || []).length;
+    const patron = sitios('weather_code_lluvia');
+    const cojas = registradas.filter(k => k !== 'weather_code_lluvia' && sitios(k) < patron);
+    ok('cada clave nuestra se escribe en todos los caminos que prestan campos',
+       patron >= 2 && cojas.length === 0,
+       cojas.length ? `se escriben en menos sitios que weather_code_lluvia (${patron}): `
+                      + cojas.map(k => `${k} en ${sitios(k)}`).join(', ')
+                    : `${patron} caminos, todas las claves en los ${patron}`);
+  }
+
   ok('la lista de claves nuestras existe y no está vacía',
      registradas.length >= 2,
      `registradas: ${registradas.join(', ') || '¡ninguna!'}`);

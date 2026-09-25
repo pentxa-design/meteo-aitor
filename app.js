@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.25-0857';
+const BUILD = '2026.09.25-1445';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -7698,10 +7698,27 @@ async function completarTorres(sitios, arr) {
 
   const pedirYPegar = async (om, ks, muerto) => {
     const conAgua = ks.includes('precipitation') && porAcierto.has('precipitation');
+    /* ── Y AQUÍ TAMBIÉN VIAJA EL CAPE DE QUIEN PRESTA LA TAPA ─────────
+       El 22-09 se puso en `completar()` —la pestaña Ahora— y NO aquí, que
+       es el camino de Mis estaciones. Resultado, visto en producción el
+       25-09 a las 14:32 en la misma app y la misma hora:
+
+           Ahora ............ «tapa 0 (la da ICON) — no dice nada»
+           Mis estaciones ... «0 TAPA · ABIERTA · LA DA ICON»
+
+       Y Mis estaciones es con la que reparte gente. Sin el CAPE del que
+       presta, `tapaVale()` no puede saber si ese 0 es una tapa de verdad
+       o el «aquí no veo nada» de ICON, y por prudencia devuelve true: o
+       sea, vuelve a escribir «ABIERTA» sobre un cero mudo.
+
+       Misma regla que las tres capas de nube y que la lluvia con su
+       código: van juntas o no van. Ni una petición de más. */
+    const conTapa = ks.includes('convective_inhibition');
     const d = await jget(API.fc, {
       latitude:  sitios.map(p => p.lat.toFixed(4)).join(','),
       longitude: sitios.map(p => p.lon.toFixed(4)).join(','),
-      hourly: ks.join(',') + (conAgua ? ',weather_code' : ''),
+      hourly: ks.join(',') + (conAgua ? ',weather_code' : '')
+              + (conTapa && !ks.includes('cape') ? ',cape' : ''),
       timezone: 'auto', wind_speed_unit: 'kmh',
       /* las mismas horas que cargarTorres: 3 días atrás, sin past_hours (25-09-2026) */
       forecast_days: 2, past_days: 3, models: om,
@@ -7726,6 +7743,10 @@ async function completarTorres(sitios, arr) {
            clasifica por código, no por milímetros. */
         if (k === 'precipitation' && porAcierto.has(k) && traeAlgo(extra[i].hourly.weather_code))
           fc.hourly.weather_code_lluvia = extra[i].hourly.weather_code;
+        /* Lo que veía el que presta la tapa, a esas mismas horas. Las
+           horas ya se han comprobado iguales unas líneas más arriba. */
+        if (k === 'convective_inhibition' && traeAlgo(extra[i].hourly.cape))
+          fc.hourly.cape_de_la_tapa = extra[i].hourly.cape;
         if (muerto) (fc.seCayo ??= []).push({ k, muerto, salvo: om });
       }
     });

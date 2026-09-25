@@ -76,6 +76,22 @@ const MOJADO = 'icon_seamless';                 // el único modelo que ve agua�
 const HORAS_AGUA = new Set([3, 4, 21, 22]);     // …y a estas horas locales
 const HORAS_RACHA = new Set([5, 15]);           // racha de 90 a estas horas (listón NO), 20 el resto
 const HORA_TAPA_ICON = 10;                      // la tapa de ICON vale 5 solo a las 10:00 (para ver si se pega por hora)
+/* ── LA TAPA MUDA (25-09-2026) ─────────────────────────────────────────
+   A esta hora el que PRESTA la tapa (ICON) ve **CAPE 0**, y su tapa de
+   120 no significa «aguanta»: significa «aquí no veo nada». MEDIDO el
+   22-09 contra la API sobre 432 horas: con CAPE 0, la tapa vale 0 en el
+   98 % de las horas; con CAPE >0, solo en el 17 %.
+
+   Esta trampa faltaba, y por eso el banco no vio el fallo del 25-09: en
+   los datos de aquí ICON veía SIEMPRE CAPE 40, así que la tapa siempre
+   contaba y `tapaVale()` nunca decía que no. La app llevaba dos días
+   diciendo «0 TAPA · ABIERTA» en Mis estaciones mientras Ahora decía
+   «no dice nada», y las dos pantallas eran la misma hora.
+
+   Se usa la 20 porque es una de las horas de reloj que se prueban y está
+   libre: la 7 la ocupa Euskalmet caída, la 10 la tapa de 5, la 13 la
+   tormenta, y 3/4/21/22 el agua de ICON. */
+const HORA_TAPA_MUDA = 20;
 const HORA_TORMENTA = 13;                       // a esa hora falsa el cargado lleva CAPE 800 y tapa 68 todo el día
 const HORA_SIN_COMPARATIVA = 20;                // a esa hora falsa la comparativa (7 modelos) NO contesta
 const HORA_SIN_FONDO = 13;                      // a esa hora `current` no trae mar de fondo (se lee de la serie)
@@ -100,7 +116,11 @@ function trampa(fijo, hh) {
       case 'weather_code': return agua ? 61 : 1;
       case 'precipitation': return agua ? 0.6 : 0;
       case 'precipitation_probability': return agua ? 60 : 5;
-      case 'cape': return cargadoTormenta ? 800 : 40;
+      /* El que presta la tapa se queda SIN gasolina a la hora muda: es
+         el caso real de Bermeo (AROME ve 20-70 y ICON ve 0). */
+      case 'cape':
+        if (om === MOJADO && h === HORA_TAPA_MUDA) return 0;
+        return cargadoTormenta ? 800 : 40;
       /* El cargado NO publica la tapa (como AROME HD de verdad): la app se la
          pide a ICON, y así se ve si lo prestado se pega por hora. Solo a la
          hora de la tormenta el cargado la trae (68) para probar esa casilla. */
@@ -497,6 +517,37 @@ async function unaHora(hh) {
     if (!/puede romper/.test(casillaTormenta)) falla(`Ahora: con CAPE 800 y tapa 68 la casilla Tormenta no dice «puede romper»: «${casillaTormenta.slice(0, 90)}»`);
     if (/aguanta/.test(casillaTormenta)) falla(`Ahora: la casilla Tormenta dice «aguanta» y «puede romper» a la vez: «${casillaTormenta.slice(0, 90)}»`);
   }
+  /* ── LA TAPA MUDA, Y LAS DOS PANTALLAS DICIENDO LO MISMO ───────────
+     El fallo del 25-09, y la familia entera a la que pertenece: el mismo
+     dato, la misma hora, DOS pestañas, y cada una contando una cosa.
+     Aquí Ahora y Mis estaciones tienen que coincidir.
+
+     A la hora muda el que presta la tapa ve CAPE 0, así que su 120 no es
+     «aguanta»: no es nada. Y «aguanta» es la dirección PELIGROSA — le
+     dice que la tapa sujeta cuando quien lo dice no veía nada debajo.
+     Es la misma mentira que él cazó el 26-08 («la tapa no baja de 210:
+     aguanta») entrando por otra puerta. */
+  if (hh === HORA_TAPA_MUDA) {
+    const casillaTapa = [...doc.querySelectorAll('.dt')].map(d => d.textContent.replace(/\s+/g, ' '))
+      .find(t => /^\s*Tormenta/.test(t)) || '';
+    const fichaTapa = [...doc.querySelectorAll('.riesgo__v, .dt, .kpi')]
+      .map(d => d.textContent.replace(/\s+/g, ' ')).filter(t => /tapa|Inhibición/i.test(t)).join(' · ');
+    const misEst = txt(doc, '#torres') || '';
+
+    const PALABRA = /\b(abierta|aguanta|Tapa floja|Tapa fuerte|Sin tapa: si hay CAPE, rompe)\b/i;
+    for (const [donde, t] of [['Ahora', casillaTapa + ' ' + fichaTapa], ['Mis estaciones', misEst]]) {
+      if (PALABRA.test(t))
+        falla(`${donde}: con el que presta la tapa viendo CAPE 0, la pantalla se moja y dice `
+            + `«${(t.match(PALABRA) || [])[0]}»: «${t.slice(0, 120)}»`);
+    }
+    const loDiceAhora = /no dice nada/.test(casillaTapa + ' ' + fichaTapa);
+    const loDiceTorres = /no dice nada|NO DICE NADA/.test(misEst);
+    if (!loDiceAhora) falla(`Ahora: la tapa muda no se dice («${(casillaTapa + ' ' + fichaTapa).slice(0, 120)}»)`);
+    if (!loDiceTorres) falla('Mis estaciones: la tapa muda no se dice, y es la pestaña con la que reparte gente');
+    if (loDiceAhora !== loDiceTorres)
+      falla(`Las dos pantallas no dicen lo mismo de la MISMA hora: Ahora=${loDiceAhora} Mis estaciones=${loDiceTorres}`);
+  }
+
   const casillaLluvia = [...doc.querySelectorAll('.dt')].map(d => d.textContent.replace(/\s+/g, ' ')).find(t => /Próxima lluvia/.test(t)) || '';
   if (hh === HORA_SIN_COMPARATIVA) {
     if (!TR.comparativasCaidas()) falla('TRAMPA: la comparativa no llegó a pedirse, así que no se puede saber qué dice «Próxima lluvia» sin ella');
