@@ -9711,7 +9711,35 @@ grupo('Sus pantallazos del 25-09 a las 07:13: seis fallos de pantalla');
      /Sirimiri/.test(conIcon) && /lo ve ICON/.test(conIcon) && !/lo ve/.test(conElMio),
      JSON.stringify({ conIcon, conElMio }));
 
-  /* 5 y 6. Dos textos. */
+  /* ── LAS PANTALLAS, A LA HORA A LA QUE ÉL LAS MIRA (25-09-2026) ───────
+   Suyo, con diecisiete pantallazos de las 07:13 y seis fallos de
+   pantalla dentro: «¿pero todavía seguimos teniendo fallos?» · «que no
+   vuelva a pasar, porque me suena que no es la primera vez». Los seis
+   tenían la misma forma y ninguna de las 1.276 pruebas miraba esas
+   pantallas a esa hora. `pantallas.cjs` las arranca enteras a cuatro
+   horas del día con datos trampa distintos en cada hora. Esto fija que
+   el guardia SIGA ENGANCHADO (el 27-08 `fueraDeRango` estuvo tres días
+   declarado y sin llamar) y que su trampa tenga dientes. */
+{
+  const R = fs.readFileSync(path.join(__dirname, 'revisar.sh'), 'utf8');
+  const G = fs.readFileSync(path.join(__dirname, 'pantallas.cjs'), 'utf8');
+  const V = fs.readFileSync(path.join(__dirname, '.vercelignore'), 'utf8');
+  ok('revisar.sh arranca pantallas.cjs y deploy.sh no publica si una pantalla dice lo que no toca',
+     /^node pantallas\.cjs \|\| exit 1$/m.test(R),
+     'un guardia escrito no es un guardia puesto');
+  ok('el guardia de pantallas corre a las 02, 07, 13 y 20 h, no solo a la hora de quien publica',
+     /'2,7,13,20'/.test(G));
+  ok('su trampa cambia con la hora y se planta si no muerde (mar de fondo, pico de ola, is_day de las 08:00)',
+     /TRAMPA SIN DIENTES: el pico de las 24 primeras horas/.test(G)
+     && /TRAMPA SIN DIENTES: la mar de fondo de medianoche/.test(G)
+     && /TRAMPA SIN DIENTES: el is_day de las 08:00 y las 20:00/.test(G));
+  ok('la trampa pone el orto a las 08:01 y el ocaso a las 20:10, que es lo que pintó la luna del 25-09',
+     /const ORTO = 8 \* 60 \+ 1, OCASO = 20 \* 60 \+ 10/.test(G));
+  ok('pantallas.cjs no se sube al sitio',
+     /^pantallas\.cjs$/m.test(V));
+}
+
+/* 5 y 6. Dos textos. */
   ok('la lista de anemómetros dice «de AEMET y Euskalmet», que es lo que lleva dentro',
      (() => { const ix = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8'); return /Anemómetros de AEMET y Euskalmet cerca de tu emplazamiento/.test(ix) && !/Anemómetros de AEMET cerca/.test(ix); })());
   ok('el marcador dice «N veces más de 10 km/h corto», no «N por debajo de 10 km/h»',
@@ -9732,7 +9760,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   /* Algunas reglas las guarda `paridad.cjs`, que corre aparte en el
      candado. Se acepta que el nombre esté allí, pero se comprueba que
      exista de verdad — no vale apuntarla y que no la guarde nadie. */
-  const otrosGuardias = ['paridad.cjs', 'pruebas-servidor.cjs', 'abrir.cjs',
+  const otrosGuardias = ['paridad.cjs', 'pantallas.cjs', 'pruebas-servidor.cjs', 'abrir.cjs',
                          'prueba-almacen-caido.mjs', 'prueba-fuente-caida.mjs',
                          // Los de la revisión 04-09 (05-09-2026): cada uno con su fichero.
                          'prueba-huecos.cjs', 'prueba-sw.cjs', 'prueba-satelite.mjs', 'prueba-cabeceras.mjs',
@@ -9745,6 +9773,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      faltan.length === 0,
      faltan.length ? `SIN PRUEBA: ${faltan.join(' · ')}` : '');
 }
+
 
 /* ── MAR EN EL MAPA (19-09-2026, portátil) ───────────────────────────
    Suyo, el sábado de las regatas de Bermeo: «en mapas no tengo mar, ¿lo

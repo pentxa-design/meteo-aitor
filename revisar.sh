@@ -196,6 +196,24 @@ node sin-clases-huerfanas.cjs || exit 1
 echo "  · las dos pantallas sirven lo mismo"
 node paridad.cjs || exit 1
 
+# ── Y LAS PANTALLAS, A LA HORA A LA QUE ÉL LAS MIRA ──────────────────
+#    Suyo, 25-09-2026, con diecisiete pantallazos de las 07:13 y seis
+#    fallos de pantalla dentro: «¿pero todavía seguimos teniendo
+#    fallos?» · «que no vuelva a pasar, porque me suena que no es la
+#    primera vez». Y no lo era: los seis tenían la misma forma —una
+#    pantalla que lee la hora equivocada, un color que sale de otra
+#    cosa, un texto que desmiente la fila de al lado— y las 1.276
+#    pruebas estaban en verde porque ninguna miraba ESAS pantallas A
+#    ESA HORA con datos en los que se notara.
+#
+#    Esto arranca la app entera a las 02:30, 07:30, 13:30 y 20:30 con
+#    datos trampa distintos en cada hora (la mar de fondo vale 0,1 a
+#    medianoche y 0,8 a las 07:00; el orto es a las 08:01…) y mira lo
+#    que se pinta. Sin red y sin Vercel. Probado rompiendo cada uno de
+#    los seis arreglos a propósito: los seis lo ponen en rojo.
+echo "  · las pantallas dicen lo que toca a las 02, 07, 13 y 20 h"
+node pantallas.cjs || exit 1
+
 # ── Y QUE EL RESPALDO FUNCIONE DE VERDAD ─────────────────────────────
 #    Suyo, 30-08-2026: «si está muerto el automatismo, ala, se queda
 #    frito en la torre» · «o se cae del viento» · «o se resbala con la
