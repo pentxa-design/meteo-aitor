@@ -541,6 +541,38 @@ grupo('El número y la palabra de las nubes, cuando no cuadran (25-09-2026)');
   ok('y sin cielo, la casilla se queda en «nubes» como siempre',
      nubesPie({ cloud: 86 }) === 'nubes');
 
+  /* ── Y DE QUIÉN ES ESE CIELO (25-09-2026) ─────────────────────────
+     Sus pantallazos de las 21:40-21:41: la portada de Bermeo decía
+     «Cubierto» y la tarjeta de Bermeo, «Mayormente despejado». No era un
+     fallo de datos: en Mis estaciones tenía abierto SOLLUBEMENDI, y
+     `cieloVotado()` solo vota con la comparativa DEL SITIO. La app carga
+     una sola, la del sitio abierto, así que una tarjeta vota únicamente
+     si resulta ser ese sitio; las otras diecinueve van con un modelo.
+
+     No se puede igualar el dato sin pedir cinco modelos de nube para
+     veinte sitios, y eso no cabe en su cupo de Vercel. Lo que sí se
+     puede —y es la regla de la casa desde la tapa— es DECIRLO. */
+  con(2, 'Parcialmente nuboso');
+  {
+    const votado = hacer(2, 'Parcialmente nuboso');
+    ok('cuando han votado los cinco, la casilla lo dice',
+       votado({ cloud: 40, votado: true }) === 'nubes · Parcialmente nuboso · lo votan los 5',
+       votado({ cloud: 40, votado: true }));
+    ok('y cuando es un solo modelo, lleva su nombre',
+       votado({ cloud: 40, cieloDe: 'ICON' }) === 'nubes · Parcialmente nuboso · lo dice ICON',
+       votado({ cloud: 40, cieloDe: 'ICON' }));
+    ok('el voto manda sobre el nombre: no se dicen las dos cosas',
+       votado({ cloud: 40, votado: true, cieloDe: 'ICON' }) === 'nubes · Parcialmente nuboso · lo votan los 5');
+    ok('y si no se sabe de quién es, no se inventa',
+       votado({ cloud: 40 }) === 'nubes · Parcialmente nuboso');
+  }
+  ok('la hora apunta si el cielo salió de la votación o de un modelo',
+     /if \(h\.t\) h\.votado = !!cieloVotado\(h\.t, h\.sitio\);/.test(src),
+     'sin esto la tarjeta no puede saber cuál de las dos cosas está enseñando');
+  ok('y los veinte sitios piden la observación de ahora, como el sitio abierto',
+     /current: CURRENT,\s*\n\s*hourly: HOURLY, timezone: 'auto', wind_speed_unit: 'kmh',/.test(src),
+     'sin `current`, la portada pisaba la hora en curso con lo instantáneo y las tarjetas no');
+
   ok('la casilla de la tarjeta lo pide a nubesPie, no se lo arma a mano',
      /num\(has\(h\.cloud\) \? Math\.round\(h\.cloud\) \+ ' %' : '—', nubesPie\(h\)\)/.test(src),
      'si se vuelve a armar en línea, la contradicción vuelve a callarse');
@@ -5380,7 +5412,10 @@ grupo('«Me pasan a las 2 de la mañana: Arbaiza» — el viaje entra en la resp
      fuera.length === 0,
      `a pelo: ${fuera.join(' · ')} — tienen que salir de codigoQueSeVe()`);
   ok('y cieloVisto y los tramos de cielo salen de esa misma puerta',
-     /function cieloVisto\(h\) \{[\s\S]{0,160}const code = codigoQueSeVe\(h, h\.code\);/.test(src)
+     /* La ventana era de 160 caracteres y el 25-09 se quedó corta al
+        documentar ahí por qué se apunta `votado`. Lo que importa no es
+        la distancia: es que `cieloVisto` PASE por `codigoQueSeVe`. */
+     /function cieloVisto\(h\) \{[\s\S]{0,1600}const code = codigoQueSeVe\(h, h\.code\);/.test(src)
      && /function tramosDeCielo\(sel\) \{\n\s*const hs = \(sel \|\| \[\]\)\.map\(h => \(\{ c: codigoQueSeVe\(h, h\.code\)/.test(src),
      'si un día pintan t.code sin pasar por codigoQueSeVe, esto lo para');
 

@@ -1020,7 +1020,36 @@ export default async function handler(req, res) {
   const enFranja = h => h >= 11 && h < 22;
   const hPrevia = antes?.cuando ? new Date(antes.cuando).getHours() : null;
   const tardeAquí = enFranja(h0) || (hPrevia !== null && enFranja(hPrevia));
-  const cadaMin = { verde: tardeAquí ? 55 : 175, ambar: 25, rojo: 10 }[nivel];
+  /* ── LA CADENCIA, BAJADA POR ÉL (25-09-2026) ──────────────────────
+     Era rojo 10 · ámbar 25 · verde 175 (55 de tarde). Suyo, esa noche:
+     *«no quiero limitar Vercel porque el Centro Operativo es muy
+     importante para mi trabajo»* · *«cuando hay mal tiempo, pasando a
+     cada media hora o 1 hora es más que suficiente»* · *«las webs de
+     Ventusky etc. se actualizan cada tres horas; si mirando los mapas ya
+     te aclaras»*.
+
+     Y el argumento es bueno, no es solo ahorro: **AROME se actualiza
+     cada 3 horas** (00, 03, 06… UTC), igual que ICON; ECMWF, cuatro
+     veces al día. Pasar cada 10 minutos era releer ocho veces el mismo
+     pronóstico. Lo comprobado de lo que ESTE vigilante mira:
+
+         el pronóstico de los cinco modelos ..... cambia cada 3 h
+         las estaciones de Euskalmet ............ cada 10 min
+         los avisos oficiales de AEMET .......... unas veces al día
+
+     No lee descargas medidas —eso lo hace la app en el móvil al abrirla—,
+     así que la cadencia corta no le compraba tiempo de reacción ante un
+     rayo ya caído.
+
+     EL PRECIO, dicho una vez: si algo se arma justo después de una
+     pasada, lo sabrá hasta 30 minutos más tarde en vez de 10. Él lo ha
+     decidido sabiéndolo, y la razón de fondo es suya: la misma cuenta de
+     Vercel sostiene su web de trabajo, y si esa cuenta se capa se le cae
+     el reparto de la jornada.
+
+     El suelo de tarde sube de 55 a 60 para que no quede por debajo del
+     ámbar: un verde que mira más a menudo que un ámbar no tiene sentido. */
+  const cadaMin = { verde: tardeAquí ? 60 : 175, ambar: 60, rojo: 30 }[nivel];
   const ojeadaAMano = req.query?.mirar === '1' || req.body?.mirar === true;
   if (!ojeadaAMano && !ventanaDelParte && huecoPrevio !== null && huecoPrevio < cadaMin) {
     return res.status(200).json({

@@ -875,7 +875,7 @@ ok('el marcador tampoco contesta «cero muestras» cuando no puede leer',
 console.log('\n  El vigilante afloja cuando no pasa nada');
 const vg = fs.readFileSync(path.join(__dirname, 'api', 'vigilante.mjs'), 'utf8');
 ok('si no hay nada en marcha NI armándose, se salta la pasada (verde 3 h de noche, 1 h por la tarde)',
-   /saltada: true/.test(vg) && /const cadaMin = \{ verde: tardeAquí \? 55 : 175, ambar: 25, rojo: 10 \}\[nivel\];/.test(vg)
+   /saltada: true/.test(vg) && /const cadaMin = \{ verde: tardeAquí \? 60 : 175, ambar: 60, rojo: 30 \}\[nivel\];/.test(vg)
    && /huecoPrevio < cadaMin/.test(vg),
    'pasar cada media hora un día tranquilo se llevaba 3,2 de las 4 h de CPU del mes');
 ok('y el rojo es rayo de HOY por delante, racha de 70 por delante o tormenta ya avisada',
@@ -1134,7 +1134,7 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
      /const enFranja = h => h >= 11 && h < 22;/.test(V)
      && /const hPrevia = antes\?\.cuando \? new Date\(antes\.cuando\)\.getHours\(\) : null;/.test(V)
      && /const tardeAquí = enFranja\(h0\) \|\| \(hPrevia !== null && enFranja\(hPrevia\)\);/.test(V)
-     && /const cadaMin = \{ verde: tardeAquí \? 55 : 175, ambar: 25, rojo: 10 \}\[nivel\];/.test(V),
+     && /const cadaMin = \{ verde: tardeAquí \? 60 : 175, ambar: 60, rojo: 30 \}\[nivel\];/.test(V),
      'mirado solo en el tic, la cadencia de tarde moría a las 21:00, una hora antes de lo prometido');
   ok('lo que se está armando se GUARDA, que si no la pasada siguiente no lo sabe',
      /ojo: buenos\.reduce\(\(m, d\) => \(\{/.test(V)

@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.25-2143';
+const BUILD = '2026.09.25-2209';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -7839,6 +7839,26 @@ async function cargarTorres() {
     const d = await jget(API.fc, {
       latitude:  S.saved.map(p => p.lat.toFixed(4)).join(','),
       longitude: S.saved.map(p => p.lon.toFixed(4)).join(','),
+      /* ── Y LA OBSERVACIÓN DE AHORA, LA MISMA QUE EL SITIO ABIERTO ────
+         Su pantallazo del 25-09-2026 a las 21:40-21:41, Bermeo, la misma
+         hora en las dos pantallas:
+
+             Portada .......... «Cubierto» (había cambiado a las 21:39)
+             Mis estaciones ... «Mayormente despejado»
+
+         La petición del sitio abierto pide `current` y ésta no, así que
+         `conAhora()` pisaba la hora en curso con la observación
+         instantánea SOLO en la portada. Las tarjetas se quedaban con la
+         previsión de la hora, que es de antes.
+
+         No es una discrepancia entre modelos: es la misma app enseñando
+         dos momentos distintos y llamando a los dos «la hora en curso».
+         Él, esa noche: *«siempre hay algo que no cuadra»*.
+
+         Va en la MISMA petición —son los veinte sitios a la vez, ni una
+         llamada de más— y con la MISMA lista, `CURRENT`, para que las
+         dos pantallas no puedan volver a separarse por aquí. */
+      current: CURRENT,
       hourly: HOURLY, timezone: 'auto', wind_speed_unit: 'kmh',
       /* TRES DÍAS HACIA ATRÁS, y son para la PISTA. Suyo, 28-08-2026:
          *«ventiscas en los montes, con el 4x4 tienes que ir, te quedas
@@ -12716,6 +12736,10 @@ function cieloPartido(sel) {
    Ahora, Horas, Mis estaciones, franjas y 10 días lo llaman a él. */
 function cieloVisto(h) {
   if (!h) return { code: undefined, dia: 1, txt: null };
+  /* Se apunta en la hora si el cielo ha salido de la VOTACIÓN de los
+     cinco o de un solo modelo: es lo que separa lo que dice la portada
+     de lo que dice cada tarjeta, y hasta hoy no se decía (25-09-2026). */
+  if (h.t) h.votado = !!cieloVotado(h.t, h.sitio);
   const code = codigoQueSeVe(h, h.code);
   const hh = h.date instanceof Date ? h.date.getHours()
            : (h.t ? Number(String(h.t).slice(11, 13)) : NaN);
@@ -16791,6 +16815,31 @@ function nubesPie(h) {
   const V = cieloVisto(h);
   if (!V.txt) return 'nubes';
   let s = 'nubes · ' + V.txt;
+  /* ── DE QUIÉN ES ESTE CIELO (25-09-2026) ──────────────────────────
+     Sus pantallazos de las 21:40-21:41, Bermeo, la misma hora:
+
+         Portada .......... «Cubierto»
+         Mis estaciones ... «Mayormente despejado»
+
+     Y no era un fallo de datos: en Mis estaciones tenía abierto
+     SOLLUBEMENDI y en la portada, Bermeo. `cieloVotado()` solo puede
+     votar con la comparativa DEL SITIO —`deEsteSitio` compara las
+     coordenadas y se niega si no son las suyas, y eso se puso a
+     propósito el 01-09 porque usar la del vecino era «mandar gente con
+     el color equivocado»—. Pero la app carga UNA comparativa, la del
+     sitio abierto. Así que **una tarjeta solo vota si resulta ser el
+     sitio que tienes abierto; las otras diecinueve van con un modelo**.
+
+     Pedir cinco modelos de nube para veinte sitios no cabe en su cupo
+     de Vercel (7 h 31 min sobre 4 h/mes, y de esa misma cuenta cuelga
+     su web de trabajo). Así que no se iguala el dato: se dice de quién
+     es. Es la regla de la casa desde la tapa — «un número que no es del
+     modelo de la cabecera lleva su nombre».
+
+     Cuando la tarjeta SÍ ha podido votar (es el sitio abierto), esto no
+     sale: `votado` lo dice. */
+  if (h?.votado) s += ' · lo votan los 5';
+  else if (h?.cieloDe) s += ` · lo dice ${h.cieloDe}`;
   const seco = c => c === VELADO || (has(c) && c >= 0 && c <= 3);
   if (has(h?.cloud) && seco(V.code)) {
     const delTotal = codigoVotado({ bm: h.cloud, alta: null });
