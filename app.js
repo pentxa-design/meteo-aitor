@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.25-1724';
+const BUILD = '2026.09.25-2143';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -155,7 +155,51 @@ const PERFILES = {
          + 'o ciudad —Monte Banderas está en Bilbao—: si hay estructura '
          + 'metálica arriba, eres el pararrayos. AQUÍ MANDA EL RAYO. Y ojo al '
          + 'acceso: trampillas, escaleras de pates y rejillas mojadas.',
-    vientoManda: false, rafagaBestia: 70,
+    /* ── SUS DOS LISTONES DE RÁFAGA (25-09-2026) ───────────────────
+       Antes esto era un solo número, 70, y el ámbar se sacaba del 70 %
+       → 49. Él, esa tarde, con la pantalla de «10 días» delante:
+       *«70 km/h pon mínimo y rojo 90 para arriba»* · *«40, 50 es poco»*
+       · *«eso es a diario en invierno aquí»*.
+
+       Y tiene razón: un ámbar que salta todos los días de invierno deja
+       de leerse, y entonces tampoco se lee el día que importa. Los dos
+       van escritos, no calculados, porque son SUYOS.
+
+       CONTRA QUÉ SE HAN SITUADO, y aquí está lo bueno: él trajo esa
+       misma tarde **METEOALERTA_ANX1 de AEMET (v1, 31-05-2022)**, que
+       es la tabla oficial de umbrales de aviso. Apartado 3.15, País
+       Vasco, RACHA MÁXIMA en km/h (amarillo | naranja | rojo):
+
+           Cuenca del Nervión ....... Álava ......  70 |  90 | 130
+           Llanada alavesa .......... Álava ......  70 |  90 | 130
+           Rioja alavesa ............ Álava ......  70 |  90 | 130
+           Gipuzkoa litoral ......... Gipuzkoa ...  90 | 110 | 140
+           Gipuzkoa interior ........ Gipuzkoa ...  90 | 110 | 140
+           Bizkaia litoral .......... Bizkaia ....  90 | 110 | 140
+           Bizkaia interior ......... Bizkaia ....  90 | 110 | 140
+
+       **Él trabaja en Bizkaia y Álava, y sus dos números caen justo
+       encima de los dos amarillos oficiales de sus provincias:**
+
+           su ámbar,  70  =  el AMARILLO de Álava
+           su rojo,   90  =  el AMARILLO de Bizkaia (y el NARANJA de Álava)
+
+       O sea: se pone en precaución en cuanto AEMET avisaría en la
+       provincia más floja, y en rojo en cuanto avisaría en la más
+       expuesta. No lo eligió mirando la tabla —la trajo después—, pero
+       cae exactamente donde tenía que caer.
+
+       Y LA GALERNA, que es lo que a él le preocupa de verdad —*«aquí a
+       veces hay un día bueno y al de unas horas entra galerna»*—, tiene
+       su propia tabla en el apartado 2.4 del mismo anexo, y solo aplica
+       a la costa de Galicia, Asturias, Cantabria y País Vasco. En
+       TIERRA, litoral: amarillo con rachas > 60, naranja > 90, rojo
+       > 130. Su rojo de 90 es, otra vez, el naranja de AEMET.
+
+       La tabla por zonas del apartado 4.5 va como MAPA y no se puede
+       citar del texto; los números de arriba son los de la tabla 3.15,
+       que sí es texto. */
+    vientoManda: false, rafagaAviso: 70, rafagaBestia: 90,
     lluviaManda: false,
     alturaImporta: false,
     // El sirimiri moja el poste, la escalera, la trampilla y el armario
@@ -208,7 +252,7 @@ const DEFAULT_THR = {
 /* ── EL LISTÓN DE RÁFAGA QUE MANDA DE VERDAD (09-09-2026) ─────────────
    Aitor, con «Tu listón: 45 km/h / 60 km/h» delante: *«eso no es así»*.
    Y no lo era: en caseta y poste (perfil hierro, el 90 % de su trabajo)
-   el veredicto mira rafagaBestia (70, y avisa desde 49), pero las
+   el veredicto mira los listones del perfil (ámbar 70, rojo 90 desde
    tarjetas, los chips de «otro modelo da…» y las barras de la
    comparativa seguían pintando gustWarn/gustNo (45/60), que son los de
    SUBIR. Dos listones a la vista, y el suyo era el que no salía. Desde
@@ -240,16 +284,18 @@ function nivelRacha(v) {
      Se comparan los dos en la unidad y con los decimales en los que se
      IMPRIMEN, así que vale igual en km/h, en nudos y en m/s: lo que él
      lee arriba es lo que decide el color. */
-  const ver = x => { const w = wv(x); return has(w) ? Number(w.toFixed(wu().d)) : null; };
-  const g = ver(v);
+  const g = wRed(v);
   if (!has(g)) return 'nd';
-  return g >= ver(L.no) ? 'no' : g >= ver(L.warn) ? 'warn' : 'go';
+  return g >= wRed(L.no) ? 'no' : g >= wRed(L.warn) ? 'warn' : 'go';
 }
 function listonRafaga() {
   const P = perfil();
   if (P.vientoManda || !has(P.rafagaBestia))
     return { warn: S.thr?.gustWarn ?? DEFAULT_THR.gustWarn, no: S.thr?.gustNo ?? DEFAULT_THR.gustNo, de: 'subir' };
-  return { warn: Math.round(P.rafagaBestia * 0.7), no: P.rafagaBestia, de: S.perfil || 'hierro' };
+  /* `rafagaAviso` es el ámbar que él ha puesto; si un perfil no lo
+     trae, se sigue sacando del 70 % del tope, como siempre. */
+  return { warn: P.rafagaAviso ?? Math.round(P.rafagaBestia * 0.7),
+           no: P.rafagaBestia, de: S.perfil || 'hierro' };
 }
 
 /* Modelos numéricos. `om` = id en Open-Meteo (datos), `windy` = id en Windy (mapas).
@@ -2305,11 +2351,11 @@ function assess(h, thr, quePerfil, place = null) {
        en ÁMBAR diciendo que dentro de la caseta no impide trabajar
        (20-09-2026). */
     if (!has(g10)) bump('nd', 'Ráfaga: sin dato del modelo');
-    else if (P.rafagaBestia && wRed(g10) >= wRed(P.rafagaBestia))
+    else if (nivelRacha(g10) === 'no')
       bump('no', `Ráfaga ${wtxt(g10, true)}${deOtro}` +
         (conHierro ? `, y a ras de suelo se nota: ramas en la pista, trampillas y rejillas`
                    : ` a la intemperie`));
-    else if (P.rafagaBestia && wRed(g10) >= wRed(P.rafagaBestia * 0.7))
+    else if (nivelRacha(g10) === 'warn')
       bump('warn', `Ráfaga ${wtxt(g10, true)}${deOtro} — ` +
         (conHierro ? `molesta en la escalera del poste y para abrir armarios; dentro de la caseta no impide trabajar`
                    : `cuidado con lo que se pueda volar`));
@@ -16996,7 +17042,7 @@ function renderThr() {
      Cazado en el barrido del 01-09-2026, y era engañoso de verdad: en el
      perfil de fábrica —«Con torre o mástil», el de sus catorce sitios de
      monte, el que usa el 90 % del tiempo— el veredicto NO mira gustWarn
-     ni gustNo. Mira `rafagaBestia` (70 km/h, y avisa desde 49), porque
+     ni gustNo. Mira los listones del perfil (ámbar 70, rojo 90 desde el 25-09), porque
      ahí abajo el viento no le para: eso se decidió con él el 24-08 y NO
      se toca.
 
@@ -17016,8 +17062,8 @@ function renderThr() {
     } else {
       nota.innerHTML = `<b>OJO con los dos de ráfaga.</b> Estás en
         <b>${esc(P?.nom || S.perfil)}</b>, y ahí el viento no decide con tus listones:
-        el veredicto avisa a <b>${wtxt(P.rafagaBestia * 0.7, true)}</b> y se pone en rojo a
-        <b>${wtxt(P.rafagaBestia, true)}</b>, porque a ras de suelo la ráfaga molesta pero
+        el veredicto avisa a <b>${wtxt(listonRafaga().warn, true)}</b> y se pone en rojo a
+        <b>${wtxt(listonRafaga().no, true)}</b>, porque a ras de suelo la ráfaga molesta pero
         no impide trabajar — lo decidiste así el 24-08.
         <b>Tus dos listones de ráfaga se aplican al subir</b> (perfil «Subir a la torre»).
         Los de lluvia, CAPE y visibilidad sí valen aquí.`;

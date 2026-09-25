@@ -150,7 +150,7 @@ eval(sacarConst('mmTxt'));
 eval(sacar('function diaSiNoEsHoy(d) {'));
 eval(sacarConst('esLlovizna'));
 eval(sacar('function comoLlueve('));
-globalThis.PERFILES = { hierro: { et: 'x', vientoManda: false, rafagaBestia: 70,
+globalThis.PERFILES = { hierro: { et: 'x', vientoManda: false, rafagaAviso: 70, rafagaBestia: 90,
   lluviaManda: false, alturaImporta: false, sirimiriImporta: true } };
 globalThis.perfil = () => PERFILES.hierro;
 globalThis.S = { perfil: 'hierro' };
@@ -166,6 +166,18 @@ eval(sacar('function tapaVale('));
    que se declara aquí abajo con los dos modelos de la prueba. */
 globalThis.COMPARAR = globalThis.COMPARAR || [];
 eval(sacar('function peorRacha('));
+/* Y `nivelRacha`, que es quien decide el color de la ráfaga desde el
+   25-09-2026: compara el número TAL COMO SE IMPRIME, así que van con
+   ella las unidades. Ojo: un `const` dentro de un eval no sale del eval,
+   por eso se asignan a mano a globalThis. */
+globalThis.WU   = eval('(' + (src.match(/^const WU = (\{[\s\S]*?\n\});/m) || [])[1] + ')');
+globalThis.wu   = () => WU[globalThis.S?.wunit] ?? WU.kmh;
+globalThis.wv   = kmh => has(kmh) ? kmh * wu().f : null;
+globalThis.wRed = v => { const x = wv(v); return has(x) ? Number(x.toFixed(wu().d)) : null; };
+eval(sacar('function listonRafaga('));
+eval(sacar('function nivelRacha('));
+globalThis.listonRafaga = listonRafaga;
+globalThis.nivelRacha = nivelRacha;
 eval(sacar('function assess('));
 
 const THR = { windWarn: 45, windNo: 60, gustWarn: 50, gustNo: 70,
@@ -389,15 +401,21 @@ grupo('Una clave inventada por nosotros no puede viajar a la API (22-09-2026)');
    ══════════════════════════════════════════════════════════════════════ */
 grupo('El color de la racha se decide con el número que se ve (25-09-2026)');
 {
-  eval(sacarConst('WU'));
-  eval(sacarConst('wu'));
-  eval(sacarConst('wv'));
-  eval(sacar('function listonRafaga('));
-  eval(sacar('function nivelRacha('));
-  globalThis.DEFAULT_THR = globalThis.DEFAULT_THR || { gustWarn: 50, gustNo: 70 };
-  globalThis.PERFILES = { hierro: { rafagaBestia: 70, vientoManda: false } };
-  globalThis.perfil = () => PERFILES.hierro;
-  globalThis.S = { perfil: 'hierro', wunit: 'kmh', thr: {} };
+  /* LA FUNCIÓN DE VERDAD, sacada de app.js, con sus dependencias
+     INYECTADAS. Con `eval` no vale: un `const` dentro de un eval no sale
+     del eval, así que `wRed` se resolvía a otro global y el cambio de
+     unidad no llegaba — las pruebas de nudos y m/s daban lo que no era
+     y casi las doy por buenas (25-09-2026). */
+  const WU_ = eval('(' + (src.match(/const WU = (\{[\s\S]*?\n\});/) || [])[1] + ')');
+  let unidad = 'kmh';
+  const wu_ = () => WU_[unidad] ?? WU_.kmh;
+  const wv_ = kmh => has(kmh) ? kmh * wu_().f : null;
+  const wRed_ = v => { const x = wv_(v); return has(x) ? Number(x.toFixed(wu_().d)) : null; };
+  /* Los listones del CASO HISTÓRICO —49/70— que es el que se documenta
+     aquí: el 25-09 él los subió a 70/90, y eso se comprueba aparte. */
+  const nivelRacha = new Function('has', 'wRed', 'listonRafaga', `
+    ${sacar('function nivelRacha(')}
+    return nivelRacha;`)(has, wRed_, () => ({ warn: 49, no: 70, de: 'hierro' }));
 
   ok('su caso: 48,6 se enseña 49 y su listón es 49, así que NO puede salir verde',
      nivelRacha(48.6) === 'warn',
@@ -411,15 +429,47 @@ grupo('El color de la racha se decide con el número que se ve (25-09-2026)');
      nivelRacha(null) === 'nd' && nivelRacha(undefined) === 'nd');
 
   /* Y EN SUS OTRAS UNIDADES, que es donde una regla así se rompe sola. */
-  S.wunit = 'kts';
+  unidad = 'kts';
   ok('en nudos también manda lo que se ve',
      nivelRacha(48.6) === nivelRacha(48.4),
      '48,6 y 48,4 se enseñan los dos 26 kt, y su listón también: mismo color');
-  S.wunit = 'ms';
+  unidad = 'ms';
   ok('y en m/s, con decimal, cada uno el suyo',
      nivelRacha(48.6) === 'go' && nivelRacha(70.2) === 'no',
      '13,5 contra un listón de 13,6; y 19,5 contra 19,4');
-  S.wunit = 'kmh';
+  unidad = 'kmh';
+
+  /* ── Y QUE SEAN LOS QUE ÉL DIJO ───────────────────────────────────
+     Suyo, 25-09-2026: *«70 km/h pon mínimo y rojo 90 para arriba»* ·
+     *«40, 50 es poco»* · *«eso es a diario en invierno aquí»*. Antes el
+     ámbar salía del 70 % del tope: 49. Un aviso que salta todos los días
+     de invierno deja de leerse, y entonces tampoco se lee el día que
+     importa.
+
+     Situados contra la nota del Gobierno Vasco del 24-01-2026
+     (euskadi.eus): amarillo con rachas > 80 en zona no expuesta, > 100
+     en zona expuesta de Álava, naranja > 120 en el litoral de Bizkaia y
+     Gipuzkoa. Los suyos son más exigentes, que es lo que toca poniendo
+     gente a pie de caseta. */
+  {
+    const codigo = src.replace(/\/\*[\s\S]*?\*\//g, '');
+    ok('su perfil lleva SUS dos listones, escritos y no calculados',
+       /rafagaAviso: 70, rafagaBestia: 90/.test(codigo),
+       'el ámbar en 70 y el rojo en 90; antes eran 49 y 70');
+    ok('y son EXACTAMENTE los dos amarillos oficiales de sus provincias',
+       /su ámbar,  70  =  el AMARILLO de Álava/.test(src)
+       && /su rojo,   90  =  el AMARILLO de Bizkaia/.test(src),
+       'METEOALERTA_ANX1 3.15: Álava 70|90|130, Bizkaia 90|110|140 — él trabaja en las dos');
+    ok('el ámbar se saca del suyo cuando lo hay, no siempre del 70 %',
+       /warn: P\.rafagaAviso \?\? Math\.round\(P\.rafagaBestia \* 0\.7\)/.test(codigo),
+       'los perfiles que no traigan el suyo siguen como estaban');
+    ok('y el 70 % no se recalcula en ningún otro sitio',
+       (codigo.match(/rafagaBestia\s*\*\s*0\.7/g) || []).length === 1,
+       'el único es el de dentro de listonRafaga()');
+    ok('el 70 del 4x4 sigue siendo otra cosa y no se ha movido',
+       /const TOPE_ACCESO = 70;/.test(codigo),
+       'ése es el del VIAJE —«con esa racha vuelco el 4x4»—, no el del trabajo');
+  }
 
   /* ── LA GUARDA DE CLASE ───────────────────────────────────────────
      Nadie compara una ráfaga con el listón a mano. Si alguien lo hace,
@@ -6326,17 +6376,23 @@ grupo('La racha que la tarjeta de 10 días te escondía (01-09-2026)');
   /* Con sello del sitio, como en la app desde el 01-09-2026. */
   S.place = S.place || { lat: 43.412976, lon: -2.718316 };
   S.diariaMulti = { clave: `${S.place.lat.toFixed(3)},${S.place.lon.toFixed(3)}`, time: [dia],
-    wind_gusts_10m_max: [37.1],                        // lo que pinta la tarjeta
-    wind_gusts_10m_max_ecmwf_ifs025: [37.1],
-    wind_gusts_10m_max_icon_seamless: [54.0],          // el que cruza su aviso
-    wind_gusts_10m_max_gfs_seamless: [31.0],
-    wind_gusts_10m_max_best_match: [43.2] };
+    wind_gusts_10m_max: [58.1],                        // lo que pinta la tarjeta
+    wind_gusts_10m_max_ecmwf_ifs025: [58.1],
+    wind_gusts_10m_max_icon_seamless: [75.0],          // el que cruza su aviso
+    wind_gusts_10m_max_gfs_seamless: [52.0],
+    wind_gusts_10m_max_best_match: [64.2] };
   const R = rachaDelDiaQueNoVesTu(dia);
-  /* El listón es el del PERFIL (listonRafaga, 09-09-2026): en caseta, la
-     bestia de 70 avisa desde 49, no los 45/60 de subir. «Eso no es así». */
+  /* El listón es el del PERFIL (listonRafaga, 09-09-2026): en caseta son
+     los suyos, no los 45/60 de subir. «Eso no es así».
+     LOS NÚMEROS ERAN 37/54/31/43 HASTA EL 25-09-2026, cuando su ámbar
+     estaba en 49. Ese día lo subió a 70 —*«40, 50 es poco, eso es a
+     diario en invierno aquí»*— y con 54 esto ya no tiene que saltar. Se
+     suben todos por encima de su listón nuevo para seguir probando lo
+     que esta prueba prueba: que salta cuando OTRO cruza y la tarjeta no.
+     El número del listón se comprueba en su sitio. */
   ok('salta cuando otro modelo cruza su listón y la tarjeta no',
-     !!R && Math.round(R.peor.v) === 54 && R.listón === 49,
-     R ? `${R.peor.nom} ${R.peor.v}` : 'no saltó — el domingo 6 se leería como día tranquilo');
+     !!R && Math.round(R.peor.v) === 75 && R.listón === 70,
+     R ? `${R.peor.nom} ${R.peor.v} · listón ${R?.listón}` : 'no saltó — el domingo 6 se leería como día tranquilo');
 
   /* Y NO salta cuando todos están del mismo lado: un aviso que sale
      siempre no avisa de nada (la lección de las catorce horas rayadas). */
@@ -8075,19 +8131,24 @@ eval(sacar('function rachaQueNoVesTu(racha10) {'));
   };
 
   /* EL CASO QUE LO JUSTIFICA TODO, y es de un sitio suyo. */
-  const sollube = racha(27, [35, 55, 14, 24, 37]);
-  ok('BI SOLLUBEMENDI 30-08 14:00: Automático 27 e ICON 55 se canta',
-     sollube !== null && sollube.quien === 'ICON' && sollube.suya === 55,
-     'su aviso está en 45: con el Automático puesto no vería nada');
+  const sollube = racha(27, [35, 75, 14, 24, 37]);
+  ok('BI SOLLUBEMENDI 30-08 14:00: Automático 27 e ICON 75 se canta',
+     sollube !== null && sollube.quien === 'ICON' && sollube.suya === 75,
+     'con el Automático puesto no vería nada');
   /* El listón es el del PERFIL (listonRafaga, 09-09-2026): en caseta —el
-     90 % de su trabajo— la bestia de 70 avisa desde 49; los 45/60 de
-     S.thr solo mandan al subir. Suyo: «Tu listón: 45 / 60. Eso no es así». */
+     90 % de su trabajo— mandan los suyos; los 45/60 de S.thr solo al
+     subir. Suyo: «Tu listón: 45 / 60. Eso no es así».
+     LOS NÚMEROS ERAN 55 Y 72 HASTA EL 25-09-2026, cuando su ámbar estaba
+     en 49 y su tope en 70. Ese día los subió a 70 y 90, así que el caso
+     se sube con ellos: 75 cruza el ámbar, 95 cruza el tope. Lo que se
+     prueba sigue siendo lo mismo —que se dice QUÉ listón cruza—, y el
+     valor de los listones se comprueba en su sitio. */
   ok('y se dice QUÉ listón cruza, con sus números',
-     sollube && sollube.limite === 49, JSON.stringify(sollube));
+     sollube && sollube.limite === 70, JSON.stringify(sollube));
 
-  const orduna = racha(38, [35, 72, 14, 24, 37]);
-  ok('BI VIRGEN ORDUÑA 30-08 15:00: otro cruza tu tope de 70 y se dice ese listón',
-     orduna && orduna.limite === 70, 'el tope manda sobre el aviso');
+  const orduna = racha(38, [35, 95, 14, 24, 37]);
+  ok('BI VIRGEN ORDUÑA 30-08 15:00: otro cruza tu tope de 90 y se dice ese listón',
+     orduna && orduna.limite === 90, 'el tope manda sobre el aviso');
 
   /* LO QUE NO PUEDE SALTAR, que es la mitad del trabajo. Estas tres
      vienen de la calibración: las reglas por proporción saltaban en el
@@ -9576,7 +9637,7 @@ grupo('QUE NO VUELVA A PASAR · las tres guardias de clase (20-09-2026)');
   const EXCUSAS = {
     'const CAPE_COMBINACION = 700': 'aquí vive el número',
     'const RACHA_TOPE = 70': 'el del vigilante, que no comparte código con la app',
-    'rafagaBestia: 70': 'la tabla de perfiles: aquí vive el número',
+    'rafagaAviso: 70, rafagaBestia: 90': 'la tabla de perfiles: aquí viven SUS dos listones',
     'rafagaBestia: 90': 'la tabla de perfiles',
     'hace falta ${CAPE_COMBINACION} con la tapa': 'texto que YA usa la constante',
   };
@@ -9638,10 +9699,17 @@ grupo('QUE NO VUELVA A PASAR · las tres guardias de clase (20-09-2026)');
      separaron una vez y costaron un fallo cada una. */
   ok('la edad de una medida sale de una sola función en las tres pantallas',
      (A_.match(/edadMedida\(/g) || []).length >= 4);
-  ok('las dos ramas del semáforo de ráfaga colorean con el número QUE SE IMPRIME',
-     (A_.match(/wRed\(g10\) >= wRed\(/g) || []).length >= 2
-     && (A_.match(/wRed\(gMax\) >= wRed\(/g) || []).length >= 1,
-     'el 04-09 se arregló la de torre y se dejó la de caseta, que es su 90 %');
+  /* 25-09-2026: esto fijaba las dos ramas escritas a mano con `wRed`, y
+     se puso rojo al encauzarlas por `nivelRacha()`. La regla no se ha
+     perdido: `nivelRacha` compara con `wRed` en los dos lados, y hay una
+     guarda propia que prohíbe comparar la ráfaga con el listón a mano.
+     Aquí se comprueba lo que de verdad importa: que las dos ramas del
+     veredicto salen de esa función y no de una cuenta suelta. */
+  ok('las dos ramas del semáforo de ráfaga salen de nivelRacha(), no de una cuenta suelta',
+     /else if \(nivelRacha\(g10\) === 'no'\)/.test(A_)
+     && /else if \(nivelRacha\(g10\) === 'warn'\)/.test(A_)
+     && /const g = wRed\(v\);/.test(A_),
+     'el 04-09 se arregló la de torre y se dejó la de caseta; hoy van las dos por la misma');
   ok('el sirimiri se reconoce con esLlovizna en todas partes, no con rangos a mano',
      !/>= 51 && [\w.]+ <= 5[0-6]\b/.test(A_),
      'el 56 y el 57 son llovizna ENGELANTE: dejarlos fuera es dejar fuera el hielo');

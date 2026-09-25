@@ -80,6 +80,17 @@ eval(sacarConst('NUBE_BAJA'));
 eval(sacar('function loQueMideLaNube(h, place) {'));
 globalThis.COMPARAR = [];
 eval(sacar('function peorRacha('));
+/* `assess` decide el color de la ráfaga con `nivelRacha`, que compara el
+   número TAL COMO SE IMPRIME (25-09-2026). Van con ella sus dos
+   ayudantes de unidades y el listón del perfil. */
+/* Ojo: un `const` dentro de un eval NO sale del eval. Se asigna a mano. */
+globalThis.WU = eval('(' + (src.match(/^const WU = (\{[\s\S]*?\n\});/m) || [])[1] + ')');
+globalThis.wu   = () => WU[globalThis.S?.wunit] ?? WU.kmh;
+globalThis.wv   = kmh => has(kmh) ? kmh * wu().f : null;
+globalThis.wRed = v => { const x = wv(v); return has(x) ? Number(x.toFixed(wu().d)) : null; };
+eval(sacar('function listonRafaga('));
+eval(sacar('function nivelRacha('));
+globalThis.nivelRacha = nivelRacha;
 eval(sacar('function assess('));
 
 const THR = { windWarn: 45, windNo: 60, gustWarn: 50, gustNo: 70,
@@ -128,15 +139,28 @@ console.log('\n  Un hueco no es verde — perfil hierro, el de fábrica');
      r.st === 'nd' && sinDato(r, 'Ráfaga'), pinta(r));
 }
 {
-  /* La comparativa rescata el hueco: ICON da 55 a 10 m en esa hora. La
-     racha no está a null: está en 55 y molesta (49 es el 70 % de 70). */
+  /* La comparativa rescata el hueco: ICON da 75 a 10 m en esa hora. La
+     racha no está a null: está en 75 y pasa su ámbar.
+
+     ERA 55 HASTA EL 25-09-2026, cuando el ámbar salía del 70 % de 70 y
+     valía 49. Ese día él lo subió a 70 —*«40, 50 es poco, eso es a
+     diario en invierno aquí»*— y con 55 esto ya NO tiene que avisar: es
+     la consecuencia buscada, no un fallo. Se sube el caso por encima de
+     su listón nuevo para seguir probando lo que esta prueba prueba —que
+     el hueco se rescata de la comparativa—, y no el número del listón,
+     que se comprueba en su sitio. */
   S.place = { lat: 43.42, lon: -2.72 };
   S.comparativa = { clave: '43.420,-2.720',
-    hourly: { time: ['2026-09-05T14:00'], wind_gusts_10m_icon_eu: [55] } };
+    hourly: { time: ['2026-09-05T14:00'], wind_gusts_10m_icon_eu: [75] } };
   COMPARAR.push({ om: 'icon_eu', name: 'ICON' });
   const r = juzgar({ gust: null, gust10: null });
-  ok('hierro con la ráfaga a null pero ICON da 55 en la comparativa: OJO con 55 km/h, no SIN DATO',
-     r.st === 'warn' && r.reasons.some(x => /^Ráfaga 55 km\/h/.test(x.txt)) && !sinDato(r, 'Ráfaga'), pinta(r));
+  ok('hierro con la ráfaga a null pero ICON da 75 en la comparativa: OJO con 75 km/h, no SIN DATO',
+     r.st === 'warn' && r.reasons.some(x => /^Ráfaga 75 km\/h/.test(x.txt)) && !sinDato(r, 'Ráfaga'), pinta(r));
+  /* Y con 55, que antes saltaba, ahora NO: su listón está en 70. */
+  S.comparativa.hourly.wind_gusts_10m_icon_eu = [55];
+  const r55 = juzgar({ gust: null, gust10: null });
+  ok('y con 55 ya no avisa: su ámbar está en 70 desde el 25-09',
+     r55.st !== 'warn' || !r55.reasons.some(x => /^Ráfaga 55/.test(x.txt)), pinta(r55));
   S.place = null; S.comparativa = null; COMPARAR.length = 0;
 }
 {
