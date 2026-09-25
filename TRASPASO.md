@@ -1052,3 +1052,27 @@ no pinta nada de rojo, claro».
 **Lo que NO se tocó, y por qué:** la cadencia del cron (cada 15 min): él pidió bajarla a la hora y luego dijo «lo que quiero es no pagar, el resto te encargas tú» — bajarla no ahorra nada medible (20 s de CPU en 12 h) y en tormenta dejaría al vigilante pasando cada hora. Tampoco la cadencia verde/ámbar/rojo ni el freno de 20 min (seguridad, suya).
 
 **Queda de la auditoría (no urgente):** resumen precalculado del marcador y libro por meses (a 20.000 muestras el POST del vigilante costará ~1,2 s); las ≤8 llamadas `/om` en serie del vigilante por estación en una sola; el CO consulta las marcas cada ~3 min desde cada pestaña (230 en 12 h: barato, pero podría ser cada 10 y al volver). **Y medir mañana en Uso:** objetivo < 5 min/día, que son 2,5 h/mes. Ojo al que mida: cada `deploy.sh` vacía el CDN (hoy cinco publicaciones).
+
+### §34 · 25-09-2026, 07:13-08:15, iMac: SUS DIECISIETE PANTALLAZOS («dale una vuelta si hay fallos»)
+
+**Lo que mandó:** 17 capturas del móvil a las 07:13 (Ahora, Horas, 10 días, Mar, Mis estaciones y el marcador). Y después: *«¿pero todavía seguimos teniendo fallos?»* · *«esto no puede ser»*. Sí los había: **seis, todos de pantalla, ninguno de decisión** (semáforo, veto de rayos y ventana intactos). Arreglados en el commit 3c66f38 y publicados como build **2026.09.25-0731**, con 8 pruebas vistas en rojo antes (banco: 1284 bien, 0 mal).
+
+| pantalla | lo que se veía | por qué | cómo queda |
+|---|---|---|---|
+| Horas | **luna a las 08:00** con el sol ya fuera | `horaDe` fiaba el día/noche al `is_day` del modelo y, si faltaba, a un 8-19 fijo | `diaDeLaHora()`: el medio de la hora contra el orto y el ocaso de `daily`; luego `is_day`; luego el 8-19 |
+| Mar (portada y Ahora) | «Mar de fondo» y «Sube a» de **medianoche** | leían el índice 0 de la serie marina | `iHoraMar()` = hora en curso; `picoOleaje24h()` = máximo de las 24 h siguientes |
+| 10 días | chapa de racha **en rojo con 36 km/h** | el CSS coloreaba la chapa por el semáforo del día (tormenta), no por la racha | `data-s` en la propia chapa: su color es el de LA RACHA |
+| Mis torres (tarjeta) | «Sirimiri de 23:00 a 00:00» sin decir quién | la línea de agua no nombraba al modelo que lo ve cuando no es el cargado | `· lo ve ICON` / `· lo ve GFS` |
+| Mis estaciones | «Anemómetros de AEMET cerca…» con Almike de Euskalmet debajo | texto viejo del 18-09 | «Anemómetros de AEMET y Euskalmet cerca de tu emplazamiento» |
+| Marcador | «N por debajo de 10» (¿de qué?) | frase a medias | «N veces más de 10 km/h corto» |
+
+**Comprobado sobre lo publicado, desde el panel del navegador (candado apagado):** `build 2026.09.25-0731`; 08:00 → `day:1`, 20:00 → `day:0`; «Mar de fondo 0,9 m … Sube a 2,1 m»; chapas `jue:no / racha=go`; «Sirimiri de 23:00 a 00:00 · lo ve ICON»; el texto de anemómetros; y las cabeceras de Mis estaciones **resueltas** tras cargar el lote: «Almike (Bermeo) · Euskalmet · a 1,1 km · 106 m · mide a 18 m · hace 5 min», Matxitxako, FORUA, BILBAO AEROPUERTO, MUTRIKU (AEMET, hace 35 min).
+
+**Lo que en sus capturas parecía fallo y NO lo es:**
+- «ESTACIÓN midiendo…» en todas las cabeceras: es la **carga** del lote de Euskalmet (7-8 s con el CDN frío). A los 20 s están todas. Si molesta, lo honesto es un «leyendo Euskalmet…» con segundos, no cambiar el dato.
+- «Medido de verdad» en Ahora con la lectura de AEMET de **hace 2 h** mientras Almike (Euskalmet) tenía dato de hace 5 min: es lo decidido el 18-09 por el gasto de Vercel (§33). **Mejora posible, no hecha:** cuando la ficha de Euskalmet ya esté en caché del CDN (5 min), enseñar la más reciente de las dos y decir de cuál es. No se toca sin medir el gasto.
+- «Cuadra, 10 km/h de diferencia»: el listón del veredicto está en 15 y 10 está por debajo. La frase es correcta; podría decir «cuadra (a 10 km/h)» para que no parezca contradicción.
+
+**Por qué se colaron, dicho con honestidad para él:** las 1276 pruebas comprueban lo que la app DICE con datos dados, y ninguna miraba esas pantallas **a esa hora**: la mar de la portada solo se equivoca cuando la serie marina arranca a medianoche y la abres a las 07:00; la luna solo sale cuando el modelo cargado no trae `is_day` y la hora cae fuera del 8-19; la chapa roja solo cuando el día está en rojo por otra cosa. Son los pantallazos suyos los que las cazan, y por eso cada uno tiene ahora su prueba. La regla sigue siendo la tercera: verificar en pantalla, y a la hora en que él la mira.
+
+**Git:** 3c66f38 + este commit con los sellos del 0731. HEAD desciende de `casa-2026-09-23` (avance limpio). La sube Aitor con `./subir-a-github.sh`.

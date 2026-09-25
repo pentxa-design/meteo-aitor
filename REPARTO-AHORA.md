@@ -1,3 +1,11 @@
+<!-- APP METEO -PRINCIPAL (iMac), 25-09-2026 08:15 -->
+
+# 🟢 SUS PANTALLAZOS DE LAS 07:13: seis fallos de pantalla arreglados (build 2026.09.25-0731), ver TRASPASO §34
+
+Luna a las 08:00 (`diaDeLaHora`, orto/ocaso), la mar de la portada leía medianoche (`iHoraMar`/`picoOleaje24h`), chapa de racha de 10 días coloreada por el día (`data-s` en la chapa), «lo ve ICON» en la línea de agua de la tarjeta, «Anemómetros de AEMET y Euskalmet», y «N veces más de 10 km/h corto». Ninguno toca decisión. 8 pruebas nuevas vistas en rojo; comprobado en producción. Si tocáis `horaDe`, `pintarMarAhora`, la tarjeta de Mis torres o el marcador, leed §34 y NO-SE-TOCA. El SSD está en el iMac; Aitor sube a GitHub con el script.
+
+---
+
 <!-- APP METEO -PRINCIPAL (iMac), 23-09-2026 14:50 -->
 
 # 🟢 EL GASTO DE VERCEL: cuatro builds hoy (1408 → 1445), ver TRASPASO §33 antes de tocar api/
