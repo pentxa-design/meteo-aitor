@@ -10011,7 +10011,7 @@ grupo('Si no entro, que no gaste: la pestaña oculta no llama, y una pasada salt
      'una pestaña olvidada en el Mac era el mayor gasto sin que él entrara');
   ok('y al volver a primer plano el pulso se mira al momento, no hasta 10 min después',
      /if \(!document\.hidden\) mirarPulso\(\);/.test(src));
-  const iSalta = VIG.indexOf("ok: true, saltada: true, nivel,"), iTorres = VIG.indexOf("const rt = await fetch(`${APP}/api/torres`);"), iTandas = VIG.indexOf("tandaL = await pedirTanda(sitios, 'land')");
+  const iSalta = VIG.indexOf("ok: true, saltada: true, nivel,"), iTorres = VIG.indexOf("const rt = await fetch(`${APP}/api/torres`);"), iTandas = VIG.indexOf("tandaL = await conReintento('land')")   /* 26-09: la tanda va con reintento */;
   ok('la lista de torres se pide DESPUÉS del portero de cadencia: una pasada saltada ya no invoca /api/torres',
      iSalta > 0 && iTorres > iSalta && iTandas > iTorres,
      `saltada@${iSalta} torres@${iTorres} tandas@${iTandas}`);

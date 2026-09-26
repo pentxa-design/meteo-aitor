@@ -874,8 +874,8 @@ ok('el marcador tampoco contesta «cero muestras» cuando no puede leer',
 
 console.log('\n  El vigilante afloja cuando no pasa nada');
 const vg = fs.readFileSync(path.join(__dirname, 'api', 'vigilante.mjs'), 'utf8');
-ok('si no hay nada en marcha NI armándose, se salta la pasada (verde 3 h de noche, 1 h por la tarde)',
-   /saltada: true/.test(vg) && /const cadaMin = \{ verde: tardeAquí \? 60 : 175, ambar: 60, rojo: 30 \}\[nivel\];/.test(vg)
+ok('si no hay nada en marcha NI armándose, se salta la pasada (3 h de noche, 2 h el resto)',
+   /saltada: true/.test(vg) && /const cadaMin = \{ verde: tardeAquí \? 120 : 180, ambar: 120, rojo: 120 \}\[nivel\];/.test(vg)
    && /huecoPrevio < cadaMin/.test(vg),
    'pasar cada media hora un día tranquilo se llevaba 3,2 de las 4 h de CPU del mes');
 ok('y el rojo es rayo de HOY por delante, racha de 70 por delante o tormenta ya avisada',
@@ -1102,10 +1102,17 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
   ok('el vigilante pide los emplazamientos en UNA tanda por celda, no dos por sitio',
      /latitude=\$\{sitios\.map\(s => s\.lat\)\.join\(','\)\}/.test(V)
      && /longitude=\$\{sitios\.map\(s => s\.lon\)\.join\(','\)\}/.test(V)
-     && /pedirTanda\(sitios, 'land'\)/.test(V) && /pedirTanda\(sitios, 'nearest'\)/.test(V),
+     && /conReintento\('land'\)/.test(V) && /conReintento\('nearest'\)/.test(V),
      'eran cuarenta peticiones a la vez y se caían siete de veinte');
+  ok('y la tanda se reintenta UNA vez antes de rendirse (26-09-2026)',
+     /try \{ return await pedirTanda\(sitios, cel\); \}\s*\n\s*catch \{ try \{ return await pedirTanda\(sitios, cel\); \} catch \{ return null; \} \}/.test(V),
+     'un hipo daba la tanda por perdida y disparaba los veinte sueltos de golpe');
+  ok('y si aun así hay que ir sitio a sitio, van en grupos de cuatro, no los veinte',
+     /for \(let i = 0; i < sitios\.length; i \+= 4\)/.test(V)
+     && /const trozo = sitios\.slice\(i, i \+ 4\);/.test(V),
+     'su aviso del 26-09: «no he podido mirar BERMEO, LEKEITIO MOV, VIRGEN ORDUÑA, PUNTA-GALEA»');
   ok('y si la tanda falla, cada sitio vuelve a pedir lo suyo: un atajo no puede dejarle sin vigilante',
-     /unSitio\(s, \{ H: tandaL\?\.\[i\] \|\| null, C: tandaC\?\.\[i\] \|\| null \},\s*\n\s*\{ desde: `\$\{claveHoy\}T\$\{String\(h0\)\.padStart\(2, '0'\)\}` \}\)/.test(V)
+     /unSitio\(s, \{ H: tandaL\?\.\[i\] \|\| null, C: tandaC\?\.\[i\] \|\| null \},/.test(V)
      && /const H = previo\?\.H\?\.time \? previo\.H : await pide\('land'\);/.test(V)
      && /if \(!C\) \{ try \{ C = await pide\('nearest'\); \} catch \{ C = null; \} \}/.test(V));
 
@@ -1130,11 +1137,11 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
      misma noche: última pasada 21:00:51, a las 22:21 sin volver a pasar, y
      la siguiente caía a las 23:56. Dos horas y 56 minutos de silencio
      empezados dentro de la franja que él pidió proteger. */
-  ok('en verde, por la tarde nunca se pasa más de una hora, y el suelo lo manda el hueco',
+  ok('en verde, por la tarde nunca se pasa más de DOS horas, y el suelo lo manda el hueco',
      /const enFranja = h => h >= 11 && h < 22;/.test(V)
      && /const hPrevia = antes\?\.cuando \? new Date\(antes\.cuando\)\.getHours\(\) : null;/.test(V)
      && /const tardeAquí = enFranja\(h0\) \|\| \(hPrevia !== null && enFranja\(hPrevia\)\);/.test(V)
-     && /const cadaMin = \{ verde: tardeAquí \? 60 : 175, ambar: 60, rojo: 30 \}\[nivel\];/.test(V),
+     && /const cadaMin = \{ verde: tardeAquí \? 120 : 180, ambar: 120, rojo: 120 \}\[nivel\];/.test(V),
      'mirado solo en el tic, la cadencia de tarde moría a las 21:00, una hora antes de lo prometido');
   ok('lo que se está armando se GUARDA, que si no la pasada siguiente no lo sabe',
      /ojo: buenos\.reduce\(\(m, d\) => \(\{/.test(V)

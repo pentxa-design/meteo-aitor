@@ -1049,7 +1049,27 @@ export default async function handler(req, res) {
 
      El suelo de tarde sube de 55 a 60 para que no quede por debajo del
      ámbar: un verde que mira más a menudo que un ámbar no tiene sentido. */
-  const cadaMin = { verde: tardeAquí ? 60 : 175, ambar: 60, rojo: 30 }[nivel];
+  /* 26-09-2026, y es la tercera vez que la baja en dos días porque tiene
+     razón: *«si ves a las 7 de la mañana ya sabes lo que te va a venir
+     dentro de 3, 4 o 12 horas»* · *«pasando cada 2 horas ya vale»* · *«el
+     tiempo no cambia cada 15 minutos, no tiene sentido»* · *«¿para qué
+     tanta vigilancia gastando Vercel?»*.
+
+     Y el rojo TAMBIÉN cada dos horas, porque insistió: *«no tiene sentido
+     vigilar cada 10 segundos o 15 minutos ni 1 hora, por favor»* ·
+     *«es absurdo»*. Tiene razón y el dato lo respalda: AROME e ICON se
+     actualizan cada 3 h y ECMWF cuatro veces al día, así que en dos
+     horas, como mucho, hay un pronóstico nuevo.
+
+     Queda, pues, DOS HORAS en todo salvo el verde de noche, que son
+     tres. El precio, dicho una vez y por escrito: si algo se arma justo
+     después de una pasada, lo sabrá hasta dos horas más tarde. Él lo
+     decide sabiéndolo, y su razón es buena — mira el mapa por la mañana
+     y ya sabe lo que viene. */
+  const cadaMin = { verde: tardeAquí ? 120 : 180, ambar: 120, rojo: 120 }[nivel];
+  /* El suelo de tarde se queda, en sus dos horas: lo puso él el 22-09 por
+     «aquí a veces hay un día bueno y al de unas horas entra tormenta», y
+     eso no lo deroga bajar la cadencia. De noche, tres. */
   const ojeadaAMano = req.query?.mirar === '1' || req.body?.mirar === true;
   if (!ojeadaAMano && !ventanaDelParte && huecoPrevio !== null && huecoPrevio < cadaMin) {
     return res.status(200).json({
@@ -1081,14 +1101,49 @@ export default async function handler(req, res) {
   /* Dos peticiones para los veinte. Si alguna tanda falla, sus huecos los
      rellena cada sitio por su cuenta dentro de `unSitio` (ver la nota). */
   let tandaL = null, tandaC = null;
-  try { tandaL = await pedirTanda(sitios, 'land'); } catch { tandaL = null; }
-  try { tandaC = await pedirTanda(sitios, 'nearest'); } catch { tandaC = null; }
+  /* ── UN HIPO NO PUEDE CONVERTIRSE EN VEINTE PETICIONES (26-09-2026)
+     Él, esa mañana, con el aviso «no he podido mirar BERMEO, LEKEITIO
+     MOV, VIRGEN ORDUÑA, PUNTA-GALEA»: *«esto pasa a diario»* · *«¿esto
+     qué es y por qué pasa tantas veces?»*.
 
-  const datos = await Promise.all(sitios.map((s, i) =>
+     MEDIDO esa misma hora: los cuatro contestaban bien y rápido, y la
+     petición de los veinte iba a 0,3 s con 20 de 20. O sea que no era la
+     API ni eran esos sitios. Era ESTO:
+
+       · la tanda fallaba una vez, por lo que fuera, y se daba por perdida
+         a la primera;
+       · y entonces los veinte salían a pedir lo suyo A LA VEZ, con
+         `Promise.all`, contra el mismo intermediario.
+
+     Que es exactamente el atasco que este fichero documenta desde el
+     21-09 —«cuarenta peticiones simultáneas: las que llegan tarde se
+     caen»— y que la tanda vino a arreglar. El remedio lo provocaba de
+     vuelta por la puerta de atrás, cada vez que había un hipo.
+
+     Ahora: la tanda se reintenta UNA vez antes de rendirse (una petición
+     de más, y solo cuando ha fallado), y si aun así no hay tanda, los
+     sueltos van EN GRUPOS DE CUATRO en vez de los veinte de golpe. */
+  const conReintento = async cel => {
+    try { return await pedirTanda(sitios, cel); }
+    catch { try { return await pedirTanda(sitios, cel); } catch { return null; } }
+  };
+  tandaL = await conReintento('land');
+  tandaC = await conReintento('nearest');
+
+  const pedirUno = (s, i) =>
     unSitio(s, { H: tandaL?.[i] || null, C: tandaC?.[i] || null },
             { desde: `${claveHoy}T${String(h0).padStart(2, '0')}` })
       .then(x => ({ ...x, ok: true }))
-      .catch(e => ({ n: s.n, critico: !!s.critico, ok: false, fallo: String(e.message || e) }))));
+      .catch(e => ({ n: s.n, critico: !!s.critico, ok: false, fallo: String(e.message || e) }));
+
+  /* Con las dos tandas buenas esto no pide nada: `unSitio` usa lo que ya
+     tiene y los grupos pasan de largo. Los grupos solo muerden cuando ha
+     habido que ir sitio a sitio, que es justo cuando se atascaba. */
+  const datos = [];
+  for (let i = 0; i < sitios.length; i += 4) {
+    const trozo = sitios.slice(i, i + 4);
+    datos.push(...await Promise.all(trozo.map((s, k) => pedirUno(s, i + k))));
+  }
 
   const buenos = datos.filter(d => d.ok);
   const fallos = datos.filter(d => !d.ok);
