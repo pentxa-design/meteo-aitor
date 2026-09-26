@@ -587,6 +587,31 @@ grupo('El color de la racha se decide con el número que se ve (25-09-2026)');
    todos los días deja de leerse — la lección del ámbar de los 49 km/h,
    que él mismo tumbó el 25-09.
    ══════════════════════════════════════════════════════════════════════ */
+grupo('La cifra de la hora es DE esa hora, no de una ventana (26-09-2026, medido)');
+{
+  /* MEDIDO contra los datos de 15 minutos de la propia API, en Bermeo
+     con AROME HD: el valor horario es EXACTAMENTE el del cuarto en
+     punto —racha 8 de 8; temperatura, CAPE y viento 24 de 24—. O sea
+     que no es el máximo de la hora, es el valor A esa hora.
+
+     Esto cierra el hallazgo #25 del 21-09, que estaba aparcado porque
+     proponía correr TODAS las rachas una hora: la medida dice que la
+     fila elegida es la buena y lo que estaba mal era la ETIQUETA, que
+     prometía «de 21:00 a 22:00» —un máximo— sobre un número que no lo
+     es. Mover las rachas habría empeorado la app.
+
+     Lo que sigue sin medir es la LLUVIA: el día de la medida no había
+     agua en ningún punto del dominio de AROME. Queda apuntado. */
+  ok('la portada dice «Cifras de las HH:00», no una ventana que promete un máximo',
+     /Cifras de las <b>\$\{dosD\(a\)\}:00<\/b>/.test(src)
+     && !/Cifras de <b>\$\{dosD\(a\)\}:00 a /.test(src),
+     'con la racha, «de 21 a 22» promete lo peor de la hora y el número es el de las 21:00');
+  ok('y la tarjeta de Mis estaciones, igual',
+     /return `a las \$\{z\(d\.getHours\(\)\)\}\$\{cola\}`;/.test(src)
+     && !/de \$\{z\(d\.getHours\(\)\)\} a \$\{z\(\(d\.getHours\(\) \+ 1\)/.test(src),
+     'es la pantalla con la que reparte gente');
+}
+
 grupo('Lo que se decide es lo que se ve, también en lluvia y visibilidad (26-09-2026)');
 {
   /* Del barrido de los cinco frentes: la palabra de la lluvia estaba

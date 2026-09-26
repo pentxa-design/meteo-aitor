@@ -5012,7 +5012,16 @@ function renderTower() {
                : ahora < b  ? ' — la hora en curso'
                : ` — <b>datos de hace ${Math.floor((ahora - b) / 3600e3) + 1} h</b>,
                     pulsa el botón de recargar arriba`;
-    el.innerHTML = `Cifras de <b>${dosD(a)}:00 a ${dosD(b)}:00</b>`
+    /* ── NO ES UNA VENTANA, ES UNA HORA (MEDIDO EL 26-09-2026) ───────
+       Esto decía «Cifras de 14:00 a 15:00», que promete un máximo de la
+       hora. MEDIDO contra los datos de 15 minutos de la propia API, en
+       Bermeo con AROME HD: el valor de cada hora es EXACTAMENTE el del
+       cuarto en punto —racha 8 de 8, y temperatura, CAPE y viento 24 de
+       24—. O sea que es el valor A LAS 14:00, no lo peor entre las 14 y
+       las 15. Con la racha eso importa: la etiqueta prometía un máximo
+       que el número no es. (La lluvia no se ha podido medir: no había
+       agua en ningún punto del dominio de AROME ese día.) */
+    el.innerHTML = `Cifras de las <b>${dosD(a)}:00</b>`
       + `${diaSiNoEsHoy(a)}${cola}. El modelo da un valor por hora, no por minuto.`;
   })();
 
@@ -10701,7 +10710,9 @@ function renderTorres() {
           const cola = ahora < a_ ? ' · la próxima hora'
                      : ahora < b_ ? ' · la hora en curso'
                      : ` · <b>de hace ${Math.floor((ahora - b_) / 3600e3) + 1} h</b>, recarga`;
-          return `de ${z(d.getHours())} a ${z((d.getHours() + 1) % 24)}${cola}`;
+          /* La hora, no una ventana: el número es el del cuarto en punto
+             (medido el 26-09-2026 contra los datos de 15 min). */
+          return `a las ${z(d.getHours())}${cola}`;
         })()}</span>
       </div>
       <div class="tor__ds">${(() => {
