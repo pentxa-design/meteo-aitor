@@ -162,6 +162,14 @@ eval(sacar('function loQueMideLaNube(h, place) {'));
 eval(sacar('function firmaTapa('));
 /* Y `tapaVale`, que es la regla del cero. */
 eval(sacar('function tapaVale('));
+/* Y la pareja calibrada con su coletilla, que desde el 26-09-2026 son
+   el ÚNICO sitio donde se decide si la tapa sujeta o se rompe y con qué
+   palabra se dice. `textoTapa` va detrás porque `colaTapa` lo llama. */
+eval(sacar('function laParejaRompe('));
+eval(sacar('function textoTapa(cin, h) {'));
+eval(sacar('function colaTapa('));
+eval(sacar('function fraseTapa(cin, h) {'));
+eval(sacar('function colaTapaLarga('));
 /* `assess` llama a `peorRacha`, así que va antes. Y necesita `COMPARAR`,
    que se declara aquí abajo con los dos modelos de la prueba. */
 globalThis.COMPARAR = globalThis.COMPARAR || [];
@@ -846,11 +854,14 @@ grupo('Una tapa en 0 de quien no ve gasolina no dice nada (22-09-2026)');
     ok('la escalera corta abierta/floja/aguanta/fuerte existe en UN solo sitio',
        escaleras.length === 1,
        `hay ${escaleras.length}; si son dos, el próximo arreglo de la tapa dejará una atrás`);
-    ok('y las dos fichas la piden a fraseTapa(), con la hora',
-       /const cinTxt = !has\(c\.cin\) \? nd : fraseTapa\(c\.cin, c\);/.test(src)
-       /* 25-09-2026: cuando salta la regla la casilla da número y listón, no
-          la palabra; fuera de la regla sigue pidiendo a fraseTapa con la hora */
-       && /const tapaTxt = tormenta\s*\n?\s*\? `tapa \$\{Math\.round\(c\.cin\)\}\$\{firmaTapa\(c\)\} \(por debajo de \$\{TAPA_ROMPE\}\)`\s*\n?\s*: fraseTapa\(c\?\.cin, c\);/.test(src),
+    /* Las dos fichas ya no llaman a `fraseTapa()` a pelo: piden la
+       coletilla larga, que pregunta la pareja antes y pasa la hora. La de
+       índices de inestabilidad era el quinto sitio que decía «Tapa que
+       aguanta» con CAPE 800 y la tapa en 68 (26-09-2026). */
+    ok('y las dos fichas la piden a la coletilla única, con la hora',
+       /const cinTxt = !has\(c\.cin\) \? nd : colaTapaLarga\(c\.cape, c\.cin, c\);/.test(src)
+       && /const tormenta = laParejaRompe\(c\?\.cape, c\?\.cin, c\);/.test(src)
+       && /: fraseTapa\(c\?\.cin, c\);/.test(src),
        'Riesgo eléctrico y Detalles: los dos sitios donde él lo vio el 22-09');
   }
   ok('fraseTapa dice quién puso el cero, y se calla la escala',
@@ -876,11 +887,19 @@ grupo('Una tapa en 0 de quien no ve gasolina no dice nada (22-09-2026)');
 grupo('El CAPE de uno con la tapa de otro no es una pareja (21-09-2026)');
 {
   const hora = (cape, cin, tapaDe) => ({ cape, cin, tapaDe });
-  const rojo = h => !h.tapaDe && has(h.cin) && h.cin < globalThis.TAPA_ROMPE
-                 && has(h.cape) && h.cape >= globalThis.CAPE_COMBINACION;
+  /* Se ejecuta LA DE LA APP (`laParejaRompe`), no una copia escrita aquí:
+     una prueba que reimplementa la regla comprueba su propia copia. */
+  const rojo = h => !h.tapaDe && laParejaRompe(h.cape, h.cin, h);
 
-  ok('la regla del rojo está escrita con la tapa propia, no con la prestada',
-     /const tapaAbierta = !h\.tapaDe\s*\n\s*&& has\(h\.cin\) && h\.cin < TAPA_ROMPE\s*\n\s*&& has\(h\.cape\) && h\.cape >= CAPE_COMBINACION;/.test(src),
+  /* Esta guarda fijaba LETRA A LETRA las tres líneas de la condición.
+     El 26-09-2026 la condición pasó a ser una llamada a `laParejaRompe()`
+     —una sola vez, para que el arreglo llegue a todas las pantallas— y la
+     regex habría parado la publicación sin que nada estuviera mal. Es la
+     otra cara del mismo defecto: una guarda que fija un texto no sabe si
+     la regla se cumple. Ahora se mira que Mis estaciones PREGUNTE a la
+     función única, y la conducta se comprueba ejecutándola. */
+  ok('la regla del rojo la pregunta Mis estaciones a la función única, con la tapa propia',
+     /const tapaAbierta = !h\.tapaDe && laParejaRompe\(h\.cape, h\.cin, h\);/.test(src),
      'con AROME puesto la tapa viene prestada SIEMPRE: 0 de 385 horas la publica él');
 
   ok('con la tapa PRESTADA no se pinta la tormenta, aunque los números cuadren',
@@ -915,7 +934,9 @@ grupo('El CAPE de uno con la tapa de otro no es una pareja (21-09-2026)');
      firmarla, esta cuenta sube y la publicación se para. */
   {
     const re = /\$\{[^}]*\b(?:cin|cinT)\b[^}]*\}/g;
-    const FIRMAS = /firmaTapa|tapaDe|due(?:ñ|n)oCin|\.quien|\.modelo\b|cmp__tap/;
+    /* `frasOtraTormenta()` es quien pone el nombre en los tres sitios que
+       enseñan la tormenta de otro modelo (26-09-2026): firma igual. */
+    const FIRMAS = /firmaTapa|tapaDe|due(?:ñ|n)oCin|\.quien|\.modelo\b|cmp__tap|frasOtraTormenta/;
     let m, parejas = 0; const sinFirmar = [];
     while ((m = re.exec(src))) {
       const v = src.slice(Math.max(0, m.index - 500), m.index + 300);
@@ -9524,7 +9545,8 @@ grupo('El chip de Horas dice cuánta agua ve el otro modelo (15-09-2026, 23:53)'
      /const dueno = nombreDeModelo\(duenoLluvia\(\)\);/.test(cLl) && /if \(m\.name === dueno \|\| m\.name === yaDicho\) continue;/.test(cLl)
      && /v >= 0\.1 && v > mia/.test(cLl) && /const hc = horaEnComparativa\(h\);/.test(cLl));
   ok('cada hora dice quién ve tormenta (CAPE ≥ 700 con tapa < 75, la regla de siempre) cuando el dueño no la ve, con sus dos números',
-     /tormentaQueNoVesTu\(h, h\.sitio \|\| null\)/.test(cCh) && /ve tormenta: CAPE \$\{Math\.round\(t\.cape\)\} · tapa \$\{Math\.round\(t\.cin\)\}/.test(cCh));
+     /tormentaQueNoVesTu\(h, h\.sitio \|\| null\)/.test(cCh)
+     && /\$\{frasOtraTormenta\(t\)\}: CAPE \$\{Math\.round\(t\.cape\)\} · tapa \$\{Math\.round\(t\.cin\)\}/.test(cCh));
   ok('cada hora dice quién da más racha a 10 m si cruza su listón o se va 20 km/h, con el número y el listón',
      /const \{ warn, no \} = listonRafaga\(\);/.test(cRa) && /alto\.v - h\.gust10 >= 20/.test(cRa)
      && /da \$\{wtxt\(r\.suya, true\)\} a 10 m/.test(cCh) && /tu listón es \$\{wtxt\(r\.limite, true\)\}/.test(cCh));
@@ -10183,10 +10205,46 @@ grupo('Sus pantallazos del 25-09 a las 07:13: seis fallos de pantalla');
      'con sirimiri salía «Racha 22 km/h» en rojo');
   ok('y la del día usa la MISMA decisión (una función, dos pantallas)',
      /const nRacha = nivelRacha\(racha\);/.test(src) && /^function nivelRacha\(v\) \{/m.test(src));
-  ok('la casilla Tormenta de Ahora no dice «Tapa que aguanta» cuando salta la regla',
-     /const tapaTxt = tormenta\s*\n?\s*\? `tapa \$\{Math\.round\(c\.cin\)\}/.test(src));
-  ok('y la cifra de la tapa en rojo de Mis estaciones tampoco',
-     /\(tapaAbierta\s*\n?[^\n]*\n?\s*\? `por debajo de \$\{TAPA_ROMPE\}: con este CAPE rompe` : textoTapa\(h\.cin, h\)\)/.test(src));
+  /* ── LA PALABRA DE LA ESCALA NO SE ALCANZA SIN PASAR POR LA PAREJA ──
+     Estas dos fijaban el TEXTO del arreglo del 25-09. Y fue exactamente
+     esa forma de guarda la que dejó pasar lo del 26-09: el arreglo estaba
+     escrito en Horas, en Detalles y en Mis estaciones, LA PORTADA y la
+     ficha de índices se quedaron fuera, y ninguna regex lo notó porque
+     las dos miraban líneas que sí existían. Una guarda que fija el texto
+     de un arreglo pasado no protege de nada (ver NO-SE-TOCA.md).
+
+     Ahora se EJECUTA la función que lo decide, y se cierra la CLASE: la
+     escala en palabras solo puede salir por `colaTapa()` o
+     `colaTapaLarga()`, que preguntan la pareja antes. Si mañana una
+     pantalla nueva llama a `textoTapa()` o a `fraseTapa()` por su cuenta,
+     esto para la publicación aunque el texto sea otro. */
+  ok('con la pareja saltando, la coletilla no dice «aguanta» en ninguna de sus dos escalas',
+     colaTapa(800, 68, { cape: 800, cin: 68 }) === `por debajo de ${globalThis.TAPA_ROMPE}: con este CAPE rompe`
+     && colaTapaLarga(800, 68, { cape: 800, cin: 68 }) === `Tapa por debajo de ${globalThis.TAPA_ROMPE}: con este CAPE rompe`
+     && colaTapa(300, 68, { cape: 300, cin: 68 }) === 'aguanta'
+     && colaTapaLarga(300, 68, { cape: 300, cin: 68 }) === 'Tapa que aguanta'
+     && colaTapa(800, 68, { cape: 800, cin: 68, tapaDe: 'ICON', capeTapa: 400 }) === `por debajo de ${globalThis.TAPA_ROMPE}`
+     && colaTapa(800, 0, { cape: 800, cin: 0, tapaDe: 'ICON', capeTapa: 0 }) === 'no dice nada'
+     && colaTapa(800, null, {}) === '' && colaTapaLarga(800, null, {}) === '',
+     JSON.stringify({ corta: colaTapa(800, 68, { cape: 800, cin: 68 }),
+                      larga: colaTapaLarga(800, 68, { cape: 800, cin: 68 }) }));
+  {
+    /* Cada sitio que imprime una palabra de la escala, con los 240
+       caracteres de delante: ahí tiene que estar la pareja preguntada. */
+    /* Sobre el código SIN comentarios: la prosa de la casa nombra estas
+       funciones a cada paso y si no, la guarda se caza a sí misma. Los
+       comentarios se sustituyen por espacios para no mover los índices. */
+    const limpio = src
+      .replace(/\/\*[\s\S]*?\*\//g, c => c.replace(/[^\n]/g, ' '))
+      .replace(/^([^'"\n]*?)\/\/.*$/gm, (l, pre) => pre + ' '.repeat(l.length - pre.length));
+    const sitios = [...limpio.matchAll(/(?<!function )\b(?:texto|frase)Tapa\(/g)]
+      .map(m => ({ i: m.index, antes: limpio.slice(Math.max(0, m.index - 240), m.index) }));
+    const sueltos = sitios.filter(x => !/laParejaRompe\(|tormenta\s*$|tormenta\s*\n\s*\?|rompe\s*\?/.test(x.antes));
+    ok('ninguna pantalla imprime la palabra de la tapa sin haber preguntado por la pareja',
+       sitios.length >= 3 && sueltos.length === 0,
+       sueltos.length ? sueltos.map(x => '…' + x.antes.slice(-90).replace(/\s+/g, ' ')).join(' ‖ ')
+                      : `${sitios.length} sitios, todos con la pareja delante`);
+  }
   ok('«Próxima lluvia» distingue «ninguno la ve» de «no he podido preguntar» (sabido:false)',
      /function lluviaQueVieneYNoVesTu\(\) \{[\s\S]{0,700}?if \(!H\?\.time\) return \{ sabido: false \};/.test(src)
      && /if \(otra && otra\.sabido === false\)/.test(src),

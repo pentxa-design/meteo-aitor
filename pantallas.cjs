@@ -576,6 +576,105 @@ async function unaHora(hh) {
   /* 10. Lo genérico, en cada zona pintada: nada de NaN, undefined, decimales
       con punto (los millares con punto, «2.680», sí valen) ni carteles de
       «cargando» cuando ya está todo contestado; ni avisos del cielo. */
+  /* ── 11 · EL MISMO HECHO, EN TODAS LAS PANTALLAS A LA VEZ ──────────
+     Suyo, 26-09-2026: *«ya tiene que funcionar bien sin errores
+     diarios»*, *«no puedo ya andar a diario con estas cosas
+     pantallazos etc»*. Esto es lo que sustituye a sus pantallazos.
+
+     Casi todos los fallos de esta semana tienen LA MISMA CARA: el
+     mismo hecho, del mismo sitio y la misma hora, contado distinto en
+     dos pestañas, porque el arreglo llegó a una y no a la otra:
+
+       25-09  la tapa muda arreglada en Ahora y no en Mis estaciones
+       26-09  la portada «Cubierto» y la tarjeta «Mayormente despejado»
+       26-09  la portada «tapa 68 — aguanta» mientras Horas decía «los
+              dos a la vez» y Mis estaciones «con este CAPE rompe»
+
+     Así que aquí se leen los hechos de cabecera del sitio cargado (BI
+     BERMEO, que es la portada Y la primera tarjeta de Mis estaciones)
+     en las tres pestañas y se exige que digan lo mismo. No sabe cuál
+     es el bueno: sabe que no pueden ser dos. Y si un hecho no aparece
+     en ninguna parte, también falla: una comparación que no encuentra
+     nada no compara nada. */
+  {
+    const kpiDe = et => {
+      const k = [...doc.querySelectorAll('#kpis .kpi')]
+        .find(x => (x.querySelector('.kpi__k')?.textContent || '').trim().startsWith(et));
+      if (!k) return null;
+      return { v: (k.querySelector('.kpi__v')?.textContent || '').replace(/\s+/g, ' ').trim(),
+               s: (k.querySelector('.kpi__s')?.textContent || '').replace(/\s+/g, ' ').trim() };
+    };
+    const kRafaga = kpiDe('Ráfaga'), kViento = kpiDe('Viento'),
+          kRayo = kpiDe('Riesgo eléctrico'), kAgua = kpiDe('Lluvia');
+    const hc = tarjeta(hh);
+    const tarjetaTorre = [...doc.querySelectorAll('#torres .tor')]
+      .find(c => /BI BERMEO/.test(c.textContent));
+    const hTxt = hc ? hc.textContent.replace(/\s+/g, ' ') : '';
+    const tTxt = tarjetaTorre ? tarjetaTorre.textContent.replace(/\s+/g, ' ') : '';
+    if (!hc) falla('cruce de pantallas: no encuentro en Horas la tarjeta de la hora en curso');
+    if (!tarjetaTorre) falla('cruce de pantallas: no encuentro BI BERMEO en Mis estaciones (es la tarjeta con la que reparte gente)');
+    if (!kRafaga || !kRayo) falla('cruce de pantallas: la portada no tiene las casillas de ráfaga y riesgo eléctrico');
+
+    /* La palabra de la tapa se dice distinta en cada pestaña (la escala
+       corta, la larga, la frase de la pareja). Lo que NO puede cambiar
+       es el dictamen: o la tapa sujeta, o se rompe, o no dice nada. */
+    const dictamen = t => !t ? null
+      : /no dice nada|no la publica/i.test(t) ? 'la tapa no dice nada'
+      : /rompe|por debajo de 75|los dos a la vez/i.test(t) ? 'la tapa se rompe'
+      : /aguanta|fuerte/i.test(t) ? 'la tapa sujeta'
+      : /floja|abierta/i.test(t) ? 'la tapa está floja' : null;
+
+    const num = (t, re) => { const m = (t || '').match(re); return m ? m[1] : null; };
+    const HECHOS = [
+      { que: 'la racha a 10 m', ven: [
+        ['Ahora', num(kRafaga?.v, /(\d+)\s*km\/h/)],
+        ['Horas', num(hTxt, /Racha\s*(\d+)\s*km\/h/)],
+        ['Mis estaciones', num(tTxt, /(\d+)\s*km\/h racha a 10 m/)] ] },
+      { que: 'el viento a 10 m', ven: [
+        ['Ahora', num(kViento?.v, /(\d+)\s*km\/h/)],
+        ['Horas', num(hTxt, /💨\s*(\d+)\s*km\/h/)],
+        ['Mis estaciones', num(tTxt, /(\d+)\s*km\/h viento a 10 m/)] ] },
+      { que: 'el CAPE', ven: [
+        ['Ahora', num(kRayo?.v, /(\d+)\s*J\/kg/)],
+        ['Horas', num(hTxt, /CAPE\s*(\d+)/)],
+        ['Mis estaciones', num(tTxt, /(\d+)\s*CAPE J\/kg/)] ] },
+      { que: 'la cifra de la tapa', ven: [
+        ['Ahora', num(kRayo?.s, /tapa\s*(\d+)/)],
+        ['Horas', num(hTxt, /tapa\s*(\d+)/)],
+        ['Mis estaciones', num(tTxt, /(\d+)\s*tapa J\/kg/)] ] },
+      { que: 'lo que hace la tapa', min: 4, ven: [
+        ['la ficha de índices', dictamen((txt(doc, '#storm').match(/frena la convección [\d,]+ J\/kg\s*(.+?)\s*(?:Isocero|$)/) || [])[1])],
+        ['Ahora', dictamen(kRayo?.s)],
+        ['Horas', dictamen((hc?.querySelector('.hcard__c')?.textContent || ''))],
+        ['Mis estaciones', dictamen((tTxt.match(/tapa J\/kg · (.+?)\s+(?:[\d,]+|—)\s+nieve/) || [])[1])] ] },
+      { que: 'la lluvia de la hora', ven: [
+        ['Ahora', num(kAgua?.v, /([\d,]+)\s*mm/)],
+        ['Mis estaciones', num(tTxt, /([\d,]+)\s*lluvia mm\/h/)] ] },
+      { que: 'la temperatura', ven: [
+        ['Ahora', num(txt(doc, '#cover'), /(\d+)° de temperatura del aire/)],
+        ['Horas', num(hTxt, /^\d\d:\d\d \w+ (\d+)°/)],
+        ['Mis estaciones', num(tTxt, /(\d+)° rocío/)] ] },
+      { que: 'el cielo', ven: [
+        ['Ahora', txt(doc, '#nowDesc') || null],
+        ['Mis estaciones', ((tTxt.match(/% nubes · ([^·]+) ·/) || [])[1] || '').trim() || null] ] },
+    ];
+    for (const H of HECHOS) {
+      const dichos = H.ven.filter(([, v]) => v !== null && v !== undefined && v !== '');
+      /* Una comparación que no encuentra el dato no compara nada y se lee
+         como verde. Cada hecho dice cuántas pantallas tienen que darlo. */
+      if (dichos.length < (H.min || 2)) {
+        const mudas = H.ven.filter(([, v]) => !v).map(([d]) => d);
+        falla(`cruce de pantallas: ${H.que} no se puede cruzar — no lo dice `
+            + `${mudas.join(' ni ') || 'nadie'} (¿cambió el marcado?)`);
+        continue;
+      }
+      const distintos = [...new Set(dichos.map(([, v]) => String(v)))];
+      if (distintos.length > 1)
+        falla(`cruce de pantallas: ${H.que} de BI BERMEO a las ${p2(hh)}:00 no coincide en todas las pantallas: `
+            + dichos.map(([d, v]) => `${d}=«${v}»`).join(' · '));
+    }
+  }
+
   const ZONAS = ['#cover', '#parts', '#nowAemet', '#nowRange', '#marAhora', '#seaDet', '#waveGraph', '#hlist', '#dlist', '#torres', '#marcador', '#parteDias'];
   for (const z of ZONAS) {
     let t = txt(doc, z); if (!t) continue;

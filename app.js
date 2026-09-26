@@ -588,6 +588,54 @@ function firmaTapa(h) {
   return h?.tapaDe ? ` (la da ${h.tapaDe})` : '';
 }
 
+/* ── LA PAREJA MANDA SOBRE LA PALABRA, Y EN UN SOLO SITIO ────────────
+   Suyo, 26-09-2026: *«ya tiene que funcionar bien sin errores
+   diarios»*. Y esto es otra vez LO MISMO: una regla escrita en varios
+   sitios y el arreglo llegando solo a unos.
+
+   El 25-09 se arregló en Horas (`lineaCapeHora`) y en Detalles
+   (`tapaTxt`): cuando salta la pareja calibrada —CAPE de 700 para
+   arriba con la tapa por debajo de 75— no se pone la palabra de la
+   escala, porque `textoTapa()` llama «aguanta» a todo lo que hay entre
+   50 y 200 y la pareja rompe por debajo de 75.
+
+   La casilla «Riesgo eléctrico» de la PORTADA se quedó fuera de aquel
+   arreglo. Medido el 26-09-2026 con CAPE 800 y la tapa en 68: Horas
+   decía «los dos a la vez», Mis estaciones «con este CAPE rompe» y la
+   portada «tapa 68 — aguanta». La dirección peligrosa, en la pantalla
+   que se mira primero.
+
+   Desde aquí la coletilla sale de UNA función y el listón se pregunta
+   en UN sitio. Con la tapa PRESTADA no se dicta veredicto —eso pegaría
+   el CAPE de un modelo a la tapa de otro, que es el fallo del 21-09—:
+   se dice el número y el listón, y de quién es la tapa ya lo dice
+   `firmaTapa()`. Y una tapa que no dice nada (`tapaVale()`) no rompe
+   nada: un 0 de quien no ve gasolina no es una tapa abierta. */
+function laParejaRompe(cape, cin, h) {
+  if (h !== undefined && !tapaVale(h)) return false;
+  return has(cape) && cape >= CAPE_COMBINACION && has(cin) && cin < TAPA_ROMPE;
+}
+
+/** La coletilla que va detrás de la cifra de la tapa, la misma en las
+ *  cuatro pantallas que la enseñan. '' cuando no hay tapa. */
+function colaTapa(cape, cin, h) {
+  if (!has(cin)) return '';
+  if (!laParejaRompe(cape, cin, h)) return textoTapa(cin, h);
+  return h?.tapaDe ? `por debajo de ${TAPA_ROMPE}`
+                   : `por debajo de ${TAPA_ROMPE}: con este CAPE rompe`;
+}
+
+/** La misma coletilla con las palabras largas, para las fichas de
+ *  Riesgo eléctrico y Detalles. La ficha de «índices de inestabilidad»
+ *  fue el QUINTO sitio que decía «Tapa que aguanta» con CAPE 800 y la
+ *  tapa en 68 (26-09-2026): la pantalla que va justo de esto. */
+function colaTapaLarga(cape, cin, h) {
+  if (!has(cin)) return '';
+  if (!laParejaRompe(cape, cin, h)) return fraseTapa(cin, h);
+  return h?.tapaDe ? `Tapa por debajo de ${TAPA_ROMPE}`
+                   : `Tapa por debajo de ${TAPA_ROMPE}: con este CAPE rompe`;
+}
+
 function loQueMideLaNube(h, place) {
   /* Se aceptan LOS DOS nombres: el corto que produce `buildHours` (que
      es lo que la app pasa de verdad) y el crudo de la API, porque hay
@@ -1335,9 +1383,9 @@ function chipsOtrosHora(h, parte) {
     if (nb) out.push(nb.trim());
   }
   if (parte === 'tormenta') {
-    const rompe = has(h.cape) && h.cape >= CAPE_COMBINACION && has(h.cin) && h.cin < TAPA_ROMPE;
+    const rompe = laParejaRompe(h.cape, h.cin, h);
     const t = rompe ? null : tormentaQueNoVesTu(h, h.sitio || null);
-    if (t) out.push(`<span class="nd__ojo">⚠ ${esc(t.quien)} ve tormenta: CAPE ${Math.round(t.cape)} · tapa ${Math.round(t.cin)}</span>`);
+    if (t) out.push(`<span class="nd__ojo">⚠ ${frasOtraTormenta(t)}: CAPE ${Math.round(t.cape)} · tapa ${Math.round(t.cin)}</span>`);
   }
   if (parte === 'racha') {
     const r = rachaQueNoVesTuHora(h);
@@ -2216,9 +2264,25 @@ function tormentaQueNoVesTu(h, place = null) {
     // A igual gasolina, antes un modelo con nombre que el «Automático», que es una mezcla.
     if (cape >= CAPE_COMBINACION && cin < TAPA_ROMPE
         && (!peor || cape > peor.cape || (cape === peor.cape && peor.auto && !auto)))
-      peor = { quien: m.name, cape, cin, auto };
+      peor = { quien: m.name, cape, cin, auto, propio: m.name === modeloDato()?.name };
   }
   return peor;
+}
+
+/* ── «OTRO VE TORMENTA»: Y SI ESE OTRO ERES TÚ, QUE SE DIGA ─────────
+   `tormentaQueNoVesTu()` recorre TODOS los modelos de la comparativa,
+   incluido el que tienes puesto —sus dos hermanas, `rachaQueNoVesTuHora`
+   y `lluviaQueVenOtrosHora`, sí lo saltan—, así que puede salir «⚠ AROME
+   HD ve tormenta» con AROME HD cargado (visto el 26-09-2026 en la ficha
+   de índices). No se calla, porque cuando tu tapa viene prestada es la
+   única pareja del mismo modelo que hay; pero se dice de quién es.
+
+   Y la cifra de la tapa lleva su coletilla de `colaTapa()`, como en
+   todas partes: aquí estaba escrita a pelo «abierta: puede romper» sobre
+   una tapa de 68, que en la escala de la casa es «aguanta». */
+function frasOtraTormenta(o) {
+  if (!o) return '';
+  return `${esc(o.quien)}${o.propio ? ' (tu modelo, con su propia tapa)' : ''} ve tormenta`;
 }
 
 function peorRacha(h, place = null) {
@@ -4811,7 +4875,7 @@ function renderTower() {
     kpi('Riesgo eléctrico',
         has(c.cape) ? `${c.cape.toFixed(0)}<i>J/kg</i>` : nd,
         isStormCode(c.code) ? 'Tormenta en la previsión horaria'
-          : has(c.cin) ? `CAPE · tapa ${c.cin.toFixed(0)}${firmaTapa(c)} — ${textoTapa(c.cin, c)}`
+          : has(c.cin) ? `CAPE · tapa ${c.cin.toFixed(0)}${firmaTapa(c)} — ${colaTapa(c.cape, c.cin, c)}`
           : 'CAPE — energía convectiva disponible',
         isStormCode(c.code) ? 'no' : cSt);
   const kSensacion =
@@ -5315,7 +5379,7 @@ function renderStorm(c) {
   // Zarautz). En esta app la inhibición sale en POSITIVO; en AguaceroWx
   // y otros visores la verás en negativo: es lo mismo, con el signo
   // cambiado.
-  const cinTxt = !has(c.cin) ? nd : fraseTapa(c.cin, c);
+  const cinTxt = !has(c.cin) ? nd : colaTapaLarga(c.cape, c.cin, c);
 
   // De dónde salen estos números, si no los publica el modelo elegido
   const fcAct = S.data?.fc;
@@ -5334,8 +5398,12 @@ function renderStorm(c) {
         capeTxt === nd ? '' : `Inestabilidad ${capeTxt}`, tonoCape) +
     /* Lo que ve OTRO modelo a esta hora, aquí también (09-09-2026): la
        tabla de abajo lo decía y esta caja no. Ver tormentaQueNoVesTu(). */
-    (o => o ? row(`⚠ ${o.quien} ve tormenta`, 'a esta hora, con su tapa',
-                  `${Math.round(o.cape)} J/kg`, `tapa ${Math.round(o.cin)} — abierta: puede romper`, 'no') : '')(tormentaQueNoVesTu(c)) +
+    /* Con la misma guarda que los otros dos sitios que lo enseñan: si tu
+       propia pareja ya rompe, esto no añade nada y sobra. */
+    (o => o ? row(`⚠ ${frasOtraTormenta(o)}`, 'a esta hora, con su tapa',
+                  `${Math.round(o.cape)} J/kg`,
+                  `tapa ${Math.round(o.cin)} — ${colaTapa(o.cape, o.cin, null)}`, 'no') : '')(
+      laParejaRompe(c?.cape, c?.cin, c) ? null : tormentaQueNoVesTu(c)) +
     row('Índice de elevación', 'Lifted Index', show(c.li, '', 1),
         liTxt === nd ? '' : `Atmósfera ${liTxt}`, tonoLi) +
     row('Inhibición convectiva', 'CIN — "tapa" que frena la convección', show(c.cin, 'J/kg'),
@@ -10564,9 +10632,7 @@ function renderTorres() {
              verdad no se pierde: sale por el camino honrado, que son la
              fila «GASOLINA Y TAPA DE CADA MODELO» y el `peorPar` del
              parte, los dos con parejas del mismo modelo. */
-          const tapaAbierta = !h.tapaDe
-            && has(h.cin) && h.cin < TAPA_ROMPE
-            && has(h.cape) && h.cape >= CAPE_COMBINACION;
+          const tapaAbierta = !h.tapaDe && laParejaRompe(h.cape, h.cin, h);
           /* La RACHA entra aquí el 26-08-2026. Faltaba, y en sus sitios
              altos es lo segundo que decide: Orduña llega a 63 km/h y
              Carranza toca los 60, que es su límite de NO APTO. Se marca
@@ -10654,9 +10720,10 @@ function renderTorres() {
                + num(has(h.cape) ? h.cape.toFixed(0) : '—', 'CAPE J/kg',
                      has(h.cape) && h.cape >= (S.thr?.capeWarn ?? 300) ? 'rojo' : tapaAbierta, 'decide')
                + num(has(h.cin) ? h.cin.toFixed(0) : '—',
-                     'tapa J/kg' + (has(h.cin) ? ' · ' + (tapaAbierta
-                       /* en rojo no puede poner «aguanta» (25-09-2026): el número y el listón */
-                       ? `por debajo de ${TAPA_ROMPE}: con este CAPE rompe` : textoTapa(h.cin, h)) : '')
+                     /* La coletilla la da `colaTapa()` y nadie más: en rojo no puede
+                        poner «aguanta» (25-09-2026) y con la tapa prestada no
+                        puede dictar veredicto (21-09-2026). */
+                     'tapa J/kg' + (has(h.cin) ? ' · ' + colaTapa(h.cape, h.cin, h) : '')
                      /* De quién es, si no es del que da el CAPE. Sin esto,
                         dos modelos distintos se leen como una pareja. */
                      + (h.tapaDe ? ` · la da ${esc(h.tapaDe)}, no ${esc(modeloDato()?.name ?? '')}` : ''),
@@ -13879,7 +13946,7 @@ function renderNow() {
   /* El mismo listón que usa el vigilante: CAPE ≥ 700 con la tapa por
      debajo de 75. Un número distinto aquí y allí sería otro renglón que
      dice una cosa mientras el aviso dice otra. */
-  const tormenta = has(c?.cape) && has(c?.cin) && c.cape >= CAPE_COMBINACION && c.cin < TAPA_ROMPE;
+  const tormenta = laParejaRompe(c?.cape, c?.cin, c);
   /* Y cuando salta la regla NO se pone la palabra de la escala
      (25-09-2026): con la tapa en 68 esta casilla decía «Tapa que aguanta ·
      gasolina y sin tapa: puede romper», las dos cosas a un centímetro.
@@ -14199,7 +14266,7 @@ function renderNow() {
       return dt('Tormenta', has(c?.cape) ? `${Math.round(c.cape)}<small> de CAPE</small>` : nd,
         [capeTxt ? `Inestabilidad ${capeTxt}` : '', tapaTxt,
          tormenta ? '<b>gasolina y sin tapa: puede romper</b>' : '',
-         otro ? `<span class="nd__ojo">⚠ ${esc(otro.quien)} ve tormenta: CAPE ${Math.round(otro.cape)} · tapa ${Math.round(otro.cin)}</span>` : '']
+         otro ? `<span class="nd__ojo">⚠ ${frasOtraTormenta(otro)}: CAPE ${Math.round(otro.cape)} · tapa ${Math.round(otro.cin)}</span>` : '']
           .filter(Boolean).join(' · '),
         tormenta ? 'no' : otro ? 'warn' : has(c?.cape) && c.cape >= (S.thr?.capeWarn ?? 300) ? 'warn' : 'go');
     })(),
@@ -14604,7 +14671,7 @@ function renderDiaDetalle(desplazar = false) {
    que el pulso del vigilante: sin dato se dice sin dato. */
 function lineaCapeHora(h) {
   if (!has(h.cape) && !has(h.cin)) return '';
-  const rompe = has(h.cape) && h.cape >= CAPE_COMBINACION && has(h.cin) && h.cin < TAPA_ROMPE;
+  const rompe = laParejaRompe(h.cape, h.cin, h);
   const cape = has(h.cape) ? `CAPE ${h.cape.toFixed(0)}` : 'CAPE: no lo publica';
   /* OJO CON LA PALABRA CUANDO SALTA LA REGLA, que si no se repite el lío
      que él cazó esta misma mañana. `textoTapa()` llama «aguanta» a todo
@@ -14618,7 +14685,7 @@ function lineaCapeHora(h) {
      de lo medido—, pero no se pisan en la misma frase. */
   const tapa = !has(h.cin) ? 'tapa: no la publica'
              : rompe       ? `tapa ${h.cin.toFixed(0)}${firmaTapa(h)}`
-                           : `tapa ${h.cin.toFixed(0)}${firmaTapa(h)} (${textoTapa(h.cin, h)})`;
+                           : `tapa ${h.cin.toFixed(0)}${firmaTapa(h)} (${colaTapa(h.cape, h.cin, h)})`;
   return `<div class="hcard__c${rompe ? ' hcard__c--ojo' : ''}">${cape} · ${tapa}${
     rompe ? ` — los dos a la vez: CAPE de ${CAPE_COMBINACION} para arriba`
           + ' y tapa por debajo de 75' : ''}</div>`;
