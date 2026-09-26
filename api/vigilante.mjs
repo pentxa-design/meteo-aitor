@@ -780,6 +780,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ ...medida(), ultima: e.cuando, haceMin, envia,
         lista: e.listaDeRespaldo ? 'respaldo' : 'la tuya',
         parteDe: e.parteDe ?? null,
+        /* El segundo parte (13:00) también se mira desde fuera: decide si
+           hoy le llega una confirmación o no, y aquí lo que decide se
+           enseña. Misma razón que `envia` y `nLista` (26-09-2026). */
+        parte2De: e.parte2De ?? null,
+        parteResumen: e.parteResumen ?? null,
         sitios: Object.keys(e.sitios || {}).length,
         nLista: e.nLista ?? null,
         noMirados: e.noMirados ?? [],
@@ -924,7 +929,10 @@ export default async function handler(req, res) {
     || Object.values(antes.sitios || {}).some(d => d && Object.values(d).some(x => x && x.ini != null))
     || Object.values(antes.aguaSitios || {}).some(a => a && Object.keys(a).length)
     || Object.values(antes.rachaSitios || {}).some(a => a && Object.keys(a).length)));
-  const ventanaDelParte = h0 >= 6 && h0 < 12 && antes?.parteDe !== claveHoy;
+  /* Las DOS ventanas de parte se saltan el freno de cadencia: la de la
+     mañana (06-12) y la del segundo (13-16, desde el 26-09-2026). */
+  const ventanaDelParte = (h0 >= 6 && h0 < 12 && antes?.parteDe !== claveHoy)
+                       || (h0 >= 13 && h0 < 16 && antes?.parte2De !== claveHoy);
 
   /* `mirar=1` es su ojeada a mano: esa nunca se salta. Se lee aquí
      directo porque `pedidoMirar` se declara más abajo. */
@@ -936,7 +944,10 @@ export default async function handler(req, res) {
                 aquí abajo)
        ámbar  — hay rayo, agua o racha apuntados (hoy o mañana) → cada 2 h
        rojo   — rayo de HOY todavía por delante, racha por encima de su
-                tope por delante, o tormenta inminente ya avisada → 2 h
+                tope por delante, o tormenta inminente ya avisada → MEDIA
+                HORA. Es lo único que se acelera, y lo pidió él así: «solo
+                cuando se detecte estas cosas que se active, y si no, hay
+                pasada normal»
 
      LO QUE DECÍA ESTA NOTA HASTA EL 26-09-2026, y que ya NO vale: el
      13-09 él pidió «cada media hora en ámbar y cada cuarto de hora en
@@ -1090,7 +1101,39 @@ export default async function handler(req, res) {
      después de una pasada, lo sabrá hasta dos horas más tarde. Él lo
      decide sabiéndolo, y su razón es buena — mira el mapa por la mañana
      y ya sabe lo que viene. */
-  const cadaMin = { verde: tardeAquí ? 120 : 180, ambar: 120, rojo: 120 }[nivel];
+  /* ── Y QUE SE ACELERE SOLA CUANDO HAY ALGO (26-09-2026) ───────────
+     Suyo, esa tarde, después de que yo le ofreciera subir la cadencia «a
+     mano solo mañana»: *«o solo cuando se detecte estas cosas que se
+     active, y si no, hay pasada normal»* · *«sería lo suyo»*.
+
+     Es mejor que lo mío: no hay que acordarse de subirla la víspera ni de
+     devolverla al día siguiente. Y es lo que los tres niveles ya hacían
+     antes de que yo los aplanara todos a 120 esa misma mañana.
+
+     La normal se queda en SUS dos horas, y el ROJO —y solo el rojo—
+     vuelve a media hora. Rojo no es «hay algo de CAPE»: es la combinación
+     de verdad todavía POR DELANTE hoy (rayo previsto con la tapa abierta,
+     o racha por encima de su tope), o un aviso ya mandado. Son días
+     contados al año, así que no le mueve el gasto de Vercel.
+
+     EL CASO QUE LO PIDIÓ, medido esa tarde para el domingo 27 en sus
+     emplazamientos, hora a hora y con la tapa del MISMO modelo y la MISMA
+     hora —que es como hay que medirlo, ver abajo—:
+
+         VIRGEN ORDUÑA  15h 940/192 · 16h 1060/103 · 17h 1480/67 ⚡
+         ARBAIZA        15h 940/145 · 16h 1170/80  · 17h 1120/68 ⚡
+         BERMEO         todo el día con la tapa entre 300 y 480: aguanta
+
+     Con la cadencia plana, la pasada de las 16:00 veía lo de las 17:00 y
+     la siguiente caía a las 18:00, con la ventana pasada. Ahora esa misma
+     pasada pone el nivel en rojo y la siguiente entra a las 16:30.
+
+     OJO CON CÓMO SE MIDE ESTO: la primera lectura de ese domingo dio
+     «Zeberio 1720 con tapa 53, rompe» y era FALSA — emparejaba el CAPE
+     más alto de un modelo con la tapa de otro y de otra hora. El mismo
+     fallo que la app lleva toda la semana arreglando, cometido al
+     medirla. Hora a hora y con el mismo modelo, Zeberio no rompe. */
+  const cadaMin = { verde: tardeAquí ? 120 : 180, ambar: 120, rojo: 30 }[nivel];
   /* El suelo de tarde se queda, en sus dos horas: lo puso él el 22-09 por
      «aquí a veces hay un día bueno y al de unas horas entra tormenta», y
      eso no lo deroga bajar la cadencia. De noche, tres. */
@@ -1540,6 +1583,10 @@ export default async function handler(req, res) {
 
      El correo sigue saliendo del Mac cuando esté encendido; desde aquí no
      hay conector de Gmail. Pero el push ya no depende de nada suyo. */
+  /* El resumen del parte del día (tres cuentas) y si el segundo ya se ha
+     resuelto hoy. Los usa el parte de las 13:00 para decir qué cambia. */
+  let resumenHoy = antes?.parteResumen ?? null;
+  let mandado2 = false;
   const HORA_PARTE = 6;
   const tocaParte = h0 >= HORA_PARTE && h0 < 12 && antes?.parteDe !== claveHoy;
   if (tocaParte) {
@@ -1576,6 +1623,87 @@ export default async function handler(req, res) {
         + ` Ábrela para el detalle.`,
       tag: 'parte', importante: false,
     });
+    resumenHoy = { rayo: conRayo.length, agua: conAgua.length, racha: conRacha.length };
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     EL SEGUNDO PARTE, A LAS 13:00 (26-09-2026)
+     ──────────────────────────────────────────────────────────────────
+     Suyo: *«mejor a primera hora para saber, y luego al mediodía con otra
+     pasada ya se sabrá más seguro»*.
+
+     Y es verdad que se sabe más, porque el pronóstico de la mañana no es
+     el mismo. MEDIDO en el metadato de Open-Meteo ese día: los modelos
+     tardan MÁS DE CUATRO HORAS en publicar cada pase.
+
+         AROME HD · pase de las 11:00 → disponible a las 15:14 · cada 3 h
+         ECMWF    · pase de las 08:00 → disponible a las 15:11 · cada 6 h
+
+         el parte de las 06:30 .. usa el pase de AROME de las 02:00
+         éste, a las 13:00 ...... usa el de las 08:00  (6 h más fresco)
+
+     Se le ofrecieron las 15:30 —que usaría el pase de las 11:00, el
+     primero que ha «visto» la mañana y el mejor para algo de la tarde— y
+     eligió las 13:00. Su razón, y es buena: a las 13:00 le queda toda la
+     tarde para mover gente, y eso vale más que dos horas de certeza.
+
+     SOLO SALE SI HAY ALGO. El de las 06:30 es el parte del día y sale
+     siempre; éste es una confirmación, y una confirmación de que no pasa
+     nada no hace falta. Es su regla de toda la vida: «si no hay nada, que
+     no lo ponga» — la misma con la que tumbó el ámbar de los 49 km/h.
+
+     Y DICE QUÉ HA CAMBIADO desde la mañana, que es para lo que sirve:
+     para eso se guarda `parteResumen` con las tres cuentas. */
+  const HORA_PARTE2 = 13;
+  const tocaParte2 = h0 >= HORA_PARTE2 && h0 < 16 && antes?.parte2De !== claveHoy;
+  if (tocaParte2) {
+    const conRayo = buenos.filter(d => d.dias[claveHoy]);
+    const conAgua = buenos.filter(d => d.agua?.[claveHoy]);
+    const conRacha = buenos.filter(d => d.racha?.[claveHoy]);
+    const hay = conRayo.length + conAgua.length + conRacha.length;
+    if (hay) {
+      const antesR = antes?.parteResumen || null;
+      const dif = [];
+      if (antesR) {
+        const cmp = (ahora, before, que) => {
+          if (ahora > before) dif.push(before ? `más ${que} que esta mañana (${before} → ${ahora})`
+                                              : `${que} que esta mañana no había`);
+          else if (ahora < before) dif.push(ahora ? `menos ${que} (${before} → ${ahora})`
+                                                  : `${que} se ha quitado`);
+        };
+        cmp(conRayo.length,  antesR.rayo  || 0, 'rayo');
+        cmp(conAgua.length,  antesR.agua  || 0, 'agua');
+        cmp(conRacha.length, antesR.racha || 0, 'racha');
+      }
+      const trozos2 = [];
+      if (conRayo.length) trozos2.push(`⚡ rayo en ${conRayo.length}: `
+        + conRayo.slice(0, 3).map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana)}`).join(' · ')
+        + (conRayo.length > 3 ? ` y ${conRayo.length - 3} más` : ''));
+      if (conAgua.length) {
+        const peor = conAgua.reduce((a2, b2) => b2.agua[claveHoy].mm > a2.agua[claveHoy].mm ? b2 : a2);
+        trozos2.push(`🌧 agua en ${conAgua.length}: lo más fuerte ${peor.n} `
+          + `${peor.agua[claveHoy].mm} mm/h ${picoTxt(peor.agua[claveHoy].hPico, peor.agua[claveHoy].ini)}`);
+      }
+      if (conRacha.length) {
+        const peor = conRacha.reduce((a2, b2) => b2.racha[claveHoy].kmh > a2.racha[claveHoy].kmh ? b2 : a2);
+        trozos2.push(`💨 racha de ${RACHA_TOPE}+ en ${conRacha.length}: lo peor ${peor.n} `
+          + `${peor.racha[claveHoy].kmh} km/h ${picoTxt(peor.racha[claveHoy].hPico, peor.racha[claveHoy].ini)}`);
+      }
+      avisos.push({
+        titulo: dif.length ? `Segundo parte · ha cambiado` : `Segundo parte · sigue en pie`,
+        url: './?v=torres',
+        cuerpo: trozos2.join('. ')
+          + (dif.length ? `. Respecto a la mañana: ${dif.join(', ')}.`
+                        : `. Igual que esta mañana, con el pase de las 08:00 ya dentro.`),
+        tag: 'parte2', importante: false,
+      });
+      resumenHoy = { rayo: conRayo.length, agua: conAgua.length, racha: conRacha.length };
+      mandado2 = true;
+    } else {
+      /* Nada hoy: no se manda nada, pero el día se da por hecho para no
+         volver a mirarlo a las 14:00 y a las 15:00. */
+      mandado2 = true;
+    }
   }
 
   /* Un hueco de más de 4 h (dos pasadas verdes perdidas) se le dice.
@@ -1688,6 +1816,15 @@ export default async function handler(req, res) {
       parteDe: (tocaParte && !soloMirar
                 && enviados.some(e => e.tag === 'parte' && (e.enviados || 0) > 0))
         ? claveHoy : (antes?.parteDe ?? null),
+      /* El segundo parte se da por hecho también cuando NO había nada que
+         mandar: si no, a las 14:00 y a las 15:00 se volvería a mirar. Pero
+         si HABÍA algo y el envío falló, no se marca y se reintenta, igual
+         que el de la mañana (la lección del 01-09). */
+      parte2De: (mandado2 && !soloMirar
+                 && (!avisos.some(a2 => a2.tag === 'parte2')
+                     || enviados.some(e => e.tag === 'parte2' && (e.enviados || 0) > 0)))
+        ? claveHoy : (antes?.parte2De ?? null),
+      parteResumen: resumenHoy,
     };
 
     const sinHora = e => { const { cuando, ...r } = e || {}; return JSON.stringify(r); };

@@ -874,8 +874,8 @@ ok('el marcador tampoco contesta «cero muestras» cuando no puede leer',
 
 console.log('\n  El vigilante afloja cuando no pasa nada');
 const vg = fs.readFileSync(path.join(__dirname, 'api', 'vigilante.mjs'), 'utf8');
-ok('si no hay nada en marcha NI armándose, se salta la pasada (3 h de noche, 2 h el resto)',
-   /saltada: true/.test(vg) && /const cadaMin = \{ verde: tardeAquí \? 120 : 180, ambar: 120, rojo: 120 \}\[nivel\];/.test(vg)
+ok('si no hay nada en marcha NI armándose, se salta la pasada (3 h de noche, 2 h el resto; solo el rojo a media)',
+   /saltada: true/.test(vg) && /const cadaMin = \{ verde: tardeAquí \? 120 : 180, ambar: 120, rojo: 30 \}\[nivel\];/.test(vg)
    && /huecoPrevio < cadaMin/.test(vg),
    'pasar cada media hora un día tranquilo se llevaba 3,2 de las 4 h de CPU del mes');
 ok('y el rojo es rayo de HOY por delante, racha de 70 por delante o tormenta ya avisada',
@@ -1141,8 +1141,38 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
      /const enFranja = h => h >= 11 && h < 22;/.test(V)
      && /const hPrevia = antes\?\.cuando \? new Date\(antes\.cuando\)\.getHours\(\) : null;/.test(V)
      && /const tardeAquí = enFranja\(h0\) \|\| \(hPrevia !== null && enFranja\(hPrevia\)\);/.test(V)
-     && /const cadaMin = \{ verde: tardeAquí \? 120 : 180, ambar: 120, rojo: 120 \}\[nivel\];/.test(V),
+     && /const cadaMin = \{ verde: tardeAquí \? 120 : 180, ambar: 120, rojo: 30 \}\[nivel\];/.test(V),
      'mirado solo en el tic, la cadencia de tarde moría a las 21:00, una hora antes de lo prometido');
+  /* ── EL SEGUNDO PARTE, A LAS 13:00 (26-09-2026) ───────────────────
+     Suyo: «mejor a primera hora para saber, y luego al mediodía con otra
+     pasada ya se sabrá más seguro». Eligió las 13:00 sobre las 15:30
+     porque le deja toda la tarde para mover gente, y eso vale más que dos
+     horas de certeza.
+
+     LA MITAD QUE SE OLVIDA, y que es suya de siempre: SOLO SALE SI HAY
+     ALGO. El de las 06:30 es el parte del día y sale siempre; éste es una
+     confirmación, y una confirmación de que no pasa nada no hace falta. */
+  ok('hay un segundo parte y cae a las 13:00, no a cualquier hora',
+     /const HORA_PARTE2 = 13;/.test(V)
+     && /const tocaParte2 = h0 >= HORA_PARTE2 && h0 < 16 && antes\?\.parte2De !== claveHoy;/.test(V));
+  ok('y SOLO se manda si hay algo hoy: en los días limpios, nada',
+     /const hay = conRayo\.length \+ conAgua\.length \+ conRacha\.length;\s*\n\s*if \(hay\) \{/.test(V),
+     'un segundo aviso diario que dice «todo tranquilo» es el que deja de leerse');
+  ok('pero el día se da por hecho aunque no se mande, o volvería a mirarlo a las 14 y a las 15',
+     /\} else \{[\s\S]{0,260}mandado2 = true;/.test(V));
+  ok('y si HABÍA algo y el envío falló, NO se marca: se reintenta (la lección del 01-09)',
+     /!avisos\.some\(a2 => a2\.tag === 'parte2'\)\s*\n\s*\|\| enviados\.some\(e => e\.tag === 'parte2' && \(e\.enviados \|\| 0\) > 0\)/.test(V));
+  ok('las DOS ventanas de parte se saltan el freno de cadencia',
+     /const ventanaDelParte = \(h0 >= 6 && h0 < 12 && antes\?\.parteDe !== claveHoy\)\s*\n\s*\|\| \(h0 >= 13 && h0 < 16 && antes\?\.parte2De !== claveHoy\);/.test(V),
+     'sin esto, a las 13:00 el freno de 2 h se lo comería');
+  ok('dice QUÉ HA CAMBIADO desde la mañana, que es para lo que sirve',
+     /const antesR = antes\?\.parteResumen \|\| null;/.test(V)
+     && /Respecto a la mañana: /.test(V)
+     && /parteResumen: resumenHoy,/.test(V));
+  ok('y el pulso lo enseña, como `envia` y `nLista`',
+     /parte2De: e\.parte2De \?\? null,/.test(V) && /parteResumen: e\.parteResumen \?\? null,/.test(V),
+     'lo que decide tiene que poder mirarse desde fuera');
+
   ok('lo que se está armando se GUARDA, que si no la pasada siguiente no lo sabe',
      /ojo: buenos\.reduce\(\(m, d\) => \(\{/.test(V)
      && /cape:\s+Math\.max\(m\.cape,\s+d\.ojo\?\.cape\s+\|\| 0\)/.test(V)
