@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.26-1112';
+const BUILD = '2026.09.26-1312';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -4851,8 +4851,14 @@ function renderTower() {
         L.k === 'bien' ? 'no' : (L.k === 'sirimiri' || L.k === 'poco') ? 'warn'
         : L.k === 'nd' ? 'nd' : otro ? 'warn' : 'go');
     })();
-  $('#kpis').innerHTML = [kLluvia, kRafaga, kViento, kRiesgo, kSensacion,
-    ...(S.hgt === 10 ? [] : kAltura)].join('');
+  /* ── Y ARRIBA DE LAS CASILLAS, LO QUE VIENE HOY (26-09-2026) ──────
+     La misma línea roja que en Mis estaciones y la misma función: él la
+     pidió «tanto en Mis estaciones como en Ahora». Aquí no hay `k` de
+     emplazamiento guardado —esto es el sitio abierto—, así que se pasa
+     null y `loQueVieneHoy` tira de las horas. Vacía cuando no hay nada. */
+  $('#kpis').innerHTML = avisoDeHoy(null, S.data?.hours)
+    + [kLluvia, kRafaga, kViento, kRiesgo, kSensacion,
+       ...(S.hgt === 10 ? [] : kAltura)].join('');
 
   /* Se dice de qué hora son las cifras de arriba. `hrs[0]` es la hora
      EN CURSO —`buildHours` coge la primera que aún no ha terminado—, así
@@ -10112,6 +10118,82 @@ function pintarDiasParte() {
    «vosotros cifras»—. Se dice a qué hora empieza, a qué hora para, si
    son horas seguidas o sueltas y de qué tipo de agua se trata. Lo que
    haga con eso es suyo. */
+/* ── LO QUE VIENE HOY, EN UNA LÍNEA Y EN ROJO (26-09-2026) ────────────
+   Suyo, esa mañana, con la tarjeta delante: *«quiero que me pongas tanto
+   en Mis estaciones como en Ahora, si por ejemplo va a empezar a llover,
+   o CAPE alto, que aparezca en ROJO el aviso»* · *«si no, no me entero
+   con tanto dato»* · *«por ejemplo, en rojo: ICON ve agua, o CAPE»* ·
+   *«o de 14 a 20 tal vez agua»*.
+
+   Y el filtro lo puso él, que es la mitad del encargo: *«si no hay hoy
+   lluvia ni CAPE ni rachas fuertes, que no lo ponga»*. Un aviso que sale
+   todos los días no es un aviso; eso ya lo aprendimos con el ámbar de
+   los 49 km/h.
+
+   LOS NÚMEROS NO SON NUEVOS. Salen de lo que la tarjeta ya enseña más
+   abajo —`S.lluviaTorres`, `S.rachaTorres` y las horas del sitio—, y por
+   eso esta línea no puede contradecir a la de debajo. Si algún día la
+   contradice, es que alguien ha metido un cuarto sitio donde se calcula
+   lo mismo, que es el fallo que esta casa lleva toda la semana cazando.
+
+   Los listones son los SUYOS: su lluvia (`rainWarn`), su ráfaga
+   (`nivelRacha`, 70/90 desde el 25-09) y su CAPE (`capeWarn`). */
+function loQueVieneHoy(k, horas) {
+  const v = ventanaParte();
+  const desde = Math.max(Date.now(), v.desde);
+  const sel = (horas || []).filter(h => {
+    const t = h?.date?.getTime?.();
+    return has(t) && t + 3600e3 > desde && t <= v.hasta;
+  });
+  const hh = d => String(new Date(d).getHours()).padStart(2, '0') + ':00';
+  const av = [];
+
+  /* 1 · AGUA. De `S.lluviaTorres`, que es multi-modelo y ya sabe QUIÉN la
+     ve; si no la hay (la pestaña Ahora), de las horas del sitio. */
+  const L = S.lluviaTorres?.find(x => x?.k === k);
+  if (L?.llueve) {
+    const deQuien = L.quien ? ` · la ve ${esc(L.quien)}` : '';
+    const cuando = L.sueltas
+      ? `${L.nHoras} horas sueltas entre las ${hh(L.ini)} y las ${hh(L.fin)}`
+      : `de ${hh(L.ini)} a ${hh(+L.fin + 3600e3)}`;
+    av.push(`AGUA ${cuando}${deQuien}`);
+  } else if (!L) {
+    const moja = sel.filter(h => has(h.prec) && h.prec >= (S.thr?.rainWarn ?? 0.2));
+    if (moja.length)
+      av.push(`AGUA de ${hh(moja[0].date)} a ${hh(+moja[moja.length - 1].date + 3600e3)}`);
+  }
+
+  /* 2 · RÁFAGA por encima de su listón. */
+  const R = S.rachaTorres?.find(x => x?.k === k);
+  if (R && has(R.racha) && nivelRacha(R.racha) !== 'go') {
+    av.push(`RACHA ${wtxt(R.racha, true)} a las ${hh(R.hora)}${R.quien ? ` · la da ${esc(R.quien)}` : ''}`);
+  } else if (!R) {
+    let peor = null;
+    for (const h of sel) {
+      const g = h.gust10 ?? h.gust;
+      if (has(g) && nivelRacha(g) !== 'go' && (!peor || g > peor.g)) peor = { g, d: h.date };
+    }
+    if (peor) av.push(`RACHA ${wtxt(peor.g, true)} a las ${hh(peor.d)}`);
+  }
+
+  /* 3 · CAPE por encima de su listón de aviso. */
+  let cape = null;
+  for (const h of sel)
+    if (has(h.cape) && h.cape >= (S.thr?.capeWarn ?? 300) && (!cape || h.cape > cape.v))
+      cape = { v: h.cape, d: h.date };
+  if (cape) av.push(`CAPE ${cape.v.toFixed(0)} a las ${hh(cape.d)}`);
+
+  return av;
+}
+
+/* La línea, ya pintada. Vacía cuando no hay nada: es la mitad del
+   encargo. Se usa en Mis estaciones y en Ahora, la misma. */
+function avisoDeHoy(k, horas) {
+  const av = loQueVieneHoy(k, horas);
+  if (!av.length) return '';
+  return `<div class="viene">⚠ ${av.join(' &nbsp;·&nbsp; ')}</div>`;
+}
+
 function lineaAguaTorre(k) {
   const L = S.lluviaTorres?.find(x => x?.k === k);
   if (!L) return '';
@@ -10599,6 +10681,7 @@ function renderTorres() {
              + num(has(h.wind) ? wtxt(h.wind) : '—', `viento ${wu().lbl}`)
              + num(has(h.cape) ? h.cape.toFixed(0) : '—', 'CAPE J/kg');
       })()}</div>
+      ${avisoDeHoy(key(t.place), t.horas)}
       ${lineaAguaTorre(key(t.place))}
       ${lineaPista(t.pista)}
       <div class="tor__tl">${tiras}<span class="tor__tlx">próximas 12 h</span></div>

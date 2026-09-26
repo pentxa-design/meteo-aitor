@@ -509,6 +509,78 @@ grupo('El color de la racha se decide con el número que se ve (25-09-2026)');
    17 franjas donde este aviso se enseña, hoy avisa en 10 y con los cinco
    avisaría en 12. Dos más en dos días para su lista entera.
    ══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════
+   LO QUE VIENE HOY, EN UNA LÍNEA Y EN ROJO
+   ──────────────────────────────────────────────────────────────────────
+   Suyo, 26-09-2026, con la tarjeta delante: *«quiero que me pongas tanto
+   en Mis estaciones como en Ahora, si por ejemplo va a empezar a llover,
+   o CAPE alto, que aparezca en ROJO el aviso»* · *«si no, no me entero
+   con tanto dato»* · *«o de 14 a 20 tal vez agua»*.
+
+   Y LA OTRA MITAD DEL ENCARGO, que es la que se olvida: *«si no hay hoy
+   lluvia ni CAPE ni rachas fuertes, que no lo ponga»*. Un aviso que sale
+   todos los días deja de leerse — la lección del ámbar de los 49 km/h,
+   que él mismo tumbó el 25-09.
+   ══════════════════════════════════════════════════════════════════════ */
+grupo('Lo que viene hoy: en rojo si lo hay, y NADA si no (26-09-2026)');
+{
+  eval(sacar('function loQueVieneHoy('));
+  eval(sacar('function avisoDeHoy('));
+  /* LAS HORAS, RELATIVAS AL RELOJ. Con fechas fijas esto pasaba ahora y
+     fallaba a las 15:30, 18:30, 21:30 y 23:30 —lo cazó el comprobador que
+     repite la suite a cinco horas del día—, porque `loQueVieneHoy` arranca
+     en `Math.max(Date.now(), v.desde)` y las horas de mentira ya habían
+     pasado. Una prueba que solo falla de madrugada engaña. */
+  const h0 = new Date(); h0.setMinutes(0, 0, 0);
+  const H = n => new Date(h0.getTime() + n * 3600e3);
+  const et = n => String(H(n).getHours()).padStart(2, '0') + ':00';
+  globalThis.ventanaParte = () => ({ desde: h0.getTime(), hasta: h0.getTime() + 13 * 3600e3, salto: 0 });
+  globalThis.esc = x => String(x);
+  globalThis.wtxt = (v, u) => `${Math.round(v)}${u ? ' km/h' : ''}`;
+  globalThis.nivelRacha = v => !has(v) ? 'nd' : v >= 90 ? 'no' : v >= 70 ? 'warn' : 'go';
+  /* Doce horas por delante, de la +1 a la +12. */
+  const horas = f => Array.from({ length: 12 }, (_, i) => ({ date: H(i + 1), ...f(i + 1) }));
+
+  S.thr = { rainWarn: 0.2, rainNo: 2, capeWarn: 300, capeNo: 1000 };
+  S.lluviaTorres = null; S.rachaTorres = null;
+
+  ok('un día tranquilo NO pone nada, que es la mitad de lo que pidió',
+     avisoDeHoy(null, horas(() => ({ prec: 0, gust10: 20, cape: 40 }))) === '',
+     avisoDeHoy(null, horas(() => ({ prec: 0, gust10: 20, cape: 40 }))));
+
+  /* Su ejemplo, «de 14 a 20 tal vez agua», con el agua de la +2 a la +7. */
+  const conAgua = avisoDeHoy(null, horas(n => ({ prec: (n >= 2 && n <= 7) ? 0.6 : 0, gust10: 20, cape: 40 })));
+  ok('«de tal a tal, agua» — su ejemplo, con las horas de verdad',
+     conAgua.includes(`AGUA de ${et(2)} a ${et(8)}`), conAgua);
+
+  const conCape = avisoDeHoy(null, horas(n => ({ prec: 0, gust10: 20, cape: n === 5 ? 1460 : 40 })));
+  ok('CAPE alto, con su hora', conCape.includes(`CAPE 1460 a las ${et(5)}`), conCape);
+
+  const conRacha = avisoDeHoy(null, horas(n => ({ prec: 0, gust10: n === 6 ? 75 : 20, cape: 40 })));
+  ok('una racha por encima de SU listón, con su hora',
+     conRacha.includes(`RACHA 75 km/h a las ${et(6)}`), conRacha);
+
+  ok('y una racha por DEBAJO de su listón no lo pone: 55 ya no es aviso desde el 25-09',
+     avisoDeHoy(null, horas(n => ({ prec: 0, gust10: n === 6 ? 55 : 20, cape: 40 }))) === '');
+
+  ok('va en ROJO y arriba: la clase es `viene`, no una nota cualquiera',
+     /^<div class="viene">⚠ /.test(conCape));
+
+  /* SU EJEMPLO LITERAL: «en rojo, ICON ve agua». */
+  S.lluviaTorres = [{ k: 'x', llueve: true, ini: H(2).getTime(), fin: H(7).getTime(),
+                      pico: 0.6, quien: 'ICON' }];
+  const deIcon = avisoDeHoy('x', []);
+  ok('«ICON ve agua» — con el nombre, como el resto de la app',
+     deIcon.includes(`AGUA de ${et(2)} a ${et(8)} · la ve ICON`), deIcon);
+  S.lluviaTorres = null;
+
+  ok('las dos pantallas usan LA MISMA función, no una copia cada una',
+     /\$\{avisoDeHoy\(key\(t\.place\), t\.horas\)\}/.test(src)
+     && /avisoDeHoy\(null, S\.data\?\.hours\)/.test(src)
+     && (src.match(/function avisoDeHoy\(/g) || []).length === 1,
+     'una copia por pantalla es como empezaron todas las contradicciones de esta semana');
+}
+
 grupo('El aviso de nubes de la franja lo pueden dar los cinco (26-09-2026)');
 {
   eval(sacarConst('VELADO'));
@@ -10396,7 +10468,10 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   const H = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   const C = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
   ok('Ahora lleva cinco casillas en su orden: lluvia, ráfaga, viento (con dirección), riesgo eléctrico, sensación; las estimadas solo si la altura no es 10',
-     /\$\('#kpis'\)\.innerHTML = \[kLluvia, kRafaga, kViento, kRiesgo, kSensacion,\s*\.\.\.\(S\.hgt === 10 \? \[\] : kAltura\)\]\.join\(''\);/.test(A)
+     /* 26-09-2026: delante va el aviso rojo de lo que viene hoy, que él
+        pidió «tanto en Mis estaciones como en Ahora». El ORDEN de las
+        cinco casillas, que es lo que esta prueba vigila, no se toca. */
+     /\$\('#kpis'\)\.innerHTML = avisoDeHoy\(null, S\.data\?\.hours\)\s*\n\s*\+ \[kLluvia, kRafaga, kViento, kRiesgo, kSensacion,\s*\n?\s*\.\.\.\(S\.hgt === 10 \? \[\] : kAltura\)\]\.join\(''\);/.test(A)
      && !/kpi\('Dirección',/.test(A)
      && /del \$\{rumboLargo\(c\.dir\)\} \(\$\{c\.dir\.toFixed\(0\)\}°\) · De donde viene el viento a/.test(A));
   ok('la comparativa de modelos se pliega: la frase de color queda a la vista y las barras detrás de «Ver por modelo»',
