@@ -928,20 +928,44 @@ export default async function handler(req, res) {
 
   /* `mirar=1` es su ojeada a mano: esa nunca se salta. Se lee aquí
      directo porque `pedidoMirar` se declara más abajo. */
-  /* ── VERDE, ÁMBAR, ROJO: LA CADENCIA SUBE SOLA (13-09-2026) ──────────
-     Suyo: «cada 2 h vale si es solo para los días en verde; que suba sola
-     a cada media hora en ámbar y a cada cuarto de hora en rojo: una
-     tormenta de verano se monta en una hora». El cron externo llama y AQUÍ
-     se decide si toca pasar. OJO (13-09-2026): cron-job.org está puesto
-     **cada media hora**, así que el rojo sale cada media, no cada cuarto;
-     para que el cuarto de hora sea de verdad hay que bajar el trabajo
-     «Vigilante Aitor Meteo» a 15 min en su consola de cron-job.org.
-       verde  — nada en marcha Y nada armándose → cada 3 h de noche y por
-                la mañana, pero NUNCA más de una hora entre las 11 y las
-                22 (ver la nota de la galerna, aquí abajo)
-       ámbar  — hay rayo, agua o racha apuntados (hoy o mañana) → cada media
-       rojo   — rayo de HOY todavía por delante, racha de 70 por delante, o
-                tormenta inminente ya avisada → cada cuarto
+  /* ── VERDE, ÁMBAR, ROJO: LA CADENCIA SUBE SOLA ─────────────────────
+     El cron externo llama y AQUÍ se decide si toca pasar.
+
+       verde  — nada en marcha Y nada armándose → cada 3 h, pero NUNCA
+                más de DOS entre las 11 y las 22 (la nota de la galerna,
+                aquí abajo)
+       ámbar  — hay rayo, agua o racha apuntados (hoy o mañana) → cada 2 h
+       rojo   — rayo de HOY todavía por delante, racha por encima de su
+                tope por delante, o tormenta inminente ya avisada → 2 h
+
+     LO QUE DECÍA ESTA NOTA HASTA EL 26-09-2026, y que ya NO vale: el
+     13-09 él pidió «cada media hora en ámbar y cada cuarto de hora en
+     rojo: una tormenta de verano se monta en una hora». Se hizo así.
+
+     El 25 y el 26-09 lo cambió tres veces, a la baja, y dio las razones:
+     *«no quiero limitar Vercel porque el Centro Operativo es muy
+     importante para mi trabajo»* · *«el tiempo no cambia cada 15 minutos
+     ni en 1 hora»* · *«si ves a las 7 de la mañana ya sabes lo que te va
+     a venir dentro de 3, 4 o 12 horas»* · *«veo los mapas y ya sé lo que
+     viene»* · *«ni los cazahuracanes»*.
+
+     Y el dato lo respalda: AROME e ICON se actualizan cada 3 h y ECMWF
+     cuatro veces al día, así que en dos horas hay, como mucho, un
+     pronóstico nuevo. Lo de «una tormenta de verano se monta en una
+     hora» sigue siendo cierto, pero ESTE vigilante no lee descargas
+     medidas —eso lo hace la app en el móvil al abrirla—, así que la
+     cadencia corta no le compraba tiempo de reacción ante un rayo ya
+     caído.
+
+     EL CRON: el 26-09 lo puso él en **cada 30 minutos** en cron-job.org.
+     Con la cadencia en 2 h, ese tic solo sirve para entrar, ver que no
+     toca y salir (~7 ms). Si algún día vuelve a querer pasadas más
+     finas, hay que bajar el cron ANTES: aquí no se puede pasar más a
+     menudo de lo que el cron llama.
+
+     EL PRECIO, dicho por escrito: si algo se arma justo después de una
+     pasada, lo sabrá hasta dos horas más tarde. Lo decidió él sabiéndolo.
+
      La app, al abrirse, sigue pidiendo el tiempo en vivo: eso no depende
      de esto. Una llamada saltada cuesta ~50 ms de CPU. */
   const porDelante = x => x && (x.fin == null || x.fin >= h0);
