@@ -490,6 +490,91 @@ grupo('El color de la racha se decide con el número que se ve (25-09-2026)');
      'el 25-09 había una copia local que devolvía null en vez de «go»');
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   «SI ALGUNO VE NUBES, AL MENOS QUE LO PONGA» — LOS CINCO, NO DOS
+   ──────────────────────────────────────────────────────────────────────
+   La regla es suya, del 12-09-2026. Pero se filtraba por `peso >= 2`, o
+   sea solo AROME e ICON, «los que ven una ladera». Buena razón para
+   VOTAR; avisar no es votar.
+
+   Lo tumbó él la madrugada del 26-09 a las 00:43 —*«hay nubes total
+   ahora, en Bermeo»*— con la franja diciendo «velo de nubes altas».
+   MEDIDO: AROME 1 %, ICON 62, ARPEGE 66, ECMWF 28 y **GFS 100**. El que
+   acertó era el grueso, y no tenía permiso para hablar.
+
+   Y la tarde anterior, al revés: Mundaka con foto suya, AROME 100 y
+   GFS 0, acertó AROME. Ninguno es de fiar siempre.
+
+   MEDIDO EL RUIDO antes de tocarlo (10 sitios, 48 h, 70 franjas): de las
+   17 franjas donde este aviso se enseña, hoy avisa en 10 y con los cinco
+   avisaría en 12. Dos más en dos días para su lista entera.
+   ══════════════════════════════════════════════════════════════════════ */
+grupo('El aviso de nubes de la franja lo pueden dar los cinco (26-09-2026)');
+{
+  eval(sacarConst('VELADO'));
+  const fuente = sacar('function nubesEnLaFranjaQueNoVesTu(');
+  /* Con dependencias inyectadas: lo que se prueba es A QUIÉN escucha. */
+  const hacer = (porModelo) => {
+    const horas = ['2026-09-26T00', '2026-09-26T01', '2026-09-26T02', '2026-09-26T03'];
+    const H = { time: horas.map(t => t + ':00') };
+    for (const [om, v] of Object.entries(porModelo)) {
+      H[`cloud_cover_low_${om}`]  = horas.map(() => v);
+      H[`cloud_cover_mid_${om}`]  = horas.map(() => 0);
+    }
+    return new Function('has', 'VELADO', 'COMPARAR', 'deEsteSitio', 'S', 'esc', 'listar', 'rangoDeHoras',
+      fuente + '; return nubesEnLaFranjaQueNoVesTu;')(
+        has, VELADO,
+        [{ om: 'best_match', name: 'Automático' },
+         { om: 'meteofrance_arome_france_hd', name: 'AROME HD', peso: 3 },
+         { om: 'icon_seamless', name: 'ICON', peso: 2 },
+         { om: 'ecmwf_ifs025', name: 'ECMWF', peso: 1 },
+         { om: 'gfs_seamless', name: 'GFS', peso: 1 },
+         { om: 'meteofrance_arpege_europe', name: 'ARPEGE', peso: 1 }],
+        () => ({ hourly: H }), {}, x => String(x),
+        a => a.join(' y '), () => 'de 00 a 03');
+  };
+  const sel = ['2026-09-26T00', '2026-09-26T01', '2026-09-26T02', '2026-09-26T03']
+    .map(t => ({ t: t + ':00', date: new Date(t + ':00') }));
+
+  /* SU CASO DEL 26-09 A LAS 00:43, con los números medidos esa hora. */
+  const suyo = hacer({ meteofrance_arome_france_hd: 1, icon_seamless: 62,
+                       ecmwf_ifs025: 28, gfs_seamless: 100,
+                       meteofrance_arpege_europe: 66 })(sel, VELADO);
+  ok('su caso: con la franja en «velo», GFS ve el 100 % y AHORA se dice',
+     /GFS/.test(suyo), suyo || '(no dijo nada — el grueso seguiría callado)');
+
+  /* Y EL CASO QUE LO DESTAPÓ TODO: solo un modelo grueso ve la nube. */
+  const soloGrueso = hacer({ meteofrance_arome_france_hd: 5, icon_seamless: 10,
+                             ecmwf_ifs025: 5, gfs_seamless: 100,
+                             meteofrance_arpege_europe: 5 })(sel, 0);
+  ok('con los finos en blanco y SOLO el grueso viendo nube, se dice igual',
+     /GFS/.test(soloGrueso) && /100/.test(soloGrueso),
+     soloGrueso || '(callado: es el fallo del 26-09)');
+
+  /* LO QUE NO PUEDE PASAR: que avise cuando nadie ve nada. */
+  const nadie = hacer({ meteofrance_arome_france_hd: 5, icon_seamless: 5,
+                        ecmwf_ifs025: 5, gfs_seamless: 5,
+                        meteofrance_arpege_europe: 5 })(sel, 0);
+  ok('y si ninguno ve nube, no se inventa un aviso',
+     nadie === '', nadie);
+
+  /* El Automático no cuenta: es mezcla de los otros y sería contarlos dos veces. */
+  const auto = hacer({ best_match: 100, meteofrance_arome_france_hd: 5,
+                       icon_seamless: 5, ecmwf_ifs025: 5, gfs_seamless: 5,
+                       meteofrance_arpege_europe: 5 })(sel, 0);
+  ok('el Automático sigue fuera: es una mezcla, no un sexto testigo',
+     auto === '', auto);
+
+  /* Y con la franja ya en «cubierto», el aviso sobra. */
+  ok('si la franja ya dice cubierto, no se repite',
+     hacer({ gfs_seamless: 100 })(sel, 3) === '');
+
+  ok('el filtro por peso ya no está: avisan los cinco',
+     /if \(m\.om === 'best_match'\) continue;/.test(src)
+     && !/m\.om === 'best_match' \|\| \(m\.peso \|\| 1\) < 2/.test(src),
+     'con `peso >= 2` el que acertó el 26-09 se quedaba mudo');
+}
+
 grupo('El número y la palabra de las nubes, cuando no cuadran (25-09-2026)');
 {
   /* EL CUERPO DE LA FUNCIÓN, SACADO DE app.js Y EJECUTADO, con las

@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.26-0050';
+const BUILD = '2026.09.26-0953';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -5870,9 +5870,42 @@ function lluviaQueVieneYNoVesTu() {
    la franja en «Despejado»: *«si alguno ve nubes al menos que lo ponga,
    ¿no?»*. La misma regla que ya tienen la lluvia («GFS y ECMWF sí»), la
    racha y el CAPE: el número de la franja es el votado, y al lado va
-   quién ve otra cosa. Solo cuentan los modelos finos (peso ≥ 2: AROME e
-   ICON), que son los que ven una ladera; y solo si ven nube baja o
-   media (≥ 40 %) en al menos la mitad de las horas de la franja. */
+   quién ve otra cosa. Solo si ven nube baja o media (≥ 40 %) en al menos
+   la mitad de las horas de la franja.
+
+   ── Y AHORA HABLAN LOS CINCO, NO DOS (26-09-2026) ──────────────────
+   Hasta hoy se filtraba por `peso >= 2`: solo AROME e ICON, «que son
+   los que ven una ladera». La razón era buena y sigue siéndolo PARA
+   VOTAR —un modelo de 25 km no resuelve una ladera—, pero AVISAR no es
+   votar.
+
+   Lo tumbó él la madrugada del 26-09 a las 00:43: *«hay nubes total
+   ahora, en Bermeo»*, con la franja diciendo «velo de nubes altas».
+   MEDIDO esa hora, nube baja+media:
+
+       AROME HD    1 %  (peso 3)   ← el fino, y se equivocó
+       ECMWF      28
+       ICON       62   (peso 2)
+       ARPEGE     66
+       GFS       100 %             ← el grueso, acertó, y estaba CALLADO
+
+   Y la tarde anterior fue AL REVÉS: Mundaka, 14:42, con foto suya del
+   cielo tapado, AROME daba 100 y GFS 0, y acertó AROME. Ninguno es de
+   fiar siempre en nube, así que callar a tres de cinco es apostar por
+   dos. (La mañana del 26 a las 09:40, tercera foto suya con el cielo
+   cubierto: AROME 100 y GFS 100 aciertan los dos, y ARPEGE da 5.)
+
+   CUÁNTO RUIDO AÑADE, medido ANTES de tocarlo sobre 10 emplazamientos
+   suyos y 48 h (70 franjas de 6 h):
+
+       franjas donde la app dice despejado o velo
+       —las únicas donde este aviso se enseña— ......... 17
+           hoy avisa (AROME o ICON) ................... 10  (59 %)
+           avisando los cinco ......................... 12  (71 %)
+
+   **Dos avisos más en 48 horas y diez sitios**: uno al día para su lista
+   entera, y uno de los dos es justo el caso que le falló. No es ruido.
+   El número de la franja NO cambia; solo se dice quién ve otra cosa. */
 function nubesEnLaFranjaQueNoVesTu(sel, code) {
   if (!sel?.length || !(code === 0 || code === 1 || code === VELADO)) return '';
   const H = deEsteSitio(S.comparativa)?.hourly;
@@ -5880,7 +5913,10 @@ function nubesEnLaFranjaQueNoVesTu(sel, code) {
   H.__porHora ??= new Map(H.time.map((x, i) => [String(x).slice(0, 13), i]));
   const ven = [];
   for (const m of COMPARAR) {
-    if (m.om === 'best_match' || (m.peso || 1) < 2) continue;
+    /* El Automático sigue fuera: es una mezcla de los otros y contarlo
+       sería contar dos veces a quien ya está dentro. Los cinco de
+       verdad, finos y gruesos, avisan. */
+    if (m.om === 'best_match') continue;
     let n = 0, tot = 0, max = 0; const horas = [];
     for (const h of sel) {
       const i = H.__porHora.get(String(h.t).slice(0, 13));
