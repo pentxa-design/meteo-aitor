@@ -908,11 +908,38 @@ ok('y saltarse una pasada NO cuenta como estar caído (el aviso salta a las 4 h)
   const appSrc = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
   const i = appSrc.indexOf('function textoPulso');
   const cartel = i < 0 ? '' : appSrc.slice(i, i + 4000);
-  ok('el cartel del pulso no promete una cadencia que el vigilante ya no tiene',
-     cartel.length > 0 && !/cada 3 horas/.test(cartel)
-     && !/cron-job\.org cada media hora/.test(cartel)
-     && /cada 2 h/.test(cartel) && /cada media hora o cada cuarto/.test(cartel),
-     'con el verde de 2 h, «debería pasar cada 3 horas» convierte un hueco normal en avería');
+  /* ── Y AHORA SE COMPRUEBA DE VERDAD, NO POR EL TEXTO (26-09-2026) ──
+     Esta guarda decía en su propio comentario «la regla es de clase: el
+     texto del cartel no puede nombrar una cadencia que el vigilante no
+     tenga», y lo que ejecutaba era buscar «cada 2 h» y «cada media hora o
+     cada cuarto» EN EL CARTEL. No miraba ni una vez el `cadaMin` del
+     vigilante. El 26-09 la cadencia pasó a 120/180 de verde, 120 de ámbar
+     y 30 de rojo, el cartel siguió prometiendo cuartos de hora… y esto
+     siguió en verde. Ahora se leen los dos ficheros y se comparan. */
+  const cadaMin = (vgc.match(/const cadaMin = \{([^}]*)\}/) || [])[1] || '';
+  const delVig = {
+    verdeTarde: +(cadaMin.match(/verde: tardeAquí \? (\d+)/) || [])[1],
+    verdeNoche: +(cadaMin.match(/verde: tardeAquí \? \d+ : (\d+)/) || [])[1],
+    ambar: +(cadaMin.match(/ambar: (\d+)/) || [])[1],
+    rojo: +(cadaMin.match(/rojo: (\d+)/) || [])[1],
+  };
+  const delApp = (() => {
+    const m = appSrc.match(/const PULSO_CADA = \{([^}]*)\};/);
+    if (!m) return null;
+    const n = k => +((m[1].match(new RegExp(k + ':\\s*(\\d+)')) || [])[1]);
+    return { verdeTarde: n('verdeTarde'), verdeNoche: n('verdeNoche'), ambar: n('ambar'), rojo: n('rojo') };
+  })();
+  ok('el cartel del pulso dice LA CADENCIA QUE EL VIGILANTE TIENE, leída de su fichero',
+     !!delApp && Object.keys(delVig).every(k => delVig[k] > 0 && delVig[k] === delApp[k]),
+     `vigilante ${JSON.stringify(delVig)} · cartel ${JSON.stringify(delApp)}`);
+  ok('y el cartel no lleva la cadencia escrita a mano: la arma con esos números',
+     /const PULSO_COMO = `pasa cada \$\{pulsoTxt\(PULSO_CADA\.verdeTarde\)\}/.test(appSrc)
+     && !/cada media hora o cada cuarto/.test(cartel) && !/cada 3 horas/.test(cartel)
+     && !/cron-job\.org cada media hora/.test(cartel),
+     'prometía cuartos de hora que ya no existen y llamaba «varias pasadas perdidas» a una y pico');
+  ok('y el listón de «nadie está vigilando» es más de una pasada, también de madrugada',
+     (() => { const m = appSrc.match(/const PULSO_MALO = (\d+);/); return m && +m[1] > delVig.verdeNoche; })(),
+     'con 240 y el verde nocturno en 180, cuatro horas ya es más de una pasada perdida');
 }
 
 console.log('\n  Tocar el aviso abre la app');

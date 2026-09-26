@@ -5377,8 +5377,15 @@ function renderStorm(c) {
   const tonoLi   = !has(c.li) ? '' : c.li <= -6 ? 'no' : c.li <= -2 ? 'warn' : 'go';
   // La tapa solo se pone en rojo si HAY gasolina que soltar.
   const hayGas   = has(c.cape) && c.cape >= CAPE_COMBINACION;
-  const tonoCin  = !has(c.cin) ? '' : (hayGas && c.cin < TAPA_ROMPE) ? 'no'
-                 : hayGas ? 'warn' : 'dato';
+  /* El ROJO por la misma puerta que el texto (26-09-2026). Aquí el color
+     salía de `hayGas && c.cin < TAPA_ROMPE` —la pareja mixta que el 21-09
+     se prohibió— mientras el texto de debajo, que sí pasa por
+     `fraseTapa`, decía «La tapa no dice nada aquí: ese 0 lo pone ICON,
+     que no ve gasolina». La fila entera en rojo sobre una cifra que la
+     propia fila declara muda: el color afirmaba lo que el texto negaba. */
+  const tonoCin  = !has(c.cin) ? ''
+                 : (!c.tapaDe && laParejaRompe(c.cape, c.cin, c)) ? 'no'
+                 : hayGas && tapaVale(c) ? 'warn' : 'dato';
   // El isocero no es bueno ni malo: es referencia… salvo que caiga sobre
   // la cota del sitio, que entonces es hielo en la pista.
   const cotaAqui = cfgDe(S.place)?.cota;
@@ -7912,6 +7919,19 @@ async function completarTorres(sitios, arr) {
       longitude: sitios.map(p => p.lon.toFixed(4)).join(','),
       hourly: ks.join(',') + (conAgua ? ',weather_code' : '')
               + (conTapa && !ks.includes('cape') ? ',cape' : ''),
+      /* ── Y EL `current` DEL QUE PRESTA, COMO EN «AHORA» (26-09-2026) ─
+         `completar()` —la pestaña Ahora— pide al prestamista las horas Y
+         el `current`, y pisa las dos cosas. Aquí solo se pedían las
+         horas, así que `fc.current` seguía siendo el del modelo cargado
+         y `conAhora()` pisaba las tres capas de nube de la hora en curso
+         con las de AROME dejando el CÓDIGO y el TOTAL en las de ECMWF.
+         Medido hoy a las 16:30 en Bermeo: AROME current → bajas 0,
+         medias 0, altas 51, sin código ni total; ECMWF current → código
+         1, total 27, medias 61. Los dos caminos caen a lados opuestos
+         del listón de 40 del velo, y por eso la portada podía decir
+         «Cubierto» y la tarjeta «Mayormente despejado» del mismo sitio y
+         la misma hora. Va en la MISMA petición: ni una llamada de más. */
+      current: ks.filter(k => k !== 'uv_index').join(','),
       timezone: 'auto', wind_speed_unit: 'kmh',
       /* las mismas horas que cargarTorres: 3 días atrás, sin past_hours (25-09-2026) */
       forecast_days: 2, past_days: 3, models: om,
@@ -7940,6 +7960,9 @@ async function completarTorres(sitios, arr) {
            horas ya se han comprobado iguales unas líneas más arriba. */
         if (k === 'convective_inhibition' && traeAlgo(extra[i].hourly.cape))
           fc.hourly.cape_de_la_tapa = extra[i].hourly.cape;
+        /* La hora en curso, del mismo dueño que las horas. Sin esto, la
+           tarjeta mezcla el código de uno con las capas del otro. */
+        if (has(extra[i].current?.[k])) { fc.current ??= {}; fc.current[k] = extra[i].current[k]; }
         if (muerto) (fc.seCayo ??= []).push({ k, muerto, salvo: om });
       }
     });
@@ -15320,7 +15343,11 @@ function avisoTormentaFranja(horas) {
 
   // Sin la combinación: se valora igual, en corto.
   let lectura, clase = 'part__ray--ojo';
-  const tapaAbierta = has(pico.cin) && pico.cin < TAPA_ROMPE;
+  /* Una tapa que no dice nada no está abierta (26-09-2026): con AROME
+     puesto la presta ICON, y en 379 de 386 horas ese ICON ve CAPE 0 y
+     escribe 0. «Riesgo moderado — tapa abierta» sobre ese 0 es la misma
+     mentira del 22-09 en la franja. */
+  const tapaAbierta = tapaVale(pico) && has(pico.cin) && pico.cin < TAPA_ROMPE;
 
   /* CON SU LISTÓN, NO CON UN 200 Y UN 500 ESCRITOS A MANO. Encontrado el
      20-09-2026: con un pico de CAPE 450 y la tapa en 300, la ficha de la
@@ -19721,10 +19748,28 @@ async function mirarPulso() {
    Así que ahora se dice SIEMPRE en cuál de los tres estados está. Es la
    regla 2 de esta app aplicada al propio vigilante: un hueco callado se
    confunde con «aquí no pasa nada». */
-/* 4 h. Desde el 13-09-2026 la pasada va cada 2 h en día tranquilo (verde),
-   cada media hora si hay algo apuntado (ámbar) y cada cuarto si hay rayo o
-   racha de 70 por delante (rojo). Cuatro horas son DOS pasadas verdes
-   perdidas: el listón sigue valiendo y no chilla en un día en calma. */
+/* ── LA CADENCIA DE VERDAD, PARA PODER DECIRLA SIN INVENTAR ─────────
+   El cartel decía «en día tranquilo pasa cada 2 h, y cada media hora o
+   cada cuarto si hay algo montándose» desde el 13-09. El 26-09 la
+   cadencia del vigilante pasó a ser otra —él: «no tiene sentido vigilar
+   cada 10 segundos ni cada 15 minutos», «si pasando cada 2 horas ya
+   vale»— y el cartel se quedó con la de antes: le prometía cuartos de
+   hora que ya no existen y llamaba «varias pasadas perdidas» a lo que de
+   madrugada es una y pico.
+
+   Esto es una COPIA DECLARADA del `cadaMin` de api/vigilante.mjs, y hay
+   una guarda en pruebas-servidor.cjs que compara las dos y para la
+   publicación si se separan. Un cartel que promete una cadencia que el
+   vigilante no tiene es un cartel que miente sobre su propio guardia. */
+const PULSO_CADA = { verdeTarde: 120, verdeNoche: 180, ambar: 120, rojo: 30 };
+const pulsoTxt = m => m % 60 === 0 ? `${m / 60} h` : `${m} min`;
+const PULSO_COMO = `pasa cada ${pulsoTxt(PULSO_CADA.verdeTarde)} de día y cada `
+  + `${pulsoTxt(PULSO_CADA.verdeNoche)} de madrugada, cada `
+  + `${pulsoTxt(PULSO_CADA.ambar)} si hay algo apuntado y cada `
+  + `${pulsoTxt(PULSO_CADA.rojo)} si hay rayo o racha por delante`;
+
+/* 4 h sin pasar es más de una pasada perdida a cualquier hora, también
+   de madrugada, que es cuando más largo es el hueco normal. */
 const PULSO_MALO = 240;
 
 function estadoPulso(d) {
@@ -19771,8 +19816,8 @@ function textoPulso(d) {
     return `<b>El vigilante contesta, pero no sabe decir cuándo pasó.</b>
       <b>Está corriendo</b> —lo lanza cron-job.org, no depende de tu Mac—: lo
       que no hay es el sello de la última pasada. Suele ser que aún no ha hecho
-      ninguna desde el último cambio; en un rato estará (en día tranquilo pasa
-      cada 2 h). Los avisos siguen saliendo.`;
+      ninguna desde el último cambio; en un rato estará (${PULSO_COMO}).
+      Los avisos siguen saliendo.`;
 
   if (e === 'nolose')
     return `<b>No he podido preguntar por el vigilante.</b> Sin cobertura o el
@@ -19783,9 +19828,8 @@ function textoPulso(d) {
     const h = Math.floor(d.haceMin / 60), m = d.haceMin % 60;
     return `<b>⚠ NADIE ESTÁ VIGILANDO</b><br>
       El vigilante lleva <b>${h} h ${m} min</b> sin pasar por tus emplazamientos.
-      En día tranquilo pasa cada 2 h, y cada media hora o cada cuarto si hay algo
-      montándose: <b>esto son varias pasadas perdidas</b>, no una.
-      Los números que ves son del último rato que miró.`;
+      En día tranquilo ${PULSO_COMO}: <b>esto es más de una pasada perdida</b>
+      a cualquier hora. Los números que ves son del último rato que miró.`;
   }
 
   const cuanto = d.haceMin < 60 ? `hace ${Math.max(0, d.haceMin)} min`

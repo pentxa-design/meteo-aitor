@@ -2491,6 +2491,11 @@ ok('sin emplazamientos se dice cómo se guardan',
    fondo del asunto, que es lo que arregla esto: **una tarea parada se ve
    igual que una tarde tranquila**. Es la regla 2 de la app aplicada al
    propio vigilante. */
+/* La cadencia que el cartel dice sale de estos tres, y son copia
+   declarada del vigilante: pruebas-servidor.cjs compara las dos. */
+eval(sacarConst('PULSO_CADA'));
+eval(sacarConst('pulsoTxt'));
+eval(sacarConst('PULSO_COMO'));
 eval(sacarConst('PULSO_MALO'));
 eval(sacar('function estadoPulso(d) {'));
 eval(sacar('function textoPulso(d) {'));
