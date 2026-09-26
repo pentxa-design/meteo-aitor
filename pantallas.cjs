@@ -108,6 +108,10 @@ const HORA_TAPA_ICON = 10;                      // la tapa de ICON vale 5 solo a
    tormenta, y 3/4/21/22 el agua de ICON. */
 const HORA_TAPA_MUDA = 20;
 const HORA_TORMENTA = 13;                       // a esa hora falsa el cargado lleva CAPE 800 y tapa 68 todo el día
+/* A las 23:30 la gasolina está MAÑANA y hoy no hay nada: es la noche del
+   26-09-2026, cuando el aviso rojo le sacó «CAPE 590 a las 22:00» con la
+   casilla de al lado en 0 porque estaba leyendo el domingo. */
+const HORA_SOLO_MANANA = 23;
 const HORA_SIN_COMPARATIVA = 20;                // a esa hora falsa la comparativa (7 modelos) NO contesta
 const HORA_SIN_FONDO = 13;                      // a esa hora `current` no trae mar de fondo (se lee de la serie)
 const HORA_SIN_EUSKALMET = 7;                   // a esa hora el lote de Euskalmet contesta 200 con ok:false (ninguna leída)
@@ -118,6 +122,7 @@ function trampa(fijo, hh) {
   const ahora = new Date(fijo);
   const hoy0 = new Date(fijo); hoy0.setHours(0, 0, 0, 0);
   const horaEnCurso = new Date(fijo); horaEnCurso.setMinutes(0, 0, 0);
+  const finDeHoy = new Date(fijo); finDeHoy.setHours(23, 59, 59, 999);
   /* Open-Meteo decide `is_day` al PRINCIPIO de la hora: a las 08:00 con
      el orto a las 08:01 dice noche. Es exactamente lo que pintó la luna. */
   const isDay = h => (h * 60 >= ORTO && h * 60 < OCASO) ? 1 : 0;
@@ -135,6 +140,8 @@ function trampa(fijo, hh) {
          el caso real de Bermeo (AROME ve 20-70 y ICON ve 0). */
       case 'cape':
         if (om === MOJADO && h === HORA_TAPA_MUDA) return 0;
+        // La gasolina, solo mañana: hoy no hay nada que avisar.
+        if (hh === HORA_SOLO_MANANA) return d.getTime() > finDeHoy.getTime() ? 900 : 40;
         return cargadoTormenta ? 800 : 40;
       /* El cargado NO publica la tapa (como AROME HD de verdad): la app se la
          pide a ICON, y así se ve si lo prestado se pega por hora. Solo a la
@@ -591,6 +598,47 @@ async function unaHora(hh) {
   /* 10. Lo genérico, en cada zona pintada: nada de NaN, undefined, decimales
       con punto (los millares con punto, «2.680», sí valen) ni carteles de
       «cargando» cuando ya está todo contestado; ni avisos del cielo. */
+  /* ── 10 bis · EL AVISO ROJO ES DE HOY, Y LO DICE ──────────────────
+     Suyo, 26-09-2026 a las 22:36, con el aviso delante: *«¿es de las 22
+     de ahora o de mañana?»*, *«joder, pues no lo pone claro»*, *«no soy
+     adivino»*, *«como los avisos no me los pongáis claros vamos a tener
+     un gran problema»*.
+
+     Era de mañana: el aviso heredaba la ventana del PARTE, que a partir
+     de las 22:00 salta al día siguiente, y escribía la hora sin el día.
+     Aquí se prueban las dos mitades:
+
+       · a las 23:30, con la gasolina puesta SOLO en mañana (CAPE 900) y
+         la racha de 90 también solo en las horas de mañana, el aviso no
+         puede nombrar ninguna de las dos;
+       · y a cualquier hora, un aviso que diga una hora tiene que decir
+         el día. Nunca un «a las 22:00» suelto. */
+  {
+    const avisos = [...doc.querySelectorAll('.viene')]
+      .map(e => e.textContent.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    for (const t of avisos)
+      if (/\d\d:00/.test(t) && !/\bhoy\b/.test(t))
+        falla(`el aviso rojo dice una hora sin decir el día: «${t.slice(0, 120)}»`);
+
+    if (hh === HORA_SOLO_MANANA) {
+      /* Que la trampa muerda: mañana TIENE que llevar algo que avisar. */
+      const hs = A.S.data?.hours || [];
+      const finHoy = (() => { const d = new Date(fijo.getTime()); d.setHours(23, 59, 59, 999); return d.getTime(); })();
+      const manana = hs.filter(h => h?.date && h.date.getTime() > finHoy);
+      if (!manana.some(h => (h.cape ?? 0) >= 300))
+        falla('TRAMPA SIN DIENTES: mañana no lleva gasolina, así que no se prueba nada');
+      if (hs.some(h => h?.date && h.date.getTime() <= finHoy && h.date.getTime() > fijo.getTime()
+                    && (h.cape ?? 0) >= 300))
+        falla('TRAMPA SIN DIENTES: hoy también lleva gasolina y no se distingue de mañana');
+
+      for (const t of avisos) {
+        if (/CAPE/.test(t)) falla(`el aviso rojo saca el CAPE de MAÑANA a las ${p2(hh)}:30 de hoy: «${t.slice(0, 120)}»`);
+        if (/RACHA/.test(t)) falla(`el aviso rojo saca la racha de MAÑANA a las ${p2(hh)}:30 de hoy: «${t.slice(0, 120)}»`);
+        if (/AGUA/.test(t))  falla(`el aviso rojo saca el agua de MAÑANA a las ${p2(hh)}:30 de hoy: «${t.slice(0, 120)}»`);
+      }
+    }
+  }
+
   /* ── 11 · EL MISMO HECHO, EN TODAS LAS PANTALLAS A LA VEZ ──────────
      Suyo, 26-09-2026: *«ya tiene que funcionar bien sin errores
      diarios»*, *«no puedo ya andar a diario con estas cosas

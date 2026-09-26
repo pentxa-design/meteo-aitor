@@ -583,57 +583,107 @@ grupo('El color de la racha se decide con el número que se ve (25-09-2026)');
    todos los días deja de leerse — la lección del ámbar de los 49 km/h,
    que él mismo tumbó el 25-09.
    ══════════════════════════════════════════════════════════════════════ */
-grupo('Lo que viene hoy: en rojo si lo hay, y NADA si no (26-09-2026)');
+grupo('Lo que viene hoy: en rojo si lo hay, NADA si no, y SOLO de hoy (26-09-2026)');
 {
   eval(sacar('function loQueVieneHoy('));
   eval(sacar('function avisoDeHoy('));
-  /* LAS HORAS, RELATIVAS AL RELOJ. Con fechas fijas esto pasaba ahora y
-     fallaba a las 15:30, 18:30, 21:30 y 23:30 —lo cazó el comprobador que
-     repite la suite a cinco horas del día—, porque `loQueVieneHoy` arranca
-     en `Math.max(Date.now(), v.desde)` y las horas de mentira ya habían
-     pasado. Una prueba que solo falla de madrugada engaña. */
-  const h0 = new Date(); h0.setMinutes(0, 0, 0);
-  const H = n => new Date(h0.getTime() + n * 3600e3);
-  const et = n => String(H(n).getHours()).padStart(2, '0') + ':00';
-  globalThis.ventanaParte = () => ({ desde: h0.getTime(), hasta: h0.getTime() + 13 * 3600e3, salto: 0 });
+  /* ── EL RELOJ ENTRA POR LA PUERTA ─────────────────────────────────
+     Antes estas pruebas colgaban del reloj de verdad y montaban «doce
+     horas por delante», que a las 22:36 caen casi todas en MAÑANA. Es
+     decir: daban por bueno justo lo que él cazó esa noche —el aviso
+     rojo sacando el CAPE del domingo— y encima solo se habrían quejado
+     a ciertas horas. Ahora la hora se pasa como argumento y el caso de
+     mañana se prueba a propósito. */
+  const DIA = new Date(2026, 8, 26, 10, 0, 0, 0);          // sábado 26, las 10:00
+  const AHORA = DIA.getTime();
+  const H = n => new Date(2026, 8, 26, n, 0, 0, 0);        // hoy, a la hora n
+  const MAN = n => new Date(2026, 8, 27, n, 0, 0, 0);      // mañana, a la hora n
+  const et = n => String(n).padStart(2, '0') + ':00';
   globalThis.esc = x => String(x);
   globalThis.wtxt = (v, u) => `${Math.round(v)}${u ? ' km/h' : ''}`;
   globalThis.nivelRacha = v => !has(v) ? 'nd' : v >= 90 ? 'no' : v >= 70 ? 'warn' : 'go';
-  /* Doce horas por delante, de la +1 a la +12. */
-  const horas = f => Array.from({ length: 12 }, (_, i) => ({ date: H(i + 1), ...f(i + 1) }));
+  /* La ventana del parte ya NO manda aquí: si alguien la vuelve a usar,
+     esta de mentira devuelve el día equivocado y las pruebas lo cantan. */
+  globalThis.ventanaParte = () => ({ desde: MAN(0).getTime(), hasta: MAN(23).getTime(), salto: 1 });
+  const aviso = (k, hs) => avisoDeHoy(k, hs, AHORA);
+
+  /* Las horas que quedan de hoy (11 a 23) y TODAS las de mañana. */
+  const hoyY = f => [...Array.from({ length: 13 }, (_, i) => ({ date: H(i + 11), ...f(i + 11, true) })),
+                     ...Array.from({ length: 24 }, (_, i) => ({ date: MAN(i), ...f(i, false) }))];
+  const CALMA = { prec: 0, gust10: 20, cape: 40 };
 
   S.thr = { rainWarn: 0.2, rainNo: 2, capeWarn: 300, capeNo: 1000 };
   S.lluviaTorres = null; S.rachaTorres = null;
 
   ok('un día tranquilo NO pone nada, que es la mitad de lo que pidió',
-     avisoDeHoy(null, horas(() => ({ prec: 0, gust10: 20, cape: 40 }))) === '',
-     avisoDeHoy(null, horas(() => ({ prec: 0, gust10: 20, cape: 40 }))));
+     aviso(null, hoyY(() => ({ ...CALMA }))) === '',
+     aviso(null, hoyY(() => ({ ...CALMA }))));
 
-  /* Su ejemplo, «de 14 a 20 tal vez agua», con el agua de la +2 a la +7. */
-  const conAgua = avisoDeHoy(null, horas(n => ({ prec: (n >= 2 && n <= 7) ? 0.6 : 0, gust10: 20, cape: 40 })));
+  /* ── EL FALLO DEL 26-09 A LAS 22:36, EL QUE ÉL CAZÓ ───────────────
+     Hoy no hay nada y mañana hay de todo. El aviso tiene que callarse:
+     «lo de mañana se avisa mañana» es regla suya. */
+  const soloManana = hoyY((n, esHoy) => esHoy ? { ...CALMA }
+                                              : { prec: 1.2, gust10: 95, cape: 900 });
+  ok('con hoy en calma y MAÑANA cargado, el aviso se calla: lo de mañana se avisa mañana',
+     aviso(null, soloManana) === '',
+     aviso(null, soloManana));
+
+  ok('…y eso vale también a las 23:30, que es cuando el parte ya salta al día siguiente',
+     avisoDeHoy(null, soloManana, new Date(2026, 8, 26, 23, 30).getTime()) === '',
+     avisoDeHoy(null, soloManana, new Date(2026, 8, 26, 23, 30).getTime()));
+
+  /* Su ejemplo, «de 14 a 20 tal vez agua». */
+  const conAgua = aviso(null, hoyY((n, esHoy) => ({ ...CALMA, prec: esHoy && n >= 14 && n <= 19 ? 0.6 : 0 })));
   ok('«de tal a tal, agua» — su ejemplo, con las horas de verdad',
-     conAgua.includes(`AGUA de ${et(2)} a ${et(8)}`), conAgua);
+     conAgua.includes(`AGUA hoy de ${et(14)} a ${et(20)}`), conAgua);
 
-  const conCape = avisoDeHoy(null, horas(n => ({ prec: 0, gust10: 20, cape: n === 5 ? 1460 : 40 })));
-  ok('CAPE alto, con su hora', conCape.includes(`CAPE 1460 a las ${et(5)}`), conCape);
+  const conCape = aviso(null, hoyY((n, esHoy) => ({ ...CALMA, cape: esHoy && n === 15 ? 1460 : 40 })));
+  ok('CAPE alto, con su hora', conCape.includes(`CAPE 1460 hoy a las ${et(15)}`), conCape);
 
-  const conRacha = avisoDeHoy(null, horas(n => ({ prec: 0, gust10: n === 6 ? 75 : 20, cape: 40 })));
+  const conRacha = aviso(null, hoyY((n, esHoy) => ({ ...CALMA, gust10: esHoy && n === 16 ? 75 : 20 })));
   ok('una racha por encima de SU listón, con su hora',
-     conRacha.includes(`RACHA 75 km/h a las ${et(6)}`), conRacha);
+     conRacha.includes(`RACHA 75 km/h hoy a las ${et(16)}`), conRacha);
 
   ok('y una racha por DEBAJO de su listón no lo pone: 55 ya no es aviso desde el 25-09',
-     avisoDeHoy(null, horas(n => ({ prec: 0, gust10: n === 6 ? 55 : 20, cape: 40 }))) === '');
+     aviso(null, hoyY((n, esHoy) => ({ ...CALMA, gust10: esHoy && n === 16 ? 55 : 20 }))) === '');
+
+  /* ── NINGUNA HORA SUELTA, NUNCA ───────────────────────────────────
+     *«joder, pues no lo pone claro»* · *«no soy adivino»*. Si un aviso
+     nombra una hora, tiene que decir el día. */
+  for (const [q, t] of [['agua', conAgua], ['CAPE', conCape], ['racha', conRacha]])
+    ok(`el aviso de ${q} dice el DÍA, no solo la hora`,
+       !/\d\d:00/.test(t) || /\bhoy\b/.test(t), t);
 
   ok('va en ROJO y arriba: la clase es `viene`, no una nota cualquiera',
      /^<div class="viene">⚠ /.test(conCape));
 
   /* SU EJEMPLO LITERAL: «en rojo, ICON ve agua». */
-  S.lluviaTorres = [{ k: 'x', llueve: true, ini: H(2).getTime(), fin: H(7).getTime(),
+  S.lluviaTorres = [{ k: 'x', llueve: true, ini: H(14).getTime(), fin: H(19).getTime(),
                       pico: 0.6, quien: 'ICON' }];
-  const deIcon = avisoDeHoy('x', []);
+  const deIcon = aviso('x', []);
   ok('«ICON ve agua» — con el nombre, como el resto de la app',
-     deIcon.includes(`AGUA de ${et(2)} a ${et(8)} · la ve ICON`), deIcon);
+     deIcon.includes(`AGUA hoy de ${et(14)} a ${et(20)} · la ve ICON`), deIcon);
+
+  /* Y si lo que trae `S.lluviaTorres` es de MAÑANA —se calcula con la
+     ventana del parte, que puede ser otro día—, aquí no se repite. */
+  S.lluviaTorres = [{ k: 'x', llueve: true, ini: MAN(14).getTime(), fin: MAN(19).getTime(),
+                      pico: 0.6, quien: 'ICON' }];
+  ok('y el agua que el parte ha calculado para MAÑANA no se cuela en el aviso de hoy',
+     aviso('x', []) === '', aviso('x', []));
   S.lluviaTorres = null;
+
+  /* Lo mismo con la racha que viene calculada para el parte. */
+  S.rachaTorres = [{ k: 'x', racha: 95, hora: MAN(16).getTime(), quien: 'ECMWF' }];
+  ok('ni la racha de MAÑANA', aviso('x', []) === '', aviso('x', []));
+  S.rachaTorres = [{ k: 'x', racha: 95, hora: H(16).getTime(), quien: 'ECMWF' }];
+  ok('y la de hoy sí, con su día y su hora',
+     aviso('x', []).includes(`RACHA 95 km/h hoy a las ${et(16)}`), aviso('x', []));
+  S.rachaTorres = null;
+
+  ok('el aviso NO pregunta la ventana al parte: la decide él, con el reloj',
+     !/ventanaParte\(\)/.test(sacar('function loQueVieneHoy(')
+       .replace(/\/\*[\s\S]*?\*\//g, '')),          // el comentario sí la nombra: cuenta el código
+     'heredarla del parte es lo que metió el domingo en el aviso de un sábado');
 
   ok('las dos pantallas usan LA MISMA función, no una copia cada una',
      /\$\{avisoDeHoy\(key\(t\.place\), t\.horas\)\}/.test(src)

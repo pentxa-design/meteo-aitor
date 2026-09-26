@@ -10249,42 +10249,79 @@ function pintarDiasParte() {
 
    Los listones son los SUYOS: su lluvia (`rainWarn`), su ráfaga
    (`nivelRacha`, 70/90 desde el 25-09) y su CAPE (`capeWarn`). */
-function loQueVieneHoy(k, horas) {
-  const v = ventanaParte();
-  const desde = Math.max(Date.now(), v.desde);
-  const sel = (horas || []).filter(h => {
-    const t = h?.date?.getTime?.();
-    return has(t) && t + 3600e3 > desde && t <= v.hasta;
-  });
-  const hh = d => String(new Date(d).getHours()).padStart(2, '0') + ':00';
+function loQueVieneHoy(k, horas, ahoraMs = Date.now()) {
+  /* ── HOY, Y SOLO HOY, Y CON EL DÍA ESCRITO ────────────────────────
+     Suyo, 26-09-2026 a las 22:36, con el aviso rojo delante: *«lo del
+     CAPE en rojo, ¿es de las 22 de ahora o de mañana?»*, *«joder, pues
+     no lo pone claro»*, *«no soy adivino»*, *«como los avisos no me los
+     pongáis claros vamos a tener un gran problema»*.
+
+     Era de MAÑANA. Medido esa noche en Markina contra AROME: 0 de CAPE
+     a las 21, 22 y 23 de hoy, y 580-680 a esas mismas horas del
+     domingo. El aviso escribía «CAPE 590 a las 22:00» sin el día, con
+     la casilla de al lado diciendo 0, y a las 22:36 de un sábado eso se
+     lee como ahora mismo.
+
+     DOS FALLOS, los dos míos y de ese mismo día:
+
+     1. La ventana salía de `ventanaParte()`, que a partir de las 22:00
+        salta al día siguiente —y que además sigue la pestaña que él
+        tenga pulsada en el parte—. O sea que el aviso «de hoy» podía
+        ser de mañana o del martes. Ahora la ventana se decide AQUÍ:
+        desde ahora hasta las 23:59 de hoy, y punto.
+
+     2. La hora iba sin el día. Su regla, de esa misma tarde: **lo de
+        mañana se avisa mañana**, porque a cuatro horas vista puede
+        haberse marchado y un aviso que se cumple a medias enseña a no
+        hacer caso. Así que el día va escrito igual, para que no haya
+        que adivinarlo nunca.
+
+     Si hoy no queda nada, no sale nada: ésa era la otra mitad del
+     encargo («si no hay hoy lluvia ni CAPE ni rachas fuertes que no lo
+     ponga»). Lo del domingo lo verá el domingo, en el parte de las
+     06:30 y en el de las 13:00. */
+  /* El reloj entra por la puerta para poder probarlo a cualquier hora:
+     una prueba que solo falla de madrugada engaña (regla de la casa). */
+  const ahora = ahoraMs;
+  const finHoy = (() => { const d = new Date(ahora); d.setHours(23, 59, 59, 999); return d.getTime(); })();
+  /* Una hora cuenta mientras no haya terminado, y solo si empieza hoy. */
+  const esDeHoy = t => has(t) && t <= finHoy && +t + 3600e3 > ahora;
+  const sel = (horas || []).filter(h => esDeHoy(h?.date?.getTime?.()));
+  const hh = d => 'hoy a las ' + String(new Date(d).getHours()).padStart(2, '0') + ':00';
+  const deA = (a, b) => `hoy de ${String(new Date(a).getHours()).padStart(2, '0')}:00`
+                      + ` a ${String(new Date(b).getHours()).padStart(2, '0')}:00`;
   const av = [];
 
   /* 1 · AGUA. De `S.lluviaTorres`, que es multi-modelo y ya sabe QUIÉN la
      ve; si no la hay (la pestaña Ahora), de las horas del sitio. */
   const L = S.lluviaTorres?.find(x => x?.k === k);
-  if (L?.llueve) {
+  /* `S.lluviaTorres` y `S.rachaTorres` se calculan con la ventana del
+     PARTE, que puede ser otro día: se comprueba que lo que traen caiga
+     hoy antes de repetirlo aquí. */
+  if (L?.llueve && esDeHoy(L.ini)) {
     const deQuien = L.quien ? ` · la ve ${esc(L.quien)}` : '';
     const cuando = L.sueltas
-      ? `${L.nHoras} horas sueltas entre las ${hh(L.ini)} y las ${hh(L.fin)}`
-      : `de ${hh(L.ini)} a ${hh(+L.fin + 3600e3)}`;
+      ? `${L.nHoras} horas sueltas entre las ${String(new Date(L.ini).getHours()).padStart(2, '0')}:00`
+        + ` y las ${String(new Date(L.fin).getHours()).padStart(2, '0')}:00 de hoy`
+      : deA(L.ini, +L.fin + 3600e3);
     av.push(`AGUA ${cuando}${deQuien}`);
   } else if (!L) {
     const moja = sel.filter(h => has(h.prec) && h.prec >= (S.thr?.rainWarn ?? 0.2));
     if (moja.length)
-      av.push(`AGUA de ${hh(moja[0].date)} a ${hh(+moja[moja.length - 1].date + 3600e3)}`);
+      av.push(`AGUA ${deA(moja[0].date, +moja[moja.length - 1].date + 3600e3)}`);
   }
 
   /* 2 · RÁFAGA por encima de su listón. */
   const R = S.rachaTorres?.find(x => x?.k === k);
-  if (R && has(R.racha) && nivelRacha(R.racha) !== 'go') {
-    av.push(`RACHA ${wtxt(R.racha, true)} a las ${hh(R.hora)}${R.quien ? ` · la da ${esc(R.quien)}` : ''}`);
+  if (R && has(R.racha) && nivelRacha(R.racha) !== 'go' && esDeHoy(R.hora)) {
+    av.push(`RACHA ${wtxt(R.racha, true)} ${hh(R.hora)}${R.quien ? ` · la da ${esc(R.quien)}` : ''}`);
   } else if (!R) {
     let peor = null;
     for (const h of sel) {
       const g = h.gust10 ?? h.gust;
       if (has(g) && nivelRacha(g) !== 'go' && (!peor || g > peor.g)) peor = { g, d: h.date };
     }
-    if (peor) av.push(`RACHA ${wtxt(peor.g, true)} a las ${hh(peor.d)}`);
+    if (peor) av.push(`RACHA ${wtxt(peor.g, true)} ${hh(peor.d)}`);
   }
 
   /* 3 · CAPE por encima de su listón de aviso. */
@@ -10292,15 +10329,15 @@ function loQueVieneHoy(k, horas) {
   for (const h of sel)
     if (has(h.cape) && h.cape >= (S.thr?.capeWarn ?? 300) && (!cape || h.cape > cape.v))
       cape = { v: h.cape, d: h.date };
-  if (cape) av.push(`CAPE ${cape.v.toFixed(0)} a las ${hh(cape.d)}`);
+  if (cape) av.push(`CAPE ${cape.v.toFixed(0)} ${hh(cape.d)}`);
 
   return av;
 }
 
 /* La línea, ya pintada. Vacía cuando no hay nada: es la mitad del
    encargo. Se usa en Mis estaciones y en Ahora, la misma. */
-function avisoDeHoy(k, horas) {
-  const av = loQueVieneHoy(k, horas);
+function avisoDeHoy(k, horas, ahoraMs = Date.now()) {
+  const av = loQueVieneHoy(k, horas, ahoraMs);
   if (!av.length) return '';
   return `<div class="viene">⚠ ${av.join(' &nbsp;·&nbsp; ')}</div>`;
 }
