@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.26-1907';
+const BUILD = '2026.09.26-1927';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -17684,6 +17684,20 @@ function bind() {
 
   function pick(p) {
     $('#ac').hidden = true; $('#q').value = ''; $('#q').blur();
+    /* ── BUSCAR UN SITIO TIENE QUE LLEVARTE AL SITIO ──────────────────
+       Suyo, 26-09-2026, con el buscador abierto en Mis estaciones:
+       *«pongo arbaiza en mis estaciones y me sale un triángulo y no me
+       lleva al sitio»*.
+
+       Y no le llevaba. Desde el 25-09, en «Mis estaciones» la portada es
+       LA SUYA por regla —la fijada con «Portada» o la primera de la
+       lista—, así que el sitio buscado se cargaba por detrás y en
+       pantalla no cambiaba absolutamente nada: el buscador parecía roto.
+       Con el mapa abierto sí se ve el salto (`Maps.irA`), y en Horas, 10
+       días o Mar lo que se pinta ya es el sitio buscado. La única
+       pestaña que se lo tragaba era ésta, así que es la única que se
+       cambia. */
+    if (S.view === 'torres') setView('now');
     go(p);
   }
 

@@ -10690,6 +10690,15 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /body\[data-view="torres"\] \.cover-fijo\{display:block\}/.test(C)
      && !/body\[data-view="torres"\] \.cover-fijo\{display:none\}/.test(C),
      'suyo: «que salga BI BERMEO, o el primero de la lista, o el que meta yo a mano»');
+  /* ── Y BUSCAR UN SITIO TIENE QUE LLEVARTE AL SITIO (26-09-2026) ────
+     El efecto de al lado de la regla de arriba, y lo cazó él: con «Mis
+     estaciones» abierto escribió «arbaiza», salió la ficha del catálogo
+     con su triángulo… y al pulsarla no pasaba nada, porque la portada de
+     esa pestaña es LA SUYA por regla y el sitio buscado se cargaba
+     detrás. Un buscador que no lleva a ningún sitio se lee como roto. */
+  ok('al elegir del buscador estando en Mis estaciones, se sale a Ahora: si no, no pasa nada en pantalla',
+     /if \(S\.view === 'torres'\) setView\('now'\);\s*\n\s*go\(p\);/.test(A),
+     'suyo: «pongo arbaiza en mis estaciones y me sale un triángulo y no me lleva al sitio»');
   ok('y al salir de Mis estaciones vuelve la portada del sitio buscado; sin datos de la estación, se esconde',
      /if \(v !== 'torres' && S\.portadaEstacion && S\.data\) seguro\('ahora', renderNow\);/.test(A)
      && /fijo\?\.classList\.add\('sin-estacion'\);/.test(A)
