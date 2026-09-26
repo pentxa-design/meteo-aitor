@@ -357,7 +357,11 @@ const TLAYERS = [
 
   { id:'gusts',  g:'Torre', name:'Ráfagas', v:'wind_gusts_10m', unit:'km/h',
     escala:'rafagas', rumbo: true,
-    desc:'Racha máxima — la capa que decide el ascenso. El color cambia en TUS listones: naranja a los 45, rojo a los 60. Al pinchar, también de dónde viene el viento' },
+    /* SIN NÚMEROS ESCRITOS AQUÍ (26-09-2026): decía «naranja a los 45,
+       rojo a los 60» con los listones en 49/70, y esta misma mañana
+       pasaron a 70/90. Un pie con cifras se queda viejo sin avisar; la
+       barra de la leyenda ya enseña los cortes de verdad. */
+    desc:'Racha máxima — la capa que decide el ascenso. El color cambia en TUS listones: naranja en tu aviso, rojo en tu límite. Al pinchar, también de dónde viene el viento' },
   /* ── LAS CUATRO CAPAS DE BARBAS, RETIRADAS EL 21-09-2026 ────────────
      Eran `wind_u_component_10m/20m/50m/100m`. El color ya se apagó el
      14-09 (era la componente, no la fuerza) y quedaban «las barbas y los
@@ -1110,9 +1114,15 @@ const Peticiones = {
 
    En ambos casos el mapa pintaba algo. Ese es justo el peligro: no daba
    error, daba un color equivocado.                                    */
-let _escalas = null;
+let _escalas = null, _escalasCon = '';
 function escalasPropias() {
-  if (_escalas) return _escalas;
+  /* La escala de racha lleva SUS listones dentro, así que si cambia de
+     perfil hay que rehacerla: guardada a secas, el mapa se quedaba con
+     los cortes del perfil anterior hasta recargar (26-09-2026). */
+  const sello = (typeof listonRafaga === 'function'
+    && (l => `${l.warn}/${l.no}`)(listonRafaga())) || '';
+  if (_escalas && _escalasCon === sello) return _escalas;
+  _escalasCon = sello;
 
   // Presión. OJO A LA UNIDAD, que ha cambiado por debajo:
   //
@@ -1234,7 +1244,23 @@ function escalasPropias() {
      49 y en 70 (dos cortes pegados) — los listones del perfil de hierro, el
      que sale por defecto desde el 13-09 — y el 60 (torre) como corte. Así
      se ve suave y sigue cambiando donde le cambia la decisión. */
-  const rfm = [0, 20, 30, 40, 48, 49, 60, 69, 70, 90, 110, 120];
+  /* ── LOS CORTES SALEN DE SUS LISTONES, NO ESCRITOS A MANO ──────────
+     26-09-2026: esta mañana subió la racha a 70 de aviso y 90 de límite
+     (AEMET/Euskalmet, umbrales del País Vasco). El cambio llegó a las
+     tarjetas, al parte y a los avisos… y AQUÍ NO. El mapa seguía
+     pintando el ROJO a los 70 —que ahora es su ÁMBAR— y el pie decía
+     «naranja a los 45, rojo a los 60», que no era verdad ni antes.
+     La capa con la que decide de un vistazo, con los listones de otro.
+
+     Desde hoy los dos saltos secos son los suyos, vengan de donde
+     vengan: `listonRafaga()` es quien los sabe. Los azules de abajo van
+     en proporción a su aviso, y arriba se sigue subiendo de 20 en 20. */
+  const LR = (typeof listonRafaga === 'function' && listonRafaga()) || { warn: 70, no: 90 };
+  const creciente = a => a.map((v2, i) => Math.round(v2)).reduce(
+    (o, v2) => (o.push(o.length && v2 <= o[o.length - 1] ? o[o.length - 1] + 1 : v2), o), []);
+  const rfm = creciente([0, LR.warn * 0.3, LR.warn * 0.45, LR.warn * 0.6, LR.warn - 1, LR.warn,
+                         LR.warn + (LR.no - LR.warn) / 2, LR.no - 1, LR.no,
+                         LR.no + 20, LR.no + 40, LR.no + 60]);
   /* El «no pasa nada» es transparente y el color sube con el valor hasta
      su listón (14-09-2026): con todo opaco, un día de calma dejaba el mapa
      azul de punta a punta y sin costa —«no se ve nada ni el mapa»—. */

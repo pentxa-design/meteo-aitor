@@ -53,7 +53,22 @@ const fs = require('fs');
 const path = require('path');
 let JSDOM;
 try { ({ JSDOM } = require('jsdom')); }
-catch { console.log('  · jsdom no está; me salto las pantallas'); process.exit(0); }
+catch {
+  /* ── SIN jsdom NO SE PUBLICA (26-09-2026) ─────────────────────────
+     Los tres guardias que ARRANCAN la app entera se saltaban solos y
+     salían con éxito si faltaba jsdom. O sea: quita una dependencia y
+     el candado que mira las pantallas —el que sustituye a sus
+     pantallazos— se abre en verde sin decir nada. Un hueco no puede
+     leerse como «todo bien». Si de verdad hace falta publicar sin él,
+     SIN_JSDOM=1 lo permite y lo dice por pantalla. */
+  if (process.env.SIN_JSDOM === '1') {
+    console.log('  · jsdom no está y SIN_JSDOM=1: las pantallas SIN COMPROBAR (pedido a mano)');
+    process.exit(0);
+  }
+  console.log('  ✗ jsdom no está instalado y las pantallas se quedan sin comprobar.');
+  console.log('    npm install jsdom   ·   o SIN_JSDOM=1 para publicar a ciegas');
+  process.exit(1);
+}
 
 /* PANTALLAS_DIR: para probar el guardia sobre una COPIA rota a propósito
    sin tocar los ficheros de verdad (así se vio en rojo el 25-09-2026). */
@@ -620,9 +635,13 @@ async function unaHora(hh) {
        es el dictamen: o la tapa sujeta, o se rompe, o no dice nada. */
     const dictamen = t => !t ? null
       : /no dice nada|no la publica/i.test(t) ? 'la tapa no dice nada'
-      : /rompe|por debajo de 75|los dos a la vez/i.test(t) ? 'la tapa se rompe'
-      : /aguanta|fuerte/i.test(t) ? 'la tapa sujeta'
-      : /floja|abierta/i.test(t) ? 'la tapa está floja' : null;
+      /* «abierta» (escala corta) y «Sin tapa: si hay CAPE, rompe» (larga)
+         son EL MISMO escalón, por debajo de 25: van antes que la pareja,
+         que si no la palabra «rompe» de la frase larga se los lleva. */
+      : /abierta|sin tapa/i.test(t) ? 'la tapa está abierta'
+      : /floja/i.test(t) ? 'la tapa está floja'
+      : /por debajo de 75|los dos a la vez|con este CAPE rompe/i.test(t) ? 'la pareja rompe'
+      : /aguanta|fuerte/i.test(t) ? 'la tapa sujeta' : null;
 
     const num = (t, re) => { const m = (t || '').match(re); return m ? m[1] : null; };
     const HECHOS = [

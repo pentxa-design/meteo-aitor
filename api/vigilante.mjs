@@ -1275,7 +1275,12 @@ export default async function handler(req, res) {
     const gordos = [];
     for (const d of buenos) {
       const r = d.racha?.[claveHoy], ag = d.agua?.[claveHoy];
-      if (r?.kmh != null && r.kmh >= 60)
+      /* SU TOPE, no un 60 escrito a mano (26-09-2026). Lo de arriba ya
+         dice «solo de lo gordo — su tope de racha», y el número puesto
+         aquí era el listón viejo de la torre: el 25-09 él los subió a 70
+         de aviso y 90 de límite y este 60 se quedó como estaba, avisando
+         por debajo de su propio ámbar. */
+      if (r?.kmh != null && r.kmh >= RACHA_TOPE)
         gordos.push(`${d.n} racha ${Math.round(r.kmh)} km/h${r.ini != null ? ` a las ${hh(r.ini)}` : ''}`);
       else if (ag?.mm != null && ag.mm >= 2)
         gordos.push(`${d.n} lluvia fuerte ${ag.mm.toFixed(1)} mm/h`);

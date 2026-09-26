@@ -288,6 +288,32 @@ function nivelRacha(v) {
   if (!has(g)) return 'nd';
   return g >= wRed(L.no) ? 'no' : g >= wRed(L.warn) ? 'warn' : 'go';
 }
+/* ── «OTRO MODELO CRUZA TU LISTÓN», UNA VEZ Y CON EL NÚMERO QUE SE VE ─
+   La misma regla estaba escrita TRES veces —la hora (`rachaQueNoVesTuHora`),
+   la casilla (`rachaQueNoVesTu`) y la franja— y solo la de la franja
+   comparaba con `wRed`. Las otras dos decidían con el crudo mientras la
+   pantalla enseña el redondeado: es EXACTAMENTE el «Racha 49 km/h en
+   verde con el listón en 49» que él fotografió el 25-09-2026, entrando
+   por otra puerta. Con su racha en 48,6 y la de otro en 49,2, las dos se
+   leen «49» y el chip decía «da 49 km/h — tu listón es 49».
+
+   El listón se compara TAL COMO SE IMPRIME (la regla del 04-09). La
+   separación va en km/h, que es la unidad en la que se calibró sobre
+   1.440 horas: 20 para una hora suelta, 10 para el máximo de una franja.
+   Devuelve null cuando no hay nada que decir. */
+const SEPARA_RACHA = 20;
+function cruceDeListon(mia, suya, separa = SEPARA_RACHA) {
+  if (!has(mia) || !has(suya)) return null;
+  const { warn, no } = listonRafaga();
+  const m = wRed(mia), s2 = wRed(suya);
+  if (!has(m) || !has(s2)) return null;
+  const cruzaNo   = m < wRed(no)   && s2 >= wRed(no);
+  const cruzaWarn = m < wRed(warn) && s2 >= wRed(warn);
+  const seSepara  = suya - mia >= separa;
+  if (!cruzaNo && !cruzaWarn && !seSepara) return null;
+  return { cruzaNo, cruzaWarn, seSepara, limite: cruzaNo ? no : cruzaWarn ? warn : null };
+}
+
 function listonRafaga() {
   const P = perfil();
   if (P.vientoManda || !has(P.rafagaBestia))
@@ -1357,12 +1383,9 @@ function rachaQueNoVesTuHora(h) {
     .filter(x => has(x.v) && x.n !== cargado);
   if (!otros.length) return null;
   const alto = otros.reduce((p, q) => q.v > p.v ? q : p);
-  const { warn, no } = listonRafaga();
-  const cruzaNo   = h.gust10 < no   && alto.v >= no;
-  const cruzaWarn = h.gust10 < warn && alto.v >= warn;
-  const seSepara  = alto.v - h.gust10 >= 20;
-  if (!cruzaNo && !cruzaWarn && !seSepara) return null;
-  return { quien: alto.n, suya: alto.v, mia: h.gust10, limite: cruzaNo ? no : cruzaWarn ? warn : null };
+  const cr = cruceDeListon(h.gust10, alto.v);
+  if (!cr) return null;
+  return { quien: alto.n, suya: alto.v, mia: h.gust10, limite: cr.limite };
 }
 /* Cada chip va AL LADO de su número (16-09-2026, 23:40, sus capturas de
    Horas: el «GFS ve 0,1 mm» salía debajo del CAPE, lejos de la línea de
@@ -1666,17 +1689,13 @@ function rachaQueNoVesTu(racha10) {
   if (!otros.length) return null;
 
   const alto = otros.reduce((a, b) => b.v > a.v ? b : a);
-  const { warn, no } = listonRafaga();   // el listón que manda en su perfil (09-09-2026)
-
-  const cruzaNo   = racha10 <  no   && alto.v >= no;
-  const cruzaWarn = racha10 <  warn && alto.v >= warn;
-  const seSepara  = alto.v - racha10 >= 20;
-  if (!cruzaNo && !cruzaWarn && !seSepara) return null;
+  const cr = cruceDeListon(racha10, alto.v);   // el listón de su perfil, tal como se imprime
+  if (!cr) return null;
 
   return { quien: alto.n, suya: alto.v, mia: racha10,
-           dif: alto.v - racha10, cruzaWarn, cruzaNo,
+           dif: alto.v - racha10, cruzaWarn: cr.cruzaWarn, cruzaNo: cr.cruzaNo,
            /* Qué listón cruza, para poder decirlo con sus palabras */
-           limite: cruzaNo ? no : cruzaWarn ? warn : null };
+           limite: cr.limite };
 }
 
 /** El texto de la marca, en UN SOLO SITIO para las tres pantallas.
@@ -6028,7 +6047,6 @@ function rachaEnLaFranjaQueNoVesTu(sel) {
      listón de aviso (49). «Ahora» (rachaQueNoVesTu) sí cuenta con los
      dos listones y con el Automático. Igualado: los dos listones y todos
      los modelos. Información, no veredicto: el número no cambia. */
-  const { warn, no } = listonRafaga();
   const otros = [];
   for (const m of COMPARAR) {
     if (m.name === cargado) continue;
@@ -6042,10 +6060,12 @@ function rachaEnLaFranjaQueNoVesTu(sel) {
       if (serie[i] > mia) horas.push({ date: h.date });
     }
     if (max === null) continue;
-    const cruzaNo   = wRed(max) >= wRed(no)   && wRed(mia) < wRed(no);
-    const cruzaWarn = wRed(max) >= wRed(warn) && wRed(mia) < wRed(warn);
-    const cruza = cruzaNo || cruzaWarn;
-    if (cruza || wRed(max) >= wRed(mia) + 10) otros.push({ nom: m.name, max, horas, cruza, limite: cruzaNo ? no : cruzaWarn ? warn : null });
+    /* Por la misma puerta que la hora y la casilla (26-09-2026). Aquí la
+       separación calibrada es 10 y no 20, y va en km/h: escrita como
+       `wRed(mia) + 10` se sumaban 10 UNIDADES DE PANTALLA, que en nudos
+       son 18,5 km/h y en m/s 36. */
+    const cr = cruceDeListon(mia, max, 10);
+    if (cr) otros.push({ nom: m.name, max, horas, cruza: cr.cruzaNo || cr.cruzaWarn, limite: cr.limite });
   }
   if (!otros.length) return null;
   otros.sort((a, b) => b.max - a.max);
@@ -13997,7 +14017,10 @@ function renderNow() {
            en ámbar: el número sigue siendo verde para TU modelo, pero la
            certeza ya no la hay, y eso es lo que hay que pintar. Mismo
            criterio que las horas rayadas de la barra de Torre. */
-        r && r.limite ? 'warn' : porUmbral(C.wind_gusts_10m, listonRafaga().warn, listonRafaga().no));
+        /* Por `nivelRacha()`, que compara el número TAL COMO SE IMPRIME.
+           Con `porUmbral` y el crudo, 48,6 se enseñaba «49» —su listón— y
+           salía en verde: el 25-09 en «10 días», aquí otra vez. */
+        r && r.limite ? 'warn' : nivelRacha(C.wind_gusts_10m));
     })(),
     dt('Humedad', show(C.relative_humidity_2m, '%')),
     /* EL MISMO NÚMERO SIRVE PARA DOS COSAS, y hasta hoy solo se decía
@@ -15242,8 +15265,11 @@ function avisoTormentaFranja(horas) {
      los mapas de AEMET: 0 en 60 km en cinco horas).
      Si falta el dato de probabilidad se avisa igual — un hueco nunca
      puede valer como «no hay disparador». */
-  const combinacion = horas.filter(h => has(h.cape) && has(h.cin)
-                                     && h.cape >= CAPE_COMBINACION && h.cin < TAPA_ROMPE);
+  /* Por `laParejaRompe()`, que además se niega a contar una tapa que no
+     dice nada (26-09-2026): con la tapa prestada en 0 por quien no veía
+     gasolina, esta franja escribía «hay gasolina y está abierta» sobre
+     un cero mudo. Es la misma mentira del 22-09 en otra pantalla. */
+  const combinacion = horas.filter(h => laParejaRompe(h.cape, h.cin, h));
   const malas = combinacion.filter(h => !has(h.pop) || h.pop >= 10);
 
   if (malas.length) {

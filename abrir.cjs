@@ -28,9 +28,20 @@ const path = require('path');
 let JSDOM;
 try { ({ JSDOM } = require('jsdom')); }
 catch {
-  console.log('  · jsdom no está instalado; me salto la prueba de arranque');
-  console.log('    (npm install jsdom para activarla)');
-  process.exit(0);
+  /* ── SIN jsdom NO SE PUBLICA (26-09-2026) ─────────────────────────
+     Los tres guardias que ARRANCAN la app entera se saltaban solos y
+     salían con éxito si faltaba jsdom. O sea: quita una dependencia y
+     el candado que mira las pantallas —el que sustituye a sus
+     pantallazos— se abre en verde sin decir nada. Un hueco no puede
+     leerse como «todo bien». Si de verdad hace falta publicar sin él,
+     SIN_JSDOM=1 lo permite y lo dice por pantalla. */
+  if (process.env.SIN_JSDOM === '1') {
+    console.log('  · jsdom no está y SIN_JSDOM=1: la prueba de arranque SIN COMPROBAR (pedido a mano)');
+    process.exit(0);
+  }
+  console.log('  ✗ jsdom no está instalado y la prueba de arranque se quedan sin comprobar.');
+  console.log('    npm install jsdom   ·   o SIN_JSDOM=1 para publicar a ciegas');
+  process.exit(1);
 }
 
 const aqui = __dirname;

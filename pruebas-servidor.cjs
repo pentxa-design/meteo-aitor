@@ -863,8 +863,11 @@ ok('sabe cuándo está ciego',
 ok('y entonces avisa por estado absoluto, no por cambio',
    /if \(ciego\) \{/.test(vgc) && /soloEstado: true/.test(vgc),
    'sin esto, 25 días sin avisos de «ahora da rayo» ni «aparece agua»');
-ok('solo de lo gordo: su tope de racha y la lluvia fuerte',
-   /r\.kmh >= 60/.test(vgc) && /ag\.mm >= 2/.test(vgc),
+/* Esta guarda se llamaba «su tope de racha» y comprobaba un 60: SU tope
+   es 70 y está en `RACHA_TOPE`. El nombre decía una cosa y la regex otra,
+   así que el 26-09, cuando él subió los listones, nadie se enteró. */
+ok('solo de lo gordo: su tope de racha (por su nombre, no por un número) y la lluvia fuerte',
+   /r\.kmh >= RACHA_TOPE/.test(vgc) && /ag\.mm >= 2/.test(vgc),
    'avisar de todo sin poder comparar sería darle la lata 25 días');
 ok('y se dice que es un aviso por lo que hay, no por lo que ha cambiado',
    /el vigilante no puede comparar con antes/.test(vgc));
@@ -1127,6 +1130,13 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
      && /\|\| \(o\.agua \?\? 0\) >= AGUA_OJO\);/.test(V)
      && /const nivel = rojo \? 'rojo' : \(algoEnMarcha \|\| seArma\) \? 'ambar' : 'verde';/.test(V),
      'los tres números van POR DEBAJO de sus listones de aviso: la cadencia sube antes, no después');
+  /* 26-09-2026: el modo ciego avisaba «de lo gordo» con un 60 escrito a
+     mano —el listón viejo de la torre— mientras su tope es 70. Ningún
+     número de racha suelto en esa rama: el listón tiene un nombre. */
+  ok('en modo ciego se avisa por SU tope de racha, no por un número escrito a mano',
+     /if \(r\?\.kmh != null && r\.kmh >= RACHA_TOPE\)/.test(V)
+     && !/r\.kmh >= \d+/.test(V),
+     'avisaba a partir de 60 con su aviso en 70: dos listones distintos para lo mismo');
   ok('y los tres listones del ojo están por debajo de los de aviso',
      (() => { const n = t => Number((V.match(new RegExp(t)) || [])[1]);
        const cape = n('const CAPE_OJO = (\\d+)'), racha = n('RACHA_OJO = (\\d+)');

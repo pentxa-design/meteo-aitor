@@ -184,6 +184,10 @@ globalThis.wv   = kmh => has(kmh) ? kmh * wu().f : null;
 globalThis.wRed = v => { const x = wv(v); return has(x) ? Number(x.toFixed(wu().d)) : null; };
 eval(sacar('function listonRafaga('));
 eval(sacar('function nivelRacha('));
+/* Y el cruce del listón, que desde el 26-09-2026 es UNA función para las
+   tres pantallas que lo dicen (hora, casilla y franja). */
+eval(sacarConst('SEPARA_RACHA'));
+eval(sacar('function cruceDeListon('));
 globalThis.listonRafaga = listonRafaga;
 globalThis.nivelRacha = nivelRacha;
 eval(sacar('function assess('));
@@ -492,6 +496,55 @@ grupo('El color de la racha se decide con el número que se ve (25-09-2026)');
     ok('nadie compara una ráfaga con el listón a mano: todos por nivelRacha()',
        malas.length === 0,
        malas.length ? `a mano en ${malas.length} sitios del código sin comentarios` : 'las catorce, por la función');
+
+    /* ── Y LA OTRA FORMA DE ESCRIBIR LO MISMO ─────────────────────────
+       La guarda de arriba solo cazaba `listonRafaga().warn` pegado a un
+       operador. Las tres copias de «otro cruza tu listón» lo escribían
+       así:  `const { warn, no } = listonRafaga();`  y comparaban abajo
+       con `warn`/`no` a secas — y dos de las tres lo hacían con el dato
+       CRUDO mientras la pantalla enseña el redondeado. O sea: la guarda
+       fijaba una FORMA y la clase se escapaba por la de al lado. Aquí se
+       mira el destripado, y solo lo pueden usar sus dos dueños. */
+    const DUENOS = ['nivelRacha', 'cruceDeListon'];
+    const conDes = [];
+    const reDes = /const \{[^}]*\} = listonRafaga\(\);/g;
+    while ((m = reDes.exec(codigo))) {
+      const antes = codigo.slice(0, m.index);
+      const fn = (antes.match(/function\s+(\w+)\s*\(/g) || []).pop() || '';
+      const nom = (fn.match(/function\s+(\w+)/) || [])[1] || '?';
+      if (!DUENOS.includes(nom)) conDes.push(`${nom} (línea ${antes.split('\n').length})`);
+    }
+    ok('ni por la puerta de atrás: solo nivelRacha() y cruceDeListon() destripan el listón',
+       conDes.length === 0,
+       conDes.length ? `lo destripan también ${conDes.join(' · ')}` : 'los dos dueños y nadie más');
+    ok('y la ráfaga de Detalles se colorea por nivelRacha, no por porUmbral con el crudo',
+       /r && r\.limite \? 'warn' : nivelRacha\(C\.wind_gusts_10m\)\)/.test(src)
+       && !/porUmbral\(C\.wind_gusts_10m/.test(src),
+       'con el crudo, 48,6 se imprime «49» —su listón— y salía verde');
+
+    /* Ejecutando la función, con su caso: el pantallazo del 25-09. */
+    const L25 = () => ({ warn: 49, no: 70 });
+    const conListon = (f, mia, suya, sep) => {
+      /* `cruceDeListon` salió de app.js con `eval`, así que ve el
+         `listonRafaga` de ESTE ámbito, no el de globalThis: se cambia el
+         de aquí y se devuelve al terminar. */
+      const g = listonRafaga; listonRafaga = f;
+      try { return cruceDeListon(mia, suya, sep); } finally { listonRafaga = g; }
+    };
+    ok('con su racha en 48,6 y la de otro en 49,2 —las dos se leen «49»— no se dice que cruza nada',
+       conListon(L25, 48.6, 49.2) === null,
+       JSON.stringify(conListon(L25, 48.6, 49.2)));
+    ok('y con 44 contra 57 sí, y se dice qué listón cruza',
+       (c => c && c.cruzaWarn && c.limite === 49)(conListon(L25, 44, 57)),
+       JSON.stringify(conListon(L25, 44, 57)));
+    ok('con los listones de hoy (70/90), 69,4 contra 91 cruza el ROJO, y 88 contra 89 no cruza nada',
+       (c => c && c.cruzaNo && c.limite === 90)(conListon(() => ({ warn: 70, no: 90 }), 69.4, 91))
+       && conListon(() => ({ warn: 70, no: 90 }), 88, 89) === null,
+       JSON.stringify(conListon(() => ({ warn: 70, no: 90 }), 69.4, 91)));
+    ok('la separación va en km/h, no en unidades de pantalla (en nudos 10 serían 18,5 km/h)',
+       conListon(L25, 20, 30, 10) !== null && conListon(L25, 20, 29, 10) === null
+       && conListon(L25, 20, 40) !== null && conListon(L25, 20, 39) === null,
+       'la franja usa 10 y la hora 20, los dos calibrados sobre 1.440 horas');
   }
   ok('y no hay una segunda nivelRacha que tape a la buena',
      (src.replace(/\/\*[\s\S]*?\*\//g, '').match(/nivelRacha\s*=\s*(?:v|\()/g) || []).length === 0,
@@ -6324,8 +6377,11 @@ grupo('RÁFAGAS: colores vivos y con SUS listones (01-09-2026)');
      de fábrica, la más pálida. Lo importante no es que sea viva: es que
      el color cambia DONDE le cambia la decisión, en sus 45 y sus 60. */
   const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
-  const cortes = (M.match(/const rfm = \[([^\]]+)\]/) || [])[1] || '';
-  const nums = cortes.split(',').map(x => +x.trim());
+  /* La rampa ya no es una lista escrita: se saca ejecutando la cuenta de
+     maps.js con sus listones de hoy (ver más abajo). */
+  const trozoRfm = (M.match(/const LR = [\s\S]*?const rfm = creciente\(\[[\s\S]*?\]\);/) || [])[0];
+  const rampaDe = trozoRfm && new Function('listonRafaga', `${trozoRfm} return rfm;`);
+  const nums = rampaDe ? rampaDe(() => ({ warn: 70, no: 90 })) : [];
   const cols = ((M.match(/const rfc = \[([\s\S]*?)\];/) || [])[1] || '').match(/#[0-9a-f]{6}/g) || [];
 
   ok('la capa de ráfagas ya tiene escala propia',
@@ -6333,12 +6389,41 @@ grupo('RÁFAGAS: colores vivos y con SUS listones (01-09-2026)');
      'iba con la de fábrica siendo la capa con la que decide');
   ok('hay tantos colores como cortes (si no, el mapa pinta corrido)',
      nums.length === cols.length, `${nums.length} cortes · ${cols.length} colores`);
-  /* 15-09-2026: rampa continua como AguaceroWx, pero con un salto seco en 49 y en 70
-     (dos cortes pegados: 48→49 y 69→70), que son los listones del perfil de hierro,
-     el que sale por defecto desde el 13-09; el 60 (torre) sigue siendo corte. */
-  ok('y los cortes caen EXACTAMENTE en sus listones: 49 y 70 con salto seco (48/49, 69/70), y 60',
-     nums.includes(48) && nums.includes(49) && nums.includes(69) && nums.includes(70) && nums.includes(60),
-     'el color tiene que cambiar donde le cambia la decisión, no en un número de manual');
+  /* ── LOS CORTES DEL MAPA SIGUEN A SUS LISTONES, SEAN LOS QUE SEAN ──
+     Esta guarda decía «los cortes caen EXACTAMENTE en sus listones» y lo
+     comprobaba con los números 48, 49, 69, 70 y 60 escritos aquí. El
+     26-09-2026 él subió la racha a 70 de aviso y 90 de límite: la app
+     cambió, el mapa se quedó pintando el rojo en su ÁMBAR… y esta
+     comprobación siguió en VERDE, porque miraba los literales viejos en
+     los dos lados. Una guarda que fija un número no puede notar que el
+     número ha cambiado.
+
+     Ahora se EJECUTA la cuenta de maps.js con dos perfiles distintos y se
+     exige la RELACIÓN: salto seco en su aviso y salto seco en su límite. */
+  {
+    const trozo = (M.match(/const LR = [\s\S]*?const rfm = creciente\(\[[\s\S]*?\]\);/) || [])[0];
+    const rampa = trozo && new Function('listonRafaga', `${trozo} return rfm;`);
+    const bien = (warn, no) => {
+      const r = rampa(() => ({ warn, no }));
+      const crece = r.every((v2, i) => i === 0 || v2 > r[i - 1]);
+      return crece && r.includes(warn - 1) && r.includes(warn)
+                   && r.includes(no - 1) && r.includes(no) && r.length === 12;
+    };
+    ok('los cortes del mapa de ráfagas los pone listonRafaga(), no están escritos a mano',
+       !!trozo && /listonRafaga\(\)/.test(trozo)
+       && /LR\.warn - 1, LR\.warn,/.test(trozo) && /LR\.no - 1, LR\.no,/.test(trozo),
+       trozo ? 'los dos saltos secos tienen que ser LR.warn y LR.no' : 'no encuentro la rampa en maps.js');
+    ok('y con CUALQUIER listón el color salta en su aviso y en su límite (70/90 hoy, 49/70 ayer)',
+       !!rampa && bien(70, 90) && bien(49, 70) && bien(60, 100),
+       rampa ? JSON.stringify({ hoy: rampa(() => ({ warn: 70, no: 90 })),
+                                ayer: rampa(() => ({ warn: 49, no: 70 })) }) : 'sin rampa');
+    ok('la escala se rehace si él cambia de perfil, no se queda con la del anterior',
+       /_escalasCon = sello;/.test(M) && /if \(_escalas && _escalasCon === sello\) return _escalas;/.test(M));
+    const pieRafagas = (M.match(/id:'gusts'[\s\S]*?desc:'([^']*)'/) || [])[1] || '';
+    ok('y el pie de la capa no lleva cifras de listón escritas, que se quedan viejas',
+       !!pieRafagas && !/\d/.test(pieRafagas),
+       `el pie dice: «${pieRafagas}»`);
+  }
   ok('está registrada, si no la capa se queda sin color',
      /presion, visibilidad, tempc, t850, rafagas,/.test(M));
   /* 15-09-2026 19:55 (portátil): la tesela trae la racha en m/s. Con la escala propia se
@@ -9026,9 +9111,9 @@ grupo('Así con todo (13-09): al lado del dato, qué ve distinto otro modelo y c
   /* 17-09-2026 10:45, Ciudad del Cabo: el Automático cruzaba el listón «no» (70) y la franja callaba. */
   const cRF = sacar('function rachaEnLaFranjaQueNoVesTu(');
   ok('el chip de racha de la franja mira los DOS listones (aviso y no) y cuenta con todos los modelos, el Automático incluido, como «Ahora»',
-     /const \{ warn, no \} = listonRafaga\(\);/.test(cRF) && /const cruzaNo   = wRed\(max\) >= wRed\(no\)/.test(cRF)
+     /const cr = cruceDeListon\(mia, max, 10\);/.test(cRF)
      && !/m\.om === 'best_match' \|\| m\.name === cargado/.test(cRF)
-     && /limite: cruzaNo \? no : cruzaWarn \? warn : null/.test(cRF)
+     && /limite: cr\.limite/.test(cRF)
      && /tu listón es \$\{wtxt\(r\.limite, true\)\}/.test(src),
      'ECMWF 61-68, ICON 59-72, Automático 77-85 y la franja sin decir nada');
   ok('las nubes que ve otro modelo llevan sus horas',
@@ -9544,11 +9629,31 @@ grupo('El chip de Horas dice cuánta agua ve el otro modelo (15-09-2026, 23:53)'
   ok('cada hora dice qué otros modelos ven lluvia y cuánta (≥ 0,1 mm y más que el dueño), sin repetir al que presta el código',
      /const dueno = nombreDeModelo\(duenoLluvia\(\)\);/.test(cLl) && /if \(m\.name === dueno \|\| m\.name === yaDicho\) continue;/.test(cLl)
      && /v >= 0\.1 && v > mia/.test(cLl) && /const hc = horaEnComparativa\(h\);/.test(cLl));
+  {
+    /* Y si el que «ve tormenta» es EL TUYO, que se diga: los tres sitios
+       que lo enseñan pasan por la misma frase (26-09-2026, visto en la
+       ficha de índices: «⚠ AROME HD ve tormenta» con AROME HD cargado). */
+    eval(sacar('function frasOtraTormenta('));
+    const sinEt = t => t.replace(/<[^>]*>/g, '');
+    ok('«otro ve tormenta» dice cuándo ese otro es tu propio modelo',
+       sinEt(frasOtraTormenta({ quien: 'ICON', propio: false })) === 'ICON ve tormenta'
+       && sinEt(frasOtraTormenta({ quien: 'AROME HD', propio: true }))
+            === 'AROME HD (tu modelo, con su propia tapa) ve tormenta'
+       && frasOtraTormenta(null) === '',
+       sinEt(frasOtraTormenta({ quien: 'AROME HD', propio: true })));
+    ok('y los tres sitios que lo enseñan usan esa frase, ninguno escribe el nombre a pelo',
+       (src.match(/frasOtraTormenta\(/g) || []).length === 4          // la función y los tres sitios
+       && !/\$\{esc\(\w+\.quien\)\} ve tormenta/.test(src),
+       'si uno se queda fuera, vuelve a salir «⚠ tu modelo ve tormenta» como si fuera otro');
+    ok('la ficha de índices no repite la tormenta cuando tu propia pareja ya rompe',
+       /laParejaRompe\(c\?\.cape, c\?\.cin, c\) \? null : tormentaQueNoVesTu\(c\)/.test(src),
+       'los otros dos sitios ya llevaban esa guarda; este no');
+  }
   ok('cada hora dice quién ve tormenta (CAPE ≥ 700 con tapa < 75, la regla de siempre) cuando el dueño no la ve, con sus dos números',
      /tormentaQueNoVesTu\(h, h\.sitio \|\| null\)/.test(cCh)
      && /\$\{frasOtraTormenta\(t\)\}: CAPE \$\{Math\.round\(t\.cape\)\} · tapa \$\{Math\.round\(t\.cin\)\}/.test(cCh));
   ok('cada hora dice quién da más racha a 10 m si cruza su listón o se va 20 km/h, con el número y el listón',
-     /const \{ warn, no \} = listonRafaga\(\);/.test(cRa) && /alto\.v - h\.gust10 >= 20/.test(cRa)
+     /const cr = cruceDeListon\(h\.gust10, alto\.v\);/.test(cRa)
      && /da \$\{wtxt\(r\.suya, true\)\} a 10 m/.test(cCh) && /tu listón es \$\{wtxt\(r\.limite, true\)\}/.test(cCh));
   /* 17-09-2026 12:40, suyo: al abrir un día, «que ponga también si alguno ve nube o agua». */
   const cCmp = sacar('async function cargarComparativa(place) {');
