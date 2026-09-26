@@ -587,6 +587,62 @@ grupo('El color de la racha se decide con el número que se ve (25-09-2026)');
    todos los días deja de leerse — la lección del ámbar de los 49 km/h,
    que él mismo tumbó el 25-09.
    ══════════════════════════════════════════════════════════════════════ */
+grupo('El día se suma de SUS horas: el resumen diario de ECMWF miente (27-09-2026, medido)');
+{
+  /* MEDIDO contra la API el 27-09-2026 en Bermeo: para el domingo 27,
+     `precipitation_sum` de ECMWF da 0,2 mm y la suma de sus propias
+     horas da 4,2. Veinte veces. AROME, ICON y GFS cuadran al decimal.
+
+     Con el resumen, la tarjeta de 10 días decía «ECMWF, seco» la misma
+     noche en que Horas decía «⚠ ECMWF ve 1,3 mm» a las 21:00. Llamar
+     seco al que más agua ve después del tuyo es la dirección mala. */
+  const MT = [{ om: 'ecmwf_ifs025', nom: 'ECMWF' },
+              { om: 'meteofrance_arome_france_hd', nom: 'AROME HD' },
+              { om: 'icon_seamless', nom: 'ICON' }];
+  const fn = new Function('has', 'MODELOS_TORMENTA',
+    `${sacar('function diasDeSusHoras(')} return diasDeSusHoras;`)(has, MT);
+
+  const respuesta = () => {
+    const R = { daily: { time: ['2026-09-27', '2026-09-28'],
+                         precipitation_sum_ecmwf_ifs025: [0.2, 0],
+                         precipitation_sum_meteofrance_arome_france_hd: [12.9, 0],
+                         precipitation_sum_icon_seamless: [0.4, 0] },
+                hourly: { time: [], precipitation_ecmwf_ifs025: [],
+                          precipitation_meteofrance_arome_france_hd: [] } };
+    for (const dia of ['2026-09-27', '2026-09-28'])
+      for (let h = 0; h < 24; h++) {
+        R.hourly.time.push(`${dia}T${String(h).padStart(2, '0')}:00`);
+        /* Lo que de verdad daban sus horas esa noche: 1,3 a las 21, 22 y
+           23, y tres gotas de 0,1 por la tarde. */
+        R.hourly.precipitation_ecmwf_ifs025.push(
+          dia === '2026-09-27' ? (h >= 21 ? 1.3 : (h >= 18 && h <= 20 ? 0.1 : 0)) : 0);
+        R.hourly.precipitation_meteofrance_arome_france_hd.push(
+          dia === '2026-09-27' && h === 22 ? 12.9 : 0);
+      }
+    return R;
+  };
+
+  const R = respuesta(); fn(R);
+  const i = R.daily.time.indexOf('2026-09-27');
+  ok('el día de ECMWF sale de SUS horas (3,9 + 0,3), no del 0,2 del resumen',
+     R.daily.precipitation_sum_ecmwf_ifs025[i] === 4.2,
+     `da ${R.daily.precipitation_sum_ecmwf_ifs025[i]}`);
+  ok('y así ya no se le puede llamar «seco»: pasa del medio milímetro',
+     R.daily.precipitation_sum_ecmwf_ifs025[i] >= 0.5);
+  ok('el que ya cuadraba se queda igual',
+     R.daily.precipitation_sum_meteofrance_arome_france_hd[i] === 12.9,
+     `da ${R.daily.precipitation_sum_meteofrance_arome_france_hd[i]}`);
+  ok('y del modelo SIN horas no se inventa nada: su resumen se queda como vino',
+     R.daily.precipitation_sum_icon_seamless[i] === 0.4,
+     `da ${R.daily.precipitation_sum_icon_seamless[i]}`);
+
+  /* Y que la petición las pida de verdad: sin `hourly` no hay nada que sumar. */
+  ok('la petición de los 10 días pide también las horas',
+     /hourly: 'precipitation',\s*\n\s*forecast_days: 10, cell_selection: 'land',/.test(src)
+     && /diasDeSusHoras\(d\);/.test(src),
+     'sin las horas, la tarjeta se vuelve a creer el resumen');
+}
+
 grupo('La cifra de la hora es DE esa hora, no de una ventana (26-09-2026, medido)');
 {
   /* MEDIDO contra los datos de 15 minutos de la propia API, en Bermeo
@@ -7517,9 +7573,10 @@ grupo('El martes doble: la franja dice el orden del cielo (31-08, 21:17)');
      /resumenCielo\(sel\)/.test(src)
      && /class="part__tira">\$\{R\.partes\.map\(t => `<i>\$\{icon\(t\.code, d\)\}<u>\$\{rot\(t\)\}<\/u><\/i>`\)/.test(src),
      'texto e icono no pueden calcular el corte cada uno por su lado');
-  ok('y el dibujo del día empieza donde las franjas: a las 6',
-     /h\.date\.getHours\(\) >= 6 && h\.date\.getHours\(\) <= 20\);/.test(src),
-     'una hora de diferencia rompía el empate y salían dos veredictos');
+  ok('el dibujo del día empieza a las 6 Y LLEGA HASTA LA NOCHE',
+     /let delDia = conDato\.filter\(h => h\.date\.getHours\(\) >= 6\);/.test(src)
+     && !/getHours\(\) >= 6 && h\.date\.getHours\(\) <= 20/.test(src),
+     'con la ventana en 6-20, una noche de 12,9 mm no podía salir dibujada (27-09-2026)');
 }
 
 grupo('El cielo pasa a ARPEGE por acierto (31-08-2026, su «dale»)');
@@ -8950,9 +9007,10 @@ console.log('\n  Revisión 04-09: los dos dibujos del día dicen QUÉ horas resu
   ok('ya no hay rótulos fijos «mañana»/«tarde» bajo los dos dibujos',
      !/<u>mañana<\/u>/.test(cuerpo) && !/<u>tarde<\/u>/.test(cuerpo),
      'con el corte a las 16:00, «tarde» resumía solo de 17 a 20 h');
-  ok('el rótulo sale de las MISMAS horas que el dibujo',
-     /R\.partes\.map\(t => `<i>\$\{icon\(t\.code, d\)\}<u>\$\{has\(t\.desde\) \? `\$\{t\.desde\}h` : ''\}<\/u><\/i>`\)/.test(cuerpo),
-     'desde el 09-09 cada tramo lleva su icono y su hora, del mismo objeto');
+  ok('el rótulo sale de las MISMAS horas que el dibujo, y cada tramo con su sol o su luna',
+     /R\.partes\.map\(t => `<i>\$\{icon\(t\.code, deSuHora\(t\)\)\}<u>\$\{has\(t\.desde\) \? `\$\{t\.desde\}h` : ''\}<\/u><\/i>`\)/.test(cuerpo)
+     && /const deSuHora = t => \{/.test(cuerpo),
+     'metida la noche en la ventana, un chubasco de las 22:00 salía con sol');
   /* Ejecutado, la función de rótulo tal cual está escrita. */
   const rot = arr => arr?.length ? `${arr[0].date.getHours()}-${arr[arr.length - 1].date.getHours()} h` : '';
   const h = n => ({ date: new Date(2026, 8, 10, n) });
@@ -9054,9 +9112,9 @@ console.log('\n  El dibujo del día sale de sus horas, no del peor rato');
      /const conDato = hs\.filter\(h => has\(codigoQueSeVe\(h, h\.code\)\)\)/.test(cuerpo),
      'con AROME cargado no hay ni una hora de 240 con weather_code propio');
 
-  ok('y el día (6-20 h, o la noche si no hay más) sale de esas horas, no de la lista cruda',
-     /let delDia = conDato\.filter\(h => h\.date\.getHours\(\) >= 6/.test(cuerpo)
-     && /delDia = conDato\.filter\(h => h\.date\.getHours\(\) >= 21/.test(cuerpo));
+  ok('y el día (de las 6 en adelante, o la madrugada si no hay más) sale de esas horas',
+     /let delDia = conDato\.filter\(h => h\.date\.getHours\(\) >= 6\);/.test(cuerpo)
+     && /delDia = conDato\.filter\(h => h\.date\.getHours\(\) <= 5\);/.test(cuerpo));
 
   /* Y la cuenta, ejecutada: con nueve horas de sol y un diario que dice
      «cubierto», tiene que ganar el sol. Es el caso del 04-09. */

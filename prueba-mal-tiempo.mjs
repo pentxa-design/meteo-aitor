@@ -119,16 +119,30 @@ for (const s of SITIOS) {
      r.lat === s.lat && r.lon === s.lon);
 }
 
-/* ── Y QUE UN SITIO TRANQUILO NO SE INVENTE NADA ────────────────────
-   Lo contrario también tiene que cumplirse: donde no pasa nada, el
-   vigilante calla. Un aviso de más en octubre y deja de mirarlos. */
-console.log('\n  BERMEO hoy (donde no pasa nada)\n');
+/* ── Y QUE NO SE INVENTE NADA: LO QUE DIGA, QUE LO RESPALDE EL DATO ──
+   Esto decía «BERMEO hoy (donde no pasa nada)» y exigía CERO avisos.
+   Y la noche del 27-09-2026 Bermeo llevaba 12,9 mm y CAPE 570: el
+   vigilante avisó con razón y la puerta se puso ROJA, parando una
+   publicación por el tiempo que hacía.
+
+   Un guardia que cambia de color con el cielo no guarda nada: engaña
+   los días de calma y estorba los días malos. Lo que sí se puede exigir
+   siempre es que **cada aviso esté respaldado por su cifra**, que es lo
+   que de verdad hay que comprobar. Si el día sale tranquilo, no hay
+   nada que revisar y se dice. */
+console.log('\n  BERMEO hoy · lo que diga, respaldado por su cifra\n');
 {
   const r = await unSitio({ n: 'BERMEO', lat: 43.4130, lon: -2.7183 });
-  const total = Object.keys(r.dias).length + Object.keys(r.racha).length;
-  console.log(`      rayo: ${Object.keys(r.dias).length} · racha: ${Object.keys(r.racha).length}`);
-  ok('no se inventa ni un rayo ni una racha donde no los hay', total === 0,
-     'si esto salta, revisa los listones antes de fiarte de los avisos');
+  const nRayo = Object.keys(r.dias).length, nRacha = Object.keys(r.racha).length;
+  console.log(`      rayo: ${nRayo} · racha: ${nRacha}`);
+  for (const [dia, d] of Object.entries(r.dias))
+    ok(`BERMEO ${dia}: el rayo lo respalda el CAPE, no es un aviso de más`,
+       Number.isFinite(d.cape) && d.cape >= 700, `cape=${d.cape}`);
+  for (const [dia, w] of Object.entries(r.racha))
+    ok(`BERMEO ${dia}: la racha pasa del listón del viaje (70)`,
+       Number.isFinite(w.kmh) && w.kmh >= 70, `kmh=${w.kmh}`);
+  if (!nRayo && !nRacha)
+    ok('día tranquilo en Bermeo: el vigilante calla, que es lo que toca', true);
 }
 
 /* ── SIN RED NO SE BLOQUEA LA PUBLICACIÓN, PERO SE DICE ─────────────

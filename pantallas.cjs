@@ -639,6 +639,59 @@ async function unaHora(hh) {
     }
   }
 
+  /* ── 10 ter · 10 DÍAS NO PUEDE LLAMAR «SECO» A QUIEN HORAS DICE QUE MOJA ─
+     Suyo, 27-09-2026 de madrugada, con los dos pantallazos al lado:
+     *«joe, ¿siempre algo? ¿tanto agente y seguimos así?»*. Y llevaba
+     razón: la tarjeta de 10 días decía «GFS (2,1 mm) también la ve ·
+     ECMWF y ICON, secos» la misma noche en que la pestaña Horas, en la
+     MISMA app, ponía «⚠ ECMWF ve 1,3 mm» a las 21:00. Medido contra la
+     API: ECMWF daba 3,9 mm esa noche, más que el GFS al que sí nombraba.
+
+     La causa era del dato, no de la cuenta: `precipitation_sum` de ECMWF
+     daba 0,2 mm para ese día y la suma de sus propias horas 4,2. Ahora
+     el día se suma de sus horas (`diasDeSusHoras`).
+
+     Y esto es lo que cierra la clase: 10 días era la única pantalla que
+     no se comparaba con ninguna otra, y por ahí se coló. Si Horas dice
+     que un modelo ve agua un día, la tarjeta de ese día no puede
+     llamarlo seco. */
+  {
+    /* El día de la tarjeta sale de su propio texto —«21:00 dom …»—, no
+       de `.hcard__h`, que solo lleva la hora. */
+    const diaDe = c => ((c.textContent || '').replace(/\s+/g, ' ').trim()
+      .match(/^\d\d:\d\d\s+([a-záéíóú]{3})/i) || [])[1] || '';
+    /* Qué modelos dice Horas que ven agua, y en qué día. */
+    const mojanEn = new Map();
+    for (const c of doc.querySelectorAll('#hlist .hcard')) {
+      const t = c.textContent.replace(/\s+/g, ' ');
+      for (const m of t.matchAll(/⚠\s*([A-ZÁÉÍÓÚÑ][\w\sÁÉÍÓÚÑ.-]{1,14}?)\s+ve\s+[\d,]+\s*mm/g)) {
+        const d = diaDe(c); if (!d) continue;
+        if (!mojanEn.has(d)) mojanEn.set(d, new Set());
+        mojanEn.get(d).add(m[1].trim());
+      }
+    }
+    const tarjetas = [...doc.querySelectorAll('#dlist .dcard, #dlist > div')];
+    for (const t of tarjetas) {
+      const txtD = t.textContent.replace(/\s+/g, ' ');
+      const mSec = txtD.match(/([^·]{1,60}?),\s*secos?\b/);
+      if (!mSec) continue;
+      const secos = mSec[1].split(/,| y /).map(x => x.trim()).filter(Boolean);
+      /* El día de la tarjeta, por su rótulo: «Hoy», «Lun», «Mar»… */
+      const rot = (txtD.match(/^(Hoy|Mañana|lun|mar|mié|jue|vie|sáb|dom)/i) || [])[1] || '';
+      const clave = /^hoy$/i.test(rot) ? (doc.querySelector('#hlist .hcard') ? diaDe(doc.querySelector('#hlist .hcard')) : '') : rot.toLowerCase();
+      const ven = mojanEn.get(clave) || mojanEn.get(clave.slice(0, 3)) || null;
+      if (!ven) continue;
+      for (const q of secos)
+        if ([...ven].some(v => v.toLowerCase() === q.toLowerCase()))
+          falla(`10 días llama «seco» a ${q} el día «${rot}», y Horas dice que ve agua ese mismo día: «${txtD.slice(0, 140)}»`);
+    }
+    /* Que la trampa muerda: tiene que haber alguien mojando en Horas. */
+    /* A la hora en que la comparativa está caída a propósito no hay chips
+       que comparar, y eso no es que la trampa no muerda: es el otro caso. */
+    if (!mojanEn.size && hh !== HORA_SIN_COMPARATIVA)
+      falla('TRAMPA SIN DIENTES: ningún modelo ve agua en Horas, así que no se compara nada con 10 días');
+  }
+
   /* ── 11 · EL MISMO HECHO, EN TODAS LAS PANTALLAS A LA VEZ ──────────
      Suyo, 26-09-2026: *«ya tiene que funcionar bien sin errores
      diarios»*, *«no puedo ya andar a diario con estas cosas

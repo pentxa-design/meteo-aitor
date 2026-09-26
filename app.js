@@ -6297,11 +6297,63 @@ function medianaPonderada(pares) {
    Una sola petición, solo el resumen diario. Si falla, no pasa nada: la
    tarjeta sale como siempre y no se dice nada — nunca se afirma que
    coinciden sin haberlo mirado.                                       */
+/** El resumen de cada día, sumado de SUS PROPIAS horas.
+ *
+ *  MEDIDO el 27-09-2026 en Bermeo contra la API: para el domingo 27,
+ *  `precipitation_sum` de ECMWF da **0,2 mm** y la suma de sus propias
+ *  horas da **4,2**. Veinte veces. AROME, ICON y GFS cuadran al decimal,
+ *  así que no es una cuenta nuestra: es el campo diario de ese modelo.
+ *
+ *  Con el resumen, la tarjeta de 10 días decía «ECMWF, seco» la misma
+ *  noche en que la pestaña Horas decía «⚠ ECMWF ve 1,3 mm» a las 21:00.
+ *  Dos pestañas de la misma app, el mismo modelo y la misma hora, con
+ *  respuestas contrarias — y en la dirección mala: llamar seco al que
+ *  más agua ve después del tuyo.
+ *
+ *  Sin horas de un modelo no se toca su resumen: un hueco no se rellena.
+ *  Modifica `d` y no devuelve nada. */
+function diasDeSusHoras(d) {
+  if (!d?.daily?.time?.length || !d?.hourly?.time?.length) return;
+  const deDia = new Map();
+  d.hourly.time.forEach((t, i) => {
+    const dia = String(t).slice(0, 10);
+    if (!deDia.has(dia)) deDia.set(dia, []);
+    deDia.get(dia).push(i);
+  });
+  const uno = MODELOS_TORMENTA.length === 1;
+  for (const m of MODELOS_TORMENTA) {
+    const hs = d.hourly[`precipitation_${m.om}`] ?? (uno ? d.hourly.precipitation : null);
+    const ds = d.daily[`precipitation_sum_${m.om}`] ?? (uno ? d.daily.precipitation_sum : null);
+    if (!Array.isArray(hs) || !Array.isArray(ds)) continue;
+    d.daily.time.forEach((dia, k) => {
+      const filas = (deDia.get(dia) || []).filter(i => has(hs[i]));
+      if (!filas.length) return;                       // sin horas, el resumen se queda
+      ds[k] = Math.round(filas.reduce((a, i) => a + hs[i], 0) * 100) / 100;
+    });
+  }
+}
+
 async function cargarDiariaMulti(place) {
   try {
     const d = await jget(API.fc, {
       latitude: place.lat, longitude: place.lon, timezone: 'auto', wind_speed_unit: 'kmh',
       daily: 'temperature_2m_max,temperature_2m_min,wind_gusts_10m_max,precipitation_sum',
+      /* ── Y LAS HORAS, PORQUE EL RESUMEN DIARIO MIENTE ────────────────
+         MEDIDO el 27-09-2026 en Bermeo contra la propia API: para el
+         domingo 27, ECMWF da `precipitation_sum` = **0,2 mm** y la suma
+         de SUS PROPIAS horas es **4,2 mm**. Veinte veces. Los otros tres
+         modelos cuadran al decimal, así que no es una cuenta nuestra: es
+         el campo diario de ECMWF.
+
+         Eso hacía que la tarjeta de 10 días dijera «ECMWF, seco» la
+         misma noche en que la pestaña Horas decía «⚠ ECMWF ve 1,3 mm» a
+         las 21:00. Dos pestañas de la misma app, la misma hora, el mismo
+         modelo, y respuestas contrarias. Y en la dirección mala: llamar
+         seco al que más agua ve después del tuyo.
+
+         Se piden también las horas y el día se suma de ellas. Es el mismo
+         número que ya enseña Horas, así que no puede haber dos. */
+      hourly: 'precipitation',
       forecast_days: 10, cell_selection: 'land',
       models: MODELOS_TORMENTA.map(m => m.om).join(','),
     }, { timeout: 15000 });
@@ -6309,6 +6361,7 @@ async function cargarDiariaMulti(place) {
        ninguna, así que los dos avisos de la tarjeta de 10 días —el de la
        racha que no ves y el del desacuerdo— podían estar contando lo de
        OTRO emplazamiento sin que nadie pudiera notarlo. */
+    diasDeSusHoras(d);
     S.diariaMulti = d?.daily?.time?.length
       ? Object.assign(d.daily, { clave: `${place.lat.toFixed(3)},${place.lon.toFixed(3)}` })
       : null;
@@ -14867,9 +14920,19 @@ function iconosDelDia(dia) {
   const hs = horasDelDia(S.data?.fc, dia);
   const conDato = hs.filter(h => has(codigoQueSeVe(h, h.code)));
   let deNoche = false;
-  let delDia = conDato.filter(h => h.date.getHours() >= 6 && h.date.getHours() <= 20);
+  /* ── LA NOCHE TAMBIÉN SE DIBUJA (27-09-2026) ──────────────────────
+     Suyo, viendo la tarjeta de hoy con «sol · nube» y 12,9 mm de agua
+     a las 22:00: *«pues pones 3 iconos si hace falta: sol, nube y
+     lluvia a la noche, que da»*.
+
+     Y tenía razón: esta ventana era 6–20, así que las horas de 21 a 23
+     solo se miraban cuando NO había ninguna de día. Una noche de
+     chubascos no podía salir dibujada aunque la propia tarjeta
+     escribiera los milímetros debajo. Ahora entran, y cada tramo lleva
+     su sol o su luna según sus propias horas. */
+  let delDia = conDato.filter(h => h.date.getHours() >= 6);
   if (!delDia.length) {
-    delDia = conDato.filter(h => h.date.getHours() >= 21 || h.date.getHours() <= 5);
+    delDia = conDato.filter(h => h.date.getHours() <= 5);
     deNoche = true;
   }
   if (!delDia.length) return SIN_DIBUJO;
@@ -14880,8 +14943,16 @@ function iconosDelDia(dia) {
      En la tarjeta del día el rótulo es la hora en que empieza cada tramo,
      que es lo que cabe. */
   if (!R.partes || R.partes.length < 2) return icon(R.code, d);
+  /* Cada tramo con SU día o SU noche: metida la noche en la ventana, un
+     chubasco de las 22:00 salía con sol. Sale de las horas del propio
+     tramo (`h.day`), que es de donde sale en el resto de la app. */
+  const deSuHora = t => {
+    const hasta = has(t.hasta) ? t.hasta : t.desde;
+    const suyas = delDia.filter(h => h.date.getHours() >= t.desde && h.date.getHours() <= hasta);
+    return suyas.length ? (suyas.some(h => h.day === 1) ? 1 : 0) : d;
+  };
   return `<span class="dcard__ii" data-n="${R.partes.length}">${
-    R.partes.map(t => `<i>${icon(t.code, d)}<u>${has(t.desde) ? `${t.desde}h` : ''}</u></i>`).join('')}</span>`;
+    R.partes.map(t => `<i>${icon(t.code, deSuHora(t))}<u>${has(t.desde) ? `${t.desde}h` : ''}</u></i>`).join('')}</span>`;
 }
 
 function renderDays() {
