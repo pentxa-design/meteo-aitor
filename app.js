@@ -494,6 +494,9 @@ function diaSiNoEsHoy(d) {
    ya salía «Menos de 0,1» con coma. La app se contradecía consigo misma
    en la cifra que más mira. */
 const mmTxt = v => (has(v) ? v.toFixed(1).replace('.', ',') : '—');
+/* El mismo redondeo que `mmTxt`, para poder DECIDIR con lo que se
+   imprime: 0,15 se lee «0,2» y no puede juzgarse como 0,15. */
+const mmRedonda = v => (has(v) ? Number(v.toFixed(1)) : v);
 /* Kilómetros con coma, como todos sus números. Cazado el 30-08-2026 en su
    pantallazo: «lee a 19.1 km» con punto, en diez sitios distintos. */
 const kmTxt = v => (has(v) ? v.toFixed(1).replace('.', ',') : '—');
@@ -1445,10 +1448,38 @@ function codigoQueSeVe(h, codigoDelCielo, thr = S.thr) {
   return veladoSiToca(codigoDelCielo, h);
 }
 
+/* ── LA PALABRA DE LA LLUVIA, A PARTIR DE LOS MILÍMETROS SUELTOS ────
+   Estaba escrita TRES veces —aquí, en el pico de la tanda de Mis
+   estaciones y en la línea de agua de la tarjeta— y las tres no decían
+   lo mismo: por debajo de su listón de aviso, una decía «Cuatro gotas»
+   y otra «Sirimiri» con los mismos milímetros. Y las dos copias
+   comparaban el crudo mientras la pantalla enseña un decimal.
+
+   Aquí y en `comoLlueve()` está TODA la escala de la lluvia. El orden
+   es el de `comoLlueve`: mandan los milímetros, y la llovizna solo
+   decide por debajo del listón, que es donde los milímetros no saben
+   distinguir mojarse de no mojarse. */
+function palabraLluvia(mm, esSirimiri = false, thr = S.thr) {
+  if (!has(mm)) return 'sin dato';
+  const v = mmRedonda(mm);
+  if (v >= mmRedonda(thr?.rainNo ?? 2))   return 'Llueve bien';
+  if (v >= mmRedonda(thr?.rainWarn ?? 0.2)) return 'Llueve poco';
+  if (esSirimiri) return 'Sirimiri';
+  /* «¿Cae ALGO?» se pregunta con el número crudo, y a propósito: 0,04
+     se imprime «0,0 mm» y moja igual. La regla de la casa es de su
+     pantallazo del 26-08 —«0,0 mm» con lluvia cayéndole encima—: los
+     listones se comparan con lo que se ve, pero el «no cae nada» tiene
+     que ser de verdad nada. Así dicen lo mismo esta función y
+     `comoLlueve()`, que es lo que comprueba el banco. */
+  return mm > 0 ? 'Cuatro gotas' : 'Sin lluvia';
+}
+
 function comoLlueve(h, thr = S.thr) {
   if (!has(h.prec)) return { k: 'nd', et: 'sin dato' };
-  if (h.prec >= thr.rainNo)   return { k: 'bien', et: 'Llueve bien' };
-  if (h.prec >= thr.rainWarn) return { k: 'poco', et: 'Llueve poco' };
+  /* Con lo que se IMPRIME (26-09-2026): 0,15 mm sale «0,2 mm» en
+     pantalla —que es su listón de aviso— y se juzgaba como 0,15. */
+  if (mmRedonda(h.prec) >= mmRedonda(thr.rainNo))   return { k: 'bien', et: 'Llueve bien' };
+  if (mmRedonda(h.prec) >= mmRedonda(thr.rainWarn)) return { k: 'poco', et: 'Llueve poco' };
   // Por debajo del umbral: o es sirimiri, o no cae nada. Lo que lo
   // distingue es el código del modelo, no los milímetros — ver la
   // sección del sirimiri en CLAUDE.md.
@@ -2507,7 +2538,10 @@ function assess(h, thr, quePerfil, place = null) {
   //                       anoche y Durango a las 23 (tapa 56)
   //   CAPE>=700 tapa<50 → 2,7 %, pero pierde Durango
   // Se queda en 700/75: una hora al día de media, y es aviso, no rojo.
-  const TAPA_CAPE = CAPE_COMBINACION, TAPA_ABIERTA = 75;
+  /* El 75 tiene nombre desde el 20-09 y es `TAPA_ROMPE`: aquí vivía una
+     copia local llamada `TAPA_ABIERTA`, que es justo la forma que tiene
+     un listón de quedarse atrás el día que se recalibre (26-09-2026). */
+  const TAPA_CAPE = CAPE_COMBINACION, TAPA_ABIERTA = TAPA_ROMPE;
 
   /* — Y HACE FALTA UNA CHISPA ─────────────────────────────────────────
      Añadido el 25-08-2026, y lo encontró él. Girona daba CAPE 1500 con
@@ -2732,15 +2766,20 @@ function assess(h, thr, quePerfil, place = null) {
     }
   }
 
-  if (has(h.temp) && has(h.prec) && h.temp <= 1 && h.prec > 0)
+  /* Con el número que se ENSEÑA (26-09-2026): la temperatura se imprime
+     sin decimales, así que 1,4 se lee «1 °C» y con el crudo se quedaba
+     fuera del aviso de hielo; y 0,6 se lee «1 °C» y sí entraba. Dos
+     renglones iguales en pantalla con avisos distintos. */
+  if (has(h.temp) && has(h.prec) && Math.round(h.temp) <= 1 && h.prec > 0)
     bump('no', `${h.temp.toFixed(0)} °C con precipitación — riesgo de hielo en la estructura`);
 
   // — Visibilidad —
-  if (has(h.vis) && h.vis < thr.visWarn)
+  /* La visibilidad se enseña en km con un decimal: se compara así. */
+  if (has(h.vis) && Number((h.vis / 1000).toFixed(1)) < Number((thr.visWarn / 1000).toFixed(1)))
     bump('warn', `Visibilidad ${kmTxt(h.vis / 1000)} km — reducida`);
 
   // — Confort térmico —
-  if (has(h.feels) && h.feels <= thr.feelsWarn)
+  if (has(h.feels) && Math.round(h.feels) <= Math.round(thr.feelsWarn))
     bump('warn', `Sensación térmica ${h.feels.toFixed(0)} °C — riesgo de pérdida de destreza manual`);
 
   /* «Sin condicionantes meteorológicos sobre los umbrales fijados» era
@@ -3028,7 +3067,12 @@ function textoAguaLejos(f, L) {
   return `<div class="elev__cerca">
     <b>Ojo al punto que se está leyendo.</b>
     ${esc(modeloDato().name)} lee este emplazamiento <b>a ${kmTxt(C.km)} km</b>,
-    y a <b>${kmTxt(C.kmCerca)} km</b> —encima del sitio— el mismo modelo da
+    ${/* Se NOMBRA el modelo en vez de decir «el mismo» (26-09-2026): la
+          celda de al lado se le pide al modelo cargado, y «el mismo» es
+          una afirmación que se queda vieja en cuanto alguien cambie a
+          quién se le pide. Con el nombre delante no hay nada que
+          adivinar. */ ''}
+    y a <b>${kmTxt(C.kmCerca)} km</b> —encima del sitio— ${esc(modeloDato().name)} da
     <b>${mmTxt(L.mm)} mm a las ${hh}</b>, y aquí
     ${has(L.mmT) ? `solo ${mmTxt(L.mmT)} mm` : 'no hay dato'}.
     <span class="elev__cerca__n">El agua que ve el modelo en TU punto no es la
@@ -3094,7 +3138,7 @@ function textoCeldaLejos() {
   return `<div class="elev__cerca">
     <b>Ojo al punto que se está leyendo.</b>
     ${esc(modeloDato().name)} lee este emplazamiento <b>a ${kmTxt(A.km)} km</b>,
-    y a <b>${kmTxt(A.kmCerca)} km</b> —encima del sitio— el mismo modelo da
+    y a <b>${kmTxt(A.kmCerca)} km</b> —encima del sitio— ${esc(mio)} da
     ${loDeAlLado}. En cambio ${alli}.
     <span class="elev__cerca__n">No se cambia ningún número de la ficha: lo de
     superficie sale de la celda de tierra, que es la que toca para un sitio en
@@ -4829,7 +4873,13 @@ function renderTower() {
   const w10 = c.w10, g10 = c.gust10;   // lo que publica el modelo a 10 m
   // ¿Tiene el modelo niveles por encima de 10 m para poder estimar?
   const sinPerfil = S.hgt !== 10 && !c.windExact && !has(c.alpha);
-  const w10St = !has(w10) ? 'nd' : w10 >= S.thr.windNo ? 'no' : w10 >= S.thr.windWarn ? 'warn' : 'go';
+  /* El viento, por lo que se IMPRIME, igual que la ráfaga de al lado
+     (26-09-2026): las dos casillas están pegadas y una decidía con el
+     crudo y la otra con el redondeado. Con el listón en 45 y el modelo
+     dando 44,6, esta escribía «45 km/h» y se quedaba en verde. */
+  const w10St = !has(w10) ? 'nd'
+    : wRed(w10) >= wRed(S.thr.windNo) ? 'no'
+    : wRed(w10) >= wRed(S.thr.windWarn) ? 'warn' : 'go';
   const g10St = nivelRacha(g10);
 
   /* ── CINCO CASILLAS, EN SU ORDEN Y SIN REPETIR (20-09-2026) ────────
@@ -6741,8 +6791,8 @@ function tablaTormenta(H, i, hora) {
         <span class="cmp__val">${nCape(f.cape)}<small> J/kg</small>${tapa}</span>
       </div>`;
     }).join('')}
-    <p class="note">Hacen falta <b>las dos cosas y en la misma hora</b>: CAPE ≥ 700
-    y la tapa por debajo de 75. ${mudos.length
+    <p class="note">Hacen falta <b>las dos cosas y en la misma hora</b>: CAPE ≥ ${CAPE_COMBINACION}
+    y la tapa por debajo de ${TAPA_ROMPE}. ${mudos.length
       ? `<b>${esc(listar(mudos.map(f => f.name)))}</b> no ${mudos.length === 1 ? 'publica' : 'publican'}
          la tapa: eso no es que no vea${mudos.length === 1 ? '' : 'n'} tormenta, es que <b>no lo sabe${mudos.length === 1 ? '' : 'n'}</b>. `
       : ''}<b>Esto dice si PUEDE, no si ha caído</b>: para descargas medidas, la pestaña Rayos.</p>`;
@@ -9503,7 +9553,7 @@ function renderParte() {
          mirando la pantalla el 28-08-2026, antes de que lo viera él. */
       : rsNums.length < 2 ? '' : fila(
           'GASOLINA Y TAPA DE CADA MODELO, ESTA HORA',
-          'CAPE·tapa · rompe desde CAPE 700 con la tapa por debajo de 75 · '
+          `CAPE·tapa · rompe desde CAPE ${CAPE_COMBINACION} con la tapa por debajo de ${TAPA_ROMPE} · `
           + '«no la publica» = ese modelo no da la tapa, no que diga que no',
           'cape', rsNums);
 
@@ -9845,7 +9895,7 @@ function renderParte() {
       return `<div class="pt__l pt__l--siri"><b>Sirimiri</b> ${cuando}
         — <b>no marca en el pluviómetro pero moja</b>, y lo que esté a la
         intemperie estará mojado</div>`;
-    const fuerza = L.pico >= (S.thr?.rainNo ?? 2) ? 'Llueve bien' : L.pico >= (S.thr?.rainWarn ?? 0.2) ? 'Llueve poco' : 'Cuatro gotas';
+    const fuerza = palabraLluvia(L.pico);
     const dPico = dia(L.hPico).trim();
     return `<div class="pt__l${L.pico >= (S.thr?.rainWarn ?? 0.2) ? ' pt__l--rojo' : ''}"><b>${fuerza}</b> ${cuando}
       — lo más fuerte <b>${nMm(L.pico)} mm</b> a las ${hm(L.hPico)}${dPico ? ` de ${dPico}` : ''}
@@ -10141,7 +10191,7 @@ function renderParte() {
            <b>${nCape(d.tapaSuelo)}</b>, <b>pero no a la vez</b> — si se juntan una hora, salta`
       : !hayGasolina
         ? `${capeTxt}${has(d.minCin) ? ` · tapa <b>${nCape(d.minCin)}</b>` : ''}`
-          + ` — hace falta ${CAPE_COMBINACION} con la tapa por debajo de 75`
+          + ` — hace falta ${CAPE_COMBINACION} con la tapa por debajo de ${TAPA_ROMPE}`
         : `tiene ${techoTxt}, pero la tapa no baja de
            <b>${has(d.tapaSuelo) ? nCape(d.tapaSuelo) : '—'}</b>: aguanta`;
     /* ── EN SU ORDEN: LLUVIA, RAYOS, VIENTO ─────────────────────────
@@ -10167,8 +10217,8 @@ function renderParte() {
     </div>`;
   }).join('')
   + avisoSirimiri(secos)
-  + `<p class="note">Hacen falta <b>las dos cosas</b>: gasolina (CAPE ≥700) y la
-     <b>tapa abierta</b> (por debajo de 75). Una sola no rompe nada — y por eso
+  + `<p class="note">Hacen falta <b>las dos cosas</b>: gasolina (CAPE ≥${CAPE_COMBINACION}) y la
+     <b>tapa abierta</b> (por debajo de ${TAPA_ROMPE}). Una sola no rompe nada — y por eso
      van siempre juntas y con su hora. Sale de los modelos que publican la tapa;
      ${esc(listar(MODELOS_TORMENTA.filter(m => !CON_TAPA.includes(m.om)).map(m => m.nom)))} no la publican. <b>Esto dice si PUEDE, no si ha caído</b>:
      para eso, la pestaña Rayos.</p>`;
@@ -10365,9 +10415,7 @@ function lineaAguaTorre(k) {
   if (!L.llueve)
     return `<div class="tor__agua" data-a="seco">Seco ${cuandoEs}</div>`;
 
-  const tipo = L.soloSirimiri ? 'Sirimiri'
-             : L.pico >= (S.thr?.rainNo ?? 2) ? 'Llueve bien'
-             : L.pico >= (S.thr?.rainWarn ?? 0.2) ? 'Llueve poco' : 'Sirimiri';
+  const tipo = palabraLluvia(L.pico, L.soloSirimiri);
 
   /* ¿Está cayendo AHORA? Entonces lo que le sirve es la hora a la que
      para, no la hora a la que empezó. Es literalmente su pregunta:
@@ -13443,10 +13491,19 @@ async function pintarPortadaEstacion({ forzar = false } = {}) {
       console.warn('portada de estación: sin datos', e);
       return;
     }
-    D.hours = buildHours(D.fc, ALTURA_CASETA, est);
     S.portadaEstacion = { est, D, t: Date.now(), sello: selloPortada };
     if (S.view !== 'torres') return;             // se fue a otra pestaña mientras cargaba
   }
+  /* ── LAS HORAS SE REHACEN SIEMPRE, TAMBIÉN CON LA COPIA ───────────
+     Esto vivía DENTRO del `if (!D)`, así que con un acierto de caché
+     —hasta 15 minutos— la portada se quedaba con las horas de cuando se
+     cargó. A las 11:05: las veinte tarjetas ya en las 11:00 y la
+     portada del MISMO sitio, justo encima, con el icono, el cielo y las
+     franjas de las 10:00. Y `comprobarCielo()` no lo cazaba porque
+     compara la portada contra esas mismas horas viejas.
+     Rehacerlas no cuesta ninguna petición: son los mismos datos, leídos
+     desde la hora en curso (26-09-2026). */
+  D.hours = buildHours(D.fc, ALTURA_CASETA, est);
   fijo?.classList.remove('sin-estacion');
   const antes = { place: S.place, data: S.data };
   S.place = est; S.data = D; S._pintandoEstacion = true;
@@ -13993,13 +14050,26 @@ function renderNow() {
     <div class="dt__v">${v}</div>${s ? `<div class="dt__s">${s}</div>` : ''}</div>`;
   };
 
-  const porUmbral = (val, warn, no) => !has(val) ? null
-    : val >= no ? 'no' : val >= warn ? 'warn' : 'go';
+  /* ── SE COMPARA LO QUE SE IMPRIME (26-09-2026) ────────────────────
+     Estas casillas decidían el color con el dato CRUDO y enseñaban el
+     redondeado, que es el «Racha 49 en verde con el listón en 49» del
+     25-09 entrando por otra puerta: con el listón de viento en 45 y el
+     modelo dando 44,6, la casilla escribe «45 km/h» y sale en verde.
+     `red` es la misma cuenta con la que se imprime cada cosa. */
+  const porUmbral = (val, warn, no, red = v => v) => {
+    if (!has(val)) return null;
+    const v = red(val), w = red(warn), n = red(no);
+    return v >= n ? 'no' : v >= w ? 'warn' : 'go';
+  };
 
-  /* La visibilidad va al revés: cuanto menos, peor. */
-  const stVis = m => !has(m) ? null : m < 200 ? 'no' : m < 1000 ? 'warn' : 'go';
-  const txtVis = m => !has(m) ? '' : m < 200 ? 'Niebla densa'
-    : m < 1000 ? 'Niebla' : m < 4000 ? 'Bruma' : '';
+  /* La visibilidad va al revés: cuanto menos, peor. Y también se juzga
+     por lo que se lee: se imprime en km con un decimal (`kmTxt`), así
+     que 999 m y 1.000 m son los dos «1,0 km» y no pueden salir uno en
+     ámbar y el otro en verde. */
+  const visKm = m => Number((m / 1000).toFixed(1));
+  const stVis = m => !has(m) ? null : visKm(m) < 0.2 ? 'no' : visKm(m) < 1 ? 'warn' : 'go';
+  const txtVis = m => !has(m) ? '' : visKm(m) < 0.2 ? 'Niebla densa'
+    : visKm(m) < 1 ? 'Niebla' : visKm(m) < 4 ? 'Bruma' : '';
 
   const stUv = u => !has(u) ? null : u >= 8 ? 'no' : u >= 6 ? 'warn' : 'go';
   const txtUv = u => !has(u) ? '' : u >= 11 ? 'Extremo — no estar al sol'
@@ -14048,7 +14118,7 @@ function renderNow() {
   $('#det').innerHTML = [
     dt('Viento a 10 m de altura', has(C.wind_speed_10m) ? `${wtxt(C.wind_speed_10m)}<small> ${wu().lbl}</small>` : nd,
        has(C.wind_direction_10m) ? `del ${rumboLargo(C.wind_direction_10m)}` : '',
-       porUmbral(C.wind_speed_10m, S.thr.windWarn, S.thr.windNo)),
+       porUmbral(C.wind_speed_10m, S.thr.windWarn, S.thr.windNo, wRed)),
     /* La ráfaga es la que decide, no la media: lo que tumba a alguien en
        un mástil es el golpe, no el promedio de la hora. Por eso lleva su
        listón dicho al lado. */
@@ -14298,7 +14368,7 @@ function renderNow() {
       const marca = otro && otro.quien
         ? ` <span class="nd__ojo">⚠ ${esc(otro.quien)} sí</span>` : '';
       return dt('Precipitación', showLluvia(C.precipitation) + marca, pie,
-        otro ? 'warn' : porUmbral(C.precipitation, S.thr.rainWarn, S.thr.rainNo));
+        otro ? 'warn' : porUmbral(C.precipitation, S.thr.rainWarn, S.thr.rainNo, mmRedonda));
     })(),
 
     /* CUÁNDO, no solo cuánto. Ver arriba.
@@ -14375,7 +14445,7 @@ function renderNow() {
           ? `A ${TORRE_ALTO_M} m, lo alto de la torre${r.exact ? '' : ' · estimado entre los 10 y los 80 m del modelo'}${
               de ? ` · de ${esc(nombreDeModelo(de.de))}` : ''}`
           : 'El modelo solo publica el viento a 10 m: arriba no se puede estimar',
-        porUmbral(v, S.thr.windWarn ?? 45, S.thr.windNo ?? 60));
+        porUmbral(v, S.thr.windWarn ?? 45, S.thr.windNo ?? 60, wRed));
     })(),
 
     /* El isocero: por dónde anda la cota de nieve y el frío de verdad.
@@ -14771,7 +14841,7 @@ function lineaCapeHora(h) {
                            : `tapa ${h.cin.toFixed(0)}${firmaTapa(h)} (${colaTapa(h.cape, h.cin, h)})`;
   return `<div class="hcard__c${rompe ? ' hcard__c--ojo' : ''}">${cape} · ${tapa}${
     rompe ? ` — los dos a la vez: CAPE de ${CAPE_COMBINACION} para arriba`
-          + ' y tapa por debajo de 75' : ''}</div>`;
+          + ` y tapa por debajo de ${TAPA_ROMPE}` : ''}</div>`;
 }
 
 /* ── EL DIBUJO DE UN DÍA, POR EL MISMO CAMINO QUE TODO (09-09-2026) ───
@@ -18582,7 +18652,7 @@ async function montarAvisos() {
        regla de siempre de esta casa, aplicada al propio aviso. */
     di(`Avisos ACTIVADOS en ${estoEs()}.`,
        'Te llega el <b>parte de la mañana</b> y, aunque tengas la app cerrada, un aviso cuando cambia algo:'
-       + '<br>⚡ <b>rayo</b> — CAPE 700 con la tapa por debajo de 75'
+       + `<br>⚡ <b>rayo</b> — CAPE ${CAPE_COMBINACION} con la tapa por debajo de ${TAPA_ROMPE}`
        + '<br>🌧 <b>agua</b> — desde 0,3 mm/h; «fuerte» a partir de 2,0'
        + '<br>💨 <b>racha</b> — por encima de 70 km/h, la que te hace no salir'
        + '<br>Solo de lo que <b>cambia</b>: que aparezca, que empeore o que se adelante. '

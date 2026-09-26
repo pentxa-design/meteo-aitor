@@ -1307,7 +1307,21 @@ function escalasPropias() {
      Por debajo de 300 va en azules apagados a propósito: ahí no hay nada
      que mirar y no tiene que llamarle la atención. El salto de color
      gordo está en el 700, que es donde empieza a importar de verdad. */
-  const cpm = [0, 100, 200, 300, 500, 700, 1000, 1500, 2000, 2500, 3000, 4000];
+  /* ── Y SALEN DE SUS LISTONES, NO ESCRITOS AQUÍ (26-09-2026) ───────
+     El comentario de arriba dice «son los suyos» y estaban clavados:
+     si él toca el CAPE en Ajustes —o se recalibra la combinación, que
+     ya pasó una vez de 800 a 700—, el mapa seguiría pintando con los de
+     antes mientras las tarjetas deciden con los nuevos. Lo mismo que
+     pasó esta mañana con la capa de ráfagas. Arriba del `capeNo` la
+     escala sigue siendo la medida, que ésa no es suya sino del cielo. */
+  const CT = {
+    warn: (typeof S !== 'undefined' && S?.thr?.capeWarn) ?? 300,
+    comb: (typeof CAPE_COMBINACION !== 'undefined' && CAPE_COMBINACION) || 700,
+    no:   (typeof S !== 'undefined' && S?.thr?.capeNo) ?? 1000,
+  };
+  const cpm = creciente([0, CT.warn / 3, CT.warn * 2 / 3, CT.warn,
+                         (CT.warn + CT.comb) / 2, CT.comb, CT.no,
+                         1500, 2000, 2500, 3000, 4000]);
   /* Por debajo de 300 (su capeWarn) ahora es transparente a medias, no
      azul opaco: ahí no hay nada que mirar y se ve el mapa (14-09-2026). */
   const cpc = [['#101c33',0], ['#16345c',0.3], ['#1d5a94',0.6], ['#2f9bd0',0.9],

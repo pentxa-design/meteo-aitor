@@ -149,6 +149,10 @@ globalThis.isStormCode = c => [95, 96, 99].includes(c);
 eval(sacarConst('mmTxt'));
 eval(sacar('function diaSiNoEsHoy(d) {'));
 eval(sacarConst('esLlovizna'));
+/* El redondeo con el que se imprime la lluvia y la palabra que sale de
+   los milímetros sueltos: desde el 26-09-2026 la escala vive en un sitio. */
+eval(sacarConst('mmRedonda'));
+eval(sacar('function palabraLluvia('));
 eval(sacar('function comoLlueve('));
 globalThis.PERFILES = { hierro: { et: 'x', vientoManda: false, rafagaAviso: 70, rafagaBestia: 90,
   lluviaManda: false, alturaImporta: false, sirimiriImporta: true } };
@@ -583,6 +587,60 @@ grupo('El color de la racha se decide con el número que se ve (25-09-2026)');
    todos los días deja de leerse — la lección del ámbar de los 49 km/h,
    que él mismo tumbó el 25-09.
    ══════════════════════════════════════════════════════════════════════ */
+grupo('Lo que se decide es lo que se ve, también en lluvia y visibilidad (26-09-2026)');
+{
+  /* Del barrido de los cinco frentes: la palabra de la lluvia estaba
+     escrita en TRES sitios y no decían lo mismo —por debajo de su
+     listón, una «Cuatro gotas» y otra «Sirimiri» con los mismos
+     milímetros—, y las tres comparaban el crudo mientras la pantalla
+     enseña un decimal. Es el «Racha 49 en verde con el listón en 49»
+     con otra unidad. */
+  const T = { rainWarn: 0.2, rainNo: 2, capeWarn: 300, capeNo: 1000 };
+  ok('0,16 mm se imprime «0,2» —su listón— así que cuenta como aviso, no como cuatro gotas',
+     palabraLluvia(0.16, false, T) === 'Llueve poco', palabraLluvia(0.16, false, T));
+  ok('y 1,96 se imprime «2,0» —su listón de fuerte— así que es «Llueve bien»',
+     palabraLluvia(1.96, false, T) === 'Llueve bien', palabraLluvia(1.96, false, T));
+  ok('pero 0,14 se imprime «0,1» y sigue siendo cuatro gotas: se juzga lo que se ve, no lo que se cree',
+     palabraLluvia(0.14, false, T) === 'Cuatro gotas', palabraLluvia(0.14, false, T));
+  /* Y al revés: 0,04 se imprime «0,0 mm» y MOJA. Su pantallazo del
+     26-08, de pie en Bermeo con la app diciendo 0,0 y cayéndole agua.
+     Los listones se comparan con lo que se ve; el «no cae nada», no. */
+  ok('0,04 se imprime «0,0 mm» pero moja, y se dice',
+     palabraLluvia(0.04, false, T) === 'Cuatro gotas', palabraLluvia(0.04, false, T));
+  ok('y con 0 de verdad, «Sin lluvia»', palabraLluvia(0, false, T) === 'Sin lluvia');
+  ok('por debajo del listón, la llovizna sí cambia la palabra',
+     palabraLluvia(0.1, true, T) === 'Sirimiri' && palabraLluvia(0.1, false, T) === 'Cuatro gotas');
+  ok('y sin dato no se inventa nada', palabraLluvia(null, false, T) === 'sin dato');
+  ok('`comoLlueve` y `palabraLluvia` dicen LO MISMO con los mismos milímetros',
+     [0, 0.04, 0.16, 0.5, 1.96, 3].every(mm =>
+       comoLlueve({ prec: mm, code: 1 }, T).et === palabraLluvia(mm, false, T)),
+     [0, 0.04, 0.16, 0.5, 1.96, 3].map(mm =>
+       `${mm}: ${comoLlueve({ prec: mm, code: 1 }, T).et} / ${palabraLluvia(mm, false, T)}`).join(' · '));
+  {
+    /* Y que no vuelva a haber una cuarta copia: las palabras de la
+       escala solo pueden salir de sus dos dueños. */
+    const codigo = src.replace(/\/\*[\s\S]*?\*\//g, '');
+    const dueños = codigo.slice(codigo.indexOf('function palabraLluvia('),
+                                codigo.indexOf('function comoLlueve(') + 900);
+    const fuera = ['Llueve bien', 'Llueve poco', 'Cuatro gotas']
+      .filter(t => (codigo.split(`'${t}'`).length - 1) > (dueños.split(`'${t}'`).length - 1));
+    ok('la escala de la lluvia en palabras existe en UN solo sitio',
+       fuera.length === 0,
+       fuera.length ? `copiada fuera de sus dueños: ${fuera.join(' · ')}` : 'las tres, una vez');
+  }
+
+  /* La visibilidad: se imprime en km con un decimal, así que 999 m y
+     1.000 m son los dos «1,0 km» y no pueden salir de colores distintos. */
+  {
+    const trozo = sacar('function renderNow() {');
+    const stVis = new Function('has', `${(trozo.match(/const visKm = [\s\S]*?const stVis = [^;]+;/) || [''])[0]} return stVis;`)(has);
+    ok('999 m y 1.000 m se leen los dos «1,0 km», así que llevan el mismo color',
+       stVis(999) === stVis(1000) && stVis(1000) === 'go', `${stVis(999)} / ${stVis(1000)}`);
+    ok('y 940 m, que se lee «0,9 km», sí es niebla',
+       stVis(940) === 'warn', stVis(940));
+  }
+}
+
 grupo('Lo que viene hoy: en rojo si lo hay, NADA si no, y SOLO de hoy (26-09-2026)');
 {
   eval(sacar('function loQueVieneHoy('));
@@ -6492,13 +6550,27 @@ grupo('RÁFAGAS: colores vivos y con SUS listones (01-09-2026)');
      'con la temperatura se recortó el último y su color no salía en la barra');
 
   /* CAPE, la segunda de las tres que deciden, también con sus cortes. */
-  const cpm = ((M.match(/const cpm = \[([^\]]+)\]/) || [])[1] || '').split(',').map(x => +x.trim());
+  /* Igual que la de ráfagas: se EJECUTA la cuenta de maps.js con dos
+     juegos de listones y se exige la relación, no unos números escritos
+     aquí (26-09-2026). Los de encima de su tope no son suyos, son del
+     cielo, y ésos siguen fijos a propósito. */
+  const trozoCpm = (M.match(/const CT = \{[\s\S]*?const cpm = creciente\(\[[\s\S]*?\]\);/) || [])[0];
+  const rampaCape = trozoCpm && new Function('creciente', 'S', 'CAPE_COMBINACION',
+    `${trozoCpm} return cpm;`);
+  const cre = a => a.map(v2 => Math.round(v2)).reduce(
+    (o, v2) => (o.push(o.length && v2 <= o[o.length - 1] ? o[o.length - 1] + 1 : v2), o), []);
+  const cpm = rampaCape ? rampaCape(cre, { thr: { capeWarn: 300, capeNo: 1000 } }, 700) : [];
   const cpc = ((M.match(/const cpc = \[([\s\S]*?)\];/) || [])[1] || '').match(/#[0-9a-f]{6}/g) || [];
   ok('CAPE ya tiene escala propia, no la pálida de fábrica',
      /escala:'capeE'/.test(M) && /const capeE = \{/.test(M));
   ok('y sus cortes son los suyos: 300, 700 y 1000',
      cpm.includes(300) && cpm.includes(700) && cpm.includes(1000),
      '700 es el listón de la combinación calibrado con Lekeitio y Durango');
+  ok('…y si él cambia el CAPE en Ajustes, el mapa cambia con él',
+     (() => { const r = rampaCape && rampaCape(cre, { thr: { capeWarn: 150, capeNo: 800 } }, 600);
+       return !!r && r.includes(150) && r.includes(600) && r.includes(800)
+              && r.every((v2, i) => i === 0 || v2 > r[i - 1]); })(),
+     JSON.stringify(rampaCape && rampaCape(cre, { thr: { capeWarn: 150, capeNo: 800 } }, 600)));
   ok('con tantos colores como cortes',
      cpm.length === cpc.length, `${cpm.length} cortes · ${cpc.length} colores`);
 }
@@ -7947,8 +8019,17 @@ grupo('El acceso no cuenta un hueco como un cero (01-09-2026)');
      deciden comparando a mano, sino con el número tal como se ve. Se le
      da la misma decisión, con el mismo listón que se le inyecta aquí. */
   const listonDePrueba = () => ({ warn: 49, no: 70, de: 'hierro' });
-  const nivelDePrueba = v => !has(v) ? 'nd'
-    : Math.round(v) >= 70 ? 'no' : Math.round(v) >= 49 ? 'warn' : 'go';
+  /* ── LA DE VERDAD, NO UNA COPIA (26-09-2026) ──────────────────────
+     Aquí había un `nivelRacha` escrito a mano con el 49 y el 70
+     clavados. O sea: esta prueba comprobaba `acceso()` contra SU PROPIA
+     idea de cómo se decide el color, no contra la de la app. El día que
+     `nivelRacha` cambie —cambió el 25-09 y volvió a cambiar hoy— esto
+     seguiría en verde con la decisión vieja. Se saca de app.js y se le
+     inyecta el listón de la prueba, que es lo único que hace falta fijar. */
+  /* En km/h, que es como él los lee: el redondeo de `wRed`, tal cual. */
+  const wRedP = v => has(v) ? Number(v.toFixed(0)) : null;
+  const nivelDePrueba = new Function('has', 'wRed', 'listonRafaga',
+    `${sacar('function nivelRacha(')} return nivelRacha;`)(has, wRedP, listonDePrueba);
   const fn = new Function('has', 'wtxt', 'kmTxt', 'listonRafaga', 'nivelRacha', `
     ${sacar('function acceso(')}
     return acceso;`)(globalThis.has, x => `${x} km/h`, x => String(x),
@@ -10054,6 +10135,22 @@ grupo('QUE NO VUELVA A PASAR · las tres guardias de clase (20-09-2026)');
   }
   ok('los listones que deciden (CAPE_COMBINACION, TAPA_ROMPE, listonRafaga()) no se escriben a pelo',
      pillados.length === 0, pillados.join(' · '));
+  /* Y TAMPOCO EN LO QUE SE PINTA (26-09-2026). Los seis renglones que
+     explican la regla del rayo llevaban el 75 y el 700 escritos a mano:
+     el día que se recalibren —el CAPE ya se recalibró una vez, de 800 a
+     700— la app decidiría con el número nuevo mientras los textos le
+     siguen contando el viejo. */
+  {
+    const limpio = A_.replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^([^'"`\n]*?)\/\/.*$/gm, (l, pre) => pre);
+    const sueltos = [];
+    for (const re of [/por debajo de 75\b/g, /CAPE ≥ ?700\b/g, /CAPE 700\b/g, /tapa < ?75\b/g])
+      for (const m of limpio.matchAll(re))
+        sueltos.push(limpio.slice(Math.max(0, m.index - 40), m.index + 30).replace(/\s+/g, ' '));
+    ok('ni los textos que se pintan: el 75 y el 700 salen de TAPA_ROMPE y CAPE_COMBINACION',
+       sueltos.length === 0,
+       sueltos.length ? sueltos.slice(0, 3).join(' ‖ ') : 'ninguno escrito a mano');
+  }
   const huerfanas = Object.keys(EXCUSAS).filter(x => !A_.includes(x) && !V_.includes(x));
   ok('y no queda ninguna excusa huérfana en la lista',
      huerfanas.length === 0, huerfanas.join(' · '));
@@ -10517,7 +10614,23 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
                          'prueba-huecos.cjs', 'prueba-sw.cjs', 'prueba-satelite.mjs', 'prueba-cabeceras.mjs',
                          'prueba-webcams.mjs', 'prueba-mapas.mjs', 'prueba-candado.cjs', 'prueba-motor.mjs', 'prueba-mal-tiempo.mjs']
     .map(f => fs.readFileSync(path.join(__dirname, f), 'utf8'));
-  const enOtroGuardia = n => otrosGuardias.some(t => t.includes(n));
+  /* ── NO VALE QUE EL NOMBRE APAREZCA, TIENE QUE SER UNA PRUEBA ──────
+     Esto decía `t.includes(n)`: bastaba con que el nombre de la regla
+     saliera en CUALQUIER SITIO de esos ficheros —un comentario, una
+     lista, la propia frase copiada— para darla por guardada. O sea: el
+     candado que vigila que ninguna regla se quede sin prueba se podía
+     satisfacer escribiendo la frase. Ahora tiene que ser el primer
+     argumento de un `ok(...)`, que es una prueba de verdad. */
+  /* El nombre tiene que estar en CÓDIGO —el título de un `ok`, el texto
+     de un `console.log`, la tabla de casos que alimenta la prueba—, no
+     en un comentario. Antes valía `t.includes(n)` a secas: bastaba con
+     escribir la frase en una nota para dar la regla por guardada, que
+     es el candado abriéndose solo. */
+  const sinComentarios = t => t
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/^([^'"`\n]*?)\/\/.*$/gm, (l, pre) => pre);
+  const codigoDeGuardias = otrosGuardias.map(sinComentarios);
+  const enOtroGuardia = n => codigoDeGuardias.some(t => t.includes(n));
   const faltan = [...new Set(filas)]
     .filter(n => !nombresEjecutados.has(n) && !enOtroGuardia(n));
   ok('todas las reglas de NO-SE-TOCA.md siguen teniendo su prueba viva',
@@ -10749,6 +10862,12 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('al elegir del buscador estando en Mis estaciones, se sale a Ahora: si no, no pasa nada en pantalla',
      /if \(S\.view === 'torres'\) setView\('now'\);\s*\n\s*go\(p\);/.test(A),
      'suyo: «pongo arbaiza en mis estaciones y me sale un triángulo y no me lleva al sitio»');
+  ok('las horas de la portada se rehacen SIEMPRE, también con la copia de menos de 15 min',
+     (() => { const c = sacar('async function pintarPortadaEstacion(');
+       const iGuarda = c.indexOf('S.portadaEstacion = { est, D, t: Date.now()');
+       const iHoras = c.indexOf('D.hours = buildHours(');
+       return iGuarda >= 0 && iHoras > iGuarda; })(),
+     'dentro del «si no hay copia», a las 11:05 la portada seguía en las 10:00 con las tarjetas ya en las 11:00');
   ok('y al salir de Mis estaciones vuelve la portada del sitio buscado; sin datos de la estación, se esconde',
      /if \(v !== 'torres' && S\.portadaEstacion && S\.data\) seguro\('ahora', renderNow\);/.test(A)
      && /fijo\?\.classList\.add\('sin-estacion'\);/.test(A)

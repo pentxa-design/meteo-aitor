@@ -69,6 +69,7 @@ globalThis.wmoText = c => ({ 95: 'tormenta', 63: 'lluvia', 51: 'llovizna' }[c] ?
 globalThis.isStormCode = c => [95, 96, 99].includes(c);
 eval(sacar('function deEsteSitio(est, place = null) {').replace('function deEsteSitio', 'globalThis.deEsteSitio = function'));
 eval(sacarConst('mmTxt'));
+eval(sacarConst('mmRedonda'));   // el redondeo con el que se decide la lluvia (26-09-2026)
 eval(sacarConst('kmTxt'));
 eval(sacarConst('esLlovizna'));
 eval(sacar('function comoLlueve('));

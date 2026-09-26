@@ -236,12 +236,17 @@ const ok = (n, b, x) => { console.log(`    ${b ? '✓' : '✗'} ${n}${b ? '' : x
        la ficha y en Mis torres para la misma hora y el mismo sitio es la
        forma exacta de los fallos del 30-08. Eso es lo que se comprueba, y
        ahora sin atarlo a una política que él puede cambiar. */
-    ok('la ficha lleva la lluvia del dueño (0,7), no la del cargado (9,9)',
+    /* EL NOMBRE DICE LO QUE SE COMPRUEBA (26-09-2026). Esta se llamaba
+       «la ficha lleva la lluvia del dueño (0,7), no la del cargado
+       (9,9)» y lo único que miraba era que hubiera un número. Los dos
+       valores se quitaron del examen el 02-09 y del nombre no: un
+       guardia que promete más de lo que mira engaña al que lo lee. */
+    ok('la ficha trae lluvia de esa hora: sin número no hay nada que comparar',
        hFicha?.prec != null, `prec=${hFicha?.prec}`);
     ok('Mis torres lleva LA MISMA lluvia',
        hTorre?.prec === hFicha?.prec,
        `ficha=${hFicha?.prec} torre=${hTorre?.prec}`);
-    ok('las dos llevan la llovizna del mismo dueño (código 51)',
+    ok('las dos llevan EL MISMO código de lluvia, sea el que sea',
        (hFicha?.codeLluvia ?? hFicha?.code) === (hTorre?.codeLluvia ?? hTorre?.code),
        `ficha=${hFicha?.codeLluvia ?? hFicha?.code} torre=${hTorre?.codeLluvia ?? hTorre?.code}`);
     if (modelo === 'best_match') {

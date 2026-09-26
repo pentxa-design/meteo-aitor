@@ -1063,9 +1063,23 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
   ok('un aviso por pasada con todas las torres en el título («AGUA HOY · 3 torres»)',
      (vig3.match(/torres` : c\.n\}`/g) || []).length === 3 && !/QueValen\.slice\(0, 3\)/.test(vig3) && !/QueVale\.slice\(0, 3\)/.test(vig3),
      'el mismo «se adelanta» llegaba en tres notificaciones seguidas, una por torre');
-  ok('no hay horas de silencio: trabaja de noche y los avisos van las 24 horas',
-     !/deNoche/.test(vig3) && /for \(const a of avisos\) enviados\.push/.test(vig3),
-     'suyo, 13-09-2026: «que la madrugada cuente igual que el resto del día»');
+  /* ── LA CLASE, NO LA PALABRA (26-09-2026) ─────────────────────────
+     Esto prohibía la palabra `deNoche` y nada más: cualquiera puede
+     volver a poner horas de silencio llamándolas de otra manera —un
+     `if (h0 >= 23 || h0 < 7) return;` delante del envío— y la guarda
+     seguiría en verde. Ahora se mira que el bucle que MANDA los avisos
+     no esté detrás de ninguna puerta que dependa de la hora. */
+  {
+    const iEnvio = vig3.indexOf('for (const a of avisos) enviados.push');
+    const antes = iEnvio < 0 ? '' : vig3.slice(Math.max(0, iEnvio - 600), iEnvio);
+    const puertas = [...antes.matchAll(/\bh0\s*[<>]=?\s*\d+|getHours\(\)\s*[<>]=?\s*\d+/g)].map(m => m[0]);
+    ok('no hay horas de silencio: trabaja de noche y los avisos van las 24 horas',
+       /* Sobre el CÓDIGO: «fallaría en silencio» es una nota de la casa. */
+       iEnvio >= 0 && puertas.length === 0
+       && !/deNoche|horasSilencio|noMolestar/i.test(vig3.replace(/\/\*[\s\S]*?\*\//g, '')),
+       puertas.length ? `el envío está detrás de una puerta por hora: ${puertas.join(' · ')}`
+                      : 'suyo, 13-09-2026: «que la madrugada cuente igual que el resto del día»');
+  }
 }
 
 
