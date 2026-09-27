@@ -2621,7 +2621,8 @@ ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan 
    funden entre cortes; el resto sigue en lineal hasta que se mida. */
 ok('las capas de lluvia piden interpolación monótona y el resto lineal',
    /const INTERPOLACION_SUAVE = new Set\(\['lluvia', 'dbz', 'sombraLluvia', 'lluviaVerde', 'nieveAzul'\]\);/.test(mapsSrc)
-   && /interpolation: INTERPOLACION_SUAVE\.has\(L_\?\.escala\) \? 'monotone' : 'linear'/.test(mapsSrc)
+   && /interpolation: interpolacionDe\(L_\)/.test(mapsSrc)
+   && /if \(INTERPOLACION_SUAVE\.has\(L_\?\.escala\)\) return 'monotone';/.test(mapsSrc)
    && !/interpolation: 'cubic'/.test(mapsSrc),
    'cúbica monótona: redondea sin pintar más agua de la que dan los nodos');
 ok('las escalas fundidas de lluvia y nieve llevan corte seco en 0,1: de 0 a 0,099 no se pinta nada',
@@ -2708,6 +2709,60 @@ grupo('La tapa: lo que el adversario rompió sin que nada se pusiera rojo (27-09
      laParejaRompe(700, 74.9, { cape: 700, cin: 74.9 })
      && !laParejaRompe(699.9, 74.9, { cape: 699.9, cin: 74.9 })
      && !laParejaRompe(700, 75, { cape: 700, cin: 75 }));
+}
+
+grupo('Base y Tope convectivos: «sin nube» es −500 y no se pinta (27-09-2026, lo vio él)');
+{
+  /* Su captura de las 18:34: Base convectiva de ICON-EU a las 23:00, media
+     Bizkaia en ROJO —«base por debajo de 500 m»— con los rótulos diciendo
+     2.000 a 4.900 m. MEDIDO por /om: ICON marca «sin nube convectiva» con
+     −500 (base y tope). La escala fundía de −9999 (transparente) a 0
+     (rojo), así que −500 salía rojo al 95 %. En el Tope, verde al 29 %.
+     Se EJECUTAN las dos escalas sacadas de maps.js: cualquier mezcla de
+     dos tramos transparentes es transparente, sea cual sea el fundido. */
+  const Mm = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const arr = nombre => {
+    const m = Mm.match(new RegExp(`const ${nombre}\\s*=\\s*(\\[[\\s\\S]*?\\]);`));
+    return m ? new Function(`return ${m[1].replace(/\/\/[^\n]*/g, '')};`)() : null;
+  };
+  const bc = arr('bc'), bcc = arr('bcc'), tc = arr('tc'), tcc = arr('tcc');
+  ok('las dos escalas se pueden sacar de maps.js', Array.isArray(bc) && Array.isArray(bcc) && Array.isArray(tc) && Array.isArray(tcc)
+     && bc.length === bcc.length && tc.length === tcc.length);
+  /* El fundido de la librería (color_blend): entre dos cortes, lineal. */
+  const alfa = (bp, cc, v) => {
+    if (v <= bp[0]) return cc[0][1];
+    for (let i = 0; i < bp.length - 1; i++)
+      if (v >= bp[i] && v <= bp[i + 1]) { const t = (v - bp[i]) / (bp[i + 1] - bp[i]); return cc[i][1] + t * (cc[i + 1][1] - cc[i][1]); }
+    return cc[cc.length - 1][1];
+  };
+  ok('Base convectiva: el «sin nube» de ICON (−500) es TRANSPARENTE, no rojo',
+     bc && alfa(bc, bcc, -500) === 0, bc && `alfa(−500) = ${alfa(bc, bcc, -500)}`);
+  ok('y cualquier negativo también (−1, −9999)', bc && alfa(bc, bcc, -1) === 0 && alfa(bc, bcc, -9999) === 0);
+  ok('pero una base en 0 m sigue en rojo pleno y una en 2.670 m casi no se pinta',
+     bc && alfa(bc, bcc, 0) === 1 && alfa(bc, bcc, 2670) < 0.35, bc && `alfa(0)=${alfa(bc, bcc, 0)} alfa(2670)=${alfa(bc, bcc, 2670)}`);
+  ok('Tope convectivo: el «sin nube» (−500) es TRANSPARENTE',
+     tc && alfa(tc, tcc, -500) === 0, tc && `alfa(−500) = ${alfa(tc, tcc, -500)}`);
+  ok('y un tope de 7.000 m sigue en rojo (0,9)', tc && Math.abs(alfa(tc, tcc, 7000) - 0.9) < 1e-9);
+  /* La leyenda empieza en 0, no en el corte del centinela. */
+  const ejeDe = nombre => { const m = Mm.match(new RegExp(`const ${nombre} = \\{[\\s\\S]*?eje: (\\w+)\\.slice\\((\\d+)\\)`)); return m ? { arr: m[1], desde: Number(m[2]) } : null; };
+  const eb = ejeDe('basecv'), et = ejeDe('topecv');
+  ok('la leyenda de la Base empieza en 0 (los cortes del centinela no salen en la barra)',
+     eb && eb.arr === 'bc' && bc[eb.desde] === 0, JSON.stringify(eb));
+  ok('y la del Tope también', et && et.arr === 'tc' && tc[et.desde] === 0, JSON.stringify(et));
+  /* Y las teselas de estas dos capas NO mezclan nodos con y sin nube: un
+     nodo en −500 al lado de uno en 3.000 daba 1.250 en medio, que es un
+     número que ningún modelo dijo. */
+  const iDe = (Mm.match(/function interpolacionDe\(L_\) \{[\s\S]*?\n\}/) || [])[0];
+  ok('la interpolación de la tesela se decide en interpolacionDe()', !!iDe);
+  if (iDe) {
+    const f = new Function('INTERPOLACION_SUAVE', `${iDe}; return interpolacionDe;`)(new Set(['lluvia', 'dbz', 'sombraLluvia', 'lluviaVerde', 'nieveAzul']));
+    ok('base y tope (con centinela) van a «nearest»: cada píxel es un nodo, no una mezcla',
+       f({ escala: 'basecv', minValido: 0 }) === 'nearest' && f({ escala: 'topecv', minValido: 0 }) === 'nearest');
+    ok('la lluvia sigue en monotone y el resto en linear',
+       f({ escala: 'lluvia' }) === 'monotone' && f({ escala: 'cape' }) === 'linear' && f(undefined) === 'linear');
+  }
+  ok('la leyenda del Tope dice los tres escalones (7.000 / 9.000 / Lekeitio)',
+     /name:'Tope convectivo'[\s\S]{0,400}?7\.000[\s\S]{0,120}?9\.000[\s\S]{0,120}?Lekeitio/.test(Mm));
 }
 
 grupo('La tapa de AguaceroWx: no hay regla (27-08-2026)');

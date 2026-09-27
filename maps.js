@@ -403,7 +403,7 @@ const TLAYERS = [
        + 'medido con GFS, el 26-08 en Bilbao 119 aquí y 58 allí, y el 27-08 en el mismo sitio 20 aquí y 91 allí. '
        + 'Aquí no hay regla como con el CAPE: mira de qué burbuja habla cada uno' },
   { id:'cct',  g:'Tormenta', name:'Tope convectivo', v:'convective_cloud_top', unit:'m', minValido:0, escala:'topecv',
-    desc:'Altura a la que llega el tope de la nube de tormenta. Cuanto más alto, más potente' },
+    desc:'Altura a la que llega el tope de la nube de tormenta. Por debajo de 7.000 m se electrifica poco; de 7.000 a 9.000, tormenta hecha; por encima de 9.000, como la noche de Lekeitio (10.640 m). Sin dato no es sin nube: el modelo no lo dice' },
   { id:'ccb',  g:'Tormenta', name:'Base convectiva', v:'convective_cloud_base', unit:'m', minValido:0, escala:'basecv',
     desc:'Altura a la que EMPIEZA la nube de tormenta. Compárala con la cota del emplazamiento: si la base baja de esa altura, la torre está dentro de la nube' },
   { id:'frz',  g:'Tormenta', name:'Isocero', v:'freezing_level_height', unit:'m', escala:'isocero',
@@ -564,6 +564,16 @@ const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isoc
   'lluvia', 'lluviaVerde', 'nieveAzul']);
 /* Capas que se interpolan con cúbica monótona entre nodos (ver omUrl). */
 const INTERPOLACION_SUAVE = new Set(['lluvia', 'dbz', 'sombraLluvia', 'lluviaVerde', 'nieveAzul']);
+/* Cómo se interpola la tesela de cada capa. En UNA función para poder
+   probarla. Las capas con centinela de «no hay» (`minValido`: base y tope
+   convectivos, donde ICON pone −500) van a `nearest`: mezclar un nodo en
+   −500 con uno en 3.000 daba 1.250 en medio, un número que ningún modelo
+   dijo, y ese número salía pintado y rotulado (27-09-2026). */
+function interpolacionDe(L_) {
+  if (INTERPOLACION_SUAVE.has(L_?.escala)) return 'monotone';
+  if (L_?.minValido !== undefined) return 'nearest';
+  return 'linear';
+}
 /* Capas de lluvia que van sobre suelo negro (como AguaceroWx) y sin la
    sombra del relieve encima (18-09-2026: al 32 % dejaba la tierra gris). */
 const CON_SUELO_NEGRO = new Set(['lluvia', 'lluviaVerde', 'dbz']);
@@ -1511,26 +1521,34 @@ function escalasPropias() {
   // filtraban, pero el MAPA lo pintaba: sin este primer tramo
   // transparente, media España salía del color más alarmante justo
   // donde no hay ninguna tormenta.
-  const bc  = [-9999, 0, 500, 1000, 1500, 2500, 4000, 9000];
-  const bcc = [['#b3122b',0],                       // sin nube: no se pinta
+  /* ── EL «SIN NUBE» DE ICON ES −500, Y SE FUNDÍA A ROJO (27-09-2026) ──
+     Lo vio él en su captura de las 18:34: media Bizkaia en rojo —«base
+     por debajo de 500 m»— con los rótulos en 2.000-4.900 m. MEDIDO por
+     /om: ICON marca «sin nube convectiva» con −500, no con NaN. Y con el
+     degradado (color_blend) la escala fundía de −9999 (transparente) a 0
+     (rojo pleno): un −500 salía rojo al 95 %. Por eso hay DOS cortes
+     transparentes: cualquier mezcla entre ellos sigue siendo transparente,
+     y el rojo empieza exactamente en 0. En el Tope, lo mismo. */
+  const bc  = [-9999, -1, 0, 500, 1000, 1500, 2500, 4000, 9000];
+  const bcc = [['#b3122b',0], ['#b3122b',0],        // sin nube (−500): no se pinta
                ['#b3122b',1], ['#e03a1f',.92], ['#f5872a',.82], ['#f2d02a',.6],
                ['#9fd7a8',.32], ['#9fd7a8',0], ['#9fd7a8',0]];
   const basecv = {
     scale: { type:'breakpoint', unit:'m', breakpoints: bc,
              colors: bcc.map(([c,a]) => hexRGBA(c, a)) },
-    eje: bc.slice(1), desde: 1, unidad: 'm', pos: bc.slice(1).map((_, i) => i),
+    eje: bc.slice(2), desde: 2, unidad: 'm', pos: bc.slice(2).map((_, i) => i),
   };
 
   // Tope convectivo: aquí es al revés que la base. Cuanto MÁS ALTO llega
   // el tope, más potente es la tormenta. Sin nube, transparente.
-  const tc  = [-9999, 0, 3000, 5000, 7000, 9000, 16000];
-  const tcc = [['#9fd7a8',0],                       // sin nube: no se pinta
+  const tc  = [-9999, -1, 0, 3000, 5000, 7000, 9000, 16000];
+  const tcc = [['#9fd7a8',0], ['#9fd7a8',0],        // sin nube (−500): no se pinta
                ['#9fd7a8',.30], ['#f2d02a',.6], ['#f5872a',.8],
                ['#e03a1f',.9], ['#b3122b',1], ['#7b2a8c',1]];
   const topecv = {
     scale: { type:'breakpoint', unit:'m', breakpoints: tc,
              colors: tcc.map(([c,a]) => hexRGBA(c, a)) },
-    eje: tc.slice(1), desde: 1, unidad: 'm', pos: tc.slice(1).map((_, i) => i),
+    eje: tc.slice(2), desde: 2, unidad: 'm', pos: tc.slice(2).map((_, i) => i),
   };
 
   /* ── NUBES COMO EN WINDY (15-09-2026) ─────────────────────────────────
@@ -2193,7 +2211,7 @@ const Maps = {
        linear 194 ms · monotone 260 ms. Nada que ver con la medición vieja
        de 'cubic' + tile_size 512 (×25), que era la tesela doble. Solo en
        las capas de lluvia por ahora, que es lo que pidió. */
-    const q = new URLSearchParams({ variable, interpolation: INTERPOLACION_SUAVE.has(L_?.escala) ? 'monotone' : 'linear' });
+    const q = new URLSearchParams({ variable, interpolation: interpolacionDe(L_) });
     if (L_?.arrows)   q.set('arrows', 'true');     // barbas de viento
     if (L_?.contours) q.set('contours', 'true');   // isobaras / isohipsas
     /* Degradado continuo entre cortes en las escalas cuyos cortes NO son
