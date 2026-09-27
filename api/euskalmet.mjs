@@ -92,7 +92,11 @@ import { cabeceras } from '../lib/cabeceras.mjs';
    «429 Please wait 7 seconds» a todas las fichas a la vez (medido el
    23-09-2026 a las 14:45). Seis en vuelo, y el 429 se respeta (abajo). */
 const AGENTE = new Agent({ keepAlive: true, maxSockets: 6, timeout: 9000, ca: CA_IZENPE });
-const CDN_SEGUNDOS = 300;
+/* 15 min desde el 27-09-2026 (suyo: «adelante»): cada apertura de la app
+   pagaba un MISS de esta función, la más cara de Vercel (0,46 s de CPU).
+   Euskalmet publica cada 10 min y la app recalcula la edad del dato desde
+   `medidoEn`, así que lo que se enseña no se congela. */
+const CDN_SEGUNDOS = 900;
 const PLAZO_MS = 15000;
 
 /* Plazo global: si Euskalmet acepta y se cuelga, no se espera a que

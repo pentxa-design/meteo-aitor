@@ -326,6 +326,23 @@ ok('y la tanda del vigilante lleva sello de 10 min y pide el código de tormenta
    /const selloTanda = \(\) => `&_=\$\{Math\.floor\(Date\.now\(\) \/ 600000\)\}`;/.test(vig)
    && (vig.match(/precipitation,wind_gusts_10m,weather_code&forecast_days=2/g) || []).length === 2);
 
+/* ── EL CANDADO NO CORRE EN /estaciones (27-09-2026, «adelante» a la duda 4) ──
+   Es la única ruta que sigue pidiendo el Centro Operativo. El matcher del
+   middleware la cubría: hoy, con el candado apagado, no pasaba nada; el día
+   que lo encendiera, el panel se quedaba sin estaciones. Se EJECUTA el
+   matcher como lo ejecuta Vercel (una expresión sobre la ruta). */
+{
+  const MW = fs.readFileSync(path.join(__dirname, 'middleware.js'), 'utf8');
+  const m = (MW.match(/matcher: \['([^']+)'\]/) || [])[1];
+  ok('el middleware declara un matcher', !!m);
+  let re = null;
+  try { re = new RegExp('^' + String(m).replace(/\\\\/g, '\\') + '$'); } catch { re = null; }
+  ok('el matcher se puede ejecutar', !!re, String(m));
+  ok('el candado sigue cubriendo la app (/ e index.html)', !!re && re.test('/') && re.test('/index.html'));
+  ok('y NO cubre /estaciones, la ruta del Centro Operativo', !!re && !re.test('/estaciones'), String(m));
+  ok('ni el service worker, ni api/, que ya estaban fuera', !!re && !re.test('/sw.js') && !re.test('/api/euskalmet'));
+}
+
 ok('el agua se avisa desde 0,3 mm/h, no desde 0,1',
    numVig('AGUA_MIN') === 0.3,
    `0,1 salía 47 horas de 48 en un día de sol; está en el comentario`);

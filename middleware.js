@@ -147,5 +147,8 @@ export default async function middleware(request) {
 export const config = {
   // El service worker y el manifiesto quedan fuera: si se les pide
   // contraseña, la app deja de poder instalarse y de funcionar sin red.
-  matcher: ['/((?!sw\\.js|manifest\\.webmanifest|icons/|vendor/|api/|_next/).*)'],
+  // Y /estaciones (27-09-2026, suyo): es lo único que sigue pidiendo el
+  // Centro Operativo desde su propio dominio. Con el candado encendido se
+  // quedaría sin estaciones medidas; con el candado apagado no cambia nada.
+  matcher: ['/((?!sw\\.js|manifest\\.webmanifest|icons/|vendor/|api/|_next/|estaciones).*)'],
 };

@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.27-1558';
+const BUILD = '2026.09.27-1747';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -212,7 +212,10 @@ const PERFILES = {
          + 'el rayo y con el coche a pie de portal. Aquí el tiempo no manda: '
          + 'vas y arreglas. Lo único, que la acometida y el contador suelen '
          + 'estar fuera, en la fachada.',
-    vientoManda: false, rafagaBestia: 90,
+    /* El ámbar escrito, como en caseta y poste (suyo, 27-09-2026): sin él
+       salía en 63, el 70 % del tope, y el mismo número tiene que ser el
+       mismo en toda la app. */
+    vientoManda: false, rafagaAviso: 70, rafagaBestia: 90,
     lluviaManda: false,
     alturaImporta: false,
     // Bajo techo el sirimiri no pinta nada. Solo la acometida de fachada,
@@ -19986,14 +19989,16 @@ function encogerFoto(fichero, lado = 1600, calidad = 0.7) {
    contestamos, deja de mandar fotos, y lo que él mide es lo único que
    dice si esta app acierta.
 
-   Se mira cada 20 s, y SOLO cuando la pestaña está delante y el hilo se
-   ve: ni gasta datos en el monte con la app en el bolsillo, ni pide nada
-   con la pantalla apagada. Y al volver a la app se refresca en el acto,
-   que es cuando más falta hace.                                       */
+   Se mira cada minuto (suyo, 27-09-2026: eran 20 s, o sea 180 llamadas
+   por hora a la función de campo con la pestaña delante; Vercel manda),
+   y SOLO cuando la pestaña está delante y el hilo se ve: ni gasta datos
+   en el monte con la app en el bolsillo, ni pide nada con la pantalla
+   apagada. Y al volver a la app se refresca en el acto, que es cuando
+   más falta hace.                                                     */
 function refrescarHilo() {
   const seVe = () => document.visibilityState === 'visible'
                   && $('#campoHilo')?.offsetParent != null;
-  setInterval(() => { if (seVe()) pintarHilo(); }, 20e3);
+  setInterval(() => { if (seVe()) pintarHilo(); }, 60e3);
   document.addEventListener('visibilitychange', () => { if (seVe()) pintarHilo(); });
 }
 

@@ -2050,3 +2050,4 @@ Lo apunto en TRASPASO §16 con builds y medidas. `deploy.sh` desde el portátil:
 4. **(20:20)** Lluvia con paleta Windy + suelo oscuro + ciudades (build 1951); sombra de lluvia sobre Nubes en AZUL (Meteored); **partículas de viento** («Partículas», junto a Barbas). Todo en TRASPASO §17. Sigue sin push: commits locales en el SSD.
 5. **(00:05, 16-09)** Chip de Horas con la cantidad que ve el otro modelo (`mmQueVeElOtro`), literal, 0,0 incluido. TRASPASO §17 al final.
 6. **(16:10, 27-09, iMac)** Última revisión con cuatro agentes: 20 fallos del vigilante (arrancado con reloj de mentira, `prueba-vigilante-reloj.mjs`) y 5 de app.js reparados, cada uno visto en rojo antes; guardias nuevas de la tapa, del marcador y de pantallas; `pruebas.js` en 4 s. Build 2026.09.27-1558. TRASPASO §40.
+7. **(17:50, 27-09, iMac)** Sus cuatro síes: dentro con ámbar 70, hilo cada minuto, Euskalmet 15 min en CDN, /estaciones fuera del candado. Build 2026.09.27-1747. TRASPASO §41.

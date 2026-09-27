@@ -485,6 +485,16 @@ grupo('El color de la racha se decide con el número que se ve (25-09-2026)');
     ok('el 70 del 4x4 sigue siendo otra cosa y no se ha movido',
        /const TOPE_ACCESO = 70;/.test(codigo),
        'ése es el del VIAJE —«con esa racha vuelco el 4x4»—, no el del trabajo');
+    /* Suyo, 27-09-2026 («adelante» a la duda 1): el perfil «dentro» no
+       traía ámbar propio y salía en 63 (el 70 % de 90). El mismo 70 en
+       toda la app. */
+    ok('el perfil «dentro» lleva el mismo ámbar de 70 que caseta y poste, no un 63 calculado',
+       (() => { try { eval(sacarConst('PERFILES')); } catch { return false; }
+                const P = globalThis.PERFILES.dentro;
+                return (P.rafagaAviso ?? Math.round(P.rafagaBestia * 0.7)) === 70 && P.rafagaAviso === 70; })());
+    ok('todo perfil con tope de racha lleva también su ámbar escrito',
+       (() => { try { eval(sacarConst('PERFILES')); } catch { return false; }
+                return Object.values(PERFILES).every(P => !has(P.rafagaBestia) || has(P.rafagaAviso)); })());
   }
 
   /* ── LA GUARDA DE CLASE ───────────────────────────────────────────
@@ -10710,7 +10720,7 @@ grupo('Euskalmet reutiliza conexiones y guarda la respuesta buena en el CDN (23-
      && /host: 'api\.euskadi\.eus', path: ruta, method: 'GET', ca: CA_IZENPE, agent: AGENTE,/.test(EUS),
      'un apretón de manos TLS por petición, diez o veinte por llamada, es CPU tirada');
   ok('las respuestas van al CDN con los segundos que decide segundosDeCache(); sin clave y caída, no-store',
-     /const CDN_SEGUNDOS = 300;/.test(EUS) && /function contestar\(res, cuerpo, segundos\)/.test(EUS)
+     /const CDN_SEGUNDOS = 900;/.test(EUS) && /function contestar\(res, cuerpo, segundos\)/.test(EUS)
      && (EUS.match(/return contestar\(res, /g) || []).length >= 5
      && (EUS.match(/res\.status\(200\)\.json\(/g) || []).length === 1
      && (EUS.match(/segundosDeCache\(\{ leidas: /g) || []).length === 2,
@@ -10719,14 +10729,20 @@ grupo('Euskalmet reutiliza conexiones y guarda la respuesta buena en el CDN (23-
      estaciones caídas por red se guardaba 5 min como bueno, y con la excusa
      equivocada («ninguna mide viento»). Ahora la decisión es una función pura. */
   const { segundosDeCache } = require('./api/euskalmet.mjs');
-  ok('segundosDeCache: todo leído → 5 min; alguna caída por red → 1 min; nada leído y caídas → no se guarda',
+  /* 15 min desde el 27-09-2026 («adelante» a la duda 3): cada apertura de
+     la app pagaba un MISS de la función más cara (0,46 s de CPU). La edad
+     del dato la recalcula la app desde `medidoEn`, así que no se congela. */
+  ok('segundosDeCache: todo leído → 15 min; alguna caída por red → 1 min; nada leído y caídas → no se guarda',
      typeof segundosDeCache === 'function'
-     && segundosDeCache({ leidas: 12, pedidas: 12, fallosRed: 0 }) === 300
+     && segundosDeCache({ leidas: 12, pedidas: 12, fallosRed: 0 }) === 900
      && segundosDeCache({ leidas: 10, pedidas: 12, fallosRed: 2 }) === 60
      && segundosDeCache({ leidas: 0, pedidas: 12, fallosRed: 12 }) === 0
-     && segundosDeCache({ leidas: 0, pedidas: 12, fallosRed: 0 }) === 300
-     && segundosDeCache({ leidas: 0, pedidas: 0, fallosRed: 0 }) === 300,
+     && segundosDeCache({ leidas: 0, pedidas: 12, fallosRed: 0 }) === 900
+     && segundosDeCache({ leidas: 0, pedidas: 0, fallosRed: 0 }) === 900,
      'las que no miden viento son una respuesta válida; las que no contestaron, no');
+  ok('y la edad de la medida la recalcula la app desde medidoEn, no del haceMinutos del servidor (si no, 15 min de CDN la congelarían)',
+     /const tMed = x\.medidoEn \? Date\.parse\(x\.medidoEn\) : NaN;/.test(src)
+     && (src.match(/Desde `medidoEn`, igual que la tarjeta de medidas/g) || []).length >= 1);
   ok('un fallo de red se distingue de «no hay»: e.red en pedir(), reintento único con socket reutilizado, y ficha/sensor no guardan un null que vino de la red',
      /e\.red = res\.statusCode >= 500 \|\| res\.statusCode === 429;/.test(EUS)
      /* 23-09-2026, 14:45, medido en producción: «429 Please wait 7 seconds before
@@ -10999,6 +11015,24 @@ grupo('Sus pantallazos del 25-09 a las 07:13: seis fallos de pantalla');
      (() => { const ix = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8'); return /Anemómetros de AEMET y Euskalmet cerca de tu emplazamiento/.test(ix) && !/Anemómetros de AEMET cerca/.test(ix); })());
   ok('el marcador dice «N veces más de 10 km/h corto», no «N por debajo de 10 km/h»',
      /\$\{m\.cortas\}<\/b> veces más de \$\{txt\(G\.corto \?\? 10\)\} corto/.test(src) && !/por debajo de \$\{txt\(G\.corto \?\? 10\)\}/.test(src));
+}
+
+grupo('El hilo de notas se mira cada minuto, no cada 20 s (27-09-2026, «adelante» a la duda 2)');
+{
+  /* 180 llamadas por hora a /api/campo con la pestaña Avisos delante. A
+     un minuto se ve la contestación con un retraso de hasta 60 s, que es
+     lo que se aceptó. Se EJECUTA con `setInterval` doblado. */
+  try {
+    eval(sacar('function refrescarHilo() {'));
+    const siAntes = globalThis.setInterval;
+    let cada = null;
+    globalThis.setInterval = (fn, ms) => { cada = ms; return 0; };
+    const docAntes = globalThis.document;
+    if (!globalThis.document?.addEventListener) globalThis.document = { visibilityState: 'visible', addEventListener() {} };
+    if (typeof $ !== 'function') globalThis.$ = () => null;
+    try { refrescarHilo(); } finally { globalThis.setInterval = siAntes; globalThis.document = docAntes; }
+    ok('el hilo se refresca cada 60 s, no cada 20', cada === 60e3, `setInterval a ${cada} ms`);
+  } catch (e) { ok('refrescarHilo se puede arrancar en el banco', false, String(e.message)); }
 }
 
 grupo('El marcador no se manda dos veces desde el mismo aparato en la misma hora (27-09-2026)');
