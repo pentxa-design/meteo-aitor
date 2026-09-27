@@ -546,6 +546,26 @@ async function unaHora(hh) {
   const ahoraTxt = txt(doc, '#now') || txt(doc, '.view[data-v="now"]');
   const casillaTormenta = [...doc.querySelectorAll('.dt')].map(d => d.textContent.replace(/\s+/g, ' ')).find(t => /^\s*Tormenta/.test(t)) || '';
   if (hh === HORA_TORMENTA) {
+    /* Los nombres con rayo en la cabecera del parte, pulsables y llevando
+       a su tarjeta (27-09-2026). OJO: el 800/68 de esta hora lo lleva el
+       CARGADO, y el parte se calcula con los modelos de tormenta (ICON,
+       GFS, ECMWF…), así que aquí NO salta ninguno: se comprueba que la
+       cabecera lo diga («ninguno con riesgo de rayo»), y si algún día la
+       trampa hace saltar uno, que el nombre esté y lleve a su tarjeta. */
+    const saltan = (A.S.parteTorres || []).filter(d => d.salta).length;
+    const enlace = doc.querySelector('#parteHint a[data-ir]');
+    const hintTxt = (doc.querySelector('#parteHint')?.textContent || '').replace(/\s+/g, ' ');
+    if (!saltan && !/ninguno con riesgo de rayo/.test(hintTxt)) falla(`sin sitios con rayo, la cabecera del parte no dice «ninguno con riesgo de rayo»: «${hintTxt.slice(0, 120)}»`);
+    if (!saltan && enlace) falla('la cabecera del parte enlaza un sitio con rayo cuando ninguno salta');
+    if (saltan && !enlace) falla(`la cabecera del parte no nombra los ${saltan} sitios con riesgo de rayo ni los enlaza a su tarjeta`);
+    else if (enlace) {
+      const tarjeta = [...doc.querySelectorAll('.tor[data-ir]')].find(t => t.dataset.ir === enlace.dataset.ir);
+      if (!tarjeta) falla(`el enlace del parte apunta a «${enlace.dataset.ir}» y no hay tarjeta con esa clave`);
+      else {
+        enlace.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }));
+        if (!tarjeta.classList.contains('tor--ir')) falla('al pulsar el nombre en la cabecera del parte, la tarjeta no se señala (tor--ir)');
+      }
+    }
     if (!/puede romper/.test(casillaTormenta)) falla(`Ahora: con CAPE 800 y tapa 68 la casilla Tormenta no dice «puede romper»: «${casillaTormenta.slice(0, 90)}»`);
     if (/aguanta/.test(casillaTormenta)) falla(`Ahora: la casilla Tormenta dice «aguanta» y «puede romper» a la vez: «${casillaTormenta.slice(0, 90)}»`);
   }

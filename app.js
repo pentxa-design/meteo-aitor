@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.27-1846';
+const BUILD = '2026.09.27-1916';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -10196,7 +10196,8 @@ function renderParte() {
     return;
   }
 
-  const nSalta = filas.filter(x => x.d.salta).length;
+  const conRayo = filas.filter(x => x.d.salta);
+  const nSalta = conRayo.length;
   const v_ = ventanaParte();
   const cual = v_.etiqueta;
   const cab = $('#parteCab');
@@ -10213,16 +10214,39 @@ function renderParte() {
   pintarSelloParte();
 
   const nCam = cambios.size, nPeor = [...cambios.values()].filter(c => c.peor).length;
-  $('#parteHint').textContent =
+  /* ── LOS QUE SALTAN, CON NOMBRE Y PULSABLES (27-09-2026) ───────────
+     Suyo: «que me salga la que más peligro tenga… así no tengo que ir
+     hasta el final para ir a Virgen Orduña». La lista se queda por
+     cercanía —lo prefirió él—; lo que salta se nombra AQUÍ y el nombre
+     lleva a su tarjeta. Solo lo del rayo, que es su veto. */
+  const nombresRayo = conRayo
+    .map(x => `<a href="#" class="pt__ir" data-ir="${esc(key(x.p))}">${esc(x.p.name)}</a>`).join(', ');
+  const hint = $('#parteHint');
+  hint.innerHTML =
     (nCam ? `· ⚠ ${nCam === 1 ? 'ha cambiado 1 torre' : `han cambiado ${nCam} torres`}`
           + (nPeor ? ` (${nPeor} a peor)` : '') + ' '
           : '')
-    + (nSalta ? `· riesgo de rayo en ${nSalta} de ${filas.length}`
-              : `· ninguno con riesgo de rayo ${cual}`)
+    + (nSalta ? `· riesgo de rayo en ${nSalta} de ${filas.length}: ${nombresRayo}`
+              : `· ninguno con riesgo de rayo ${esc(cual)}`)
     /* Y si faltan sitios, va aquí mismo: el recuento de arriba dice
        «ninguno con riesgo» sobre los que SÍ llegaron, y sin esto se lee
        como si fueran los veinte. */
     + (sinDato.length ? ` · ⚠ de ${filas.length}, faltan ${sinDato.length}` : '');
+  /* Al pulsar un nombre, a su tarjeta, señalada un momento. Un solo
+     manejador por elemento (la cabecera se repinta muchas veces). */
+  if (typeof hint.addEventListener === 'function' && !hint.dataset?.ir1) {
+    hint.dataset.ir1 = '1';
+    hint.addEventListener('click', e => {
+      const a = e.target?.closest?.('a[data-ir]');
+      if (!a) return;
+      e.preventDefault();
+      const t = [...document.querySelectorAll('.tor[data-ir]')].find(x => x.dataset.ir === a.dataset.ir);
+      if (!t) return;
+      t.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      t.classList.add('tor--ir');
+      setTimeout(() => t.classList.remove('tor--ir'), 2500);
+    });
+  }
 
   const secos = filas
     .filter(({ k }) => !(S.lluviaTorres?.find(x => x?.k === k)?.llueve))

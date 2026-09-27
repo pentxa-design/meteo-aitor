@@ -2036,6 +2036,21 @@ ok('solo lo lleva la torre que cambió',
    (txtCam.match(/HA CAMBIADO/g) || []).length + ' renglones');
 ok('y se avisa arriba', /ha cambiado 1 torre/.test(pintado['#parteHint'] || ''),
    pintado['#parteHint']);
+/* Los nombres en la cabecera, pulsables (27-09-2026, suyo: «así no tengo
+   que ir hasta el final para ir a Virgen Orduña»). La lista sigue por
+   cercanía, que es lo que quiere; lo que salta se NOMBRA arriba y el
+   nombre lleva a su tarjeta. */
+{
+  const hint = pintado['#parteHint'] || '';
+  ok('la cabecera del parte NOMBRA los sitios con riesgo de rayo, no solo los cuenta',
+     /riesgo de rayo en 3 de 5: /.test(hint) && hint.includes(sitios[0].name) && hint.includes(sitios[1].name) && hint.includes(sitios[2].name), hint);
+  ok('y cada nombre lleva a su tarjeta (data-ir con la clave del sitio)',
+     hint.includes(`data-ir="${k(sitios[0])}"`) && hint.includes(`data-ir="${k(sitios[2])}"`), hint);
+  ok('los que no saltan no se nombran ahí', !hint.includes(sitios[3].name) && !hint.includes(sitios[4].name), hint);
+  const Cs = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+  ok('el aviso rojo dentro de la tarjeta va a lo ancho, no en la columna del rótulo (su captura de las 18:57)',
+     /\.tor \.viene\{grid-column:1\/-1\}/.test(Cs));
+}
 
 /* Recién mirado: a los cinco minutos NO puede salir un aviso NUEVO… y el
    que ya estaba en pantalla tampoco puede desaparecer.
