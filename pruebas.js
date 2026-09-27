@@ -882,6 +882,43 @@ grupo('Lo que viene hoy: en rojo si lo hay, NADA si no, y SOLO de hoy (26-09-202
 
   ok('y una racha por DEBAJO de su listón no lo pone: 55 ya no es aviso desde el 25-09',
      aviso(null, hoyY((n, esHoy) => ({ ...CALMA, gust10: esHoy && n === 16 ? 55 : 20 }))) === '');
+  /* Entre el 60 de siempre y su 70 (27-09-2026, el adversario lo rompió
+     con un `g >= 60` a pelo y nada se puso rojo). */
+  ok('una racha de 65 —por debajo de su ámbar de 70— tampoco',
+     aviso(null, hoyY((n, esHoy) => ({ ...CALMA, gust10: esHoy && n === 16 ? 65 : 20 }))) === '',
+     aviso(null, hoyY((n, esHoy) => ({ ...CALMA, gust10: esHoy && n === 16 ? 65 : 20 }))));
+  {
+    /* `nivelRacha` vive en el ámbito del módulo (sale de un `eval` de
+       arriba), no en globalThis: se rebinda la de verdad. */
+    const nr = nivelRacha;
+    nivelRacha = v => !has(v) ? 'nd' : v >= 100 ? 'no' : v >= 80 ? 'warn' : 'go';
+    ok('y si él sube el ámbar a 80, una de 75 tampoco: el aviso sigue al listón, no a un número',
+       aviso(null, hoyY((n, esHoy) => ({ ...CALMA, gust10: esHoy && n === 16 ? 75 : 20 }))) === '',
+       aviso(null, hoyY((n, esHoy) => ({ ...CALMA, gust10: esHoy && n === 16 ? 75 : 20 }))));
+    nivelRacha = nr;
+  }
+
+  /* ── EL AGUA DE LA LÍNEA ROJA, CON SU PALABRA Y SU LISTÓN (27-09-2026) ──
+     `S.lluviaTorres` junta cualquier hora con 0,05 mm de cualquier modelo,
+     y la línea roja lo llamaba «AGUA» todo: cuatro gotas de un modelo en
+     rojo. El listón del aviso de agua es el suyo (0,2), y el sirimiri
+     —que moja sin marcar— se dice con su nombre. */
+  try { eval(sacarConst('mmRedonda')); } catch (e) { console.log(`  (sin mmRedonda: ${e.message})`); }
+  S.lluviaTorres = [{ k: 'x', llueve: true, ini: H(14).getTime(), fin: H(19).getTime(),
+                      pico: 0.1, quien: 'ICON', soloSirimiri: true }];
+  ok('sirimiri de 14 a 20 sale como SIRIMIRI, no como AGUA',
+     aviso('x', []).includes(`SIRIMIRI hoy de ${et(14)} a ${et(20)}`), aviso('x', []));
+  S.lluviaTorres = [{ k: 'x', llueve: true, ini: H(14).getTime(), fin: H(19).getTime(),
+                      pico: 0.1, quien: 'ICON', soloSirimiri: false }];
+  ok('cuatro gotas (0,1 mm sin código de llovizna) NO van en rojo: por debajo de su listón de 0,2',
+     aviso('x', []) === '', aviso('x', []));
+  S.lluviaTorres = null;
+  const siriHoras = aviso(null, hoyY((n, esHoy) => ({ ...CALMA, prec: esHoy && n >= 14 && n <= 15 ? 0.1 : 0,
+                                                       code: esHoy && n >= 14 && n <= 15 ? 55 : 1 })));
+  ok('y por el respaldo (las horas del sitio) el sirimiri también sale con su nombre',
+     siriHoras.includes(`SIRIMIRI hoy de ${et(14)} a ${et(16)}`), siriHoras);
+  ok('mientras que 0,1 mm sin llovizna por el respaldo no pone nada',
+     aviso(null, hoyY((n, esHoy) => ({ ...CALMA, prec: esHoy && n === 14 ? 0.1 : 0 }))) === '');
 
   /* ── NINGUNA HORA SUELTA, NUNCA ───────────────────────────────────
      *«joder, pues no lo pone claro»* · *«no soy adivino»*. Si un aviso
@@ -2604,6 +2641,65 @@ ok('la capa de encima solo se pide si ESE modelo publica la variable, y si no, s
    'AROME no trae nieve en teselas: pedirla era una capa de «trozos sin cargar»');
 const htmlSrc = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 
+grupo('La tapa: lo que el adversario rompió sin que nada se pusiera rojo (27-09-2026)');
+{
+  /* D4 · EL COLOR DE LA TAPA MUDA EN TORRE. El arreglo del 26-09 (el rojo
+     por la misma puerta que el texto) no tenía guardia: un `tonoCin` que
+     vuelva a la pareja mixta pinta en rojo una fila cuyo texto dice «no
+     dice nada». Se EJECUTA la expresión de `renderStorm`. */
+  const trozo = sacar('function renderStorm(c) {');
+  const exprs = (trozo.match(/const hayGas[\s\S]*?const tonoCin[\s\S]*?: 'dato';/) || [''])[0];
+  ok('la expresión del color de la tapa está en renderStorm y se puede aislar', exprs.length > 50);
+  const tono = new Function('has', 'c', 'CAPE_COMBINACION', 'TAPA_ROMPE', 'laParejaRompe', 'tapaVale', 'S',
+                            `${exprs} return tonoCin;`);
+  const muda = { cape: 800, cin: 0, tapaDe: 'ICON', capeTapa: 0 };
+  ok('la fila de la Inhibición NO va en rojo ni ámbar sobre un 0 que no dice nada',
+     tono(has, muda, CAPE_COMBINACION, TAPA_ROMPE, laParejaRompe, tapaVale, S) === 'dato',
+     tono(has, muda, CAPE_COMBINACION, TAPA_ROMPE, laParejaRompe, tapaVale, S));
+  ok('y con su propia tapa en 68 y CAPE 800 sí va en rojo',
+     tono(has, { cape: 800, cin: 68 }, CAPE_COMBINACION, TAPA_ROMPE, laParejaRompe, tapaVale, S) === 'no');
+  ok('y con CAPE 800 y la tapa en 150 (aguanta), ámbar: hay gasolina, la tapa cuenta',
+     tono(has, { cape: 800, cin: 150 }, CAPE_COMBINACION, TAPA_ROMPE, laParejaRompe, tapaVale, S) === 'warn');
+
+  /* D5 · LAS DOS ESCALERAS DE LA TAPA (`textoTapa` corta, `fraseTapa`
+     larga) tienen los mismos cortes. La guarda de «UN solo sitio» solo
+     cuenta la corta; si la larga se separa (150 en una, 200 en otra),
+     dos pantallas dirían dos cosas de la misma cifra. Con los bordes. */
+  const EQ = { abierta: 'Sin tapa: si hay CAPE, rompe', floja: 'Tapa floja', aguanta: 'Tapa que aguanta', fuerte: 'Tapa fuerte' };
+  for (const c of [0, 24, 25, 49, 50, 74, 75, 199, 200, 500])
+    ok(`en ${c} la escala corta y la larga dicen lo mismo`, EQ[textoTapa(c, { cin: c })] === fraseTapa(c, { cin: c }),
+       `${textoTapa(c, { cin: c })} / ${fraseTapa(c, { cin: c })}`);
+  const Mjs = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const cnm = ((Mjs.match(/const cnm = \[([^\]]+)\]/) || [])[1] || '').split(',').map(Number);
+  ok('los cortes de la capa Inhibición del mapa incluyen los de textoTapa (25, 50, 200) y TAPA_ROMPE',
+     [25, 50, 200, TAPA_ROMPE].every(x => cnm.includes(x)), cnm.join(','));
+
+  /* D6 · LA FRANJA «RIESGO … TAPA ABIERTA» SOBRE EL 0 MUDO. Arreglo del
+     26-09 (`tapaVale(pico)` en `avisoTormentaFranja`) sin guardia: se
+     arranca la función con una hora cuya tapa la presta ICON sin ver
+     gasolina, y con la misma hora con tapa propia. */
+  try {
+    eval(sacar('function avisoTormentaFranja('));
+    if (typeof esc !== 'function') globalThis.esc = x => String(x);
+    const thrAntes = S.thr; S.thr = { capeWarn: 300, capeNo: 1000 };
+    const sinEt = t => String(t).replace(/<[^>]*>/g, ' ');
+    const Hf = o => ({ date: new Date(2026, 8, 27, 16), pop: 30, ...o });
+    const mudo = sinEt(avisoTormentaFranja([Hf({ cape: 800, cin: 0, tapaDe: 'ICON', capeTapa: 0 })]));
+    ok('la franja no llama «abierta» a una tapa prestada por quien no ve gasolina, ni «riesgo de tormenta»',
+       !/abierta/i.test(mudo) && !/Riesgo de tormenta/.test(mudo), mudo.trim());
+    const propia = sinEt(avisoTormentaFranja([Hf({ cape: 800, cin: 0 })]));
+    ok('y con la tapa propia en 0 y CAPE 800 sí: «Riesgo de tormenta … está abierta»',
+       /Riesgo de tormenta/.test(propia) && /abierta/.test(propia), propia.trim());
+    S.thr = thrAntes;
+  } catch (e) { ok('la franja de tormenta se puede arrancar en el banco', false, String(e.message)); }
+
+  /* 5.7 · EL BORDE DE LA PAREJA: 700 con 74,9 rompe; 699,9 no; 700 con 75 no. */
+  ok('la pareja rompe justo en 700 con 74,9, y no en 699,9 ni con la tapa en 75',
+     laParejaRompe(700, 74.9, { cape: 700, cin: 74.9 })
+     && !laParejaRompe(699.9, 74.9, { cape: 699.9, cin: 74.9 })
+     && !laParejaRompe(700, 75, { cape: 700, cin: 75 }));
+}
+
 grupo('La tapa de AguaceroWx: no hay regla (27-08-2026)');
 
 const capaCin = (mapsSrc.match(/id:'cin'[\s\S]*?\},\n/) || [''])[0];
@@ -3717,8 +3813,22 @@ ok('sin agua se dice que está seco, no se calla',
    llega a las 07:00, decía otra cosa. */
 ok('y NO se afirman 24 horas cuando la ventana es otra',
    !/en las próximas 24 h/.test(lineaAguaTorre('seco'))
-   && /lo que queda de hoy|Seco el /.test(lineaAguaTorre('seco')),
+   && /lo que queda de hoy|Seco (mañana|el) /.test(lineaAguaTorre('seco')),
    'la ventana del parte es lo que queda del día, o el día que él tenga pulsado');
+/* «Seco el mañana lunes» (27-09-2026, cazado por el agente de pantallas):
+   `nombreDeDia()` ya devuelve «mañana lunes» o «el martes», y aquí se le
+   ponía otro «el» delante. */
+{
+  const selAntes = S.parteSel; S.parteSel = 1;
+  const man = soloTexto(lineaAguaTorre('seco'));
+  ok('con la pestaña de mañana pulsada dice «Seco mañana lunes», no «Seco el mañana lunes»',
+     /Seco mañana \w+/.test(man) && !/Seco el mañana/.test(man), man);
+  S.parteSel = 2;
+  const pas = soloTexto(lineaAguaTorre('seco'));
+  ok('y con la de pasado, «Seco el martes» con un solo «el»',
+     /Seco el \w+/.test(pas) && !/Seco el el /.test(pas), pas);
+  S.parteSel = selAntes;
+}
 
 ok('un emplazamiento que no está en la lista NO inventa una línea',
    lineaAguaTorre('no-existe') === '');
@@ -3770,6 +3880,46 @@ S.lluviaTorres = [{ k: 'sueltas', llueve: true, ini: H0(9), fin: H0(20), pico: 0
 const su = soloTexto(lineaAguaTorre('sueltas'));
 ok('tres horas repartidas se dicen SUELTAS, no «de 09:00 a 21:00»',
    /3 horas sueltas entre las 09:00 y las 20:00/.test(su), su);
+
+/* ── «ESTÁ LLOVIENDO» DICE QUIÉN LO VE (27-09-2026) ──────────────────
+   La ventana es la UNIÓN de los modelos; la cabecera de la misma tarjeta
+   enseña el agua del CARGADO. A las 20:30 en Bermeo: «Está lloviendo ·
+   escampa a las 00:00» sobre «0,0 lluvia mm/h»: quien veía agua a esa
+   hora era ECMWF (0,1 mm) y no lo decía nadie. Cazado por el agente de
+   pantallas en la revisión final. */
+{
+  const hEnCurso = H0(h);
+  const mdAntes = typeof modeloDato === 'function' ? modeloDato : undefined;
+  modeloDato = () => ({ name: 'AROME HD' });
+  const base = { k: 've', llueve: true, ini: H0(h - 1), fin: H0(h + 2), pico: 1.5,
+                 hPico: H0(h + 2), nHoras: 4, sueltas: false, soloSirimiri: false };
+  S.lluviaTorres = [{ ...base, veCada: { ICON: [H0(h - 1), hEnCurso, H0(h + 1)], 'AROME HD': [H0(h + 2)] } }];
+  const otro = soloTexto(lineaAguaTorre('ve'));
+  ok('si el agua de ESTA hora la ve otro modelo y no el cargado, se dice: «Está lloviendo (lo ve ICON)»',
+     /Está lloviendo \(lo ve ICON\)/.test(otro), otro);
+  S.lluviaTorres = [{ ...base, veCada: { ICON: [hEnCurso], 'AROME HD': [H0(h - 1), hEnCurso, H0(h + 2)] } }];
+  const mio = soloTexto(lineaAguaTorre('ve'));
+  ok('y si la ve tu modelo, «Está lloviendo» a secas',
+     /Está lloviendo/.test(mio) && !/Está lloviendo \(/.test(mio), mio);
+  S.lluviaTorres = [{ ...base, veCada: { ICON: [H0(h - 1), H0(h + 1)], 'AROME HD': [H0(h + 2)] } }];
+  const hueco = soloTexto(lineaAguaTorre('ve'));
+  ok('y si NINGÚN modelo ve agua en esta hora (hueco dentro de la ventana), no se dice «Está lloviendo»',
+     !/Está lloviendo/.test(hueco), hueco);
+  modeloDato = mdAntes;
+}
+/* ── EL LÍMITE DE «CAYENDO» (27-09-2026) ─────────────────────────────
+   `L.fin` es el PRINCIPIO de la última hora con agua. A las 20:30 con
+   `fin` a las 20:00 sigue lloviendo hasta las 21:00, y `fin >= ahora`
+   decía que no: la tarjeta pasaba a «de 18:00 a 21:00» como si fuera
+   para luego, en plena lluvia. */
+if (new Date().getMinutes() > 0) {
+  S.lluviaTorres = [{ k: 'ult', llueve: true, ini: H0(h - 3), fin: H0(h), pico: 1.0,
+                      hPico: H0(h - 1), nHoras: 4, sueltas: false, soloSirimiri: false }];
+  const ult = lineaAguaTorre('ult');
+  ok('si la última hora con agua es ESTA, sigue siendo «ahora» y dice cuándo escampa',
+     /data-a="ahora"/.test(ult) && new RegExp(`escampa a las ${String((h + 1) % 24).padStart(2, '0')}:00`).test(soloTexto(ult)),
+     soloTexto(ult));
+}
 
 /* EL SIRIMIRI DE COSTA: moja igual y con 0,1 mm. */
 S.lluviaTorres = [{ k: 'siri', llueve: true, ini: H0(7), fin: H0(9), pico: 0.1,
@@ -5462,6 +5612,7 @@ grupo('Los ajustes viajan: el Mac, una calca del móvil (30-08-2026, 19:50)');
     'campo.pendientes': 'notas suyas aún sin mandar DESDE este aparato',
     'monte.t': 'marca de tiempo interna de este aparato',
     cieloFranjas: 'el último cielo pintado por franja, para decir «ha cambiado a las…»: es de este aparato y de esta pasada (13-09-2026)',
+    marcadorMandado: 'la firma del último lote que ESTE aparato mandó al marcador, para no repetirlo dentro de la misma hora (27-09-2026)',
   };
   const guardadas = [...new Set([...src.matchAll(/LS\.set\('([^']+)'/g)].map(m => m[1]))];
   const sinDecidir = guardadas.filter(k =>
@@ -9027,7 +9178,11 @@ console.log('\n  Si el GPS viene de camino, se le espera antes de mandar');
   /* Y la espera, ejecutada: con la petición en marcha tiene que esperar
      de verdad, no seguir de largo. */
   eval(sacar('async function esperarLaUbi(est) {'));
-  (async () => {
+  /* Esto se ESPERA antes del recuento (27-09-2026): iba suelto, sus tres
+     `ok` se imprimían detrás del total y no podían vetar nada; y el
+     `setTimeout` de 12,5 s de `esperarLaUbi` mantenía el proceso vivo
+     11,5 s de balde en cada una de las diez pasadas de `revisar.sh`. */
+  (globalThis.__pendientes ??= []).push((async () => {
     let resolver;
     globalThis.ubiPidiendo = new Promise(r => { resolver = r; });
     globalThis.campoUbi = null;
@@ -9049,7 +9204,11 @@ console.log('\n  Si el GPS viene de camino, se le espera antes de mandar');
     globalThis.campoUbi = null;
     ok('sin petición en marcha no espera nada: no estorba al que no la usa',
        (await esperarLaUbi(null)) === false);
-  })();
+  })());
+  ok('el banco espera al bloque del GPS antes del recuento, y sus pruebas vetan',
+     Array.isArray(globalThis.__pendientes) && globalThis.__pendientes.length >= 1
+     && /Promise\.all\(globalThis\.__pendientes \|\| \[\]\)\.then/.test(fs.readFileSync(__filename, 'utf8'))
+     && /process\.exit\(0\);/.test(fs.readFileSync(__filename, 'utf8').slice(-400)));
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -10610,7 +10769,7 @@ grupo('Si no entro, que no gaste: la pestaña oculta no llama, y una pasada salt
      'una pestaña olvidada en el Mac era el mayor gasto sin que él entrara');
   ok('y al volver a primer plano el pulso se mira al momento, no hasta 10 min después',
      /if \(!document\.hidden\) mirarPulso\(\);/.test(src));
-  const iSalta = VIG.indexOf("ok: true, saltada: true, nivel,"), iTorres = VIG.indexOf("const rt = await fetch(`${APP}/api/torres`);"), iTandas = VIG.indexOf("tandaL = await conReintento('land')")   /* 26-09: la tanda va con reintento */;
+  const iSalta = VIG.indexOf("ok: true, saltada: true, nivel,"), iTorres = VIG.indexOf("const rt = await fetch(`${APP}/api/torres`, { signal: AbortSignal.timeout(8000) });"), iTandas = VIG.indexOf("tandaL = await conReintento('land')")   /* 26-09: la tanda va con reintento */;
   ok('la lista de torres se pide DESPUÉS del portero de cadencia: una pasada saltada ya no invoca /api/torres',
      iSalta > 0 && iTorres > iSalta && iTandas > iTorres,
      `saltada@${iSalta} torres@${iTorres} tandas@${iTandas}`);
@@ -10842,6 +11001,41 @@ grupo('Sus pantallazos del 25-09 a las 07:13: seis fallos de pantalla');
      /\$\{m\.cortas\}<\/b> veces más de \$\{txt\(G\.corto \?\? 10\)\} corto/.test(src) && !/por debajo de \$\{txt\(G\.corto \?\? 10\)\}/.test(src));
 }
 
+grupo('El marcador no se manda dos veces desde el mismo aparato en la misma hora (27-09-2026)');
+{
+  /* Cada entrada en Mis estaciones mandaba el mismo lote al servidor, que
+     lo descarta pero para eso lee y ordena el libro entero (~1,2 s de CPU
+     en Vercel por POST). Lo cazó el agente del gasto en la revisión final. */
+  try {
+    eval(sacar('function apuntarTorresEnMarcador() {'));
+    if (typeof key !== 'function') globalThis.key = p => `${p.lat},${p.lon}`;
+    if (typeof esDeDiezMinutos !== 'function') globalThis.esDeDiezMinutos = () => false;
+    if (!Array.isArray(globalThis.MODELOS_TORMENTA) || !globalThis.MODELOS_TORMENTA.length)
+      globalThis.MODELOS_TORMENTA = [{ nom: 'ICON', om: 'icon_eu' }, { nom: 'GFS', om: 'gfs_seamless' }];
+    let mandados = 0;
+    const antesFn = typeof apuntarEnElMarcador === 'function' ? apuntarEnElMarcador : undefined;
+    apuntarEnElMarcador = () => { mandados++; };
+    try { localStorage.removeItem('torre.marcadorMandado'); } catch { /* sin localStorage */ }
+    const p = { lat: 43.41, lon: -2.72, name: 'BI BERMEO' };
+    const hora = new Date(); hora.setMinutes(0, 0, 0);
+    const iso = new Date(hora.getTime() - hora.getTimezoneOffset() * 60000).toISOString().slice(0, 13);
+    const H = { time: [iso + ':00'] };
+    for (const m of MODELOS_TORMENTA) H[`wind_gusts_10m_${m.om}`] = [30];
+    S.parteRaw = { sitios: [p], arr: [{ hourly: H }] };
+    S.medidoTorres = new Map([[key(p), { racha: 28, medidoEn: hora.toISOString(), nombre: 'MATXITXAKO', altitud: 120, fuente: 'AEMET', haceMinutos: 10 }]]);
+    apuntarTorresEnMarcador();
+    ok('la primera vez, el lote se manda', mandados === 1, `mandados=${mandados}`);
+    apuntarTorresEnMarcador();
+    ok('la segunda vez con el MISMO lote (misma estación, misma hora), NO se vuelve a mandar', mandados === 1, `mandados=${mandados}`);
+    S.medidoTorres = new Map([[key(p), { racha: 31, medidoEn: new Date(hora.getTime() + 3600e3).toISOString(), nombre: 'MATXITXAKO', altitud: 120, fuente: 'AEMET', haceMinutos: 10 }]]);
+    H.time = [new Date(hora.getTime() + 3600e3 - hora.getTimezoneOffset() * 60000).toISOString().slice(0, 13) + ':00'];
+    apuntarTorresEnMarcador();
+    ok('y con la hora siguiente medida, sí se manda otra vez', mandados === 2, `mandados=${mandados}`);
+    apuntarEnElMarcador = antesFn;
+    S.parteRaw = null; S.medidoTorres = null;
+  } catch (e) { ok('apuntarTorresEnMarcador se puede arrancar en el banco', false, String(e.message)); }
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');
@@ -10857,7 +11051,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      candado. Se acepta que el nombre esté allí, pero se comprueba que
      exista de verdad — no vale apuntarla y que no la guarde nadie. */
   const otrosGuardias = ['paridad.cjs', 'pantallas.cjs', 'pruebas-servidor.cjs', 'abrir.cjs',
-                         'prueba-almacen-caido.mjs', 'prueba-fuente-caida.mjs',
+                         'prueba-almacen-caido.mjs', 'prueba-fuente-caida.mjs', 'prueba-vigilante-reloj.mjs',
                          // Los de la revisión 04-09 (05-09-2026): cada uno con su fichero.
                          'prueba-huecos.cjs', 'prueba-sw.cjs', 'prueba-satelite.mjs', 'prueba-cabeceras.mjs',
                          'prueba-webcams.mjs', 'prueba-mapas.mjs', 'prueba-candado.cjs', 'prueba-motor.mjs', 'prueba-mal-tiempo.mjs']
@@ -11142,8 +11336,13 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
    siga siéndolo: si alguien añade una prueba detrás, la publicación no
    pasa.
    ═══════════════════════════════════════════════════════════════════ */
+/* Lo que quedó en marcha (el GPS) se espera; y al acabar se SALE, que un
+   temporizador suelto mantenía el proceso 11,5 s más (27-09-2026). */
+Promise.all(globalThis.__pendientes || []).then(() => {
 console.log(`\n  ${pasadas} bien, ${fallos} mal\n`);
 if (fallos) {
   console.log('  ✗ NO SE PUBLICA. Alguna de estas ya falló una vez de verdad.\n');
   process.exit(1);
 }
+process.exit(0);
+});

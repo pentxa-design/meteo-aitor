@@ -79,14 +79,17 @@ let memo = { promesa: null };
 function descargarTodas(clave) {
   if (memo.promesa) return memo.promesa;
   const promesa = (async () => {
-    const r1 = await fetch(`${API}?api_key=${encodeURIComponent(clave)}`);
+    /* Con tope de tiempo (27-09-2026): es la única ruta que sigue usando
+       el Centro Operativo, y sin tope un AEMET colgado se comía la función
+       hasta el límite de Vercel. */
+    const r1 = await fetch(`${API}?api_key=${encodeURIComponent(clave)}`, { signal: AbortSignal.timeout(12000) });
     const meta = await r1.json();
     if (!r1.ok || meta.estado !== 200 || !meta.datos) {
       const e = new Error(meta.descripcion || `AEMET respondió ${r1.status}`);
       e.deAemet = true;
       throw e;
     }
-    const r2 = await fetch(meta.datos);
+    const r2 = await fetch(meta.datos, { signal: AbortSignal.timeout(15000) });
     if (!r2.ok) throw new Error(`datos de AEMET: ${r2.status}`);
     const crudo = new TextDecoder('iso-8859-1').decode(await r2.arrayBuffer());
     return JSON.parse(crudo);
@@ -212,7 +215,11 @@ function json(cuerpo, status) {
   return new Response(JSON.stringify(cuerpo), {
     status,
     // Las estaciones publican cada hora: no tiene sentido pedirlo más.
-    headers: cabeceras(ok ? 600 : 0, { navegador: 300, revalidar: 1800, origen: 'aemet-observacion' }),
+    /* stale-if-error (27-09-2026): cuando AEMET corta por «límite de uso
+       por minuto», el CDN sigue sirviendo la última buena hasta una hora,
+       en vez de dejar al Centro Operativo sin dato medido y de volver a
+       pegarle a AEMET con cada aparato en ese mismo minuto. */
+    headers: cabeceras(ok ? 600 : 0, { navegador: 300, revalidar: 1800, siError: 3600, origen: 'aemet-observacion' }),
   });
 }
 

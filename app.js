@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.27-1113';
+const BUILD = '2026.09.27-1558';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -7998,6 +7998,14 @@ function apuntarTorresEnMarcador() {
       });
     }
   });
+  /* UNA VEZ POR HORA Y APARATO (27-09-2026). Cada entrada en Mis
+     estaciones mandaba el mismo lote: el servidor descarta las muestras
+     repetidas, pero para eso lee y ordena el libro entero (hasta 20.000
+     muestras, ~1,2 s de CPU en Vercel) en cada POST. El vigilante ya
+     apunta lo mismo cada hora; esto solo aporta lo que aún no se mandó. */
+  const firma = muestras.map(m => `${m.estacion}|${m.hora}|${m.magnitud}`).sort().join(';');
+  if (!muestras.length || LS.get('marcadorMandado') === firma) return;
+  LS.set('marcadorMandado', firma);
   apuntarEnElMarcador(muestras);
 }
 
@@ -8817,6 +8825,9 @@ function calcularParte(sitios, arr) {
        Se apunta desde qué hora ve agua CADA modelo, y si el del pico no
        llega al principio, el texto deja de decir «la ve X». */
     const desdeCada = new Map();
+    /* Y en QUÉ horas ve agua cada uno (27-09-2026): la tarjeta lo usa para
+       decir quién ve la de ESTA hora cuando no es el modelo cargado. */
+    const veCada = new Map();
 
     /* Las horas se cuentan DISTINTAS, no una vez por modelo. Si ICON y
        ECMWF ven agua a las 19:00, son las 19:00, no dos horas. Sin esto
@@ -8837,6 +8848,7 @@ function calcularParte(sitios, arr) {
         if (!ini || t < ini) ini = t;
         if (!fin || t > fin) fin = t;
         if (!desdeCada.has(m.nom) || t < desdeCada.get(m.nom)) desdeCada.set(m.nom, t);
+        (veCada.get(m.nom) ?? veCada.set(m.nom, []).get(m.nom)).push(marca);
         if (mm > pico) { pico = mm; hPico = t; quien = m.nom; }
         const c = cod?.[i];
         if (c >= 51 && c <= 57 && mm < 0.2) conSirimiri.add(marca);
@@ -8860,6 +8872,7 @@ function calcularParte(sitios, arr) {
     /* El del pico abarca la ventana solo si ya ve agua cuando empieza. */
     const picoAbarca = !!quien && desdeCada.has(quien) && +desdeCada.get(quien) <= +ini;
     return { k, llueve: true, ini, fin, pico, hPico, quien, picoAbarca, horasAgua,
+             veCada: Object.fromEntries(veCada),
              nHoras: conAgua.size, sueltas,
              soloSirimiri: conSirimiri.size === conAgua.size,
              discrepan: seco > 0 ? (mojado / Math.max(seco, 0.1)) >= 3 : mojado >= 0.5 };
@@ -9925,7 +9938,7 @@ function renderParte() {
       ${C.libreDesde
         ? `Deja de frenarte a las <b>${hh(C.libreDesde.t)}</b>`
           + (C.horasLibres > 1 ? `, y aguanta <b>${C.horasLibres} h</b>.` : ', pero solo esa hora.')
-        : `<b>No se despeja ${(v => v.salto === 0 ? 'en lo que queda de hoy' : `el ${v.etiqueta.trim()}`)(ventanaParte())}.</b>`}</div>`;
+        : `<b>No se despeja ${(v => v.salto === 0 ? 'en lo que queda de hoy' : v.etiqueta.trim())(ventanaParte())}.</b>`}</div>`;
   };
 
   const lineaRacha = (k) => {
@@ -10490,7 +10503,14 @@ function loQueVieneHoy(k, horas, ahoraMs = Date.now()) {
   /* `S.lluviaTorres` y `S.rachaTorres` se calculan con la ventana del
      PARTE, que puede ser otro día: se comprueba que lo que traen caiga
      hoy antes de repetirlo aquí. */
+  const rw = S.thr?.rainWarn ?? 0.2;
   if (L?.llueve && esDeHoy(L.ini)) {
+    /* CON SU PALABRA Y SU LISTÓN (27-09-2026): `S.lluviaTorres` junta
+       cualquier hora con 0,05 mm de cualquier modelo, y esto lo llamaba
+       «AGUA» todo: cuatro gotas de un modelo, en rojo. El listón del
+       aviso de agua es el suyo (`rainWarn`, 0,2) y el sirimiri —que moja
+       sin marcar en el pluviómetro— va con su nombre. */
+    const cuenta = L.soloSirimiri || !has(L.pico) || mmRedonda(L.pico) >= mmRedonda(rw);
     /* «la ve X» solo si X ve la ventana entera; si no, lo que es verdad
        es que X tiene el pico (27-09-2026). */
     const deQuien = L.quien
@@ -10500,7 +10520,7 @@ function loQueVieneHoy(k, horas, ahoraMs = Date.now()) {
       ? `${L.nHoras} horas sueltas entre las ${String(new Date(L.ini).getHours()).padStart(2, '0')}:00`
         + ` y las ${String(new Date(L.fin).getHours()).padStart(2, '0')}:00 de hoy`
       : deA(L.ini, +L.fin + 3600e3);
-    av.push(`AGUA ${cuando}${deQuien}`);
+    if (cuenta) av.push(`${L.soloSirimiri ? 'SIRIMIRI' : 'AGUA'} ${cuando}${deQuien}`);
   /* ── Y SI LO DEL PARTE NO SIRVE PARA HOY, NO BASTA CON CALLARSE ───
      Fallo MÍO del 26-09, cazado la madrugada siguiente por el barrido
      que mira la pantalla. Esto decía `else if (!L)`: o sea que el
@@ -10514,9 +10534,16 @@ function loQueVieneHoy(k, horas, ahoraMs = Date.now()) {
      dando 8,8 mm/h a esa misma hora. Y él trabaja de noche.
      Lo mismo pasaba con solo pulsar la pestaña de otro día. */
   } else {
-    const moja = sel.filter(h => has(h.prec) && h.prec >= (S.thr?.rainWarn ?? 0.2));
+    const moja = sel.filter(h => has(h.prec) && h.prec >= rw);
     if (moja.length)
       av.push(`AGUA ${deA(moja[0].date, +moja[moja.length - 1].date + 3600e3)}`);
+    else {
+      /* El sirimiri por el respaldo: código de llovizna (51-57) sin
+         llegar al listón. Misma regla que `palabraLluvia`. */
+      const siri = sel.filter(h => has(h.code) && h.code >= 51 && h.code <= 57);
+      if (siri.length)
+        av.push(`SIRIMIRI ${deA(siri[0].date, +siri[siri.length - 1].date + 3600e3)}`);
+    }
   }
 
   /* 2 · RÁFAGA por encima de su listón. */
@@ -10568,7 +10595,9 @@ function lineaAguaTorre(k) {
   const v = ventanaParte();
   const hoyEs = v.salto === 0;
   const queda = Math.max(1, Math.round((v.hasta - Math.max(Date.now(), v.desde)) / 3600e3));
-  const cuandoEs = hoyEs ? `en lo que queda de hoy (${queda} h)` : `el ${v.etiqueta.trim()}`;
+  /* `nombreDeDia()` ya trae «mañana lunes» o «el martes»: sin otro «el»
+     delante, que salía «Seco el mañana lunes» (27-09-2026). */
+  const cuandoEs = hoyEs ? `en lo que queda de hoy (${queda} h)` : v.etiqueta.trim();
 
   if (!L.llueve)
     return `<div class="tor__agua" data-a="seco">Seco ${cuandoEs}</div>`;
@@ -10587,14 +10616,33 @@ function lineaAguaTorre(k) {
      para, no la hora a la que empezó. Es literalmente su pregunta:
      ¿mando a la gente o que esperen dos horas? */
   const ahora = ahoraMm;
-  const cayendo = L.ini <= ahora + 3600e3 && L.fin >= ahora;
+  /* `+L.fin + 3600e3`: `fin` es el PRINCIPIO de la última hora con agua.
+     A las 20:30 con `fin` a las 20:00 sigue lloviendo hasta las 21:00, y
+     `fin >= ahora` decía que no: la tarjeta pasaba a «de 18:00 a 21:00»
+     como si fuera para luego, en plena lluvia (27-09-2026). */
+  const cayendo = L.ini <= ahora + 3600e3 && +L.fin + 3600e3 > ahora;
   /* «Está lloviendo» solo si de verdad está cayendo YA —`cayendo`
      incluye lo que empieza dentro de la hora siguiente, que no es lo
      mismo— y nunca en vez de «Sirimiri», que es una palabra suya y dice
      algo que «llueve» no dice: moja sin marcar en el pluviómetro. */
   const lloviendoYa = L.ini <= ahoraMm && +L.fin + 3600e3 > ahoraMm;
-  const tipo = (lloviendoYa && picoDespues && !L.soloSirimiri)
-    ? 'Está lloviendo' : palabraLluvia(L.pico, L.soloSirimiri);
+  /* ── Y QUIÉN LA VE EN ESTA HORA (27-09-2026) ──────────────────────
+     La ventana es la UNIÓN de los modelos y la cabecera de la misma
+     tarjeta enseña el agua del CARGADO. A las 20:30 en Bermeo: «Está
+     lloviendo · escampa a las 00:00» encima de «0,0 lluvia mm/h». Quien
+     veía agua a esa hora era ECMWF (0,1 mm), y no lo decía nadie. Si el
+     de esta hora no es tu modelo, se nombra; y si ningún modelo ve agua
+     en esta hora (un hueco dentro de la ventana), no se dice «está
+     lloviendo». Cazado por el agente de pantallas en la revisión final. */
+  const dueno = typeof modeloDato === 'function' ? modeloDato()?.name : null;
+  const horaEnCurso = ahoraMm - (ahoraMm % 3600e3);
+  const venAhora = L.veCada
+    ? Object.entries(L.veCada).filter(([, hs]) => (hs || []).some(t => +t === horaEnCurso)).map(([n]) => n)
+    : null;
+  const tipo = (lloviendoYa && picoDespues && !L.soloSirimiri && (venAhora === null || venAhora.length))
+    ? ((venAhora === null || (dueno && venAhora.includes(dueno)))
+        ? 'Está lloviendo' : `Está lloviendo (lo ve ${esc(venAhora[0])})`)
+    : palabraLluvia(L.pico, L.soloSirimiri);
 
   const cuando = L.sueltas
     ? `${L.nHoras} horas sueltas entre las ${hh(L.ini)} y las ${hh(L.fin)}`
@@ -10610,7 +10658,6 @@ function lineaAguaTorre(k) {
      00:00» en el Sollube con AROME seco y la franja de al lado diciendo
      «Sin lluvia». Era ICON, y no lo ponía. La regla de siempre: el modelo,
      con nombre. */
-  const dueno = typeof modeloDato === 'function' ? modeloDato()?.name : null;
   const veQuien = L.quien && L.quien !== dueno
     ? ` · ${L.picoAbarca === false ? 'lo más fuerte lo ve' : 'lo ve'} ${esc(L.quien)}` : '';
 

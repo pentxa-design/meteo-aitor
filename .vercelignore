@@ -35,6 +35,7 @@ prueba-satelite.mjs
 prueba-cabeceras.mjs
 prueba-fuente-caida.mjs
 prueba-almacen-caido.mjs
+prueba-vigilante-reloj.mjs
 prueba-candado.cjs
 prueba-mal-tiempo.mjs
 prueba-mapas.mjs

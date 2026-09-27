@@ -84,6 +84,7 @@ node pruebas-servidor.cjs || exit 1
 # casi lo mismo, ¿podéis hacer que esto no pase nunca más?».
 echo "  · con el almacén caído, ninguna función miente"
 node prueba-almacen-caido.mjs || exit 1
+node prueba-vigilante-reloj.mjs || exit 1
 
 # ── EL MOTOR DE RECAMBIO, ARRANCADO ──────────────────────────────────
 # Puesto el 03-09-2026, el día que Vercel dejó su Blob fuera del plan

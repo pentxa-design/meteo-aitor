@@ -75,6 +75,14 @@ const MODELOS_AGUA = [...MODELOS, 'ecmwf_ifs025'];
    ficha de Torre, que decía AROME HD y enseñaba datos de ECMWF.       */
 const NOMBRE = { best_match: 'Automático', icon_eu: 'ICON', gfs_seamless: 'GFS', ecmwf_ifs025: 'ECMWF' };
 const nombreDe = m => NOMBRE[m] || m;
+/* Los milímetros van con coma, como en la app: «7.2 mm/h» en un aviso del
+   26-09 (segundo parte) era un fallo tonto de los suyos. */
+const coma = v => String(v).replace('.', ',');
+/* La tanda lleva siempre la misma URL y `/om` sale con s-maxage=600 y
+   stale-while-revalidate=3600: en rojo (cada 30 min) el CDN podía servir
+   la copia de la pasada anterior. Un sello de 10 min comparte caché entre
+   pasadas cercanas y nunca sirve una rancia (27-09-2026). */
+const selloTanda = () => `&_=${Math.floor(Date.now() / 600000)}`;
 
 /* ── EL AGUA, QUE ES LO QUE DECIDE SU DÍA ─────────────────────────────
    Suyo, 29-08-2026 por la mañana: *«¿y el vigilante no avisa que viene
@@ -259,7 +267,15 @@ function enTramos(hs) {
    «MARKINA tranquilo» de la mañana, y aquí.                          */
 function cuandoTxt(d, claveHoy, claveManana) {
   const hoy = d.dias[claveHoy];
-  if (!hoy) return '';
+  /* Un sitio que entra SOLO por su rayo de mañana (desde las 21:00, con
+     `hastaManana`) salía como «BERMEO » a secas: sin hora, sin día
+     (27-09-2026). Se dice cuándo, y que es mañana. */
+  if (!hoy) {
+    const man = d.dias[claveManana];
+    if (!man) return '';
+    const tm = (man.tramos || []).map(r => r.ini === r.fin ? hh(r.ini) : `${hh(r.ini)}-${hh(r.fin)}`).join(' y ');
+    return `mañana ${tm || `${hh(man.ini)}-${hh(man.fin)}`}`;
+  }
   const t = (hoy.tramos || []).map(r => r.ini === r.fin ? hh(r.ini) : `${hh(r.ini)}-${hh(r.fin)}`).join(' y ');
 
   /* ¿Enlaza con mañana? Las 23:00 y las 00:00 son horas seguidas. */
@@ -325,9 +341,11 @@ function cuandoTxt(d, claveHoy, claveManana) {
 async function pedirTanda(sitios, cel) {
   const u = `${APP}/om?api=fc&latitude=${sitios.map(s => s.lat).join(',')}`
           + `&longitude=${sitios.map(s => s.lon).join(',')}&timezone=auto`
-          + `&hourly=cape,convective_inhibition,precipitation,wind_gusts_10m&forecast_days=2`
-          + `&cell_selection=${cel}&models=${MODELOS_AGUA.join(',')}`;
-  const r = await fetch(u);
+          + `&hourly=cape,convective_inhibition,precipitation,wind_gusts_10m,weather_code&forecast_days=2`
+          + `&cell_selection=${cel}&models=${MODELOS_AGUA.join(',')}${selloTanda()}`;
+  /* Con tope (27-09-2026): sin él, Open-Meteo colgado se comía la pasada
+     entera hasta el límite de Vercel, sin estado y sin aviso. */
+  const r = await fetch(u, { signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error(`la app contesta ${r.status}`);
   const j = await r.json();
   const lista = Array.isArray(j) ? j : [j];
@@ -351,9 +369,9 @@ async function pedirTanda(sitios, cel) {
 async function unSitio(s, previo = null, reloj = null) {
   const pide = async cel => {
     const u = `${APP}/om?api=fc&latitude=${s.lat}&longitude=${s.lon}&timezone=auto`
-            + `&hourly=cape,convective_inhibition,precipitation,wind_gusts_10m&forecast_days=2`
-            + `&cell_selection=${cel}&models=${MODELOS_AGUA.join(',')}`;
-    const r = await fetch(u);
+            + `&hourly=cape,convective_inhibition,precipitation,wind_gusts_10m,weather_code&forecast_days=2`
+            + `&cell_selection=${cel}&models=${MODELOS_AGUA.join(',')}${selloTanda()}`;
+    const r = await fetch(u, { signal: AbortSignal.timeout(15000) });
     if (!r.ok) throw new Error(`la app contesta ${r.status}`);
     return (await r.json()).hourly;
   };
@@ -365,6 +383,26 @@ async function unSitio(s, previo = null, reloj = null) {
   if (!C) { try { C = await pide('nearest'); } catch { C = null; } }
 
   const porDia = {};                       // '2026-08-26' -> {horas:Set, cape, quien}
+  /* ── EL CÓDIGO DE TORMENTA TAMBIÉN ES RAYO (27-09-2026) ─────────────
+     La app pone NO APTO con código de tormenta (95-99) aunque el CAPE no
+     llegue a 700; el vigilante solo miraba la pareja CAPE/tapa y un
+     modelo diciendo «tormenta» con CAPE 650 no le hacía ni caso. Se cuenta
+     como hora de rayo, con su modelo, para todos los modelos del agua. */
+  for (const [H_, deLado] of [[H, false], [C, true]]) {
+    if (!H_?.time) continue;
+    for (const m of MODELOS_AGUA) {
+      const wc = H_[`weather_code_${m}`];
+      if (!wc) continue;
+      for (let i = 0; i < H_.time.length; i++) {
+        const w = wc[i];
+        if (w == null || w < 95 || w > 99) continue;
+        const dia = H_.time[i].slice(0, 10), h = Number(H_.time[i].slice(11, 13));
+        const d = porDia[dia] ??= { horas: new Set(), cape: 0, quien: null, deLado: false };
+        d.horas.add(h);
+        if (!d.quien) { d.quien = nombreDe(m) + ' (código de tormenta)' + (deLado ? ' (celda de al lado)' : ''); d.deLado = deLado; }
+      }
+    }
+  }
   for (const [H_, deLado] of [[H, false], [C, true]]) {
     if (!H_?.time) continue;
     for (const m of MODELOS) {
@@ -500,7 +538,7 @@ async function unSitio(s, previo = null, reloj = null) {
     };
     for (const H_ of [H, C]) {
       mira(H_, { k: 'cape', modelos: MODELOS, campo: 'cape' });
-      mira(H_, { k: 'wind_gusts_10m', modelos: MODELOS_AGUA, campo: 'racha' });
+      mira(H_, { k: 'wind_gusts_10m', modelos: MODELOS, campo: 'racha' });   // los mismos que el aviso de racha (27-09-2026)
       mira(H_, { k: 'precipitation',  modelos: MODELOS_AGUA, campo: 'agua'  });
     }
   }
@@ -555,7 +593,12 @@ async function empujar(titulo, cuerpo, tag, importante, url) {
                                  url: url || './', enviado: new Date().toISOString() });
   let enviados = 0; const muertos = [];
   await Promise.all(aparatos.map(async a => {
-    try { await webpush.sendNotification({ endpoint: a.endpoint, keys: a.keys }, carga, { TTL: 3600 }); enviados++; }
+    /* TTL y urgencia (27-09-2026): con TTL 3600 y sin urgencia, un móvil
+       que retrase el aviso más de una hora (DuraSpeed, 25-09: 42 min) se
+       queda sin él y aquí constaba como enviado. Lo importante vive 6 h y
+       pide despertar el aparato; lo demás, como antes. */
+    try { await webpush.sendNotification({ endpoint: a.endpoint, keys: a.keys }, carga,
+                                         { TTL: importante ? 6 * 3600 : 3600, urgency: importante ? 'high' : 'normal' }); enviados++; }
     catch (e) { if (e?.statusCode === 404 || e?.statusCode === 410) muertos.push(a.endpoint); }
   }));
   /* Igual que en `avisar.mjs`: limpiar la lista es tarea de mantenimiento
@@ -616,7 +659,8 @@ const horaLocal = iso => {
 async function apuntarEnElMarcador(sitios) {
   /* Las estaciones cerca de sus emplazamientos, de una vez. */
   const puntos = sitios.slice(0, 20).map(s => `${s.lat},${s.lon}`).join('|');
-  const rEst = await fetch(`${APP}/api/euskalmet?puntos=${encodeURIComponent(puntos)}&radio=15`);
+  const rEst = await fetch(`${APP}/api/euskalmet?puntos=${encodeURIComponent(puntos)}&radio=15`,
+                           { signal: AbortSignal.timeout(12000) });
   if (!rEst.ok) throw new Error(`estaciones ${rEst.status}`);
   const est = (await rEst.json()).puntos || [];
 
@@ -633,19 +677,22 @@ async function apuntarEnElMarcador(sitios) {
   if (!unicas.size) return { apuntadas: 0, nota: 'ninguna estación con dato fresco' };
 
   const muestras = [];
-  for (const e of [...unicas.values()].slice(0, 8)) {
+  /* Las ocho estaciones en UNA petición multipunto (27-09-2026): eran hasta
+     ocho /om en serie en cada pasada, el 70-80 % de la CPU del vigilante. */
+  const ocho = [...unicas.values()].slice(0, 8);
+  let lista = [];
+  try {
+    const u8 = `${APP}/om?api=fc&latitude=${ocho.map(e => e.lat).join(',')}&longitude=${ocho.map(e => e.lon).join(',')}`
+             + `&timezone=Europe%2FMadrid&hourly=wind_gusts_10m,precipitation,temperature_2m&forecast_days=1`
+             + `&cell_selection=land&models=${MODELOS_MARCADOR.map(m => m[1]).join(',')}`;
+    const r8 = await fetch(u8, { signal: AbortSignal.timeout(15000) });
+    if (r8.ok) { const j8 = await r8.json(); lista = Array.isArray(j8) ? j8 : [j8]; }
+  } catch { lista = []; }
+  for (const [k, e] of ocho.entries()) {
     /* Los modelos EN LA ESTACIÓN, no en el emplazamiento: comparar el
        pronóstico de un cordal contra un aparato del valle no mide al
        modelo, mide el desnivel. */
-    const u = `${APP}/om?api=fc&latitude=${e.lat}&longitude=${e.lon}&timezone=Europe%2FMadrid`
-            + `&hourly=wind_gusts_10m,precipitation,temperature_2m&forecast_days=1`
-            + `&cell_selection=land&models=${MODELOS_MARCADOR.map(m => m[1]).join(',')}`;
-    let H;
-    try {
-      const r = await fetch(u);
-      if (!r.ok) continue;
-      H = (await r.json()).hourly;
-    } catch { continue; }
+    const H = lista[k]?.hourly;
     if (!H?.time) continue;
 
     const hora = horaLocal(e.medidoEn);
@@ -680,7 +727,7 @@ async function apuntarEnElMarcador(sitios) {
 
   const r = await fetch(`${APP}/api/marcador`, {
     method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ muestras }),
+    body: JSON.stringify({ muestras }), signal: AbortSignal.timeout(8000),
   });
   if (!r.ok) throw new Error(`marcador ${r.status}`);
   return { apuntadas: muestras.length, estaciones: unicas.size };
@@ -708,7 +755,9 @@ export default async function handler(req, res) {
      única forma de que eso no vuelva a pasar es que el aviso salga donde
      él SÍ mira, que es la app, y que no dependa de que corra nada. */
   if (req.method === 'GET' && req.query?.pulso === '1') {
-    res.setHeader('Cache-Control', 'no-store');
+    /* 60 s de CDN (27-09-2026): cada apertura de la app lo pedía y la
+       función arrancaba para decir lo mismo que hace medio minuto. */
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=30');
     try {
       const e = await leerEstado();
       if (!e?.cuando) return res.status(200).json({ ultima: null, haceMin: null,
@@ -879,6 +928,7 @@ export default async function handler(req, res) {
      fallo que dejó muerta la comparación del parte en la app. */
   const ahora = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
   const claveHoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+  const horaMarcadorAhora = horaLocal(new Date().toISOString());   // para apuntar en el marcador una vez por hora (27-09-2026)
   const manana = new Date(ahora); manana.setDate(manana.getDate() + 1);
   const claveManana = `${manana.getFullYear()}-${String(manana.getMonth() + 1).padStart(2, '0')}-${String(manana.getDate()).padStart(2, '0')}`;
   const h0 = ahora.getHours();
@@ -931,8 +981,14 @@ export default async function handler(req, res) {
     || Object.values(antes.rachaSitios || {}).some(a => a && Object.keys(a).length)));
   /* Las DOS ventanas de parte se saltan el freno de cadencia: la de la
      mañana (06-12) y la del segundo (13-16, desde el 26-09-2026). */
-  const ventanaDelParte = (h0 >= 6 && h0 < 12 && antes?.parteDe !== claveHoy)
-                       || (h0 >= 13 && h0 < 16 && antes?.parte2De !== claveHoy);
+  /* Si el envío del parte falló (claves, FCM, ningún móvil), la ventana
+     saltaba el freno EN CADA TIC durante horas. Como mucho un intento cada
+     30 min (27-09-2026). */
+  const parteHaceMin = antes?.parteIntentoEn
+    ? (Date.now() - new Date(antes.parteIntentoEn).getTime()) / 60000 : Infinity;
+  const ventanaDelParte = parteHaceMin >= 30 && (
+       (h0 >= 6 && h0 < 12 && antes?.parteDe !== claveHoy)
+    || (h0 >= 13 && h0 < 16 && antes?.parte2De !== claveHoy));
 
   /* `mirar=1` es su ojeada a mano: esa nunca se salta. Se lee aquí
      directo porque `pedidoMirar` se declara más abajo. */
@@ -1138,10 +1194,14 @@ export default async function handler(req, res) {
      «aquí a veces hay un día bueno y al de unas horas entra tormenta», y
      eso no lo deroga bajar la cadencia. De noche, tres. */
   const ojeadaAMano = req.query?.mirar === '1' || req.body?.mirar === true;
-  if (!ojeadaAMano && !ventanaDelParte && huecoPrevio !== null && huecoPrevio < cadaMin) {
+  /* `- 5`: el sello `cuando` se escribe al FINAL de la pasada y `huecoPrevio`
+     va redondeado, así que una pasada de más de 30 s hacía que el tic de
+     las 2 h viese 119 y se saltase hasta el siguiente: 2 h 30 en vez de 2.
+     Cinco minutos de margen y la cadencia es la que él fijó (27-09-2026). */
+  if (!ojeadaAMano && !ventanaDelParte && huecoPrevio !== null && huecoPrevio < cadaMin - 5) {
     return res.status(200).json({
       ok: true, saltada: true, nivel, ...medida(),
-      nota: `${nivel}: se pasa cada ${nivel === 'verde' ? (tardeAquí ? 'hora (tarde)' : 'tres horas') : nivel === 'ambar' ? 'media hora' : 'cuarto de hora'}`,
+      nota: `${nivel}: se pasa cada ${cadaMin} min`,
       ultimaPasada: antes.cuando,
     });
   }
@@ -1152,7 +1212,7 @@ export default async function handler(req, res) {
   /* Su lista de verdad, la que guarda la app. Si falla, la de respaldo. */
   let sitios = SITIOS, listaDeRespaldo = true;
   try {
-    const rt = await fetch(`${APP}/api/torres`);
+    const rt = await fetch(`${APP}/api/torres`, { signal: AbortSignal.timeout(8000) });
     const t = rt.ok ? (await rt.json())?.torres : null;
     if (Array.isArray(t) && t.length) {
       sitios = t.map(x => ({
@@ -1283,7 +1343,7 @@ export default async function handler(req, res) {
       if (r?.kmh != null && r.kmh >= RACHA_TOPE)
         gordos.push(`${d.n} racha ${Math.round(r.kmh)} km/h${r.ini != null ? ` a las ${hh(r.ini)}` : ''}`);
       else if (ag?.mm != null && ag.mm >= 2)
-        gordos.push(`${d.n} lluvia fuerte ${ag.mm.toFixed(1)} mm/h`);
+        gordos.push(`${d.n} lluvia fuerte ${coma(ag.mm.toFixed(1))} mm/h`);
     }
     if (gordos.length) {
       cambios.push({ n: gordos[0].split(' ')[0], cual: 'hoy', peor: true, critico: false,
@@ -1344,14 +1404,14 @@ export default async function handler(req, res) {
         if (vb && !va && hayAguaGuardada && !(cual === 'hoy' && vb.fin < h0)) {
           cambiosAgua.push({ n: d.n, lat: d.lat, lon: d.lon, cual, peor: true, critico: d.critico,
             txt: `${vb.fuerte ? 'lluvia fuerte' : 'agua'} ${tramosTxt(vb.tramos, vb.ini, vb.fin)}`
-               + ` (${vb.mm} mm/h, lo ve ${vb.quien})` });
+               + ` (${coma(vb.mm)} mm/h, lo ve ${vb.quien})` });
         } else if (vb && va && !(cual === 'hoy' && vb.fin < h0)) {
           const aFuerte = !va.fuerte && vb.fuerte;
           const antesDe = vb.ini <= va.ini - 2;
           if (aFuerte || antesDe) {
             cambiosAgua.push({ n: d.n, lat: d.lat, lon: d.lon, cual, peor: true, critico: d.critico,
               txt: aFuerte
-                ? `el agua pasa a fuerte: ${vb.mm} mm/h ${picoTxt(vb.hPico, vb.ini)}`
+                ? `el agua pasa a fuerte: ${coma(vb.mm)} mm/h ${picoTxt(vb.hPico, vb.ini)}`
                 : `el agua se adelanta: ${hh(va.ini)} pasa a ${hh(vb.ini)}` });
           }
         }
@@ -1381,7 +1441,14 @@ export default async function handler(req, res) {
   const cambiosQueValen = cambios.filter(c => (c.cual === 'hoy' || h0 >= 18) && c.peor);
 
   /* ── 3. ¿SE AVISA? Solo si hay algo NUEVO ─────────────────────────── */
-  const firmaAhora = inminentes.map(d => `${d.n}:${d.dias[claveHoy].ini}-${d.dias[claveHoy].fin}`).sort().join('|');
+  /* Desde las 21:00 un sitio puede estar aquí SOLO por su rayo de mañana
+     (`hastaManana`): sin `dias[claveHoy]` esto reventaba la pasada entera
+     (TypeError) y no salía ni aviso ni estado, justo en la franja de la
+     noche que el 20-09 quiso cubrir (27-09-2026). La firma de hoy no cambia
+     de forma para no repetir avisos ya mandados. */
+  const firmaAhora = inminentes.map(d => d.dias[claveHoy]
+      ? `${d.n}:${d.dias[claveHoy].ini}-${d.dias[claveHoy].fin}`
+      : `${d.n}:mañana:${d.dias[claveManana]?.ini}-${d.dias[claveManana]?.fin}`).sort().join('|');
   const yaAvisado = antes?.ultimoAviso === firmaAhora;
 
   const avisos = [];
@@ -1504,16 +1571,19 @@ export default async function handler(req, res) {
      Ahora también cuenta lo que se acaba de ver en ESTA pasada. */
   const seRepite = fallos.some(f => (antes?.noMirados || []).includes(f.n));
   const hayCritico = fallos.some(f => f.critico);
+  /* Solo con SUS listones y POR DELANTE (27-09-2026): antes bastaba el ojo
+     (CAPE 300, racha 45, 0,3 mm en cualquier hora, pasadas incluidas) para
+     que sonara «no he podido mirar» un día que «dan bueno», que es justo lo
+     que él pidió que no sonara. */
+  const porDelanteHoy = x => x && (x.fin == null || x.fin >= h0);
   const loQueAcaboDeVer = buenos.some(d =>
-    (d.dias && (d.dias[claveHoy] || d.dias[claveManana]))
-    || (d.racha && (d.racha[claveHoy] || d.racha[claveManana]))
-    || (d.agua && (d.agua[claveHoy] || d.agua[claveManana]))
-    || (d.ojo && ((d.ojo.cape ?? 0) >= CAPE_OJO || (d.ojo.racha ?? 0) >= RACHA_OJO
-               || (d.ojo.agua ?? 0) >= AGUA_OJO)));
+    (d.dias && (porDelanteHoy(d.dias[claveHoy]) || d.dias[claveManana]))
+    || (d.racha && (porDelanteHoy(d.racha[claveHoy]) || d.racha[claveManana]))
+    || (d.agua && ((porDelanteHoy(d.agua[claveHoy]) && d.agua[claveHoy].fuerte) || d.agua[claveManana]?.fuerte)));
   /* Sin poder leer el estado no se puede comparar, y ahí el hueco pesa
      MÁS, no menos: `nivel` valdría verde por defecto y callaría. */
   const aCiegas = !antes;
-  const huecoImporta = nivel !== 'verde' || seRepite || loQueAcaboDeVer || aCiegas;
+  const huecoImporta = nivel !== 'verde' || loQueAcaboDeVer || aCiegas;   // repetirse en verde no suena: se dice como motivo si suena
   if (hayCritico || (fallos.length >= 4 && huecoImporta)) {
     const porQue = hayCritico ? ' Hay alguno de los que no pueden faltar.'
                  : seRepite ? ' No es un tropiezo: ya no se pudieron mirar en la pasada anterior.'
@@ -1593,11 +1663,14 @@ export default async function handler(req, res) {
   let resumenHoy = antes?.parteResumen ?? null;
   let mandado2 = false;
   const HORA_PARTE = 6;
+  /* Lo que ya ha pasado no «sigue en pie» (27-09-2026): a las 13:00 el agua
+     de las 08 contaba como aviso del día. Solo lo que queda por delante. */
+  const quedaHoy = x => x && x.fin >= h0;
   const tocaParte = h0 >= HORA_PARTE && h0 < 12 && antes?.parteDe !== claveHoy;
   if (tocaParte) {
-    const conRayo = buenos.filter(d => d.dias[claveHoy]);
-    const conAgua = buenos.filter(d => d.agua?.[claveHoy]);
-    const conRacha = buenos.filter(d => d.racha?.[claveHoy]);
+    const conRayo = buenos.filter(d => quedaHoy(d.dias[claveHoy]));
+    const conAgua = buenos.filter(d => quedaHoy(d.agua?.[claveHoy]));
+    const conRacha = buenos.filter(d => quedaHoy(d.racha?.[claveHoy]));
 
     const trozos = [];
     if (conRayo.length) {
@@ -1608,12 +1681,12 @@ export default async function handler(req, res) {
     if (conAgua.length) {
       const peor = conAgua.reduce((a2, b2) => b2.agua[claveHoy].mm > a2.agua[claveHoy].mm ? b2 : a2);
       trozos.push(`🌧 agua en ${conAgua.length}: lo más fuerte ${peor.n} `
-        + `${peor.agua[claveHoy].mm} mm/h ${picoTxt(peor.agua[claveHoy].hPico, peor.agua[claveHoy].ini)}`
+        + `${coma(peor.agua[claveHoy].mm)} mm/h ${picoTxt(peor.agua[claveHoy].hPico, peor.agua[claveHoy].ini)}`
         + `, y llueve ${tramosTxt(peor.agua[claveHoy].tramos, peor.agua[claveHoy].ini, peor.agua[claveHoy].fin)}`);
     }
     if (conRacha.length) {
       const peor = conRacha.reduce((a2, b2) => b2.racha[claveHoy].kmh > a2.racha[claveHoy].kmh ? b2 : a2);
-      trozos.push(`💨 racha de 70+ en ${conRacha.length}: lo peor ${peor.n} `
+      trozos.push(`💨 racha de ${RACHA_TOPE}+ en ${conRacha.length}: lo peor ${peor.n} `
         + `${peor.racha[claveHoy].kmh} km/h ${picoTxt(peor.racha[claveHoy].hPico, peor.racha[claveHoy].ini)}`
         + `, y pasa de ${RACHA_TOPE} ${tramosTxt(peor.racha[claveHoy].tramos, peor.racha[claveHoy].ini, peor.racha[claveHoy].fin)}`);
     }
@@ -1624,11 +1697,11 @@ export default async function handler(req, res) {
         : 'El parte de hoy · sin nada por encima de tus listones',
       cuerpo: (trozos.length
         ? trozos.join('. ')
-        : `Los ${buenos.length} emplazamientos, sin rayo, sin agua de 0,3 mm/h para arriba y sin rachas de 70.`)
+        : `Los ${buenos.length} emplazamientos, sin rayo, sin agua de ${coma(AGUA_MIN)} mm/h para arriba y sin rachas de ${RACHA_TOPE}.`)
         + ` Ábrela para el detalle.`,
       tag: 'parte', importante: false,
     });
-    resumenHoy = { rayo: conRayo.length, agua: conAgua.length, racha: conRacha.length };
+    resumenHoy = { fecha: claveHoy, rayo: conRayo.map(d => d.n), agua: conAgua.map(d => d.n), racha: conRacha.map(d => d.n) };
   }
 
   /* ══════════════════════════════════════════════════════════════════
@@ -1662,23 +1735,30 @@ export default async function handler(req, res) {
   const HORA_PARTE2 = 13;
   const tocaParte2 = h0 >= HORA_PARTE2 && h0 < 16 && antes?.parte2De !== claveHoy;
   if (tocaParte2) {
-    const conRayo = buenos.filter(d => d.dias[claveHoy]);
-    const conAgua = buenos.filter(d => d.agua?.[claveHoy]);
-    const conRacha = buenos.filter(d => d.racha?.[claveHoy]);
+    const conRayo = buenos.filter(d => quedaHoy(d.dias[claveHoy]));
+    const conAgua = buenos.filter(d => quedaHoy(d.agua?.[claveHoy]));
+    const conRacha = buenos.filter(d => quedaHoy(d.racha?.[claveHoy]));
     const hay = conRayo.length + conAgua.length + conRacha.length;
     if (hay) {
-      const antesR = antes?.parteResumen || null;
+      /* Se compara POR SITIO y solo con el parte de HOY (27-09-2026): por
+         recuentos, «rayo en A y B» → «rayo en C y D» salía «igual que esta
+         mañana»; y sin parte de hoy guardado se afirmaba lo mismo sin
+         haber comparado nada. */
+      const antesR = (antes?.parteResumen && antes.parteResumen.fecha === claveHoy) ? antes.parteResumen : null;
       const dif = [];
       if (antesR) {
+        const nombres = x => Array.isArray(x) ? x : [];
         const cmp = (ahora, before, que) => {
-          if (ahora > before) dif.push(before ? `más ${que} que esta mañana (${before} → ${ahora})`
-                                              : `${que} que esta mañana no había`);
-          else if (ahora < before) dif.push(ahora ? `menos ${que} (${before} → ${ahora})`
-                                                  : `${que} se ha quitado`);
+          const A = new Set(ahora), B = new Set(before);
+          const entran = ahora.filter(n => !B.has(n)), salen = before.filter(n => !A.has(n));
+          if (!entran.length && !salen.length) return;
+          if (!before.length) dif.push(`${que} que esta mañana no había (${entran.join(', ')})`);
+          else if (!ahora.length) dif.push(`${que} se ha quitado`);
+          else dif.push(`${que}: ${entran.length ? `entra ${entran.join(', ')}` : ''}${entran.length && salen.length ? '; ' : ''}${salen.length ? `sale ${salen.join(', ')}` : ''} (${before.length} → ${ahora.length})`);
         };
-        cmp(conRayo.length,  antesR.rayo  || 0, 'rayo');
-        cmp(conAgua.length,  antesR.agua  || 0, 'agua');
-        cmp(conRacha.length, antesR.racha || 0, 'racha');
+        cmp(conRayo.map(d => d.n),  nombres(antesR.rayo),  'rayo');
+        cmp(conAgua.map(d => d.n),  nombres(antesR.agua),  'agua');
+        cmp(conRacha.map(d => d.n), nombres(antesR.racha), 'racha');
       }
       const trozos2 = [];
       if (conRayo.length) trozos2.push(`⚡ rayo en ${conRayo.length}: `
@@ -1687,7 +1767,7 @@ export default async function handler(req, res) {
       if (conAgua.length) {
         const peor = conAgua.reduce((a2, b2) => b2.agua[claveHoy].mm > a2.agua[claveHoy].mm ? b2 : a2);
         trozos2.push(`🌧 agua en ${conAgua.length}: lo más fuerte ${peor.n} `
-          + `${peor.agua[claveHoy].mm} mm/h ${picoTxt(peor.agua[claveHoy].hPico, peor.agua[claveHoy].ini)}`);
+          + `${coma(peor.agua[claveHoy].mm)} mm/h ${picoTxt(peor.agua[claveHoy].hPico, peor.agua[claveHoy].ini)}`);
       }
       if (conRacha.length) {
         const peor = conRacha.reduce((a2, b2) => b2.racha[claveHoy].kmh > a2.racha[claveHoy].kmh ? b2 : a2);
@@ -1699,10 +1779,11 @@ export default async function handler(req, res) {
         url: './?v=torres',
         cuerpo: trozos2.join('. ')
           + (dif.length ? `. Respecto a la mañana: ${dif.join(', ')}.`
-                        : `. Igual que esta mañana, con el pase de las 08:00 ya dentro.`),
+                        : antesR ? `. Igual que esta mañana (datos de las ${h0}h).`
+                                 : `. Sin parte de esta mañana con el que comparar (datos de las ${h0}h).`),
         tag: 'parte2', importante: false,
       });
-      resumenHoy = { rayo: conRayo.length, agua: conAgua.length, racha: conRacha.length };
+      resumenHoy = { fecha: claveHoy, rayo: conRayo.map(d => d.n), agua: conAgua.map(d => d.n), racha: conRacha.map(d => d.n) };
       mandado2 = true;
     } else {
       /* Nada hoy: no se manda nada, pero el día se da por hecho para no
@@ -1830,6 +1911,8 @@ export default async function handler(req, res) {
                      || enviados.some(e => e.tag === 'parte2' && (e.enviados || 0) > 0)))
         ? claveHoy : (antes?.parte2De ?? null),
       parteResumen: resumenHoy,
+      parteIntentoEn: (tocaParte || tocaParte2) ? new Date().toISOString() : (antes?.parteIntentoEn ?? null),
+      marcadorHora: horaMarcadorAhora,
     };
 
     const sinHora = e => { const { cuando, ...r } = e || {}; return JSON.stringify(r); };
@@ -1864,9 +1947,16 @@ export default async function handler(req, res) {
   /* ── Y DE PASO, EL MARCADOR ────────────────────────────────────────
      Lo último de la pasada y con el fallo tragado: si esto falla, los
      avisos ya han salido. Nunca al revés. */
+  /* Solo cuando cambia la hora (27-09-2026): corría en TODA pasada completa
+     —euskalmet 1,3-2 s de CPU siempre MISS, ocho /om, un POST— y el
+     servidor descarta las muestras repetidas de la misma estación y hora:
+     en rojo, una de cada dos llamadas no apuntaba nada. */
   let marcador = null;
-  try { marcador = await apuntarEnElMarcador(sitios); }
-  catch (e) { marcador = { error: String(e?.message || e).slice(0, 80) }; }
+  if (antes?.marcadorHora === horaMarcadorAhora) marcador = { saltado: 'misma hora que la última vez' };
+  else {
+    try { marcador = await apuntarEnElMarcador(sitios); }
+    catch (e) { marcador = { error: String(e?.message || e).slice(0, 80) }; }
+  }
 
   /* Lo que no se pudo leer o guardar se DICE: hasta el 13-09-2026 eran dos
      banderas que se calculaban y nadie leía (las cazó ESLint el 05-09). */
@@ -1882,7 +1972,7 @@ export default async function handler(req, res) {
     listaDeRespaldo, cuantosSitios: sitios.length,
     inminentes: inminentes.map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana)}`),
     cambios: cambios.map(c => `${c.n} (${c.cual}): ${c.txt}`),
-    avisados: enviados.map(e => ({ titulo: e.titulo, enviados: e.enviados, nota: e.nota })),
+    avisados: enviados.map(e => ({ titulo: e.titulo, cuerpo: e.cuerpo, tag: e.tag, enviados: e.enviados, nota: e.nota })),
     callado: !enviados.length,
     /* Se distingue «no había nada que decir» de «tenía algo y está mudo». */
     mudo: !puedeEnviar,

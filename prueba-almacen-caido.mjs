@@ -158,7 +158,51 @@ for (const c of CASOS) {
    Esto arranca el POST. Si el vigilante revienta por lo que sea, no se
    publica.                                                             */
 console.log('\n  el vigilante ARRANCA\n');
+/* ── SIN RED (27-09-2026) ──────────────────────────────────────────────
+   Hasta hoy esto arrancaba la pasada ENTERA contra producción: cada
+   publicación costaba en Vercel torres + dos tandas + euskalmet + hasta
+   ocho /om + un POST al marcador con muestras de verdad. Ahora `fetch` es
+   de mentira y contesta lo que contestaría la app, con veinte sitios. Y
+   con `tormentaManana` uno de ellos lleva rayo SOLO mañana de 00 a 02 h,
+   que a las 22:30 entra en «inminentes» sin día de hoy: la pasada
+   reventaba entera (TypeError en la firma) y no salía ni aviso ni estado. */
+function fetchDeMentira({ tormentaManana = false } = {}) {
+  const hoy0 = new Date(); hoy0.setHours(0, 0, 0, 0);
+  const p2 = x => String(x).padStart(2, '0');
+  const iso = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:00`;
+  const R = o => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(o), text: () => Promise.resolve(JSON.stringify(o)) });
+  return (u = '') => {
+    const s = String(u); const q = new URL(s).searchParams;
+    if (s.includes('/api/torres')) return R({ torres: [] });
+    if (s.includes('/api/euskalmet')) return R({ ok: true, puntos: [] });
+    if (s.includes('/api/marcador')) return R({ ok: true });
+    if (s.includes('/om')) {
+      const lats = (q.get('latitude') || '43.4').split(','), lons = (q.get('longitude') || '-2.7').split(',');
+      const modelos = (q.get('models') || 'best_match').split(',');
+      const campos = (q.get('hourly') || '').split(',').filter(Boolean);
+      const T = []; for (let i = 0; i < 48; i++) T.push(new Date(hoy0.getTime() + i * 3600e3));
+      const uno = (lat, lon, k) => {
+        const h = { time: T.map(iso) };
+        for (const om of modelos) for (const c of campos) h[`${c}_${om}`] = T.map(d => {
+          const manana = d.getDate() !== hoy0.getDate(), hh = d.getHours();
+          const rayo = tormentaManana && k === 0 && om === 'icon_eu' && manana && hh <= 2;
+          if (c === 'cape') return rayo ? 900 : 40;
+          if (c === 'convective_inhibition') return rayo ? 10 : 120;
+          if (c === 'precipitation') return 0;
+          if (c === 'wind_gusts_10m') return 20;
+          if (c === 'weather_code') return 1;
+          return null;
+        });
+        return { latitude: +lat, longitude: +lon, hourly: h };
+      };
+      return R(lats.length > 1 ? lats.map((la, k) => uno(la, lons[k], k)) : uno(lats[0], lons[0], 0));
+    }
+    return R({});
+  };
+}
+const fetchReal = globalThis.fetch;
 {
+  globalThis.fetch = fetchDeMentira();
   const mod = await import(pathToFileURL(path.join(tmp, 'api', 'vigilante.mjs')).href
                            + '?post=1');
   const res = resFalso();
@@ -166,7 +210,6 @@ console.log('\n  el vigilante ARRANCA\n');
   try {
     await mod.default({ method: 'POST', query: {}, headers: {}, body: {} }, res);
   } catch (e) { reventó = `${e?.constructor?.name}: ${e?.message}`; }
-
   ok('la pasada entera del vigilante no revienta',
      !reventó,
      reventó ? `${reventó}  ← esto deja su móvil sin avisos` : '');
@@ -174,6 +217,34 @@ console.log('\n  el vigilante ARRANCA\n');
      !reventó && res.code === 200 && Number(res.body?.mirados) > 0,
      `contestó ${res.code} · ${JSON.stringify(res.body).slice(0, 120)}`);
 }
+{
+  /* A las 22:30, con un sitio cuyo rayo es SOLO de mañana (00-02 h). */
+  globalThis.fetch = fetchDeMentira({ tormentaManana: true });
+  const Real = Date; const fijo = new Real(); fijo.setHours(22, 30, 0, 0);
+  globalThis.Date = new Proxy(Real, {
+    construct(T, a) { return a.length ? new T(...a) : new T(fijo); },
+    get(T, p) { return p === 'now' ? () => fijo.getTime() : T[p]; },
+  });
+  const mod = await import(pathToFileURL(path.join(tmp, 'api', 'vigilante.mjs')).href
+                           + '?post=2');
+  const res = resFalso();
+  let reventó = null;
+  try {
+    await mod.default({ method: 'POST', query: { mirar: '1' }, headers: {}, body: {} }, res);
+  } catch (e) { reventó = `${e?.constructor?.name}: ${e?.message}`; }
+  globalThis.Date = Real;
+  ok('a las 22:30, un sitio con rayo SOLO mañana de 00 a 02 h no revienta la pasada (27-09-2026)',
+     !reventó && res.code === 200,
+     reventó ? `${reventó}  ← la pasada entera muerta justo la noche que entra de guardia` : `contestó ${res.code}`);
+  /* La respuesta lista los inminentes y, según VIGILANTE_ENVIA, los avisos
+     mandados (`avisados`) o los que habría mandado (`habriaAvisado`). */
+  const titulos = [...(res.body?.avisados || []).map(a => a.titulo), ...(res.body?.habriaAvisado || [])];
+  ok('y ese sitio sale como inminente, con su aviso de tormenta preparado',
+     !reventó && Array.isArray(res.body?.inminentes) && res.body.inminentes.length === 1
+     && /mañana/.test(res.body.inminentes[0]) && titulos.some(t => /armando/i.test(String(t))),
+     JSON.stringify({ inminentes: res.body?.inminentes, titulos }).slice(0, 200));
+}
+globalThis.fetch = fetchReal;
 
 /* ── Y QUE «AÚN NO EXISTE» SIGA SIENDO VACÍO DE VERDAD ────────────── */
 /* La otra mitad del trato: si esto no valiera, el primer día de cada

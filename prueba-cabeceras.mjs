@@ -170,7 +170,7 @@ const CASOS = [
   ['rayos',      '/rayos?tormentas=1', 'nhc',
                  { ttl: 900, swr: 0, nav: 900, tipo: 'application/json', origen: 'nhc-noaa' }],
   ['estaciones', '/estaciones?lat=43.42&lon=-2.72', 'aemetObs',
-                 { ttl: 600, swr: 1800, nav: 300, tipo: 'application/json; charset=utf-8', origen: 'aemet-observacion' }],
+                 { ttl: 600, swr: 1800, sie: 3600, nav: 300, tipo: 'application/json; charset=utf-8', origen: 'aemet-observacion' }],
   // Las teselas: el de netlify/ (que en Vercel no corre) y el de api/ (el
   // que corre de verdad, con la ruta en `?ruta=` por la reescritura de
   // vercel.json). Los dos con los mismos números.
@@ -189,11 +189,11 @@ const cargar = async (f, carpeta = 'netlify') => cargados[`${carpeta}/${f}`] ??=
   pathToFileURL(path.join(aqui, ...(carpeta === 'api' ? ['api'] : ['netlify', 'functions']), `${f}.js`)).href)).default;
 
 const arrancar = async (f, ruta, doble, carpeta) => {
-  const pedidas = [];
-  globalThis.fetch = async (u) => { const url = String(u); pedidas.push(url); return DOBLES[doble](url); };
+  const pedidas = [], inits = [];
+  globalThis.fetch = async (u, init) => { const url = String(u); pedidas.push(url); inits.push(init); return DOBLES[doble](url); };
   const fn = await cargar(f, carpeta);
   const r = await fn(new Request(`https://x${ruta}`));
-  return { r, pedidas, h: Object.fromEntries(r.headers) };
+  return { r, pedidas, inits, h: Object.fromEntries(r.headers) };
 };
 
 for (const [f, ruta, doble, antes] of CASOS) {
@@ -223,6 +223,14 @@ for (const [f, ruta, doble, antes] of CASOS) {
   ok(`${nom}: content-type ${antes.tipo}`, h['content-type'] === antes.tipo, h['content-type']);
   ok(`${nom}: CORS abierto`, h['access-control-allow-origin'] === '*');
   if (antes.origen) ok(`${nom}: x-origen ${antes.origen}`, h['x-origen'] === antes.origen, h['x-origen']);
+}
+
+/* La ruta que sigue usando el Centro Operativo, con tope en las DOS
+   peticiones a AEMET (27-09-2026). */
+{
+  const { inits } = await arrancar('estaciones', '/estaciones?lat=43.42&lon=-2.72', 'aemetObs');
+  ok('estaciones.js: las dos peticiones a AEMET (índice y fichero) llevan tope de tiempo',
+     inits.length === 2 && inits.every(i => i && i.signal), `${inits.filter(i => !i?.signal).length} sin tope de ${inits.length}`);
 }
 
 /* Y con la fuente caída, no-store y sin cabecera de CDN: un 5xx no se pega. */

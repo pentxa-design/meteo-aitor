@@ -299,6 +299,33 @@ console.log('\n  El vigilante: agua y racha');
 const vig = fs.readFileSync(path.join(__dirname, 'api', 'vigilante.mjs'), 'utf8');
 const numVig = n => Number(vig.match(new RegExp('const ' + n + ' = ([0-9.]+);'))[1]);
 
+/* ── LA APP Y EL VIGILANTE NO COMPARTEN CÓDIGO: SE CRUZAN AQUÍ (27-09-2026) ──
+   El adversario cambió los listones de la app a 80/100 dejando el
+   vigilante en 70 y nadie lo vio. Los números del vigilante se LEEN de
+   app.js, no se repiten. */
+{
+  const A = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  const nApp = re => Number((A.match(re) || [])[1]);
+  ok('RACHA_TOPE del vigilante es el ámbar de SU perfil de caseta y poste (rafagaAviso), leído de app.js',
+     numVig('RACHA_TOPE') === nApp(/rafagaAviso: (\d+), rafagaBestia: \d+,/), `${numVig('RACHA_TOPE')} frente a ${nApp(/rafagaAviso: (\d+), rafagaBestia: \d+,/)}`);
+  ok('y CAPE_MIN / TAPA_MAX son CAPE_COMBINACION / TAPA_ROMPE de la app',
+     numVig('CAPE_MIN') === nApp(/const CAPE_COMBINACION = (\d+);/) && numVig('TAPA_MAX') === nApp(/const TAPA_ROMPE = (\d+);/));
+  ok('y el diálogo de los avisos de la app dice el mismo número de racha que el vigilante',
+     nApp(/racha<\/b> — por encima de (\d+) km\/h, la que te hace no salir/) === numVig('RACHA_TOPE'));
+  ok('y el mismo umbral de agua (AGUA_MIN) y de «fuerte» (AGUA_FUERTE)',
+     new RegExp(`desde ${String(numVig('AGUA_MIN')).replace('.', ',')} mm/h; «fuerte» a partir de ${numVig('AGUA_FUERTE').toFixed(1).replace('.', ',')}`).test(A));
+}
+
+/* El push (27-09-2026): con TTL 3600 y sin urgencia, un móvil que retrase
+   el aviso más de una hora (DuraSpeed, 25-09: 42 min) se quedaba sin él y
+   aquí constaba como enviado. Recordatorio: la conducta no se puede
+   arrancar sin claves VAPID. */
+ok('el push importante vive 6 h y pide despertar el móvil (urgency high); el resto, 1 h y normal',
+   /TTL: importante \? 6 \* 3600 : 3600, urgency: importante \? 'high' : 'normal'/.test(vig));
+ok('y la tanda del vigilante lleva sello de 10 min y pide el código de tormenta (lo ejecuta prueba-vigilante-reloj.mjs)',
+   /const selloTanda = \(\) => `&_=\$\{Math\.floor\(Date\.now\(\) \/ 600000\)\}`;/.test(vig)
+   && (vig.match(/precipitation,wind_gusts_10m,weather_code&forecast_days=2/g) || []).length === 2);
+
 ok('el agua se avisa desde 0,3 mm/h, no desde 0,1',
    numVig('AGUA_MIN') === 0.3,
    `0,1 salía 47 horas de 48 en un día de sol; está en el comentario`);
@@ -482,8 +509,8 @@ ok('GALDAMES usa el punto que mandó él, no el de la planta',
    desde la app, así que **el desajuste se creaba solo**. Cuatro
    emplazamientos suyos llevaban días sin que nadie los mirara. */
 console.log('\n  La lista del vigilante ya no se queda vieja');
-ok('lee SU lista de verdad, la que guarda la app',
-   /fetch\(`\$\{APP\}\/api\/torres`\)/.test(vig));
+ok('lee SU lista de verdad, la que guarda la app (y con tope de tiempo desde el 27-09)',
+   /fetch\(`\$\{APP\}\/api\/torres`, \{ signal: AbortSignal\.timeout\(\d+\) \}\)/.test(vig));
 ok('y la de escrita a mano solo se usa si eso falla',
    /let sitios = SITIOS, listaDeRespaldo = true;/.test(vig));
 ok('cuando usa la de respaldo, LO DICE en la respuesta',
@@ -1127,6 +1154,7 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
     ];
     const resp = SITIOS.map(s => ({ latitude: s.lat, longitude: s.lon, hourly: { time: ['x'], quien: s.n } }));
     const APP = 'x', MODELOS_AGUA = ['a'];
+    ${(V.match(/const selloTanda = [^\n]+/) || ['const selloTanda = () => "";'])[0]}
     let DEVUELVE = resp;
     const fetch = async () => ({ ok: true, status: 200, json: async () => DEVUELVE });
     ${trozo}
@@ -1225,13 +1253,17 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
      /\} else \{[\s\S]{0,260}mandado2 = true;/.test(V));
   ok('y si HABÍA algo y el envío falló, NO se marca: se reintenta (la lección del 01-09)',
      /!avisos\.some\(a2 => a2\.tag === 'parte2'\)\s*\n\s*\|\| enviados\.some\(e => e\.tag === 'parte2' && \(e\.enviados \|\| 0\) > 0\)/.test(V));
-  ok('las DOS ventanas de parte se saltan el freno de cadencia',
-     /const ventanaDelParte = \(h0 >= 6 && h0 < 12 && antes\?\.parteDe !== claveHoy\)\s*\n\s*\|\| \(h0 >= 13 && h0 < 16 && antes\?\.parte2De !== claveHoy\);/.test(V),
+  /* Desde el 27-09-2026 la conducta del parte (ventana, freno, reintento a
+     la media hora, comparación por sitio y con fecha) se EJECUTA en
+     `prueba-vigilante-reloj.mjs`. Aquí queda solo el recordatorio. */
+  ok('las DOS ventanas de parte se saltan el freno de cadencia, y no más de una vez cada 30 min si el envío falla',
+     /const ventanaDelParte = parteHaceMin >= 30 && \(\s*\n\s*\(h0 >= 6 && h0 < 12 && antes\?\.parteDe !== claveHoy\)\s*\n\s*\|\| \(h0 >= 13 && h0 < 16 && antes\?\.parte2De !== claveHoy\)\);/.test(V),
      'sin esto, a las 13:00 el freno de 2 h se lo comería');
-  ok('dice QUÉ HA CAMBIADO desde la mañana, que es para lo que sirve',
-     /const antesR = antes\?\.parteResumen \|\| null;/.test(V)
+  ok('dice QUÉ HA CAMBIADO desde la mañana, por SITIO y solo con el parte de HOY',
+     /const antesR = \(antes\?\.parteResumen && antes\.parteResumen\.fecha === claveHoy\) \? antes\.parteResumen : null;/.test(V)
      && /Respecto a la mañana: /.test(V)
-     && /parteResumen: resumenHoy,/.test(V));
+     && /parteResumen: resumenHoy,/.test(V)
+     && /resumenHoy = \{ fecha: claveHoy, rayo: conRayo\.map\(d => d\.n\)/.test(V));
   ok('y el pulso lo enseña, como `envia` y `nLista`',
      /parte2De: e\.parte2De \?\? null,/.test(V) && /parteResumen: e\.parteResumen \?\? null,/.test(V),
      'lo que decide tiene que poder mirarse desde fuera');
@@ -1250,10 +1282,12 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
      && /\{ desde: `\$\{claveHoy\}T\$\{String\(h0\)\.padStart\(2, '0'\)\}` \}/.test(V),
      'una tormenta de esta mañana ya pasada no puede tener al vigilante en ámbar toda la noche');
 
-  ok('el aviso de «no he podido mirar» solo suena si puede cambiar algo',
-     /const huecoImporta = nivel !== 'verde' \|\| seRepite \|\| loQueAcaboDeVer \|\| aCiegas;/.test(V)
+  ok('el aviso de «no he podido mirar» solo suena si puede cambiar algo: sus listones por delante, no el ojo',
+     /const huecoImporta = nivel !== 'verde' \|\| loQueAcaboDeVer \|\| aCiegas;/.test(V)
+     && /const porDelanteHoy = x => x && \(x\.fin == null \|\| x\.fin >= h0\);/.test(V)
+     && !/d\.ojo && \(\(d\.ojo\.cape \?\? 0\) >= CAPE_OJO/.test(V.slice(V.indexOf('const loQueAcaboDeVer'), V.indexOf('const huecoImporta')))
      && /const seRepite = fallos\.some\(f => \(antes\?\.noMirados \|\| \[\]\)\.includes\(f\.n\)\);/.test(V),
-     'suyo, 21-09: «si dan bueno y no dan nada malo, ni hace falta»');
+     'suyo, 21-09: «si dan bueno y no dan nada malo, ni hace falta»; el 25-09 sonó por CAPE 300 de ojo un día que daban bueno');
   /* 22-09, dos agujeros de ayer mismo. */
   ok('pero un CRÍTICO caído suena SIEMPRE, aunque sea él solo',
      /if \(hayCritico \|\| \(fallos\.length >= 4 && huecoImporta\)\)/.test(V)

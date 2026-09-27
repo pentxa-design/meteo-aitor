@@ -115,6 +115,12 @@ const HORA_SOLO_MANANA = 23;
 const HORA_SIN_COMPARATIVA = 20;                // a esa hora falsa la comparativa (7 modelos) NO contesta
 const HORA_SIN_FONDO = 13;                      // a esa hora `current` no trae mar de fondo (se lee de la serie)
 const HORA_SIN_EUSKALMET = 7;                   // a esa hora el lote de Euskalmet contesta 200 con ok:false (ninguna leída)
+/* A esa hora la observación de AHORA (`current`) dice cubierto —código 3,
+   90 % de nubes— mientras la serie horaria dice despejado. Hasta el 27-09
+   la trampa devolvía en `current` lo mismo que la hora, así que el hecho
+   «el cielo» no podía distinguir si la app lee `current` o no (lo cazó el
+   adversario rompiendo `conAhora` sin que nada se pusiera rojo). */
+const HORA_CURRENT_DISTINTO = 2;
 const RACHA_DIA = [30, 90, 60, 35, 40, 45, 50, 25, 20, 30];   // hoy: tormenta con racha floja
 
 /* ── LOS DATOS TRAMPA, construidos alrededor del reloj falso ────────── */
@@ -222,6 +228,10 @@ function trampa(fijo, hh) {
         if (cq.length) {
           const c = { time: `${iso(ahora).slice(0, 14)}${p2(ahora.getMinutes())}`, interval: 900 };
           for (const k of cq) c[k] = valor(om, k, ahora);
+          if (hh === HORA_CURRENT_DISTINTO) {
+            if (cq.includes('weather_code')) c.weather_code = 3;
+            if (cq.includes('cloud_cover')) c.cloud_cover = 90;
+          }
           /* El `current` de verdad se evalúa AL MINUTO: a las 20:30 con el
              ocaso a las 20:10 dice noche. El de la serie horaria, al
              principio de la hora. */
@@ -616,9 +626,12 @@ async function unaHora(hh) {
   {
     const avisos = [...doc.querySelectorAll('.viene')]
       .map(e => e.textContent.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    /* Por TROZO (27-09-2026): «AGUA hoy de 21:00 a 00:00 · RACHA 90 km/h a
+       las 15:00» pasaba porque la línea entera llevaba un «hoy». */
     for (const t of avisos)
-      if (/\d\d:00/.test(t) && !/\bhoy\b/.test(t))
-        falla(`el aviso rojo dice una hora sin decir el día: «${t.slice(0, 120)}»`);
+      for (const trozo of t.split('·'))
+        if (/\d\d:00/.test(trozo) && !/\bhoy\b/.test(trozo))
+          falla(`el aviso rojo dice una hora sin decir el día: «${trozo.trim().slice(0, 120)}» (en «${t.slice(0, 120)}»)`);
 
     if (hh === HORA_SOLO_MANANA) {
       /* Que la trampa muerda: mañana TIENE que llevar algo que avisar. */
@@ -807,7 +820,9 @@ async function unaHora(hh) {
         ['Ahora', (doc.querySelector('#kpis .viene')?.textContent || '').replace(/\s+/g, ' ').trim() || 'sin aviso'],
         ['Mis estaciones', (tarjetaTorre?.querySelector('.viene')?.textContent || '').replace(/\s+/g, ' ').trim() || 'sin aviso'] ] },
       { que: 'el cielo', ven: [
-        ['Ahora', txt(doc, '#nowDesc') || null],
+        /* Sin la nota «⚠ los otros ven…», que es un añadido de la portada
+           sobre la misma palabra votada (27-09-2026). */
+        ['Ahora', (txt(doc, '#nowDesc') || '').replace(/\s*⚠.*$/, '') || null],
         ['Mis estaciones', ((tTxt.match(/% nubes · ([^·]+) ·/) || [])[1] || '').trim() || null] ] },
     ];
     for (const H of HECHOS) {
@@ -824,6 +839,34 @@ async function unaHora(hh) {
       if (distintos.length > 1)
         falla(`cruce de pantallas: ${H.que} de BI BERMEO a las ${p2(hh)}:00 no coincide en todas las pantallas: `
             + dichos.map(([d, v]) => `${d}=«${v}»`).join(' · '));
+    }
+    /* ── Y QUE LAS DOS LEAN `current` (27-09-2026) ─────────────────────
+       A esa hora la observación dice cubierto y la serie despejado: si
+       una pantalla dice «Despejado», está leyendo la previsión de la hora
+       y no lo que hay ahora. */
+    if (hh === HORA_CURRENT_DISTINTO) {
+      /* La PALABRA es la votada entre los modelos (por diseño, 02-09 y
+         25-09: la nubosidad de uno solo no se fía); lo que tiene que
+         venir de `current` es el porcentaje PROPIO: la tarjeta lo imprime
+         («90 % nubes») y la portada lo delata en su nota («⚠ los otros
+         ven 10 %»), que solo sale si el propio es otro. */
+      const port = txt(doc, '#nowDesc') || '';
+      const pct = Number((tTxt.match(/(\d+) % nubes/) || [])[1]);
+      if (pct !== 90)
+        falla(`Mis estaciones no lee la nubosidad de la observación de ahora (90 %): la tarjeta dice «${(tTxt.match(/\d+ % nubes[^·]*/) || ['nada'])[0]}»`);
+      if (!/los otros ven 10 %/.test(port))
+        falla(`Ahora no lee la nubosidad de la observación de ahora (90 %, con los otros en 10): dice «${port}»`);
+    }
+    /* ── Y LA LÍNEA ROJA NO PUEDE ESTAR MUDA DONDE HAY ALGO HOY ────────
+       «sin aviso» == «sin aviso» pasaba el cruce con la función muerta
+       (adversario, 27-09-2026). A las 2 y a las 20 la trampa tiene agua
+       de ICON por delante (03-04 y 21-22); a las 7 y a las 13, la racha
+       de 90 de las 15:00. */
+    if ([2, 7, 13, 20].includes(hh)) {
+      const lr = HECHOS.find(H2 => H2.que === 'la línea roja de aviso');
+      for (const [donde, v] of lr.ven)
+        if (!v || v === 'sin aviso')
+          falla(`${donde}: la línea roja está muda a las ${p2(hh)}:00, con agua o racha de hoy en la trampa`);
     }
   }
 
