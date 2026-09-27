@@ -282,7 +282,9 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   ok('22:30 · del rayo de mañana solo se dice la madrugada («mañana 00h»), no el resto del día (su aviso de las 21:00)',
      !H2.reventó && H2.b.inminentes?.[0] === 'BERMEO mañana 00h', resumen(H2));
   ok('   y sale como inminente diciendo que es MAÑANA y a qué hora, con su aviso de tormenta',
-     Array.isArray(H.b.inminentes) && H.b.inminentes[0] === 'BERMEO mañana 00h-02h'
+     /* A las 22:30 las tres horas siguientes llegan hasta la 01h: se dice
+        hasta ahí, que es lo que cuenta ahora (deManana). */
+     Array.isArray(H.b.inminentes) && H.b.inminentes[0] === 'BERMEO mañana 00h-01h'
      && titulos(H.b).some(t => /armando/i.test(t)), resumen(H));
 }
 
@@ -341,6 +343,12 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
                            esc: { rayo: [{ k: 0, dia: 'man', horas: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] }] } });
   ok('20:00 · un rayo de MAÑANA de 00 a 13 h no es «CAMBIO» a las 20:00 (empieza a 4 h; va en el parte de las 06:30)',
      !N3.reventó && !titulos(N3.b).some(t => /CAMBIO/.test(t)), resumen(N3));
+  const N5 = await pasada({ hora: '22:00', antes: tranquilo('22:00', 130, {
+                              sitios: { BERMEO: { [MAN]: { ini: 13, fin: 19, tramos: [{ ini: 13, fin: 19 }] } } }, aguaSitios: {}, rachaSitios: {} }),
+                            esc: { rayo: [{ k: 0, dia: 'man', horas: Array.from({ length: 20 }, (_, i) => i) }] } });
+  const c5 = (N5.b.avisados || []).find(a => /CAMBIO/.test(a.titulo))?.cuerpo || '';
+  ok('22:00 · el CAMBIO de mañana solo cuenta la madrugada que cae en las 3 h siguientes: «ahora da rayo de 00h a 01h», no «13h-19h pasa a 00h-19h» (su aviso de las 22:00)',
+     /ahora da rayo de 00h a 01h/.test(c5) && !/19h/.test(c5), c5 || resumen(N5));
   const N4 = await pasada({ hora: '22:00', antes: conAguaGuardada('22:00', 130),
                            esc: { rayo: [{ k: 0, dia: 'man', horas: [0, 1, 2] }] } });
   ok('22:00 · pero el rayo de madrugada (00-02 h) sí avisa, que es la noche de guardia',

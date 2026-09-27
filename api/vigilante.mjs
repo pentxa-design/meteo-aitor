@@ -265,19 +265,18 @@ function enTramos(hs) {
 
    Ese día salió TRES veces: en el parte del servidor, en un
    «MARKINA tranquilo» de la mañana, y aquí.                          */
-function cuandoTxt(d, claveHoy, claveManana) {
+function cuandoTxt(d, claveHoy, claveManana, deManana = x => x) {
   const hoy = d.dias[claveHoy];
   /* Un sitio que entra SOLO por su rayo de mañana (desde las 21:00, con
      `hastaManana`) salía como «BERMEO » a secas: sin hora, sin día
      (27-09-2026). Se dice cuándo, y que es mañana. */
   if (!hoy) {
-    const man = d.dias[claveManana];
+    /* Solo lo que cuenta de mañana (la madrugada, por `deManana`): su
+       aviso de las 21:00 del 27-09 decía «SANTAMAÑA mañana 00h y 12h-14h
+       y 18h-19h», y lo de la tarde de mañana va en el parte. */
+    const man = deManana(d.dias[claveManana]);
     if (!man) return '';
-    /* Solo la madrugada (las tres primeras horas, que son las que lo hacen
-       inminente): su aviso de las 21:00 del 27-09 decía «SANTAMAÑA mañana
-       00h y 12h-14h y 18h-19h», y lo de la tarde de mañana va en el parte. */
-    const tm = (man.tramos || []).filter(r => r.ini <= 2)
-      .map(r => r.ini === r.fin ? hh(r.ini) : `${hh(r.ini)}-${hh(Math.min(r.fin, 2))}`).join(' y ');
+    const tm = (man.tramos || []).map(r => r.ini === r.fin ? hh(r.ini) : `${hh(r.ini)}-${hh(r.fin)}`).join(' y ');
     return `mañana ${tm || hh(man.ini)}`;
   }
   const t = (hoy.tramos || []).map(r => r.ini === r.fin ? hh(r.ini) : `${hh(r.ini)}-${hh(r.fin)}`).join(' y ');
@@ -938,6 +937,21 @@ export default async function handler(req, res) {
   const horaMarcadorAhora = horaLocal(new Date().toISOString());   // para apuntar en el marcador una vez por hora (27-09-2026)
   const manana = new Date(ahora); manana.setDate(manana.getDate() + 1);
   const claveManana = `${manana.getFullYear()}-${String(manana.getMonth() + 1).padStart(2, '0')}-${String(manana.getDate()).padStart(2, '0')}`;
+  /* ── QUÉ CUENTA DE MAÑANA AHORA MISMO: UNA SOLA PUERTA (27-09-2026) ──
+     Suyo, 23:25, después de tres avisos de la misma noche con lo de
+     mañana pegado a lo de hoy («hay que buscar la raíz, para que no pase
+     en todas»): cinco sitios distintos leían `dias[claveManana]` cada
+     uno a su manera. Desde aquí, TODOS pasan por `deManana()`: de mañana
+     solo cuenta la madrugada que cae dentro de las tres horas siguientes
+     (desde las 21:00; a las 22:00, hasta las 01h), recortada; el resto va
+     en el parte de las 06:30. Devuelve null si no cuenta nada. El estado
+     guardado NO se recorta: se recorta la lectura, no el dato. */
+  const deManana = x => {
+    const hastaManana = h0 + 3 - 24;        // negativo si no se cruza la medianoche (h0 se declara más abajo; esto corre después)
+    if (!(hastaManana >= 0 && x && x.ini <= hastaManana)) return null;
+    const tramos = (x.tramos || []).filter(r => r.ini <= hastaManana).map(r => ({ ...r, fin: Math.min(r.fin, hastaManana) }));
+    return { ...x, fin: Math.min(x.fin, hastaManana), tramos };
+  };
   const h0 = ahora.getHours();
 
 
@@ -1049,7 +1063,7 @@ export default async function handler(req, res) {
        noche el vigilante se queda en ámbar (cada media hora) justo cuando
        se está armando lo de las 00:00 (20-09-2026). */
     || Object.values(antes.sitios || {}).some(d => porDelante(d?.[claveHoy])
-         || (h0 >= 21 && d?.[claveManana]))
+         || deManana(d?.[claveManana]))
     || Object.values(antes.rachaSitios || {}).some(r => r?.[claveHoy] && r[claveHoy].kmh >= RACHA_TOPE && porDelante(r[claveHoy]))));
   /* ══════════════════════════════════════════════════════════════════
      LA GALERNA (21-09-2026)
@@ -1295,12 +1309,8 @@ export default async function handler(req, res) {
      TEXTO y la DETECCIÓN se quedó igual. Ahora, cuando las tres horas
      siguientes cruzan la medianoche, se miran también las primeras horas
      de mañana. */
-  const hastaManana = h0 + 3 - 24;          // negativo si no se cruza la medianoche
   const inminentes = buenos.filter(d => {
-    if (hastaManana >= 0) {
-      const m = d.dias[claveManana];
-      if (m && m.ini <= hastaManana) return true;
-    }
+    if (deManana(d.dias[claveManana])) return true;
     const t = d.dias[claveHoy];
     return t && t.ini <= h0 + 3 && t.fin >= h0;
   });
@@ -1369,11 +1379,9 @@ export default async function handler(req, res) {
          desde las 21:00: `hastaManana`); el resto va en el parte de las
          06:30. */
       for (const [clave, cual] of [[claveHoy, 'hoy'], [claveManana, 'mañana']]) {
-        if (cual === 'mañana') {
-          const b0 = d.dias[clave];
-          if (!(hastaManana >= 0 && b0 && b0.ini <= hastaManana)) continue;
-        }
-        const a = antes.sitios[d.n]?.[clave], b = d.dias[clave];
+        if (cual === 'mañana' && !deManana(d.dias[clave])) continue;
+        const a = cual === 'mañana' ? deManana(antes.sitios[d.n]?.[clave]) : antes.sitios[d.n]?.[clave];
+        const b = cual === 'mañana' ? deManana(d.dias[clave]) : d.dias[clave];
         if (!a && !b) continue;
         /* Lo que ya pasó no es aviso (§11): un tramo de HOY que acabó antes de esta hora se calla. */
         if (!a && b) { if (!(cual === 'hoy' && b.fin < h0)) cambios.push({ n: d.n, lat: d.lat, lon: d.lon, cual, txt: `ahora da rayo ${tramoTxt(b.ini, b.fin)}`, peor: true, critico: d.critico }); continue; }
@@ -1467,14 +1475,14 @@ export default async function handler(req, res) {
      de forma para no repetir avisos ya mandados. */
   const firmaAhora = inminentes.map(d => d.dias[claveHoy]
       ? `${d.n}:${d.dias[claveHoy].ini}-${d.dias[claveHoy].fin}`
-      : `${d.n}:mañana:${d.dias[claveManana]?.ini}-${d.dias[claveManana]?.fin}`).sort().join('|');
+      : `${d.n}:mañana:${deManana(d.dias[claveManana])?.ini}-${deManana(d.dias[claveManana])?.fin}`).sort().join('|');
   const yaAvisado = antes?.ultimoAviso === firmaAhora;
 
   const avisos = [];
   if (inminentes.length && !yaAvisado) {
     const crit = inminentes.find(d => d.critico);
     const lista = [...inminentes].sort((a, b) => (b.critico ? 1 : 0) - (a.critico ? 1 : 0))
-      .slice(0, 4).map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana)}`).join(' · ');
+      .slice(0, 4).map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana, deManana)}`).join(' · ');
     avisos.push({
       titulo: crit ? `⚡ MATIENA (crítico) y ${inminentes.length - 1} más` : `⚡ Se está armando en ${inminentes.length}`,
       /* Afecta a varios: se abre «Mis estaciones», que los enseña todos. */
@@ -1596,9 +1604,9 @@ export default async function handler(req, res) {
      que él pidió que no sonara. */
   const porDelanteHoy = x => x && (x.fin == null || x.fin >= h0);
   const loQueAcaboDeVer = buenos.some(d =>
-    (d.dias && (porDelanteHoy(d.dias[claveHoy]) || d.dias[claveManana]))
-    || (d.racha && (porDelanteHoy(d.racha[claveHoy]) || d.racha[claveManana]))
-    || (d.agua && ((porDelanteHoy(d.agua[claveHoy]) && d.agua[claveHoy].fuerte) || d.agua[claveManana]?.fuerte)));
+    (d.dias && (porDelanteHoy(d.dias[claveHoy]) || deManana(d.dias[claveManana])))
+    || (d.racha && porDelanteHoy(d.racha[claveHoy]))
+    || (d.agua && porDelanteHoy(d.agua[claveHoy]) && d.agua[claveHoy].fuerte));
   /* Sin poder leer el estado no se puede comparar, y ahí el hueco pesa
      MÁS, no menos: `nivel` valdría verde por defecto y callaría. */
   const aCiegas = !antes;
@@ -1694,7 +1702,7 @@ export default async function handler(req, res) {
     const trozos = [];
     if (conRayo.length) {
       trozos.push(`⚡ rayo en ${conRayo.length}: `
-        + conRayo.slice(0, 3).map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana)}`).join(' · ')
+        + conRayo.slice(0, 3).map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana, deManana)}`).join(' · ')
         + (conRayo.length > 3 ? ` y ${conRayo.length - 3} más` : ''));
     }
     if (conAgua.length) {
@@ -1781,7 +1789,7 @@ export default async function handler(req, res) {
       }
       const trozos2 = [];
       if (conRayo.length) trozos2.push(`⚡ rayo en ${conRayo.length}: `
-        + conRayo.slice(0, 3).map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana)}`).join(' · ')
+        + conRayo.slice(0, 3).map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana, deManana)}`).join(' · ')
         + (conRayo.length > 3 ? ` y ${conRayo.length - 3} más` : ''));
       if (conAgua.length) {
         const peor = conAgua.reduce((a2, b2) => b2.agua[claveHoy].mm > a2.agua[claveHoy].mm ? b2 : a2);
@@ -1989,7 +1997,7 @@ export default async function handler(req, res) {
        mirando emplazamientos viejos y eso NO puede pasar en silencio: es
        justo el fallo del 29-08, que se dejó cuatro sitios suyos fuera. */
     listaDeRespaldo, cuantosSitios: sitios.length,
-    inminentes: inminentes.map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana)}`),
+    inminentes: inminentes.map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana, deManana)}`),
     cambios: cambios.map(c => `${c.n} (${c.cual}): ${c.txt}`),
     avisados: enviados.map(e => ({ titulo: e.titulo, cuerpo: e.cuerpo, tag: e.tag, enviados: e.enviados, nota: e.nota })),
     callado: !enviados.length,

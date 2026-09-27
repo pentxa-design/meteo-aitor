@@ -442,7 +442,8 @@ ok('los avisos de agua y racha usan los TRAMOS, no los extremos del día',
    en la que él trabaja de noche. */
 ok('lo inminente mira también las primeras horas de mañana',
    /const hastaManana = h0 \+ 3 - 24;/.test(vig)
-   && /if \(hastaManana >= 0\) \{\s*\n\s*const m = d\.dias\[claveManana\];/.test(vig),
+   && /if \(deManana\(d\.dias\[claveManana\]\)\) return true;/.test(vig)
+   && (vig.match(/deManana\(/g) || []).length >= 8,
    'él trabaja de noche: una tormenta a las 00:00 tiene que avisar a las 23:00');
 /* ── QUIÉN VIBRA Y QUIÉN NO (20-09-2026) ─────────────────────────────
    Esa noche el aviso de prueba LLEGÓ al Ulefone y no sonó: lo tenía en
@@ -459,7 +460,7 @@ ok('y el parte de la mañana NO vibra: llega todos los días',
    'un móvil que vibra a diario se silencia entero');
 
 ok('y esa noche el vigilante no se queda en ámbar',
-   /\|\| \(h0 >= 21 && d\?\.\[claveManana\]\)/.test(vig));
+   /\|\| deManana\(d\?\.\[claveManana\]\)\)/.test(vig));
 ok('y dice cuántos sitios ha mirado, que un cero sin contexto no vale',
    /Los \$\{buenos\.length\} emplazamientos/.test(vig));
 /* 12 es EL TOPE del plan Hobby de Vercel, y con /api/ajustes (30-08,

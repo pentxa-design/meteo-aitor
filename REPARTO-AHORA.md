@@ -2055,3 +2055,4 @@ Lo apunto en TRASPASO §16 con builds y medidas. `deploy.sh` desde el portátil:
 9. **(19:20, 27-09, iMac)** Cabecera del parte con los sitios con rayo nombrados y pulsables (llevan a su tarjeta); aviso rojo de la tarjeta a lo ancho. Build 2026.09.27-1916. TRASPASO §43. Queda su `./subir-a-github.sh`.
 10. **(20:10, 27-09)** Con la tormenta encima: push con prioridad alta en todo; lo de mañana fuera de los avisos de hoy (salvo el rayo de madrugada). Builds 1956/2001/2005. TRASPASO §44. Pendiente mañana: radar observado en el vigilante.
 11. **(21:20, 27-09)** Inminente de madrugada solo con la madrugada (build 2112); rutina del iMac «Vigilante tormentas» APAGADA (duplicaba y mandaba lo de mañana de noche). TRASPASO §44 bis.
+12. **(23:30, 27-09)** Raíz única `deManana()` para todo lo de mañana en el vigilante (build 2327). TRASPASO §44 ter.
