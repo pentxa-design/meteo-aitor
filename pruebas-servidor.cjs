@@ -320,8 +320,8 @@ const numVig = n => Number(vig.match(new RegExp('const ' + n + ' = ([0-9.]+);'))
    el aviso más de una hora (DuraSpeed, 25-09: 42 min) se quedaba sin él y
    aquí constaba como enviado. Recordatorio: la conducta no se puede
    arrancar sin claves VAPID. */
-ok('el push importante vive 6 h y pide despertar el móvil (urgency high); el resto, 1 h y normal',
-   /TTL: importante \? 6 \* 3600 : 3600, urgency: importante \? 'high' : 'normal'/.test(vig));
+ok('el push importante vive 6 h; TODOS piden despertar el móvil (urgency high): el de agua de las 19:31 del 27-09 llegó a las 19:52, al abrir la app',
+   /TTL: importante \? 6 \* 3600 : 3600, urgency: 'high'/.test(vig) && !/urgency: importante \?/.test(vig));
 ok('y la tanda del vigilante lleva sello de 10 min y pide el código de tormenta (lo ejecuta prueba-vigilante-reloj.mjs)',
    /const selloTanda = \(\) => `&_=\$\{Math\.floor\(Date\.now\(\) \/ 600000\)\}`;/.test(vig)
    && (vig.match(/precipitation,wind_gusts_10m,weather_code&forecast_days=2/g) || []).length === 2);
@@ -341,6 +341,19 @@ ok('y la tanda del vigilante lleva sello de 10 min y pide el código de tormenta
   ok('el candado sigue cubriendo la app (/ e index.html)', !!re && re.test('/') && re.test('/index.html'));
   ok('y NO cubre /estaciones, la ruta del Centro Operativo', !!re && !re.test('/estaciones'), String(m));
   ok('ni el service worker, ni api/, que ya estaban fuera', !!re && !re.test('/sw.js') && !re.test('/api/euskalmet'));
+}
+
+/* Todo push de la casa va con prioridad alta (27-09-2026, 19:57): el de agua
+   de las 19:31 llegó a las 19:52, al abrir la app. Vigilante, parte de la
+   mañana, avisar y el botón de prueba. */
+{
+  const conPush = ['vigilante.mjs', 'parte.mjs', 'avisar.mjs', 'prueba-aviso.mjs']
+    .map(f => [f, fs.readFileSync(path.join(__dirname, 'api', f), 'utf8')]);
+  for (const [f, src] of conPush) {
+    const llamadas = src.match(/sendNotification\([\s\S]*?\);/g) || [];
+    ok(`${f}: cada sendNotification lleva urgency: 'high'`,
+       llamadas.length >= 1 && llamadas.every(c => /urgency: 'high'/.test(c)), `${llamadas.length} llamadas`);
+  }
 }
 
 ok('el agua se avisa desde 0,3 mm/h, no desde 0,1',

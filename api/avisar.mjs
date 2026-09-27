@@ -65,7 +65,7 @@ export default async function handler(req, res) {
   const muertos = [];
   const resultados = await Promise.all(aparatos.map(async a => {
     try {
-      await webpush.sendNotification({ endpoint: a.endpoint, keys: a.keys }, carga, { TTL: 3600 });
+      await webpush.sendNotification({ endpoint: a.endpoint, keys: a.keys }, carga, { TTL: 3600, urgency: 'high' });   // alta: Android retiene los normales (27-09-2026)
       return { apodo: a.apodo, ok: true };
     } catch (e) {
       const cod = e?.statusCode;

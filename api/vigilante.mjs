@@ -595,10 +595,13 @@ async function empujar(titulo, cuerpo, tag, importante, url) {
   await Promise.all(aparatos.map(async a => {
     /* TTL y urgencia (27-09-2026): con TTL 3600 y sin urgencia, un móvil
        que retrase el aviso más de una hora (DuraSpeed, 25-09: 42 min) se
-       queda sin él y aquí constaba como enviado. Lo importante vive 6 h y
-       pide despertar el aparato; lo demás, como antes. */
+       queda sin él y aquí constaba como enviado. Lo importante vive 6 h.
+       Y TODOS van con urgencia alta desde las 19:57 de ese mismo día: el
+       aviso de agua de Arbaiza salió a las 19:31 y su móvil lo enseñó a
+       las 19:52, al abrir la app. Con urgencia normal Android lo retiene;
+       con alta lo despierta. Son pocos avisos: no hay nada que ahorrar. */
     try { await webpush.sendNotification({ endpoint: a.endpoint, keys: a.keys }, carga,
-                                         { TTL: importante ? 6 * 3600 : 3600, urgency: importante ? 'high' : 'normal' }); enviados++; }
+                                         { TTL: importante ? 6 * 3600 : 3600, urgency: 'high' }); enviados++; }
     catch (e) { if (e?.statusCode === 404 || e?.statusCode === 410) muertos.push(a.endpoint); }
   }));
   /* Igual que en `avisar.mjs`: limpiar la lista es tarea de mantenimiento
@@ -1355,7 +1358,17 @@ export default async function handler(req, res) {
 
   if (antes?.sitios) {
     for (const d of buenos) {
+      /* LO DE MAÑANA SE AVISA MAÑANA (27-09-2026, 20:01, su pantallazo:
+         «CAMBIO MAÑANA · BERMEO (mañana): ahora da rayo de 00h a 13h…
+         OIZ (mañana): 13h-18h pasa a 13h-19h»). El rayo de mañana solo
+         cuenta si empieza en las tres horas siguientes (la madrugada,
+         desde las 21:00: `hastaManana`); el resto va en el parte de las
+         06:30. */
       for (const [clave, cual] of [[claveHoy, 'hoy'], [claveManana, 'mañana']]) {
+        if (cual === 'mañana') {
+          const b0 = d.dias[clave];
+          if (!(hastaManana >= 0 && b0 && b0.ini <= hastaManana)) continue;
+        }
         const a = antes.sitios[d.n]?.[clave], b = d.dias[clave];
         if (!a && !b) continue;
         /* Lo que ya pasó no es aviso (§11): un tramo de HOY que acabó antes de esta hora se calla. */
@@ -1399,7 +1412,9 @@ export default async function handler(req, res) {
   const hayRachaGuardada = !!antes?.rachaSitios;
   if (antes?.sitios) {
     for (const d of buenos) {
-      for (const [clave, cual] of [[claveHoy, 'hoy'], [claveManana, 'mañana']]) {
+      /* Solo HOY (27-09-2026): el agua y la racha de mañana van en el parte
+         de las 06:30, no en un aviso a las 20:00 de hoy. */
+      for (const [clave, cual] of [[claveHoy, 'hoy']]) {
         const va = antes.aguaSitios?.[d.n]?.[clave], vb = d.agua?.[clave];
         if (vb && !va && hayAguaGuardada && !(cual === 'hoy' && vb.fin < h0)) {
           cambiosAgua.push({ n: d.n, lat: d.lat, lon: d.lon, cual, peor: true, critico: d.critico,

@@ -314,6 +314,35 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      !L.reventó && L.b.marcador?.saltado, resumen(L));
 }
 
+/* ── LO DE MAÑANA SE AVISA MAÑANA (27-09-2026, 20:01, su pantallazo) ───
+   «AGUA MAÑANA · CARRANZA (mañana): el agua pasa a fuerte a las 20h.
+   BALMASEDA (mañana): el agua se adelanta: 16h pasa a 00h» a las 20:00 de
+   hoy. Los cambios de agua y racha de MAÑANA no son aviso: van en el
+   parte de las 06:30. El rayo de madrugada (`hastaManana`) sigue igual. */
+{
+  const conAguaGuardada = (hora, min) => tranquilo(hora, min, {
+    sitios: { BERMEO: {}, ORDUNA: {}, MUNGIA: {}, DURANGO: {}, GERNIKA: {}, OIZ: {} },
+    aguaSitios: { BERMEO: { [MAN]: { ini: 16, fin: 17, mm: 0.5, fuerte: false, tramos: [{ ini: 16, fin: 17 }] } } },
+    rachaSitios: {},
+  });
+  const N = await pasada({ hora: '20:00', antes: conAguaGuardada('20:00', 130),
+                           esc: { agua: [{ k: 0, dia: 'man', horas: [0, 1, 2, 3], mm: 2.5 }] } });
+  ok('20:00 · el agua de MAÑANA que cambia (se adelanta y pasa a fuerte) NO es aviso de hoy',
+     !N.reventó && !titulos(N.b).some(t => /AGUA/i.test(t)), resumen(N));
+  const N2 = await pasada({ hora: '20:00', antes: conAguaGuardada('20:00', 130),
+                           esc: { agua: [{ k: 1, dia: 'hoy', horas: [21, 22], mm: 2.5 }] } });
+  ok('20:00 · agua nueva HOY en ORDUNA sí es aviso, y el título dice HOY',
+     !N2.reventó && titulos(N2.b).some(t => /AGUA HOY/.test(t)), resumen(N2));
+  const N3 = await pasada({ hora: '20:00', antes: conAguaGuardada('20:00', 130),
+                           esc: { rayo: [{ k: 0, dia: 'man', horas: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] }] } });
+  ok('20:00 · un rayo de MAÑANA de 00 a 13 h no es «CAMBIO» a las 20:00 (empieza a 4 h; va en el parte de las 06:30)',
+     !N3.reventó && !titulos(N3.b).some(t => /CAMBIO/.test(t)), resumen(N3));
+  const N4 = await pasada({ hora: '22:00', antes: conAguaGuardada('22:00', 130),
+                           esc: { rayo: [{ k: 0, dia: 'man', horas: [0, 1, 2] }] } });
+  ok('22:00 · pero el rayo de madrugada (00-02 h) sí avisa, que es la noche de guardia',
+     !N4.reventó && titulos(N4.b).some(t => /CAMBIO|armando/i.test(t)), resumen(N4));
+}
+
 /* ── EL PULSO, 60 s DE CDN ─────────────────────────────────────────── */
 {
   const M = await pasada({ hora: '14:00', antes: tranquilo('14:00', 10), metodo: 'GET', query: { pulso: '1' } });

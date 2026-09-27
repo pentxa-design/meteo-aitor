@@ -280,7 +280,7 @@ export default async function handler(req, res) {
     const carga = JSON.stringify({ titulo: tit, cuerpo, tag: 'parte',
                                    enviado: new Date().toISOString() });
     await Promise.all(aparatos.map(async a => {
-      try { await webpush.sendNotification({ endpoint: a.endpoint, keys: a.keys }, carga, { TTL: 6 * 3600 }); enviados++; }
+      try { await webpush.sendNotification({ endpoint: a.endpoint, keys: a.keys }, carga, { TTL: 6 * 3600, urgency: 'high' }); enviados++; }   // alta (27-09-2026)
       catch (e) { if (e?.statusCode === 404 || e?.statusCode === 410) muertos.push(a.endpoint); }
     }));
     /* Envuelto (01-09-2026, barrido): con el almacén suspendido esta

@@ -39,7 +39,7 @@ export default async function handler(req, res) {
         cuerpo: `Esta viene del servidor. Si la ves, los avisos funcionan de verdad. Enviada a las ${ahora}.`,
         tag: 'prueba',
         enviado: new Date().toISOString(),
-      }), { TTL: 600 });
+      }), { TTL: 600, urgency: 'high' });
     return res.status(200).json({ ok: true, enviados: 1 });
   } catch (e) {
     return res.status(200).json({ ok: false, enviados: 0,
