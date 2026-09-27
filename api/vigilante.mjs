@@ -273,8 +273,12 @@ function cuandoTxt(d, claveHoy, claveManana) {
   if (!hoy) {
     const man = d.dias[claveManana];
     if (!man) return '';
-    const tm = (man.tramos || []).map(r => r.ini === r.fin ? hh(r.ini) : `${hh(r.ini)}-${hh(r.fin)}`).join(' y ');
-    return `mañana ${tm || `${hh(man.ini)}-${hh(man.fin)}`}`;
+    /* Solo la madrugada (las tres primeras horas, que son las que lo hacen
+       inminente): su aviso de las 21:00 del 27-09 decía «SANTAMAÑA mañana
+       00h y 12h-14h y 18h-19h», y lo de la tarde de mañana va en el parte. */
+    const tm = (man.tramos || []).filter(r => r.ini <= 2)
+      .map(r => r.ini === r.fin ? hh(r.ini) : `${hh(r.ini)}-${hh(Math.min(r.fin, 2))}`).join(' y ');
+    return `mañana ${tm || hh(man.ini)}`;
   }
   const t = (hoy.tramos || []).map(r => r.ini === r.fin ? hh(r.ini) : `${hh(r.ini)}-${hh(r.fin)}`).join(' y ');
 

@@ -277,6 +277,10 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
                            esc: { rayo: [{ k: 0, dia: 'man', horas: [0, 1, 2] }] } });
   ok('22:30 · un sitio con rayo SOLO mañana de 00 a 02 h no revienta la pasada (TypeError en la firma)',
      !H.reventó && H.res.code === 200, resumen(H));
+  const H2 = await pasada({ hora: '22:30', antes: tranquilo('22:30', 130),
+                            esc: { rayo: [{ k: 0, dia: 'man', horas: [0, 12, 13, 18, 19] }] } });
+  ok('22:30 · del rayo de mañana solo se dice la madrugada («mañana 00h»), no el resto del día (su aviso de las 21:00)',
+     !H2.reventó && H2.b.inminentes?.[0] === 'BERMEO mañana 00h', resumen(H2));
   ok('   y sale como inminente diciendo que es MAÑANA y a qué hora, con su aviso de tormenta',
      Array.isArray(H.b.inminentes) && H.b.inminentes[0] === 'BERMEO mañana 00h-02h'
      && titulos(H.b).some(t => /armando/i.test(t)), resumen(H));
