@@ -4257,10 +4257,41 @@ const Maps = {
       return `${rgba(c)} ${((v - min) / span * 100).toFixed(2)}%`;
     }).join(',');
 
-    // Etiquetas: como mucho 7, repartidas
+    /* ── SUS LISTONES SE ROTULAN SIEMPRE (27-09-2026) ────────────────
+       Las etiquetas se elegían «una de cada dos», y con eso la barra
+       caía justo al lado de lo que él necesita leer: en Ráfagas
+       rotulaba el **69** —que no es ningún listón suyo, es su aviso
+       menos uno— y se saltaba el **70**; en CAPE rotulaba el 200 y el
+       500, que son de relleno, y no el **300** ni el **700**, que es
+       donde el propio comentario dice que está el salto de color gordo.
+       En la capa con la que decide si sube alguien, la barra no dejaba
+       leer dónde está su límite.
+
+       Ahora sus listones van rotulados siempre y lo demás se adelgaza
+       alrededor. Los números salen de donde viven, no escritos aquí. */
+    const suyos = new Set();
+    {
+      const L = (typeof listonRafaga === 'function' && listonRafaga()) || null;
+      const thr = (typeof S !== 'undefined' && S?.thr) || null;
+      const añade = x => { if (x !== null && x !== undefined && isFinite(x)) suyos.add(Number(x)); };
+      if (this.layer === 'gusts' && L) { añade(L.warn); añade(L.no); }
+      if (this.layer === 'cape') {
+        añade(thr?.capeWarn ?? 300); añade(thr?.capeNo ?? 1000);
+        añade(typeof CAPE_COMBINACION !== 'undefined' ? CAPE_COMBINACION : 700);
+      }
+    }
+    const esSuyo = i => {
+      const val = e.etiquetas ? e.etiquetas[i] : bp[i] * e.factor;
+      return suyos.has(Math.round(val));
+    };
+    // Etiquetas: como mucho 7, repartidas — y las suyas, siempre
     const paso = Math.max(1, Math.ceil(n / 7));
     const ticks = bp.map((v, i) => {
-      if (i % paso && i !== n - 1) return '';
+      if (i % paso && i !== n - 1 && !esSuyo(i)) return '';
+      /* Y si un corte cae pegado a un listón suyo, manda el listón: dos
+         números a un milímetro no se leen. */
+      if (!esSuyo(i) && suyos.size
+          && [i - 1, i + 1].some(j => j >= 0 && j < n && esSuyo(j))) return '';
       const val = e.etiquetas ? e.etiquetas[i] : v * e.factor;
       const txt = Math.abs(val) >= 100 ? val.toFixed(0)
                 : Math.abs(val) >= 10  ? val.toFixed(0)

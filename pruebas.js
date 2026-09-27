@@ -587,6 +587,64 @@ grupo('El color de la racha se decide con el número que se ve (25-09-2026)');
    todos los días deja de leerse — la lección del ámbar de los 49 km/h,
    que él mismo tumbó el 25-09.
    ══════════════════════════════════════════════════════════════════════ */
+grupo('La barra del mapa rotula SUS listones, no los de al lado (27-09-2026)');
+{
+  /* Del barrido que miró la pantalla: las etiquetas se elegían «una de
+     cada dos» y caían justo al lado de lo que él necesita leer. En
+     Ráfagas rotulaba el 69 —su aviso menos uno— y se saltaba el 70; en
+     CAPE rotulaba el 200 y el 500, de relleno, y no el 300 ni el 700,
+     que es donde está el salto de color gordo. En la capa con la que
+     decide si sube alguien, la barra no dejaba leer su límite. */
+  const M2 = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const rotula = (bp, suyos) => {
+    const n = bp.length, S_ = new Set(suyos), es = i => S_.has(Math.round(bp[i]));
+    const paso = Math.max(1, Math.ceil(n / 7)), out = [];
+    bp.forEach((v, i) => {
+      if (i % paso && i !== n - 1 && !es(i)) return;
+      if (!es(i) && S_.size && [i - 1, i + 1].some(j => j >= 0 && j < n && es(j))) return;
+      out.push(v);
+    });
+    return out;
+  };
+  const raf = rotula([0, 21, 32, 42, 69, 70, 80, 89, 90, 110, 130, 150], [70, 90]);
+  const cap = rotula([0, 100, 200, 300, 500, 700, 1000, 1500, 2000, 2500, 3000, 4000], [300, 700, 1000]);
+  ok('en Ráfagas se leen su aviso (70) y su tope (90), y no el 69 de al lado',
+     raf.includes(70) && raf.includes(90) && !raf.includes(69) && !raf.includes(89),
+     raf.join(' · '));
+  ok('en CAPE se leen su 300, el 700 de la combinación y su 1.000',
+     cap.includes(300) && cap.includes(700) && cap.includes(1000) && !cap.includes(200),
+     cap.join(' · '));
+  ok('y la barra los saca de donde viven, no escritos en la leyenda',
+     /if \(this\.layer === 'gusts' && L\) \{ añade\(L\.warn\); añade\(L\.no\); \}/.test(M2)
+     && /añade\(thr\?\.capeWarn \?\? 300\); añade\(thr\?\.capeNo \?\? 1000\);/.test(M2)
+     && /const esSuyo = i =>/.test(M2),
+     'si mañana los cambia en Ajustes, la barra cambia con él');
+}
+
+grupo('«La ve X» solo si X ve la ventana entera (27-09-2026, medido)');
+{
+  /* Del barrido que mira la pantalla: la línea roja decía «AGUA hoy de
+     18:00 a 00:00 · la ve AROME HD» y AROME daba 0,0 mm a las 18, 19 y
+     20 — ahí el único que veía algo era ECMWF con 0,1. La ventana es la
+     UNIÓN de todos los modelos y el nombre era el del PICO, así que se
+     le colgaba a un modelo una ventana que no ve. Y la portada del
+     mismo sitio lo desmentía: «AROME HD la ve seca». */
+  const L = (picoAbarca) => ({ k: 'x', llueve: true, quien: 'AROME HD', picoAbarca,
+                               ini: Date.now(), fin: Date.now() + 3600e3, pico: 8.8 });
+  const texto = l => (l.quien
+    ? (l.picoAbarca === false ? ` · lo más fuerte lo ve ${l.quien}` : ` · la ve ${l.quien}`) : '');
+  ok('si el del pico ve la ventana entera, se dice «la ve X»',
+     texto(L(true)) === ' · la ve AROME HD', texto(L(true)));
+  ok('y si solo tiene el pico, se dice eso y no otra cosa',
+     texto(L(false)) === ' · lo más fuerte lo ve AROME HD', texto(L(false)));
+  ok('la marca viaja con el dato, no se recalcula en cada pantalla',
+     /const picoAbarca = !!quien && desdeCada\.has\(quien\) && \+desdeCada\.get\(quien\) <= \+ini;/.test(src)
+     && /picoAbarca, horasAgua,/.test(src));
+  ok('y las TRES pantallas que nombran al modelo del agua la miran',
+     (src.match(/picoAbarca === false/g) || []).length === 3,
+     'la línea roja, la línea de agua de la tarjeta y el parte');
+}
+
 grupo('El día se suma de SUS horas: el resumen diario de ECMWF miente (27-09-2026, medido)');
 {
   /* MEDIDO contra la API el 27-09-2026 en Bermeo: para el domingo 27,
@@ -635,6 +693,45 @@ grupo('El día se suma de SUS horas: el resumen diario de ECMWF miente (27-09-20
   ok('y del modelo SIN horas no se inventa nada: su resumen se queda como vino',
      R.daily.precipitation_sum_icon_seamless[i] === 0.4,
      `da ${R.daily.precipitation_sum_icon_seamless[i]}`);
+
+  /* ── UN DÍA A MEDIAS TAMPOCO ES UN DÍA (27-09-2026) ───────────────
+     Fallo MÍO del mismo día que el arreglo, cazado por el barrido que
+     mira la pantalla: ICON deja de pronosticar a media madrugada del
+     último día —el 4 de octubre solo trae las 00, 01 y 02— y esto
+     sumaba esas tres horas a 0,0 y escribía un 0 encima del null de la
+     API. Con ese 0, ICON pasaba a contar como modelo «con dato» y la
+     tarjeta lo metía en «secos»: un hueco pintado de cero y hablando. */
+  {
+    const M = respuesta();
+    M.daily.precipitation_sum_ecmwf_ifs025[1] = null;          // la API no sabe ese día
+    M.hourly.precipitation_ecmwf_ifs025 = M.hourly.precipitation_ecmwf_ifs025
+      .map((v2, k) => (M.hourly.time[k].startsWith('2026-09-28') && +M.hourly.time[k].slice(11, 13) > 2) ? null : v2);
+    fn(M);
+    ok('con el último día a medias, el resumen se queda en null: no se pinta un 0 que luego habla',
+       M.daily.precipitation_sum_ecmwf_ifs025[1] === null,
+       `da ${M.daily.precipitation_sum_ecmwf_ifs025[1]}`);
+  }
+
+  /* Y la otra forma de respuesta: el pronóstico principal no lleva el
+     sufijo del modelo en las claves. Si solo se mira la de varios, la
+     tarjeta de 10 días —que come del principal— se queda sin corregir,
+     que es como se quedó a medias este arreglo hasta el barrido. */
+  {
+    const P = { daily: { time: ['2026-09-30'], precipitation_sum: [1.9] },
+                hourly: { time: [], precipitation: [] } };
+    for (let h = 0; h < 24; h++) {
+      P.hourly.time.push(`2026-09-30T${String(h).padStart(2, '0')}:00`);
+      P.hourly.precipitation.push(h < 6 ? 0.2 : h < 12 ? 0.1 : h < 15 ? 0.2 : 0);
+    }
+    fn(P);
+    ok('el pronóstico principal (sin sufijo de modelo) también se corrige: 1,9 pasa a 2,4',
+       P.daily.precipitation_sum[0] === 2.4, `da ${P.daily.precipitation_sum[0]}`);
+    ok('y eso cambia el color, que es lo que decide: 1,9 se queda en ámbar y 2,4 pasa del listón de 2',
+       P.daily.precipitation_sum[0] >= 2);
+  }
+  ok('y se llama sobre el pronóstico principal, no solo sobre la comparativa',
+     (src.match(/diasDeSusHoras\(/g) || []).length >= 3,
+     'la definición, la comparativa y el principal');
 
   /* Y que la petición las pida de verdad: sin `hourly` no hay nada que sumar. */
   ok('la petición de los 10 días pide también las horas',
@@ -814,6 +911,23 @@ grupo('Lo que viene hoy: en rojo si lo hay, NADA si no, y SOLO de hoy (26-09-202
   /* Lo mismo con la racha que viene calculada para el parte. */
   S.rachaTorres = [{ k: 'x', racha: 95, hora: MAN(16).getTime(), quien: 'ECMWF' }];
   ok('ni la racha de MAÑANA', aviso('x', []) === '', aviso('x', []));
+  /* ── Y SI LO DEL PARTE ES DE OTRO DÍA, SE CAE AL RESPALDO ─────────
+     Fallo MÍO del 26-09: el respaldo solo entraba cuando NO había nada
+     del parte (`else if (!L)`), y `ventanaParte()` salta al día
+     siguiente a partir de las 22:00. Resultado: de las 22:00 en
+     adelante la línea roja perdía el agua y la racha sola, con AROME
+     dando 8,8 mm/h esa misma hora. Y él trabaja de noche. */
+  {
+    S.lluviaTorres = [{ k: 'x', llueve: true, ini: MAN(14).getTime(), fin: MAN(19).getTime(),
+                        pico: 0.6, quien: 'ICON' }];
+    S.rachaTorres = [{ k: 'x', racha: 95, hora: MAN(16).getTime(), quien: 'ECMWF' }];
+    const hs = hoyY((n, esHoy) => ({ ...CALMA,
+      prec: esHoy && n === 22 ? 8.8 : 0, gust10: esHoy && n === 22 ? 95 : 20 }));
+    const t = avisoDeHoy('x', hs, new Date(2026, 8, 26, 22, 30).getTime());
+    ok('con el parte ya en mañana, el agua y la racha de HOY siguen saliendo por el respaldo',
+       /AGUA hoy de 22:00/.test(t) && /RACHA 95 km\/h hoy a las 22:00/.test(t), t);
+    S.lluviaTorres = null; S.rachaTorres = null;
+  }
   S.rachaTorres = [{ k: 'x', racha: 95, hora: H(16).getTime(), quien: 'ECMWF' }];
   ok('y la de hoy sí, con su día y su hora',
      aviso('x', []).includes(`RACHA 95 km/h hoy a las ${et(16)}`), aviso('x', []));
@@ -826,7 +940,7 @@ grupo('Lo que viene hoy: en rojo si lo hay, NADA si no, y SOLO de hoy (26-09-202
 
   ok('las dos pantallas usan LA MISMA función, no una copia cada una',
      /\$\{avisoDeHoy\(key\(t\.place\), t\.horas\)\}/.test(src)
-     && /avisoDeHoy\(null, S\.data\?\.hours\)/.test(src)
+     && /avisoDeHoy\(S\.place \? key\(S\.place\) : null, S\.data\?\.hours\)/.test(src)
      && (src.match(/function avisoDeHoy\(/g) || []).length === 1,
      'una copia por pantalla es como empezaron todas las contradicciones de esta semana');
 }
@@ -4348,7 +4462,11 @@ grupo('Mar: una tarjeta por hora con ola, rumbo, periodo, mar de fondo, mar de v
   ok('la tira #waveHours existe y se pinta desde la hora en curso con los números tal cual',
      /id="waveHours"/.test(html)
      && /function pintarOleajeHoras\(M, iAhora\)/.test(src)
-     && /pintarOleajeHoras\(M, iAhora\);/.test(src)
+     /* CON EL RECORTE SUMADO (27-09-2026): `iAhora` va sobre la serie ya
+        recortada desde `i0Ola` y la función lo usa contra la entera, que
+        empieza a medianoche — a las 23:30 la tira arrancaba en «00:00
+        hoy» y solo llegaba a 24 h con el rótulo prometiendo 48. */
+     && /pintarOleajeHoras\(M, i0Ola \+ iAhora\);/.test(src)
      && /<span>🌊 \$\{has\(dirO\) \? 'del ' \+ esc\(rumboLargo\(dirO\)\) : 'rumbo sin dato'\}<\/span>/.test(src)
      && /periodo \$\{has\(per\) \? mTxt\(per\) \+ ' s' : '—'\}/.test(src)
      && /mar de viento \$\{has\(mv\) \? mTxt\(mv\) \+ ' m' : '—'\}/.test(src));
@@ -5515,8 +5633,13 @@ grupo('«Me pasan a las 2 de la mañana: Arbaiza» — el viaje entra en la resp
   ok('con la comparación contra el aparato de Euskalmet incluida',
      /\$\{P\.cuerpo\}<\/div>\$\{P\.comp \|\| ''\}/.test(src),
      'esa tabla es lo único que dice si el pronóstico acierta en su sitio');
-  ok('y el chip de rayo, junto al nombre',
-     /P\?\.etq \? ` <span class="pt__b" data-s="\$\{P\.est\}">\$\{P\.etq\}<\/span>`/.test(src));
+  ok('y el chip de rayo, junto al nombre, CON SU DÍA si el parte no es de hoy',
+     /P\?\.etq \? ` <span class="pt__b" data-s="\$\{P\.est\}">\$\{P\.etq\}\$\{\s*\n?\s*P\.dia \? ` · \$\{esc\(P\.dia\)\}` : ''\}<\/span>`/.test(src),
+     'el 27-09 la tarjeta ponía «RAYO de 12:00 a 17:00» y era del lunes: ese domingo, a esas horas, no rompía nada');
+  ok('y el cuerpo del parte dentro de la tarjeta también lo dice',
+     /P\.dia \? `<div class="tor__parte__d">El parte de <b>\$\{esc\(P\.dia\)\}<\/b><\/div>` : ''/.test(src)
+     && /const rotuloDelParte = /.test(src),
+     'dentro de la tarjeta el único título es «la hora en curso», que es de hoy');
 
   /* EL ORDEN IMPORTA y es el fallo que casi se me cuela: `renderTorres`
      LEE `S.parteFilas`, así que el parte tiene que calcularse antes. Al
@@ -7739,10 +7862,10 @@ grupo('Torre se mudó a Ahora: dos vistas, no tres (31-08-2026, 18:36)');
 grupo('Las mareas en la columna de Ahora (31-08-2026, 18:32)');
 {
   /* «En la parte derecha falta poner horas de bajamar y pleamar». */
-  ok('Sol y aire lleva las dos próximas mareas, de la tabla oficial',
-     /\.\.\.proximasMareas\(2\)\.map/.test(src)
+  ok('Sol y aire lleva las dos próximas mareas, de la tabla oficial Y SOLO DONDE ESA TABLA VALE',
+     /\.\.\.\(enCostaVasca\(S\.place\) \? proximasMareas\(2\) : \[\]\)\.map/.test(src)
      && /'▲ Pleamar' : '▼ Bajamar'/.test(src.slice(src.indexOf('pintarMarAhora'))),
-     'las mismas de Euskalmet que usa la pestaña Mar, nunca calculadas');
+     'en Calpe ponía las pleamares de Bermeo —4,46 m— y las llamaba «tabla oficial» (27-09-2026)');
   ok('y la altura va con coma y con su día',
      /e\.altura\.toFixed\(2\)\.replace\('\.', ','\)\} m · tabla oficial/.test(src));
 }
@@ -10885,7 +11008,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      /* 26-09-2026: delante va el aviso rojo de lo que viene hoy, que él
         pidió «tanto en Mis estaciones como en Ahora». El ORDEN de las
         cinco casillas, que es lo que esta prueba vigila, no se toca. */
-     /\$\('#kpis'\)\.innerHTML = avisoDeHoy\(null, S\.data\?\.hours\)\s*\n\s*\+ \[kLluvia, kRafaga, kViento, kRiesgo, kSensacion,\s*\n?\s*\.\.\.\(S\.hgt === 10 \? \[\] : kAltura\)\]\.join\(''\);/.test(A)
+     /\$\('#kpis'\)\.innerHTML = avisoDeHoy\(S\.place \? key\(S\.place\) : null, S\.data\?\.hours\)\s*\n\s*\+ \[kLluvia, kRafaga, kViento, kRiesgo, kSensacion,\s*\n?\s*\.\.\.\(S\.hgt === 10 \? \[\] : kAltura\)\]\.join\(''\);/.test(A)
      && !/kpi\('Dirección',/.test(A)
      && /del \$\{rumboLargo\(c\.dir\)\} \(\$\{c\.dir\.toFixed\(0\)\}°\) · De donde viene el viento a/.test(A));
   ok('la comparativa de modelos se pliega: la frase de color queda a la vista y las barras detrás de «Ver por modelo»',

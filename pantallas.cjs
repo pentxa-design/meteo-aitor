@@ -639,6 +639,30 @@ async function unaHora(hh) {
     }
   }
 
+  /* ── 10 quater · UNA HORA YA PASADA, SIN DÍA, ES IMPOSIBLE ────────
+     Del barrido del 27-09 que miró la pantalla: a las 02:08 del domingo
+     la casilla «Próxima lluvia» ponía «01:00» y esa agua era del LUNES
+     a la 01:00 —veintitrés horas después—, con las cuatro franjas de
+     hoy diciendo «Sin lluvia». `proxima` mira 24 horas por delante, así
+     que cruza la medianoche a menudo.
+
+     La regla que lo caza sin saber de qué casilla hablamos: si una
+     casilla anuncia algo que VIENE y pone una hora ANTERIOR a la que
+     es, o es de otro día —y entonces tiene que decirlo— o está mal.
+     No hace falta conocer el caso: la aritmética del reloj basta. */
+  {
+    const DIAS = /hoy|mañana|pasado|lunes|martes|miércoles|jueves|viernes|sábado|domingo/i;
+    for (const c of doc.querySelectorAll('.dt')) {
+      const k = (c.querySelector('.dt__k')?.textContent || '').replace(/\s+/g, ' ').trim();
+      const v = (c.querySelector('.dt__v')?.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!/Próxima|Empieza|Llega|Vuelve/i.test(k)) continue;       // solo lo que ANUNCIA
+      const m = v.match(/(\d\d):00/);
+      if (!m) continue;
+      if (Number(m[1]) < hh && !DIAS.test(v))
+        falla(`«${k}» anuncia las ${m[1]}:00, que ya han pasado (son las ${p2(hh)}:30), y no dice de qué día: «${v}»`);
+    }
+  }
+
   /* ── 10 ter · 10 DÍAS NO PUEDE LLAMAR «SECO» A QUIEN HORAS DICE QUE MOJA ─
      Suyo, 27-09-2026 de madrugada, con los dos pantallazos al lado:
      *«joe, ¿siempre algo? ¿tanto agente y seguimos así?»*. Y llevaba
@@ -774,6 +798,14 @@ async function unaHora(hh) {
         ['Ahora', num(txt(doc, '#cover'), /(\d+)° de temperatura del aire/)],
         ['Horas', num(hTxt, /^\d\d:\d\d \w+ (\d+)°/)],
         ['Mis estaciones', num(tTxt, /(\d+)° rocío/)] ] },
+      /* La línea roja del MISMO sitio tiene que ser la misma en las dos
+         pantallas. El 27-09 Ahora decía «AGUA hoy de 21:00 a 00:00» y
+         Mis estaciones «de 18:00 a 00:00» del mismo sitio y el mismo
+         minuto, porque la portada pasaba `null` de clave y caía por la
+         rama de un solo modelo. */
+      { que: 'la línea roja de aviso', ven: [
+        ['Ahora', (doc.querySelector('#kpis .viene')?.textContent || '').replace(/\s+/g, ' ').trim() || 'sin aviso'],
+        ['Mis estaciones', (tarjetaTorre?.querySelector('.viene')?.textContent || '').replace(/\s+/g, ' ').trim() || 'sin aviso'] ] },
       { que: 'el cielo', ven: [
         ['Ahora', txt(doc, '#nowDesc') || null],
         ['Mis estaciones', ((tTxt.match(/% nubes · ([^·]+) ·/) || [])[1] || '').trim() || null] ] },

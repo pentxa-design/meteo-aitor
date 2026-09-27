@@ -2925,3 +2925,9 @@ body.sin-scroll{overflow:hidden}
    cosa y el semáforo hacía otra. */
 .q__n{font-size:0.8125rem;color:var(--dim);margin-top:8px;line-height:1.5}
 .q__n b{color:var(--txt)}
+
+/* El parte que se mete en la tarjeta de Mis estaciones dice de qué día
+   es cuando no es de hoy (27-09-2026): dentro de la tarjeta el único
+   título es «la hora en curso», y sin esto las horas de mañana se leían
+   como de hoy. */
+.tor__parte__d{font-size:.78rem;opacity:.8;margin:0 0 .35rem;letter-spacing:.02em}

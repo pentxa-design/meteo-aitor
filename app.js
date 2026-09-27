@@ -854,6 +854,13 @@ async function pintarBoyaMar(p) {
 function notaCeldaMar(M) {
   const p = S.place;
   if (!has(M?.latitude) || !has(M?.longitude) || !has(p?.lat) || !has(p?.lon)) return '';
+  /* ── SIN OLA NO HAY «MAR ABIERTO» (27-09-2026) ────────────────────
+     En Orduña —a 40 km del mar— esto escribía «mar abierto a 3 km al
+     noroeste». Los 3 km son la distancia al nudo que devuelve la API
+     marina, que para un sitio de interior es solo el punto de rejilla
+     más cercano y viene con TODO a null. Un nudo sin ola no es mar
+     abierto: es que ahí no hay mar. */
+  if (!M?.hourly?.wave_height?.some?.(has)) return '';
   const c = { lat: M.latitude, lon: M.longitude };
   const km = kmEntre(p, c);
   if (!(km >= 1)) return '';
@@ -3031,6 +3038,17 @@ async function loadAll(p) {
      «en 2 días al menos tenemos lo bueno». Va después de `completar()`
      para no pisar lo que ese ya haya rellenado. */
   await completarLargo(f, p);
+  /* ── Y EL RESUMEN DE CADA DÍA, DE SUS PROPIAS HORAS ────────────────
+     El arreglo del 27-09 se quedó a medias y lo cazó el barrido de esa
+     madrugada: `diasDeSusHoras()` se aplicaba a `S.diariaMulti` —de
+     donde salen los chips de «X también la ve»— y NO al pronóstico
+     principal, que es de donde la tarjeta de 10 días saca el número
+     grande. Medido en Bermeo con ECMWF: el miércoles 30 la tarjeta
+     ponía 1,9 mm y sus propias horas, al abrirla, sumaban 2,4. Y eso
+     cambia el color, que es lo que decide: 1,9 se queda en ámbar y 2,4
+     pasa del listón de 2 y va en rojo. La tarjeta y las horas que abre
+     esa misma tarjeta tienen que dar lo mismo. */
+  diasDeSusHoras(f);
   // El dato se lleva grabado DE QUÉ MODELO salió. Ojo: puede no ser el
   // elegido — si el modelo de área limitada no cubre el punto, arriba se
   // cae al automático. Sin este sello, la ficha ponía un nombre y
@@ -4989,7 +5007,17 @@ function renderTower() {
      pidió «tanto en Mis estaciones como en Ahora». Aquí no hay `k` de
      emplazamiento guardado —esto es el sitio abierto—, así que se pasa
      null y `loQueVieneHoy` tira de las horas. Vacía cuando no hay nada. */
-  $('#kpis').innerHTML = avisoDeHoy(null, S.data?.hours)
+  /* ── LA MISMA LÍNEA EN LAS DOS PANTALLAS (27-09-2026) ─────────────
+     Aquí iba `null` de clave, así que `S.lluviaTorres.find(x => x.k === null)`
+     no encontraba nunca nada y la portada caía SIEMPRE por la rama de un
+     solo modelo, mientras Mis estaciones —que sí pasa la clave— usaba la
+     unión de los cinco. Medido esa noche en Bermeo, el mismo sitio y el
+     mismo minuto: Ahora «AGUA hoy de 21:00 a 00:00» y Mis estaciones
+     «AGUA hoy de 18:00 a 00:00 · la ve AROME HD». Y la dirección
+     peligrosa estaba abierta: con tu modelo seco y otro viendo agua, la
+     portada no decía NADA y Mis estaciones sí. Si el sitio abierto es
+     uno de los tuyos, las dos leen lo mismo. */
+  $('#kpis').innerHTML = avisoDeHoy(S.place ? key(S.place) : null, S.data?.hours)
     + [kLluvia, kRafaga, kViento, kRiesgo, kSensacion,
        ...(S.hgt === 10 ? [] : kAltura)].join('');
 
@@ -6320,14 +6348,33 @@ function diasDeSusHoras(d) {
     if (!deDia.has(dia)) deDia.set(dia, []);
     deDia.get(dia).push(i);
   });
-  const uno = MODELOS_TORMENTA.length === 1;
+  /* Dos formas de respuesta y las dos pasan por aquí: la de VARIOS
+     modelos lleva el sufijo en la clave (`precipitation_ecmwf_ifs025`) y
+     la del pronóstico principal no lleva ninguno. Si solo se mira la
+     primera, la tarjeta de 10 días —que come del principal— se queda sin
+     corregir, que es como se quedó a medias el arreglo del 27-09. */
+  const parejas = [];
+  if (Array.isArray(d.hourly.precipitation) && Array.isArray(d.daily.precipitation_sum))
+    parejas.push([d.hourly.precipitation, d.daily.precipitation_sum]);
   for (const m of MODELOS_TORMENTA) {
-    const hs = d.hourly[`precipitation_${m.om}`] ?? (uno ? d.hourly.precipitation : null);
-    const ds = d.daily[`precipitation_sum_${m.om}`] ?? (uno ? d.daily.precipitation_sum : null);
-    if (!Array.isArray(hs) || !Array.isArray(ds)) continue;
+    const h2 = d.hourly[`precipitation_${m.om}`], s2 = d.daily[`precipitation_sum_${m.om}`];
+    if (Array.isArray(h2) && Array.isArray(s2)) parejas.push([h2, s2]);
+  }
+  for (const [hs, ds] of parejas) {
     d.daily.time.forEach((dia, k) => {
-      const filas = (deDia.get(dia) || []).filter(i => has(hs[i]));
-      if (!filas.length) return;                       // sin horas, el resumen se queda
+      /* ── UN DÍA A MEDIAS NO ES UN DÍA (27-09-2026) ─────────────────
+         Esto solo respetaba el resumen cuando NO había ninguna hora, y
+         con eso se coló un fallo mío del mismo día: ICON deja de
+         pronosticar a mitad del último día —el 4 de octubre solo trae
+         las 00, 01 y 02— y aquí se sumaban esas tres horas a 0,0 y se
+         escribía un **0 encima del null** que manda la API. A partir de
+         ahí ICON contaba como modelo «con dato» y la tarjeta lo metía
+         en la lista de secos: un hueco pintado de cero y encima
+         hablando, que es justo lo contrario de la regla de la casa.
+         Si no está el día entero, se deja el resumen como vino. */
+      const horas = deDia.get(dia) || [];
+      const filas = horas.filter(i => has(hs[i]));
+      if (!filas.length || filas.length < horas.length) return;
       ds[k] = Math.round(filas.reduce((a, i) => a + hs[i], 0) * 100) / 100;
     });
   }
@@ -8752,6 +8799,16 @@ function calcularParte(sitios, arr) {
 
     let ini = null, fin = null, pico = 0, hPico = null, quien = null;
     let seco = Infinity, mojado = 0;
+    /* ── ¿EL DEL PICO VE TODA LA VENTANA, O SOLO UN TROZO? ───────────
+       La ventana es la UNIÓN de todos los modelos y el nombre es el del
+       PICO, así que se le colgaba a un modelo una ventana que ese
+       modelo no ve. Medido el 27-09-2026 en Bermeo: la línea decía
+       «AGUA hoy de 18:00 a 00:00 · la ve AROME HD» y AROME daba 0,0 a
+       las 18, 19 y 20 — quien veía algo ahí era ECMWF con 0,1 mm. Y la
+       portada del mismo sitio lo desmentía: «AROME HD la ve seca».
+       Se apunta desde qué hora ve agua CADA modelo, y si el del pico no
+       llega al principio, el texto deja de decir «la ve X». */
+    const desdeCada = new Map();
 
     /* Las horas se cuentan DISTINTAS, no una vez por modelo. Si ICON y
        ECMWF ven agua a las 19:00, son las 19:00, no dos horas. Sin esto
@@ -8771,6 +8828,7 @@ function calcularParte(sitios, arr) {
         conAgua.add(marca);
         if (!ini || t < ini) ini = t;
         if (!fin || t > fin) fin = t;
+        if (!desdeCada.has(m.nom) || t < desdeCada.get(m.nom)) desdeCada.set(m.nom, t);
         if (mm > pico) { pico = mm; hPico = t; quien = m.nom; }
         const c = cod?.[i];
         if (c >= 51 && c <= 57 && mm < 0.2) conSirimiri.add(marca);
@@ -8791,7 +8849,9 @@ function calcularParte(sitios, arr) {
     const tramo = Math.round((fin - ini) / 3600e3) + 1;
     const sueltas = tramo > conAgua.size;
 
-    return { k, llueve: true, ini, fin, pico, hPico, quien, horasAgua,
+    /* El del pico abarca la ventana solo si ya ve agua cuando empieza. */
+    const picoAbarca = !!quien && desdeCada.has(quien) && +desdeCada.get(quien) <= +ini;
+    return { k, llueve: true, ini, fin, pico, hPico, quien, picoAbarca, horasAgua,
              nHoras: conAgua.size, sueltas,
              soloSirimiri: conSirimiri.size === conAgua.size,
              discrepan: seco > 0 ? (mojado / Math.max(seco, 0.1)) >= 3 : mojado >= 0.5 };
@@ -9961,7 +10021,7 @@ function renderParte() {
     const dPico = dia(L.hPico).trim();
     return `<div class="pt__l${L.pico >= (S.thr?.rainWarn ?? 0.2) ? ' pt__l--rojo' : ''}"><b>${fuerza}</b> ${cuando}
       — lo más fuerte <b>${nMm(L.pico)} mm</b> a las ${hm(L.hPico)}${dPico ? ` de ${dPico}` : ''}
-      <span class="pt__m">· lo ve ${esc(L.quien ?? '—')}</span>${L.discrepan
+      <span class="pt__m">· ${L.picoAbarca === false ? 'lo más fuerte lo ve' : 'lo ve'} ${esc(L.quien ?? '—')}</span>${L.discrepan
         ? `<br><span class="pt__m">Los modelos no coinciden en la cantidad:
            fíate de la hora, no de los milímetros</span>` : ''}</div>`;
   };
@@ -10168,6 +10228,17 @@ function renderParte() {
      emplazamiento; `renderTorres` lo mete dentro de la tarjeta que ya
      tiene ese sitio. Se pinta UNA vez y sale UNA vez.                 */
   S.parteFilas = new Map();
+  /* ── EL PARTE VIAJA CON SU DÍA A LA TARJETA (27-09-2026) ───────────
+     `renderParte()` se salta el día a propósito porque su título ya lo
+     dice. Pero ese mismo cuerpo se REINYECTA dentro de cada tarjeta de
+     Mis estaciones, y allí el único título que hay es «a las 22:00 · la
+     hora en curso», que es de HOY. Medido esa madrugada en Bermeo: a
+     las 22:40 del domingo la tarjeta ponía «RAYO de 12:00 a 17:00» y
+     «CAPE 1.190 con la tapa en 52 a las 14:00», que son del LUNES. Ese
+     mismo domingo, a esas horas, el CAPE era 150-360 con la tapa por
+     encima de 340: no rompía nada. Leído como hoy, se equivoca por 830
+     J/kg. Así que si el parte no es de hoy, la tarjeta lo dice. */
+  const rotuloDelParte = (() => { const v_ = ventanaParte(); return v_.salto === 0 ? '' : v_.etiqueta; })();
   el.innerHTML = avisoSinDato + filas.map(({ p, d, k }) => {
     if (d.salta) {
       const cuando = tramo(d.ini, d.fin);
@@ -10176,7 +10247,7 @@ function renderParte() {
             <b>tapa en ${nCape(d.cin)}</b>, a las ${hm(d.hora)}
             <span class="pt__m">· lo ve ${esc(d.modelo)}${cuantosLoVen(d)}</span></div>
           ${cuandoSePuede(k)}${lineaCambio(k)}`;
-      S.parteFilas.set(key(p), { est: 'no', etq: `RAYO ${esc(cuando)}`,
+      S.parteFilas.set(key(p), { est: 'no', etq: `RAYO ${esc(cuando)}`, dia: rotuloDelParte,
                                  cuerpo: cuerpoR, comp: comparativa(p) });
       return `<div class="pt" data-s="no">
         <div class="pt__izq">
@@ -10270,7 +10341,7 @@ function renderParte() {
     const cuerpo = `${lineaLluvia(k)}
         ${lineaRacha(k)}
         <div class="pt__d">${porQue}</div>${cuandoSePuede(k)}${lineaCambio(k)}`;
-    S.parteFilas.set(key(p), { est, etq, cuerpo, comp: comparativa(p) });
+    S.parteFilas.set(key(p), { est, etq, cuerpo, dia: rotuloDelParte, comp: comparativa(p) });
     return `<div class="pt" data-s="${est}">
       <div class="pt__izq">
         <div class="pt__h"><b>${esc(p.name)}</b><span class="pt__b">${etq}</span></div>
@@ -10411,13 +10482,29 @@ function loQueVieneHoy(k, horas, ahoraMs = Date.now()) {
      PARTE, que puede ser otro día: se comprueba que lo que traen caiga
      hoy antes de repetirlo aquí. */
   if (L?.llueve && esDeHoy(L.ini)) {
-    const deQuien = L.quien ? ` · la ve ${esc(L.quien)}` : '';
+    /* «la ve X» solo si X ve la ventana entera; si no, lo que es verdad
+       es que X tiene el pico (27-09-2026). */
+    const deQuien = L.quien
+      ? (L.picoAbarca === false ? ` · lo más fuerte lo ve ${esc(L.quien)}`
+                                : ` · la ve ${esc(L.quien)}`) : '';
     const cuando = L.sueltas
       ? `${L.nHoras} horas sueltas entre las ${String(new Date(L.ini).getHours()).padStart(2, '0')}:00`
         + ` y las ${String(new Date(L.fin).getHours()).padStart(2, '0')}:00 de hoy`
       : deA(L.ini, +L.fin + 3600e3);
     av.push(`AGUA ${cuando}${deQuien}`);
-  } else if (!L) {
+  /* ── Y SI LO DEL PARTE NO SIRVE PARA HOY, NO BASTA CON CALLARSE ───
+     Fallo MÍO del 26-09, cazado la madrugada siguiente por el barrido
+     que mira la pantalla. Esto decía `else if (!L)`: o sea que el
+     respaldo —las horas del propio sitio— solo entraba cuando NO HABÍA
+     nada del parte. Pero `ventanaParte()` salta al día siguiente en
+     cuanto faltan menos de dos horas para medianoche, así que a partir
+     de las 22:00 `L` EXISTÍA (con las horas de mañana), no pasaba el
+     filtro de hoy, y el respaldo tampoco entraba: la línea roja perdía
+     el agua y la racha sola, sin tocar nada. Medido esa noche en
+     Bermeo: a las 22:30 quedaba «⚠ CAPE 440 hoy a las 22:00» con AROME
+     dando 8,8 mm/h a esa misma hora. Y él trabaja de noche.
+     Lo mismo pasaba con solo pulsar la pestaña de otro día. */
+  } else {
     const moja = sel.filter(h => has(h.prec) && h.prec >= (S.thr?.rainWarn ?? 0.2));
     if (moja.length)
       av.push(`AGUA ${deA(moja[0].date, +moja[moja.length - 1].date + 3600e3)}`);
@@ -10427,7 +10514,7 @@ function loQueVieneHoy(k, horas, ahoraMs = Date.now()) {
   const R = S.rachaTorres?.find(x => x?.k === k);
   if (R && has(R.racha) && nivelRacha(R.racha) !== 'go' && esDeHoy(R.hora)) {
     av.push(`RACHA ${wtxt(R.racha, true)} ${hh(R.hora)}${R.quien ? ` · la da ${esc(R.quien)}` : ''}`);
-  } else if (!R) {
+  } else {                                   // lo del parte no sirve para hoy: a las horas del sitio
     let peor = null;
     for (const h of sel) {
       const g = h.gust10 ?? h.gust;
@@ -10500,7 +10587,8 @@ function lineaAguaTorre(k) {
      «Sin lluvia». Era ICON, y no lo ponía. La regla de siempre: el modelo,
      con nombre. */
   const dueno = typeof modeloDato === 'function' ? modeloDato()?.name : null;
-  const veQuien = L.quien && L.quien !== dueno ? ` · lo ve ${esc(L.quien)}` : '';
+  const veQuien = L.quien && L.quien !== dueno
+    ? ` · ${L.picoAbarca === false ? 'lo más fuerte lo ve' : 'lo ve'} ${esc(L.quien)}` : '';
 
   return `<div class="tor__agua" data-a="${cayendo ? 'ahora' : 'luego'}">
     ${tipo} ${cuando}${pico}${veQuien}</div>`;
@@ -10728,7 +10816,8 @@ function renderTorres() {
              al nombre. Ver `S.parteFilas`: el parte ya no es una lista
              aparte, vive dentro de la tarjeta de su sitio. */
           const P = S.parteFilas?.get(key(t.place));
-          return P?.etq ? ` <span class="pt__b" data-s="${P.est}">${P.etq}</span>` : '';
+          return P?.etq ? ` <span class="pt__b" data-s="${P.est}">${P.etq}${
+            P.dia ? ` · ${esc(P.dia)}` : ''}</span>` : '';
         })()}
         <span>${esc([t.place.admin1, t.place.country].filter(Boolean).join(' · '))}</span>
         <!-- DE QUÉ HORA SON LAS CIFRAS. Suyo, 02-09-2026: *«el tiempo que
@@ -10963,7 +11052,9 @@ function renderTorres() {
            nombre se lee UNA vez.                                      */
         const P = S.parteFilas?.get(key(t.place));
         if (!P) return '';
-        return `<div class="tor__parte" data-s="${P.est}">${P.cuerpo}</div>${P.comp || ''}`;
+        return `<div class="tor__parte" data-s="${P.est}">${
+          P.dia ? `<div class="tor__parte__d">El parte de <b>${esc(P.dia)}</b></div>` : ''
+        }${P.cuerpo}</div>${P.comp || ''}`;
       })()}
       ${lineaD}
       ${(() => {
@@ -14442,8 +14533,16 @@ function renderNow() {
        modelos veían sirimiri. Ver `lluviaQueVieneYNoVesTu()`. */
     (() => {
       if (proxima) {
+        /* ── CON EL DÍA, QUE MIRA 24 HORAS POR DELANTE (27-09-2026) ─
+           `proxima` recorre las 24 horas siguientes, así que cruza la
+           medianoche a menudo. Medido esa madrugada: a las 02:08 del
+           domingo la casilla ponía «01:00» y esa agua era del LUNES a
+           la 01:00, veintitrés horas después, con las cuatro franjas de
+           hoy diciendo «Sin lluvia». Leído a las 02:08, «01:00» es una
+           hora que acaba de pasar. La función ya existe y se usa dos
+           renglones más arriba en la misma pantalla. */
         return dt('Próxima lluvia',
-          `${String(proxima.date.getHours()).padStart(2, '0')}:00`,
+          `${String(proxima.date.getHours()).padStart(2, '0')}:00${diaSiNoEsHoy(proxima.date)}`,
           `${mmTxt(proxima.prec)} mm esa hora · ${mmTxt(agua24)} mm en 24 h`,
           'warn');
       }
@@ -14462,7 +14561,7 @@ function renderNow() {
           `${mmTxt(agua24)} mm en 24 h según ${esc(nombreDeModelo(duenoLluvia()))} · a los demás todavía no he podido preguntarles`);
       if (otra) {
         return dt('Próxima lluvia',
-          `${String(otra.hora.getHours()).padStart(2, '0')}:00<small> según otros</small>`,
+          `${String(otra.hora.getHours()).padStart(2, '0')}:00${diaSiNoEsHoy(otra.hora)}<small> según otros</small>`,
           `⚠ ${esc(nombreDeModelo(duenoLluvia()))} no la ve · <b>${esc(otra.quien)}</b> sí`
             + ` (${mmTxt(otra.mm24)} mm en 24 h)`
             + (otra.soloEnTorre
@@ -14695,7 +14794,15 @@ function pintarMarAhora(dt) {
        tabla oficial de Euskalmet que usa la pestaña Mar — nunca una
        marea calculada. Si la tabla no está cargada aún, no se inventa
        hueco: simplemente no salen hasta que llegue. */
-    ...proximasMareas(2).map(e =>
+    /* ── Y SOLO DONDE ESA TABLA EXISTE (27-09-2026) ───────────────
+       La tabla de Euskalmet cubre la COSTA VASCA y nada más, y
+       `MAREAS` es una caché de módulo que no se vacía al cambiar de
+       sitio. Medido en A CALPE: esta tarjeta ponía «▲ Pleamar 05:43 ·
+       4,46 m · tabla oficial», que son las de Bermeo de ese día — en
+       Calpe la carrera de marea es de centímetros. Y en la MISMA app,
+       la pestaña Mar de Calpe decía lo contrario con todas las letras.
+       La puerta que ya usa `pintarMareas()`, aquí también. */
+    ...(enCostaVasca(S.place) ? proximasMareas(2) : []).map(e =>
       dt(e.tipo === 'high' ? '▲ Pleamar' : '▼ Bajamar',
          `${esc(e.hora)}`,
          `${esc(e.cuando.toLocaleDateString('es', { weekday: 'short' }))} · ${e.altura.toFixed(2).replace('.', ',')} m · tabla oficial`)),
@@ -15785,7 +15892,19 @@ function renderSea() {
      Ahora el aviso tiene su propio hueco y los hijos solo se esconden. */
   const nota = $('#seaNote');
   const dentro = ['#tide', '#tidelist', '#tideNote'].map($);
-  if (!M?.hourly?.sea_level_height_msl) {
+  /* ── UNA COLUMNA DE NULOS NO ES MAR (27-09-2026) ──────────────────
+     Esto solo escapaba cuando la serie NO VENÍA. Pero para un sitio de
+     interior la API marina contesta 200 con las columnas puestas y
+     TODAS a null —medido en Orduña, 42,949/-3,003: celda 42,958/-3,042,
+     `wave_height` y `sea_level_height_msl` a null—, así que no escapaba
+     y más abajo las guardas se quedaban vacías sin repintar nada: la
+     gráfica de oleaje y la curva de marea **seguían siendo las de
+     Bermeo**, con «Ahora 1,6 m» y la curva entera, mientras la tarjeta
+     de al lado decía «sin dato». Es la familia de siempre —datos del
+     sitio anterior— en la pestaña del mar. */
+  const hayMarea = M?.hourly?.sea_level_height_msl?.some?.(has);
+  const hayOla = M?.hourly?.wave_height?.some?.(has);
+  if (!hayMarea && !hayOla) {
     if (nota) {
       nota.hidden = false;
       // Un 4xx es «aquí no hay mar»; lo demás es que no ha contestado.
@@ -15803,13 +15922,16 @@ function renderSea() {
   }
   if (nota) { nota.hidden = true; nota.innerHTML = ''; }
   dentro.forEach(e => { if (e) e.hidden = false; });
-  const T = M.hourly.time, L = M.hourly.sea_level_height_msl;
+  const T = M.hourly.time, L = M.hourly.sea_level_height_msl || [];
   pintarMareas();
 
   // Curva de marea
   const W = 900, H = 190, P = 26;
   const n = Math.min(L.length, 72);
   const vs = L.slice(0, n).filter(has);
+  /* Y si aquí no hay marea, la curva se borra: dejarla puesta es dejar
+     la del sitio anterior (27-09-2026). */
+  if (!vs.length && $('#tide')) $('#tide').innerHTML = '';
   if (vs.length) {
     const mn = Math.min(...vs), mx = Math.max(...vs), sp = Math.max(mx - mn, .1);
     const X = i => P + i / (n - 1) * (W - P * 2);
@@ -15925,8 +16047,19 @@ function renderSea() {
         <path d="${p}" stroke="#a89bff" stroke-width="2.4" fill="none"/>
       </svg>
       <div class="ola__horas">${marcas}</div>`;
-    pintarOleajeHoras(M, iAhora);
-  } else if ($('#waveHours')) $('#waveHours').innerHTML = '';
+    /* ── EL ÍNDICE ES DE LA SERIE ENTERA, NO DE LA RECORTADA ────────
+       `iAhora` se calcula sobre `wv`/`wt`, que YA vienen recortados
+       desde `i0Ola`, así que vale casi siempre 0 — y
+       `pintarOleajeHoras` lo usa contra `M.hourly` ENTERO, que empieza
+       a medianoche. Medido el 27-09 a las 23:30: la lista arrancaba en
+       «00:00 hoy» y se quedaba en 24 horas por delante, con el rótulo
+       prometiendo 48. Hay que sumarle el recorte. */
+    pintarOleajeHoras(M, i0Ola + iAhora);
+  } else {
+    /* Sin ola tampoco se deja la gráfica del sitio anterior. */
+    if ($('#waveGraph')) $('#waveGraph').innerHTML = '';
+    if ($('#waveHours')) $('#waveHours').innerHTML = '';
+  }
 }
 
 /* ── OLEAJE POR HORAS (19-09-2026, 12:30, sábado de regatas) ─────────
