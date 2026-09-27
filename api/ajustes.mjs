@@ -40,6 +40,28 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 import { leerJSON, guardarJSON } from '../lib/almacen.mjs';
+import { cabeceras } from '../lib/cabeceras.mjs';
+
+/* ── LA LECTURA DE MARCAS Y JORNADA VA AL CDN (27-09-2026) ─────────────
+   MEDIDO en el panel de Vercel: /api/ajustes era la ruta más invocada de
+   la app (2.100 veces en 12 h, un GET cada 20-30 s, todo el día y toda la
+   noche) y el equipo iba por 10 h 20 min de CPU sobre las 4 h del plan.
+   Cada uno de esos GET arrancaba la función y leía el Blob para devolver
+   lo mismo que el anterior. Ahora la lectura se sirve 60 s desde el CDN:
+   quien pregunte cada 20 s se lleva la copia sin arrancar nada. Las
+   ESCRITURAS (POST) no pasan por aquí y siguen sin caché.
+   El CORS de la lectura va con «*» a propósito: una copia del CDN se
+   sirve a quien la pida, y si llevara el origen del primero que preguntó
+   (o ninguno, si fue un curl), al Centro Operativo le fallaría la lectura
+   hasta que caducase. Leer marcas y jornada ya era público (GET sin
+   clave); esto no abre nada que no estuviera abierto. */
+const LECTURA_CDN_S = 60;
+function lecturaCacheable(res) {
+  for (const [k, v] of Object.entries(cabeceras(LECTURA_CDN_S, { cors: true, revalidar: 30 })))
+    if (k !== 'content-type') res.setHeader(k, v);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.removeHeader('Vary');
+}
 
 const CAJON = 'avisos/ajustes.json';
 
@@ -192,6 +214,7 @@ async function marcas(req, res) {
     try {
       const { dato } = await leerJSON(CAJON_MARCAS, {});
       const m = dato || {};
+      lecturaCacheable(res);
       return res.status(200).json({ ok: true, marcas: m, total: Object.keys(m).length });
     } catch (e) {
       /* No poder leer NO es «no hay nada marcado». Si contestara {} el
@@ -256,6 +279,7 @@ async function jornada(req, res) {
   if (req.method === 'GET') {
     try {
       const { dato } = await leerJSON(CAJON_JORNADA, null);
+      lecturaCacheable(res);
       return res.status(200).json({ ok: true, jornada: dato || null });
     } catch (e) {
       /* Igual que con las marcas: no poder leer NO es «no hay jornada».

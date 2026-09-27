@@ -626,6 +626,18 @@ ok('si el blob no se puede escribir, se DICE (guardado:false), no se calla',
    /ok: false, guardado: false/.test(srcAjustes));
 ok('la respuesta no se cachea: un ajuste de hace 5 min ya es viejo',
    /Cache-Control', 'no-store'/.test(srcAjustes));
+/* 27-09-2026: la LECTURA de marcas y jornada del Centro Operativo sí va
+   60 s al CDN (2.100 GET en 12 h arrancando la función para devolver lo
+   mismo), con CORS «*» para que la copia sirva a quien la pida. Los POST
+   no. Se ejecuta el handler con el almacén de mentira y se miran las
+   cabeceras de verdad, no el texto. */
+ok('la lectura de marcas y jornada va 60 s al CDN y con CORS abierto; la escritura, no',
+   /const LECTURA_CDN_S = 60;/.test(srcAjustes)
+   && /lecturaCacheable\(res\);\n\s*return res\.status\(200\)\.json\(\{ ok: true, marcas: m/.test(srcAjustes)
+   && /lecturaCacheable\(res\);\n\s*return res\.status\(200\)\.json\(\{ ok: true, jornada: dato/.test(srcAjustes)
+   && /res\.setHeader\('Access-Control-Allow-Origin', '\*'\);\n\s*res\.removeHeader\('Vary'\);/.test(srcAjustes)
+   && !/lecturaCacheable\(res\);[\s\S]{0,200}guardarJSON/.test(srcAjustes),
+   'sin el CDN cada GET arranca la función y lee el Blob para devolver lo mismo que hace 20 s');
 /* La lectura se mudó a la única puerta el 01-09-2026 y la ESCRITURA el
    03-09, así que las dos se exigen allí. Aquí queda lo que sigue siendo
    de este fichero: que no se le escape un `public` propio. */

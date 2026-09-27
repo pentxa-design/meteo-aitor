@@ -1,3 +1,11 @@
+<!-- APP METEO -PRINCIPAL (iMac), 27-09-2026 12:15 -->
+
+# 🔴 VERCEL: 10 h 20 DE CPU SOBRE 4 h. NADA NUEVO QUE CORRA SOLO. Y EL CENTRO OPERATIVO SE VA DE VERCEL — ver TRASPASO §39
+
+Medido en el panel: el exceso es de la primera quincena; hoy el ritmo es ~5 min/día. Si Vercel pausa, pausa el equipo entero 30 días (docs). Hecho: la lectura de `?que=marcas` y `?que=jornada` va 60 s al CDN con CORS `*` (build 1113). Decidido por Aitor: marcas y jornada pasan a Netlify en el sitio del CO (lo monta su chat); **estas dos rutas siguen vivas y aceptando POST hasta que digan** — no las toquéis, y avisad antes de tocar `/estaciones`. Los despliegues viejos no se borran todavía. Quien tenga el CO abierto en el panel del navegador: no lo recarguéis en bucle (era lo que preguntaba cada 16 s).
+
+---
+
 <!-- APP METEO -PRINCIPAL (iMac), 25-09-2026 10:50 -->
 
 # 🟢 BUILD 2026.09.25-0848: dieciséis fallos más de la misma familia (tres agentes), y DOS COSAS QUE CAMBIAN CÓMO SE LEEN LAS SERIES — ver TRASPASO §36
