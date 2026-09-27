@@ -2663,6 +2663,9 @@ const Maps = {
 
       if (L_.contours) this.isobaras(url);
       this.costaEncima();
+      /* Los nombres, legibles en cualquier capa: se rehacen aquí porque
+         al cambiar de capa o de fondo el estilo se vuelve a montar. */
+      this.etiquetasLegibles();
     } catch (e) {
       this.status('la capa no ha podido dibujarse: ' + e.message);
       return;
@@ -3108,10 +3111,45 @@ const Maps = {
      como agua y no como velo. El gris de Windy del 15-09 se fue el 17-09
      con su «y si es de lluvia prefiero en mm»: la misma pintada negra,
      pero leyendo milímetros. `on`: true con capa de lluvia, false quita. */
+  /* ── Y LOS NOMBRES, QUE SE PUEDAN LEER ENCIMA ────────────────────
+     Suyo, 27-09-2026, con el mapa de lluvia abierto: *«no se leen bien
+     los pueblos y ciudades»*. Y no se leían: el suelo de aquí abajo
+     pinta un casi negro sobre el fondo CLARO —para que los colores del
+     agua se vean— y las etiquetas seguían siendo las del mapa claro,
+     gris oscuro sobre negro. Amorebieta, Durango y Gernika se perdían.
+
+     Se les pone color de noche mientras el suelo está puesto y se les
+     devuelve el suyo al quitarlo. El original se guarda la primera vez,
+     que si no, al restaurar se inventaría un color que no era. */
+  etiquetasLegibles() {
+    if (!this.map) return;
+    /* ── UNA SOLA REGLA, QUE VALE EN TODAS LAS CAPAS ─────────────────
+       El primer intento fue «claro cuando el suelo de la lluvia está
+       puesto», y con sus cinco pantallazos delante se ve que no basta:
+       en Tope convectivo, CAPE e Índice de elevación los nombres se
+       leen, y en Inhibición y en Precipitación no — y la Inhibición no
+       pasa por ese suelo, es que su propia escala pinta azul oscuro.
+       Una lista de «capas oscuras» se queda vieja en cuanto se añada
+       otra, que es la avería de esta semana.
+
+       Así que van SIEMPRE en blanco con un borde oscuro grueso, que es
+       lo que hacen Windy y Ventusky y lo único que se lee encima de un
+       naranja, de un negro y de un azul. Si en los fondos claros te
+       gustan más como estaban, se cambia en esta línea y ya. */
+    for (const id of this.capasEtiqueta()) {
+      try {
+        this.map.setPaintProperty(id, 'text-color', '#ffffff');
+        this.map.setPaintProperty(id, 'text-halo-color', 'rgba(10,14,20,0.9)');
+        this.map.setPaintProperty(id, 'text-halo-width', 2);
+        this.map.setPaintProperty(id, 'text-halo-blur', 0.3);
+      } catch { /* una capa sin texto: se salta */ }
+    }
+  },
+
   sueloParaLluvia(on) {
     if (!this.map) return;
     const quitar = () => ['sueloLluviaLayer', 'marLluviaLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
-    if (!on || this.base === 'oscuro') { quitar(); return; }
+    if (!on || this.base === 'oscuro') { quitar(); this.etiquetasLegibles(); return; }
     const tono = { tierra: '#1b1d21', tierraOp: 0.94, mar: '#0b0c0f', marOp: 0.96 };
     try {
       quitar();
@@ -3123,6 +3161,7 @@ const Maps = {
         this.map.addLayer({ id:'marLluviaLayer', type:'fill', source:'carto', 'source-layer':'water',
           paint:{ 'fill-color':tono.mar, 'fill-opacity':tono.marOp } }, this.firstLabelLayer());
       }
+      this.etiquetasLegibles();
     } catch (e) { console.warn('suelo para lluvia: no se ha podido poner', e); }
   },
 

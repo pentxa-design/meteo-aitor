@@ -2546,7 +2546,22 @@ ok('bajo la lluvia, en mm/h y en dBZ, el suelo va negro como en AguaceroWx',
    && !/#5a5f66/.test(mapsSrc),
    'suyo: «y si es de lluvia prefiero en mm»: misma pintada negra, leyendo milímetros');
 ok('y en el fondo Oscuro no se pone suelo encima (ya está oscuro)',
-   /sueloParaLluvia\(on\) \{[\s\S]{0,400}if \(!on \|\| this\.base === 'oscuro'\) \{ quitar\(\); return; \}/.test(mapsSrc));
+   /if \(!on \|\| this\.base === 'oscuro'\) \{ quitar\(\); this\.etiquetasLegibles\(\); return; \}/.test(mapsSrc));
+/* ── Y LOS NOMBRES DE LOS PUEBLOS, LEGIBLES ENCIMA DEL SUELO ───────
+   Suyo, 27-09-2026, con el mapa de lluvia: «no se leen bien los pueblos
+   y ciudades». El suelo pinta un casi negro sobre el fondo CLARO y las
+   etiquetas seguían siendo las del mapa claro: gris oscuro sobre negro. */
+ok('los nombres de pueblos y ciudades van en blanco con borde oscuro, EN TODAS las capas',
+   /setPaintProperty\(id, 'text-color', '#ffffff'\)/.test(mapsSrc)
+   && /setPaintProperty\(id, 'text-halo-color', 'rgba\(10,14,20,0\.9\)'\)/.test(mapsSrc)
+   && /setPaintProperty\(id, 'text-halo-width', 2\)/.test(mapsSrc),
+   'en Inhibición y en Precipitación salían gris oscuro sobre fondo oscuro (27-09-2026)');
+ok('y se vuelven a poner al cambiar de capa o de fondo, que ahí se rehace el estilo',
+   /this\.costaEncima\(\);\s*\n[\s\S]{0,200}?this\.etiquetasLegibles\(\);/.test(mapsSrc),
+   'sin esto solo valdría para la primera capa que abras');
+ok('y no hay lista de «capas oscuras» que se quede vieja',
+   !/capasOscuras|LAYERS_OSCURAS/.test(mapsSrc),
+   'la Inhibición no pasa por el suelo de la lluvia y también es oscura: una lista se queda corta');
 ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan un decimal',
    /\['#4a7fd8',0\], \['#4a7fd8',\.55\], \['#3f9fe0',\.8\]/.test(mapsSrc)
    && /if \(e\?\.unidad === 'mm\/h' && txt < 0\.1\) continue;/.test(mapsSrc)
