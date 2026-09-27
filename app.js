@@ -3560,7 +3560,6 @@ const COBERTURA = {
 const GLOBALES = [
   "best_match",
   "icon_seamless",
-  "ecmwf_ifs025",
   "gem_seamless",
   "gfs_seamless"
 ];
@@ -8708,7 +8707,14 @@ function calcularParte(sitios, arr) {
           if (!has(cape[i]) || !has(cin[i])) continue;
           if (!peorPar || cape[i] > peorPar.cape
               || (cape[i] === peorPar.cape && cin[i] < peorPar.cin)) {
-            peorPar = { cape: cape[i], cin: cin[i] };
+            /* CON SU NOMBRE (27-09-2026): esta pareja sale del modelo que
+               la da, y la tarjeta la enseñaba a pelo. Medido en Bermeo a
+               las 20:00: Mis estaciones ponía «520 de CAPE · tapa 61» —el
+               61 es del Automático— y Horas, del mismo sitio y la misma
+               hora, «tapa 403 (la da ICON)». Las dos cifras son ciertas
+               y son de modelos distintos; sin el nombre, la de aquí
+               parece la misma y contradice a la de al lado. */
+            peorPar = { cape: cape[i], cin: cin[i], om: m };
           }
           if (capeTecho === null || cape[i] > capeTecho) capeTecho = cape[i];
           /* ── UNA TAPA SIN GASOLINA DEBAJO NO ES UNA TAPA (22-09-2026) ──
@@ -8748,6 +8754,7 @@ function calcularParte(sitios, arr) {
       return { k, salta: false,
                maxCape: peorPar ? peorPar.cape : null,
                minCin:  peorPar ? peorPar.cin : null,
+               parDe:   peorPar ? (MODELOS_TORMENTA.find(x => x.om === peorPar.om)?.nom ?? peorPar.om) : null,
                capeTecho, tapaSuelo };
     }
     const nom = MODELOS_TORMENTA.find(m => m.om === quien)?.nom ?? quien;
@@ -10323,7 +10330,8 @@ function renderParte() {
         ? `llega a ${techoTxt} y la tapa le baja a
            <b>${nCape(d.tapaSuelo)}</b>, <b>pero no a la vez</b> — si se juntan una hora, salta`
       : !hayGasolina
-        ? `${capeTxt}${has(d.minCin) ? ` · tapa <b>${nCape(d.minCin)}</b>` : ''}`
+        ? `${capeTxt}${has(d.minCin) ? ` · tapa <b>${nCape(d.minCin)}</b>`
+             + (d.parDe ? ` <small>(la da ${esc(d.parDe)})</small>` : '') : ''}`
           + ` — hace falta ${CAPE_COMBINACION} con la tapa por debajo de ${TAPA_ROMPE}`
         : `tiene ${techoTxt}, pero la tapa no baja de
            <b>${has(d.tapaSuelo) ? nCape(d.tapaSuelo) : '—'}</b>: aguanta`;
@@ -10564,13 +10572,28 @@ function lineaAguaTorre(k) {
   if (!L.llueve)
     return `<div class="tor__agua" data-a="seco">Seco ${cuandoEs}</div>`;
 
-  const tipo = palabraLluvia(L.pico, L.soloSirimiri);
+  /* ── SI ESTÁ CAYENDO, LA PALABRA ES LA DE AHORA ──────────────────
+     `palabraLluvia(L.pico)` describe el PICO, y pegada a «escampa» se
+     lee como lo que cae en este momento. Medido el 27-09 a las 20:30 en
+     Bermeo: la tarjeta ponía «Llueve bien · escampa a las 00:00» encima
+     de su propia cabecera con «0,0 lluvia mm/h». A esa hora lo único
+     que había era la llovizna de ECMWF (0,1 mm); los 8,8 mm son de las
+     22:00, y eso ya lo dice «lo más fuerte a las 22:00». */
+  const ahoraMm = Date.now();
+  const picoDespues = has(L.hPico) && +L.hPico > ahoraMm + 3600e3;
 
   /* ¿Está cayendo AHORA? Entonces lo que le sirve es la hora a la que
      para, no la hora a la que empezó. Es literalmente su pregunta:
      ¿mando a la gente o que esperen dos horas? */
-  const ahora = Date.now();
+  const ahora = ahoraMm;
   const cayendo = L.ini <= ahora + 3600e3 && L.fin >= ahora;
+  /* «Está lloviendo» solo si de verdad está cayendo YA —`cayendo`
+     incluye lo que empieza dentro de la hora siguiente, que no es lo
+     mismo— y nunca en vez de «Sirimiri», que es una palabra suya y dice
+     algo que «llueve» no dice: moja sin marcar en el pluviómetro. */
+  const lloviendoYa = L.ini <= ahoraMm && +L.fin + 3600e3 > ahoraMm;
+  const tipo = (lloviendoYa && picoDespues && !L.soloSirimiri)
+    ? 'Está lloviendo' : palabraLluvia(L.pico, L.soloSirimiri);
 
   const cuando = L.sueltas
     ? `${L.nHoras} horas sueltas entre las ${hh(L.ini)} y las ${hh(L.fin)}`
@@ -14029,7 +14052,10 @@ function renderNow() {
       const seguidas = mojadas.length === (h2.getHours() - h1.getHours() + 1);
       const todaLaFranja = h1.getHours() === sel[0].date.getHours()
                         && h2.getHours() === sel[sel.length - 1].date.getHours();
-      desde = todaLaFranja ? ' toda la franja'
+      /* Vacío, no « toda la franja»: el texto que lo usa ya dice «en la
+         franja», y salía «12,8 mm en la franja toda la franja»
+         (27-09-2026). Si moja de punta a punta, no hay nada que añadir. */
+      desde = todaLaFranja ? ''
         : seguidas
           ? (h1.getHours() === h2.getHours()
               ? ` solo a las ${hh(h1)}`
@@ -15037,11 +15063,13 @@ function iconosDelDia(dia) {
      chubascos no podía salir dibujada aunque la propia tarjeta
      escribiera los milímetros debajo. Ahora entran, y cada tramo lleva
      su sol o su luna según sus propias horas. */
-  let delDia = conDato.filter(h => h.date.getHours() >= 6);
-  if (!delDia.length) {
-    delDia = conDato.filter(h => h.date.getHours() <= 5);
-    deNoche = true;
-  }
+  /* EL DÍA ENTERO, 0 a 23 (27-09-2026). Primero era 6-20 y una noche de
+     12,9 mm no salía dibujada; se metió la noche y quedó fuera la
+     MADRUGADA — en Lekeitio el lunes 28 toda el agua del día (0,6 mm)
+     cae a las 00:00 y la tarjeta se dibujaba sin una gota. Cada tramo
+     saca su sol o su luna de sus propias horas, así que ya no hace
+     falta decidirlo para la tarjeta entera. */
+  let delDia = conDato;
   if (!delDia.length) return SIN_DIBUJO;
   const R = resumenCielo(delDia);
   if (!R || !has(R.code)) return SIN_DIBUJO;
@@ -16031,13 +16059,23 @@ function renderSea() {
        el que mira si sale con el kayak o si la mar deja trabajar en el
        muelle. */
     const iAhora = (() => {
-      const t = Date.now(); let mejor = 0, dif = Infinity;
+      /* ── «AHORA» ES LA HORA EN CURSO, NO LA MÁS CERCANA ────────────
+         Cogía la más cercana, así que durante media hora de cada hora
+         «Ahora» era la hora SIGUIENTE. Medido el 27-09 a las 02:47: la
+         tarjeta de al lado ponía «Altura de ola 1,7 m» (el `current` de
+         la API) y la gráfica «Ahora 1,6 m», que era la de las 03:00.
+         Dos «ahora» para la misma ola a cuatro centímetros. La regla de
+         la casa es la hora en curso: la que contiene este minuto. */
+      const t = Date.now();
+      let enCurso = -1, mejor = 0, dif = Infinity;
       wt.forEach((x, i) => {
         if (!has(wv[i])) return;
-        const d = Math.abs(new Date(x).getTime() - t);
+        const ini = new Date(x).getTime();
+        if (ini <= t && t < ini + 3600e3 && enCurso < 0) enCurso = i;
+        const d = Math.abs(ini - t);
         if (d < dif) { dif = d; mejor = i; }
       });
-      return mejor;
+      return enCurso >= 0 ? enCurso : mejor;
     })();
     $('#waveGraph').innerHTML = `
       <div class="ola__cab">Ahora <b>${has(wv[iAhora]) ? mTxt(wv[iAhora]) : '—'} m</b>

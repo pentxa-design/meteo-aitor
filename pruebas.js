@@ -1651,9 +1651,9 @@ S.torres = sitios.map(p => ({ place: p }));
 S.parteTorres = [
   { k: k(sitios[0]), salta: true, ini: Hh(0, 23), fin: Hh(1, 1), cape: 1660, cin: 58, hora: Hh(1, 0), modelo: 'GFS' },
   { k: k(sitios[1]), salta: true, ini: Hh(0, 13), fin: Hh(0, 18), cape: 2680, cin: 11, hora: Hh(0, 16), modelo: 'ICON' },
-  { k: k(sitios[2]), salta: false, maxCape: 640, minCin: 20, capeTecho: 640, tapaSuelo: 20 },
-  { k: k(sitios[3]), salta: false, maxCape: 1220, minCin: 102, capeTecho: 1220, tapaSuelo: 102 },
-  { k: k(sitios[4]), salta: false, maxCape: 1350, minCin: 210, capeTecho: 1350, tapaSuelo: 8 },
+  { k: k(sitios[2]), salta: false, maxCape: 640, minCin: 20, parDe: 'ICON', capeTecho: 640, tapaSuelo: 20 },
+  { k: k(sitios[3]), salta: false, maxCape: 1220, minCin: 102, parDe: 'ICON', capeTecho: 1220, tapaSuelo: 102 },
+  { k: k(sitios[4]), salta: false, maxCape: 1350, minCin: 210, parDe: 'ICON', capeTecho: 1350, tapaSuelo: 8 },
 ];
 S.lluviaTorres = [
   { k: k(sitios[0]), llueve: false },
@@ -1953,9 +1953,9 @@ S.torres = sitios.map(p => ({ place: p }));
 S.parteTorres = [
   { k: k(sitios[0]), salta: true, ini: Hh(0, 23), fin: Hh(1, 1), cape: 1660, cin: 58, hora: Hh(1, 0), modelo: 'GFS' },
   { k: k(sitios[1]), salta: true, ini: Hh(0, 13), fin: Hh(0, 18), cape: 2680, cin: 11, hora: Hh(0, 16), modelo: 'ICON' },
-  { k: k(sitios[2]), salta: false, maxCape: 640, minCin: 20, capeTecho: 640, tapaSuelo: 20 },
-  { k: k(sitios[3]), salta: false, maxCape: 1220, minCin: 102, capeTecho: 1220, tapaSuelo: 102 },
-  { k: k(sitios[4]), salta: false, maxCape: 1350, minCin: 210, capeTecho: 1350, tapaSuelo: 8 },
+  { k: k(sitios[2]), salta: false, maxCape: 640, minCin: 20, parDe: 'ICON', capeTecho: 640, tapaSuelo: 20 },
+  { k: k(sitios[3]), salta: false, maxCape: 1220, minCin: 102, parDe: 'ICON', capeTecho: 1220, tapaSuelo: 102 },
+  { k: k(sitios[4]), salta: false, maxCape: 1350, minCin: 210, parDe: 'ICON', capeTecho: 1350, tapaSuelo: 8 },
 ];
 
 LS.vaciar();
@@ -3759,6 +3759,32 @@ ok('tres horas repartidas se dicen SUELTAS, no «de 09:00 a 21:00»',
 /* EL SIRIMIRI DE COSTA: moja igual y con 0,1 mm. */
 S.lluviaTorres = [{ k: 'siri', llueve: true, ini: H0(7), fin: H0(9), pico: 0.1,
                     hPico: H0(8), nHoras: 3, sueltas: false, soloSirimiri: true }];
+/* ── «ESTÁ LLOVIENDO» SOLO SI CAE YA, Y NUNCA EN VEZ DE «SIRIMIRI» ──
+   El 27-09 la tarjeta ponía «Llueve bien · escampa a las 00:00» encima
+   de su propia cabecera con «0,0 lluvia mm/h»: la palabra salía del
+   PICO de las 22:00 y pegada a «escampa» se leía como lo que cae ahora.
+   Al arreglarlo se coló lo contrario —«Está lloviendo» sobre una
+   ventana que aún no había empezado—, y lo cazó la pasada de las 06:00.
+   Las dos cosas, probadas aquí. */
+{
+  const H0b = h => { const d = new Date(); d.setHours(h, 0, 0, 0); return d.getTime(); };
+  const guarda = S.lluviaTorres;
+  const ahoraH = new Date().getHours();
+  /* Cayendo YA (empezó hace dos horas) y con el pico por delante. */
+  S.lluviaTorres = [{ k: 'cae', llueve: true, ini: H0b(ahoraH - 2), fin: H0b(ahoraH + 3),
+                      pico: 8.8, hPico: H0b(ahoraH + 2), nHoras: 6, sueltas: false, soloSirimiri: false }];
+  const cae = soloTexto(lineaAguaTorre('cae'));
+  ok('si cae YA y lo gordo viene después, se dice «Está lloviendo», no la palabra del pico',
+     /^Está lloviendo/.test(cae) && /lo más fuerte/.test(cae), cae);
+  /* La misma ventana pero EMPEZANDO dentro de dos horas: aún no llueve. */
+  S.lluviaTorres = [{ k: 'luego2', llueve: true, ini: H0b(ahoraH + 2), fin: H0b(ahoraH + 5),
+                      pico: 8.8, hPico: H0b(ahoraH + 4), nHoras: 4, sueltas: false, soloSirimiri: false }];
+  ok('y si todavía no ha empezado, NO se dice que está lloviendo',
+     !/Está lloviendo/.test(soloTexto(lineaAguaTorre('luego2'))),
+     soloTexto(lineaAguaTorre('luego2')));
+  S.lluviaTorres = guarda;
+}
+
 ok('el sirimiri se llama sirimiri, que moja igual',
    /Sirimiri/.test(soloTexto(lineaAguaTorre('siri'))),
    soloTexto(lineaAguaTorre('siri')));
@@ -6249,7 +6275,7 @@ grupo('El parte juntaba el CAPE de un modelo con la tapa de otro (30-08)');
      Y la pareja es SUYA: el 26-08 él mismo la pidió — «¿y CAPE no pones?
      porque tapa pero no hay potencia…». */
   ok('la pareja sale de la MISMA hora y el MISMO modelo',
-     /peorPar = \{ cape: cape\[i\], cin: cin\[i\] \}/.test(src)
+     /peorPar = \{ cape: cape\[i\], cin: cin\[i\], om: m \}/.test(src)
      && !/if \(has\(cin\[i\]\) && \(minCin === null \|\| cin\[i\] < minCin\)\)/.test(src),
      'antes: max de CAPE por un lado, min de tapa por otro');
   ok('con empate de CAPE gana la tapa más baja, que es la que se acerca a romper',
@@ -6384,8 +6410,9 @@ grupo('De qué hora a qué hora llueve (31-08-2026, 00:25)');
      /` de \$\{hh\(h1\)\} a \$\{hh\(h2\)\}`/.test(src)
      && !/` desde las \$\{String\(empieza\.date\.getHours\(\)\)/.test(src),
      'antes solo salía «desde las 12:00»');
-  ok('si moja la franja entera, se dice así y no se repiten las horas',
-     /todaLaFranja \? ' toda la franja'/.test(src));
+  ok('si moja la franja entera no se añade nada: el texto ya dice «en la franja»',
+     /todaLaFranja \? ''/.test(src) && !/' toda la franja'/.test(src),
+     'salía «12,8 mm en la franja toda la franja» (27-09-2026)');
   ok('una sola hora se dice como una sola hora',
      /` solo a las \$\{hh\(h1\)\}`/.test(src));
   ok('y si van sueltas se dice, que no es lo mismo tres seguidas que tres repartidas',
@@ -7696,10 +7723,10 @@ grupo('El martes doble: la franja dice el orden del cielo (31-08, 21:17)');
      /resumenCielo\(sel\)/.test(src)
      && /class="part__tira">\$\{R\.partes\.map\(t => `<i>\$\{icon\(t\.code, d\)\}<u>\$\{rot\(t\)\}<\/u><\/i>`\)/.test(src),
      'texto e icono no pueden calcular el corte cada uno por su lado');
-  ok('el dibujo del día empieza a las 6 Y LLEGA HASTA LA NOCHE',
-     /let delDia = conDato\.filter\(h => h\.date\.getHours\(\) >= 6\);/.test(src)
+  ok('el dibujo del día es el DÍA ENTERO, de 0 a 23',
+     /let delDia = conDato;/.test(src)
      && !/getHours\(\) >= 6 && h\.date\.getHours\(\) <= 20/.test(src),
-     'con la ventana en 6-20, una noche de 12,9 mm no podía salir dibujada (27-09-2026)');
+     'con 6-20 no salía la noche de 12,9 mm; con 6-23 se quedaba fuera la madrugada de Lekeitio (27-09-2026)');
 }
 
 grupo('El cielo pasa a ARPEGE por acierto (31-08-2026, su «dale»)');
@@ -9235,9 +9262,9 @@ console.log('\n  El dibujo del día sale de sus horas, no del peor rato');
      /const conDato = hs\.filter\(h => has\(codigoQueSeVe\(h, h\.code\)\)\)/.test(cuerpo),
      'con AROME cargado no hay ni una hora de 240 con weather_code propio');
 
-  ok('y el día (de las 6 en adelante, o la madrugada si no hay más) sale de esas horas',
-     /let delDia = conDato\.filter\(h => h\.date\.getHours\(\) >= 6\);/.test(cuerpo)
-     && /delDia = conDato\.filter\(h => h\.date\.getHours\(\) <= 5\);/.test(cuerpo));
+  ok('y el día entero sale de las horas CON DATO, no de la lista cruda',
+     /let delDia = conDato;/.test(cuerpo)
+     && /const conDato = hs\.filter\(h => has\(codigoQueSeVe\(h, h\.code\)\)\)/.test(cuerpo));
 
   /* Y la cuenta, ejecutada: con nueve horas de sol y un diario que dice
      «cubierto», tiene que ganar el sol. Es el caso del 04-09. */
