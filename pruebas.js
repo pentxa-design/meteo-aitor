@@ -2780,6 +2780,20 @@ grupo('Base y Tope convectivos: «sin nube» es −500 y no se pinta (27-09-2026
      /name:'Tope convectivo'[\s\S]{0,400}?7\.000[\s\S]{0,120}?9\.000[\s\S]{0,120}?Lekeitio/.test(Mm));
 }
 
+grupo('El mapa en el móvil: la cabecera se mide aunque la sección esté fija (28-09-2026)');
+{
+  /* En el móvil la sección del mapa es position:fixed → offsetParent null →
+     la función salía antes de publicar --alto-top y el CSS usaba 150 px con
+     una cabecera de 107: 43 px de mapa en blanco. Sus capturas de las 13:51. */
+  const i = src.indexOf("document.documentElement.style.setProperty('--alto-top'");
+  const j = src.indexOf("if (!sec || !mapa || sec.offsetParent === null) return;");
+  ok('--alto-top se publica ANTES de la salida temprana por offsetParent (móvil, sección fija)',
+     i > 0 && j > 0 && i < j, `alto-top en ${i}, salida en ${j}`);
+  const Cs = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+  ok('y en el móvil la hora del mapa va al lado de los mandos, no en su propia línea (más mapa)',
+     /\.view\[data-v="models"\]\.is-on #mapStamp\{order:0; flex:none;/.test(Cs));
+}
+
 grupo('La tapa de AguaceroWx: no hay regla (27-08-2026)');
 
 const capaCin = (mapsSrc.match(/id:'cin'[\s\S]*?\},\n/) || [''])[0];
@@ -3992,7 +4006,10 @@ ok('tres horas repartidas se dicen SUELTAS, no «de 09:00 a 21:00»',
    `fin` a las 20:00 sigue lloviendo hasta las 21:00, y `fin >= ahora`
    decía que no: la tarjeta pasaba a «de 18:00 a 21:00» como si fuera
    para luego, en plena lluvia. */
-if (new Date().getMinutes() > 0) {
+/* Sin condición de reloj (28-09-2026): a las 14:00 en punto la prueba no
+   corría y el candado de NO-SE-TOCA la dio por muerta. Con el arreglo
+   vale a cualquier minuto: `+fin + 3600e3 > ahora` es cierto toda la hora. */
+{
   S.lluviaTorres = [{ k: 'ult', llueve: true, ini: H0(h - 3), fin: H0(h), pico: 1.0,
                       hPico: H0(h - 1), nHoras: 4, sueltas: false, soloSirimiri: false }];
   const ult = lineaAguaTorre('ult');

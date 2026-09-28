@@ -2058,3 +2058,4 @@ Lo apunto en TRASPASO §16 con builds y medidas. `deploy.sh` desde el portátil:
 12. **(23:30, 27-09)** Raíz única `deManana()` para todo lo de mañana en el vigilante (build 2327). TRASPASO §44 ter.
 13. **(12:10, 28-09)** Vigilante sin ruido de mediodía: firma por sitios, deHoy, CAMBIO solo si se adelanta 2 h. Build 2026.09.28-1206. TRASPASO §45.
 14. **(12:35, 28-09)** Aviso «Próximas 3 h» por sitio (rayo, agua fuerte, racha 70); avisos de cambio apagados. TRASPASO §46.
+15. **(14:05, 28-09)** «rayo en 17 sitios» (build 1352) y más mapa en el móvil, +37 % medido (build 1358). TRASPASO §47.

@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.28-1352';
+const BUILD = '2026.09.28-1358';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -17942,6 +17942,12 @@ addEventListener('keydown', e => {
 function ajustarAltoMapa() {
   const sec  = document.querySelector('.view[data-v="models"]');
   const mapa = document.querySelector('.mapc');
+  /* La cabecera se publica ANTES de la salida temprana (28-09-2026): en el
+     móvil la sección va `position:fixed`, su `offsetParent` es null y esto
+     salía sin medir; el CSS usaba los 150 px por defecto con una cabecera
+     de 107, y el mapa perdía 43 px de pantalla en blanco. */
+  const cab = document.querySelector('header.top');
+  if (cab) document.documentElement.style.setProperty('--alto-top', Math.round(cab.getBoundingClientRect().height || cab.offsetHeight || 0) + 'px');
   if (!sec || !mapa || sec.offsetParent === null) return;
 
   // NO se mide con getBoundingClientRect().top: eso depende de por dónde
