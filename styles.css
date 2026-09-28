@@ -1641,7 +1641,8 @@ body.sin-scroll{overflow:hidden}
   .view[data-v="models"].is-on .lgtop__u{max-width:34%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .view[data-v="models"].is-on .radar__bar{padding:4px 8px 5px; gap:6px; row-gap:3px}
   .view[data-v="models"].is-on .radar__bar .ib{width:34px; height:34px; border-radius:10px}
-  .view[data-v="models"].is-on .ib--now{height:30px; padding:0 9px}
+  .view[data-v="models"].is-on .ib--now{height:30px; padding:0 9px; flex:none; min-width:max-content}
+  .view[data-v="models"].is-on #mapTime{flex:1 1 60px; min-width:60px; margin:0}
   .view[data-v="models"].is-on #mapStamp{order:0; flex:none; font-size:.8rem; min-width:0; margin-left:auto}
   .view[data-v="models"].is-on .mbtn--rayos{padding:3px 8px; font-size:.75rem}
   .view[data-v="models"].is-on .opa label{display:none}

@@ -339,7 +339,7 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
                            esc: { agua: [{ k: 1, dia: 'hoy', horas: [21, 22], mm: 2.5 }] } });
   const c2 = (N2.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo))?.cuerpo || '';
   ok('20:00 · agua FUERTE hoy en ORDUNA a las 21-22 (dentro de 3 h) sale en el aviso de «Próximas 3 h», con su hora y sus mm',
-     !N2.reventó && /ORDUNA: agua fuerte de 21h a 22h \(2,5 mm\/h\)/.test(c2), c2 || resumen(N2));
+     !N2.reventó && /ORDUNA: agua fuerte 21h-22h \(2,5 mm\/h\)/.test(c2), c2 || resumen(N2));
   const N3 = await pasada({ hora: '20:00', antes: conAguaGuardada('20:00', 130),
                            esc: { rayo: [{ k: 0, dia: 'man', horas: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] }] } });
   ok('20:00 · un rayo de MAÑANA de 00 a 13 h no es «CAMBIO» a las 20:00 (empieza a 4 h; va en el parte de las 06:30)',
@@ -381,8 +381,8 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const R3 = await pasada({ hora: '12:00', antes: conRayoGuardado('12:00', 40, 13, 16),
                             esc: { rayo: [{ k: 0, dia: 'hoy', horas: [13, 14, 15, 16] }, { k: 1, dia: 'hoy', horas: [14, 15] }] } });
   const c3 = (R3.b.avisados || []).find(a => /Próximas 3 h|crítico/.test(a.titulo))?.cuerpo || '';
-  ok('12:00 · y si entra un sitio NUEVO (ORDUNA) sí vuelve a sonar «Próximas 3 h», con los dos sitios y sus horas',
-     !R3.reventó && /ORDUNA: rayo 14h-15h/.test(c3) && /BERMEO: rayo 13h-16h/.test(c3), c3 || resumen(R3));
+  ok('12:00 · y si entra un sitio NUEVO (ORDUNA) sí vuelve a sonar «Próximas 3 h», con los dos sitios y sus horas recortadas a las 3 h siguientes (hasta las 15h)',
+     !R3.reventó && /ORDUNA: rayo 14h-15h/.test(c3) && /BERMEO: rayo 13h-15h/.test(c3) && !/16h/.test(c3), c3 || resumen(R3));
 }
 
 /* ── EL PULSO, 60 s DE CDN ─────────────────────────────────────────── */

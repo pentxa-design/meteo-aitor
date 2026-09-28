@@ -1801,6 +1801,11 @@ const Maps = {
       });
       this.map.addControl(new maplibregl.NavigationControl({ showCompass:false }), 'top-left');
       this.map.addControl(new maplibregl.AttributionControl({ compact:true }), 'bottom-right');
+      /* En el móvil MapLibre abre la atribución compacta al cargar y se
+         come tres líneas de mapa (su captura del 28-09-2026). Se pliega
+         al arrancar; el botón (i) la sigue abriendo. */
+      if (typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches)
+        this.map.once('load', () => this.map.getContainer().querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'));
       this.map.addControl(new maplibregl.ScaleControl({ unit:'metric' }), 'bottom-left');
 
       // El evento 'load' puede haber saltado ya, o tardar si el estilo va
@@ -4342,7 +4347,11 @@ const Maps = {
       return suyos.has(Math.round(val));
     };
     // Etiquetas: como mucho 7, repartidas — y las suyas, siempre
-    const paso = Math.max(1, Math.ceil(n / 7));
+    /* En pantalla estrecha, cinco rótulos y no siete: con siete, «700» y
+       «1000» se pisaban en la barra de CAPE (su captura del 28-09-2026,
+       14:26: «7001000», «30004000»). Sus listones se enseñan igual. */
+    const estrecha = typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches;
+    const paso = Math.max(1, Math.ceil(n / (estrecha ? 5 : 7)));
     const ticks = bp.map((v, i) => {
       if (i % paso && i !== n - 1 && !esSuyo(i)) return '';
       /* Y si un corte cae pegado a un listón suyo, manda el listón: dos

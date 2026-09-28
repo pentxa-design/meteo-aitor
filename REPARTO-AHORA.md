@@ -2059,3 +2059,4 @@ Lo apunto en TRASPASO §16 con builds y medidas. `deploy.sh` desde el portátil:
 13. **(12:10, 28-09)** Vigilante sin ruido de mediodía: firma por sitios, deHoy, CAMBIO solo si se adelanta 2 h. Build 2026.09.28-1206. TRASPASO §45.
 14. **(12:35, 28-09)** Aviso «Próximas 3 h» por sitio (rayo, agua fuerte, racha 70); avisos de cambio apagados. TRASPASO §46.
 15. **(14:05, 28-09)** «rayo en 17 sitios» (build 1352) y más mapa en el móvil, +37 % medido (build 1358). TRASPASO §47.
+16. **(14:45, 28-09)** Leyenda/AHORA/atribución del mapa móvil (1429) y aviso por tramos recortado a 3 h (1433). TRASPASO §48.

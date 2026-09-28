@@ -2792,6 +2792,14 @@ grupo('El mapa en el móvil: la cabecera se mide aunque la sección esté fija (
   const Cs = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
   ok('y en el móvil la hora del mapa va al lado de los mandos, no en su propia línea (más mapa)',
      /\.view\[data-v="models"\]\.is-on #mapStamp\{order:0; flex:none;/.test(Cs));
+  const Mj = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  ok('en pantalla estrecha la leyenda pone cinco rótulos, no siete: «700» y «1000» se pisaban (su captura 28-09, 14:26)',
+     /const paso = Math\.max\(1, Math\.ceil\(n \/ \(estrecha \? 5 : 7\)\)\);/.test(Mj));
+  ok('y en el móvil la atribución del mapa arranca plegada (se comía tres líneas de mapa)',
+     /classList\.remove\('maplibregl-compact-show'\)/.test(Mj));
+  ok('y el botón AHORA no se deja pisar por el deslizador de la hora',
+     /\.view\[data-v="models"\]\.is-on \.ib--now\{[^}]*flex:none; min-width:max-content\}/.test(Cs)
+     && /\.view\[data-v="models"\]\.is-on #mapTime\{flex:1 1 60px; min-width:60px/.test(Cs));
 }
 
 grupo('La tapa de AguaceroWx: no hay regla (27-08-2026)');

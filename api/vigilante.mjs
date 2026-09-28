@@ -1503,27 +1503,44 @@ export default async function handler(req, res) {
      cada sitio, nada más». Así que el aviso es ESO: por sitio, rayo,
      agua fuerte o racha de 70 dentro de las tres horas siguientes, con
      su hora. Los avisos de «cambio» se apagan (AVISAR_CAMBIOS). */
-  const dentroDe3h = x => x && x.ini <= h0 + 3 && x.fin >= h0;
+  /* Cada TRAMO que cae en las tres horas siguientes se dice una vez,
+     recortado a lo que queda: «rayo ahora y hasta las 17h», «rayo 16h-17h».
+     Lo de más allá de las tres horas sonará cuando entre en la ventana
+     (28-09-2026, 14:27: «SANTAMAÑA: rayo 13h-19h» a las 14:00 arrastraba
+     la hora pasada y contaba hasta las 19). */
+  const H3 = h0 + 3;
+  const tramoTxt3 = (t, pref) => {
+    const fin = Math.min(t.fin, H3);
+    return t.ini <= h0 ? `${pref}ahora y hasta las ${hh(fin)}` : (t.ini === fin ? `${pref}a las ${hh(t.ini)}` : `${pref}${hh(t.ini)}-${hh(fin)}`);
+  };
+  const tramosEnVentana = x => (x?.tramos || []).filter(t => t.ini <= H3 && t.fin >= h0);
   const queViene = d => {
     const f = [];
-    const r = deHoy(d.dias[claveHoy]);
-    if ((r && dentroDe3h(r)) || deManana(d.dias[claveManana]))
-      f.push({ que: 'rayo', txt: `rayo ${cuandoTxt(d, claveHoy, claveManana, deManana, h0)}` });
-    const ag = deHoy(d.agua?.[claveHoy]);
-    if (ag && d.agua[claveHoy].fuerte && dentroDe3h(ag))
-      f.push({ que: 'agua', txt: `agua fuerte ${tramosTxt(ag.tramos, ag.ini, ag.fin)} (${coma(d.agua[claveHoy].mm)} mm/h)` });
-    const ra = deHoy(d.racha?.[claveHoy]);
-    if (ra && (d.racha[claveHoy].kmh ?? 0) >= RACHA_TOPE && dentroDe3h(ra))
-      f.push({ que: 'racha', txt: `racha ${d.racha[claveHoy].kmh} km/h ${picoTxt(d.racha[claveHoy].hPico, ra.ini)}` });
+    for (const t of tramosEnVentana(deHoy(d.dias[claveHoy])))
+      f.push({ que: 'rayo', clave: `rayo:${t.ini}`, txt: `rayo ${tramoTxt3(t, '')}` });
+    const rm = deManana(d.dias[claveManana]);
+    for (const t of (rm?.tramos || []))
+      f.push({ que: 'rayo', clave: `rayo:m${t.ini}`, txt: `rayo mañana ${t.ini === t.fin ? hh(t.ini) : `${hh(t.ini)}-${hh(t.fin)}`}` });
+    const ag = d.agua?.[claveHoy];
+    if (ag?.fuerte) for (const t of tramosEnVentana(deHoy(ag)))
+      f.push({ que: 'agua', clave: `agua:${t.ini}`, txt: `agua fuerte ${tramoTxt3(t, '')} (${coma(ag.mm)} mm/h)` });
+    const ra = d.racha?.[claveHoy];
+    if (ra && (ra.kmh ?? 0) >= RACHA_TOPE) for (const t of tramosEnVentana(deHoy(ra)))
+      f.push({ que: 'racha', clave: `racha:${t.ini}`, txt: `racha ${ra.kmh} km/h ${tramoTxt3(t, '')}` });
     return f;
   };
   const proximas = buenos.map(d => ({ d, f: queViene(d) })).filter(x => x.f.length);
-  const firmaAhora = proximas.flatMap(x => x.f.map(f => `${x.d.n}:${f.que}`)).sort().join('|');
-  /* Ya avisado si NADA es nuevo respecto a lo dicho (las firmas viejas,
-     nombre solo o nombre:horas, cuentan como rayo). */
-  const dichas = new Set(String(antes?.ultimoAviso || '').split('|').filter(Boolean)
-    .map(x => { const [n, q] = x.split(':'); return `${n}:${['rayo', 'agua', 'racha'].includes(q) ? q : 'rayo'}`; }));
-  const yaAvisado = firmaAhora.split('|').filter(Boolean).every(x => dichas.has(x));
+  const firmaAhora = proximas.flatMap(x => x.f.map(f => `${x.d.n}:${f.clave}`)).sort().join('|');
+  /* Ya avisado si NADA es nuevo respecto a lo dicho. Las firmas viejas
+     («BERMEO», «BERMEO:0-2», «BERMEO:rayo») valen por cualquier tramo de
+     rayo de ese sitio, para no repetir tras publicar. */
+  const dichasViejas = new Set(), dichas = new Set();
+  for (const x of String(antes?.ultimoAviso || '').split('|').filter(Boolean)) {
+    const [n, q, t] = x.split(':');
+    if (['rayo', 'agua', 'racha'].includes(q) && t !== undefined) dichas.add(x); else dichasViejas.add(n);
+  }
+  const yaDicho = x => dichas.has(x) || (x.split(':')[1] === 'rayo' && dichasViejas.has(x.split(':')[0]));
+  const yaAvisado = firmaAhora.split('|').filter(Boolean).every(yaDicho);
   const AVISAR_CAMBIOS = false;   // apagado el 28-09-2026 por él: «si cambia o no cambia no me interesa»
 
   const avisos = [];
