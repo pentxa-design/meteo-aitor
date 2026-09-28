@@ -847,6 +847,14 @@ export default async function handler(req, res) {
            enseña. Misma razón que `envia` y `nLista` (26-09-2026). */
         parte2De: e.parte2De ?? null,
         parteResumen: e.parteResumen ?? null,
+        /* ── Y A QUÉ HORA SALIÓ, QUE ES LO QUE SE DISCUTE ───────────────
+           28-09-2026: el domingo el parte de la mañana le llegó a las
+           07:48 y no a las 06:30. Por nuestro lado la ventana se salta el
+           freno de cadencia desde las 06:00, así que debería salir en la
+           primera llamada de después — pero eso no se podía comprobar
+           desde fuera, solo suponer. Aquí sale la hora del intento, que
+           es un dato y no una suposición. */
+        parteIntentoEn: e.parteIntentoEn ?? null,
         sitios: Object.keys(e.sitios || {}).length,
         nLista: e.nLista ?? null,
         noMirados: e.noMirados ?? [],

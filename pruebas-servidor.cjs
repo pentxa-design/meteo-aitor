@@ -1245,6 +1245,16 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
   /* 26-09-2026: el modo ciego avisaba «de lo gordo» con un 60 escrito a
      mano —el listón viejo de la torre— mientras su tope es 70. Ningún
      número de racha suelto en esa rama: el listón tiene un nombre. */
+  /* ── LA HORA DEL PARTE, MIRABLE DESDE FUERA (28-09-2026) ──────────
+     El domingo el parte de la mañana le llegó a las 07:48 y no a las
+     06:30, y no se podía comprobar por qué: la hora del intento vivía
+     solo dentro del estado. Un número que decide tiene que poder
+     mirarse desde fuera, como `envia`, `nLista` y `ojo`. */
+  ok('el pulso dice a qué hora se intentó el parte, no solo de qué día es',
+     /parteIntentoEn: e\.parteIntentoEn \?\? null,/.test(vgc)
+     && /parteIntentoEn: \(tocaParte \|\| tocaParte2\) \? new Date\(\)\.toISOString\(\)/.test(vgc),
+     'sin esto solo se puede suponer, y de suposiciones ya van dos esta semana');
+
   ok('en modo ciego se avisa por SU tope de racha, no por un número escrito a mano',
      /if \(r\?\.kmh != null && r\.kmh >= RACHA_TOPE\)/.test(V)
      && !/r\.kmh >= \d+/.test(V),
