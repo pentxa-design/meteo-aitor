@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.28-2047';
+const BUILD = '2026.09.28-2158';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -18442,6 +18442,13 @@ function bind() {
   });
 
   $('#mapFull')?.addEventListener('click', () => pantallaCompletaMapa());
+  /* En el móvil el botón vive DENTRO del mapa (arriba a la derecha), como
+     icono, y la pantalla completa quita también la cabecera: unos 110 px
+     más de mapa (28-09-2026, suyo: «un poco más grande sería lo suyo»). */
+  if (typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches) {
+    const b = $('#mapFull'), w = document.querySelector('.mapwrap');
+    if (b && w) w.appendChild(b);
+  }
   $('#mapPrev').addEventListener('click', () => Maps.paso(-1));
   $('#mapNext').addEventListener('click', () => Maps.paso(+1));
   $('#mapNow') .addEventListener('click', () => Maps.ahora());

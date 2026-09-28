@@ -1570,9 +1570,14 @@ body.sin-scroll{overflow:hidden}
   .view[data-v="models"].is-on .mapwrap{flex:1; min-height:0; display:flex; flex-direction:column}
   .view[data-v="models"].is-on .mapc{flex:1; height:auto!important; min-height:0}
 
-  /* Se montaba encima del selector de capa. Y ya no hace falta: la
-     sección entera ocupa la pantalla. */
-  .view[data-v="models"].is-on .mfull{display:none}
+  /* En el móvil el botón de pantalla completa va DENTRO del mapa, como
+     icono (app.js lo mueve a .mapwrap), y al activarlo se lleva también
+     la cabecera: el mapa gana unos 110 px (28-09-2026). */
+  .view[data-v="models"].is-on .mfull{display:inline-flex; top:10px; right:10px; left:auto;
+    width:38px; height:38px; padding:0; justify-content:center; border-radius:50%; z-index:8}
+  .view[data-v="models"].is-on .mfull span{display:none}
+  .view[data-v="models"].is-on .mfull svg{width:18px; height:18px}
+  body.mapa-movil .view[data-v="models"].is-pantalla{top:0}
 
   /* El pie ocupaba 104 px porque se partía en varias líneas. Se queda,
      porque ahí va DE DÓNDE SALE el dato —modelo, resolución y hora de la
