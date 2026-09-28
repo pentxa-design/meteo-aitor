@@ -2060,3 +2060,4 @@ Lo apunto en TRASPASO §16 con builds y medidas. `deploy.sh` desde el portátil:
 14. **(12:35, 28-09)** Aviso «Próximas 3 h» por sitio (rayo, agua fuerte, racha 70); avisos de cambio apagados. TRASPASO §46.
 15. **(14:05, 28-09)** «rayo en 17 sitios» (build 1352) y más mapa en el móvil, +37 % medido (build 1358). TRASPASO §47.
 16. **(14:45, 28-09)** Leyenda/AHORA/atribución del mapa móvil (1429) y aviso por tramos recortado a 3 h (1433). TRASPASO §48.
+17. **(16:10, 28-09)** «riesgo de rayo» en el aviso (1535); punto de 12 px en el mapa (1603). TRASPASO §48 bis.

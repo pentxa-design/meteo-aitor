@@ -1405,6 +1405,9 @@ canvas.mvals{width:100%;height:100%;display:block}
   background:color-mix(in srgb,var(--no) 14%,transparent);
   border-left:4px solid var(--no)}
 #kpis .viene{grid-column:1/-1}
+/* El sitio en el mapa: un punto de 12 px, no un globo de 40 (28-09-2026). */
+.mpunto{width:12px;height:12px;border-radius:50%;background:#e03050;
+  border:2px solid #fff;box-shadow:0 0 0 1px #0006,0 1px 4px #0008;cursor:pointer}
 /* Dentro de la tarjeta de Mis estaciones también a lo ancho: caía en la
    columna del rótulo (104 px) y salía en vertical (su captura, 27-09). */
 .tor .viene{grid-column:1/-1}

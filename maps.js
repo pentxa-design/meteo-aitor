@@ -1817,7 +1817,13 @@ const Maps = {
         setTimeout(r, 9000);
       });
 
-      this._marcador = new maplibregl.Marker({ color:'#e03050' })
+      /* Un PUNTO, no el globo de MapLibre (28-09-2026, suyo: «el globo rojo
+         enorme no me deja ver ni los pueblos, como mínimo un puntito»).
+         Un círculo de 12 px con borde blanco, centrado en el sitio. */
+      const punto = document.createElement('div');
+      punto.className = 'mpunto';
+      punto.title = p.name;
+      this._marcador = new maplibregl.Marker({ element: punto, anchor: 'center' })
         .setLngLat([p.lon, p.lat])
         .setPopup(new maplibregl.Popup({ offset:16 }).setText(p.name))
         .addTo(this.map);

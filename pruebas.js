@@ -2797,6 +2797,9 @@ grupo('El mapa en el móvil: la cabecera se mide aunque la sección esté fija (
      /const paso = Math\.max\(1, Math\.ceil\(n \/ \(estrecha \? 5 : 7\)\)\);/.test(Mj));
   ok('y en el móvil la atribución del mapa arranca plegada (se comía tres líneas de mapa)',
      /classList\.remove\('maplibregl-compact-show'\)/.test(Mj));
+  ok('el sitio en el mapa es un punto de 12 px (mpunto), no el globo de MapLibre que tapaba los pueblos (28-09-2026)',
+     /new maplibregl\.Marker\(\{ element: punto, anchor: 'center' \}\)/.test(Mj) && !/Marker\(\{ color:'#e03050' \}\)/.test(Mj)
+     && /\.mpunto\{width:12px;height:12px;border-radius:50%/.test(Cs));
   ok('y el botón AHORA no se deja pisar por el deslizador de la hora',
      /\.view\[data-v="models"\]\.is-on \.ib--now\{[^}]*flex:none; min-width:max-content\}/.test(Cs)
      && /\.view\[data-v="models"\]\.is-on #mapTime\{flex:1 1 60px; min-width:60px/.test(Cs));
