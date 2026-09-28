@@ -1494,25 +1494,49 @@ export default async function handler(req, res) {
      Suyo: «a veces no sé ni lo que estoy leyendo». Vuelve a sonar solo si
      entra un sitio nuevo; las horas que se mueven van por «CAMBIO», y
      solo si se adelantan dos o más. */
-  const firmaAhora = inminentes.map(d => d.n).sort().join('|');
-  /* Compatible con la firma vieja (nombre:horas): se comparan los nombres. */
-  const nombresDe = f => String(f || '').split('|').map(x => x.split(':')[0]).filter(Boolean).sort().join('|');
-  const yaAvisado = nombresDe(antes?.ultimoAviso) === firmaAhora;
+  /* ── LO QUE PASA EN CADA SITIO EN LAS PRÓXIMAS TRES HORAS (28-09-2026) ──
+     Suyo, 12:15: «a mí no me interesa si cambia o no cambia; me interesa
+     en esos momentos, o dentro de dos o tres horas, qué va a pasar en
+     cada sitio, nada más». Así que el aviso es ESO: por sitio, rayo,
+     agua fuerte o racha de 70 dentro de las tres horas siguientes, con
+     su hora. Los avisos de «cambio» se apagan (AVISAR_CAMBIOS). */
+  const dentroDe3h = x => x && x.ini <= h0 + 3 && x.fin >= h0;
+  const queViene = d => {
+    const f = [];
+    const r = deHoy(d.dias[claveHoy]);
+    if ((r && dentroDe3h(r)) || deManana(d.dias[claveManana]))
+      f.push({ que: 'rayo', txt: `rayo ${cuandoTxt(d, claveHoy, claveManana, deManana, h0)}` });
+    const ag = deHoy(d.agua?.[claveHoy]);
+    if (ag && d.agua[claveHoy].fuerte && dentroDe3h(ag))
+      f.push({ que: 'agua', txt: `agua fuerte ${tramosTxt(ag.tramos, ag.ini, ag.fin)} (${coma(d.agua[claveHoy].mm)} mm/h)` });
+    const ra = deHoy(d.racha?.[claveHoy]);
+    if (ra && (d.racha[claveHoy].kmh ?? 0) >= RACHA_TOPE && dentroDe3h(ra))
+      f.push({ que: 'racha', txt: `racha ${d.racha[claveHoy].kmh} km/h ${picoTxt(d.racha[claveHoy].hPico, ra.ini)}` });
+    return f;
+  };
+  const proximas = buenos.map(d => ({ d, f: queViene(d) })).filter(x => x.f.length);
+  const firmaAhora = proximas.flatMap(x => x.f.map(f => `${x.d.n}:${f.que}`)).sort().join('|');
+  /* Ya avisado si NADA es nuevo respecto a lo dicho (las firmas viejas,
+     nombre solo o nombre:horas, cuentan como rayo). */
+  const dichas = new Set(String(antes?.ultimoAviso || '').split('|').filter(Boolean)
+    .map(x => { const [n, q] = x.split(':'); return `${n}:${['rayo', 'agua', 'racha'].includes(q) ? q : 'rayo'}`; }));
+  const yaAvisado = firmaAhora.split('|').filter(Boolean).every(x => dichas.has(x));
+  const AVISAR_CAMBIOS = false;   // apagado el 28-09-2026 por él: «si cambia o no cambia no me interesa»
 
   const avisos = [];
-  if (inminentes.length && !yaAvisado) {
-    const crit = inminentes.find(d => d.critico);
-    const lista = [...inminentes].sort((a, b) => (b.critico ? 1 : 0) - (a.critico ? 1 : 0))
-      .slice(0, 4).map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana, deManana, h0)}`).join(' · ');
+  if (proximas.length && !yaAvisado) {
+    const orden = [...proximas].sort((a, b) => (b.d.critico ? 1 : 0) - (a.d.critico ? 1 : 0));
+    const crit = orden[0].d.critico;
+    const lista = orden.slice(0, 5).map(x => `${x.d.n}: ${x.f.map(f => f.txt).join(' · ')}`).join('. ');
     avisos.push({
-      titulo: crit ? `⚡ MATIENA (crítico) y ${inminentes.length - 1} más` : `⚡ Se está armando en ${inminentes.length}`,
-      /* Afecta a varios: se abre «Mis estaciones», que los enseña todos. */
+      titulo: crit ? `⚡ ${orden[0].d.n} (crítico) y ${proximas.length - 1} más`
+                   : `⚡ Próximas 3 h · ${proximas.length === 1 ? orden[0].d.n : `${proximas.length} sitios`}`,
       url: './?v=torres',
-      cuerpo: `${lista}${inminentes.length > 4 ? ` y ${inminentes.length - 4} más` : ''}. Datos de las ${hh(h0)}.`,
+      cuerpo: `${lista}${proximas.length > 5 ? `. Y ${proximas.length - 5} más` : ''}. Datos de las ${hh(h0)}.`,
       tag: 'tormenta', importante: true,
     });
   }
-  if (cambiosQueValen.length) {
+  if (AVISAR_CAMBIOS && cambiosQueValen.length) {
     const c = cambiosQueValen[0];
     avisos.push({
       titulo: `⚡ CAMBIO ${c.cual.toUpperCase()} · ${cambiosQueValen.length > 1 ? `${cambiosQueValen.length} torres` : c.n}`,
@@ -1526,7 +1550,7 @@ export default async function handler(req, res) {
   /* EL AGUA VA EN SU PROPIO AVISO Y CON SU PROPIO ICONO. No se junta con
      el rayo: con rayo no se acerca, con agua decide a qué hora va. */
   const aguaQueVale = cambiosAgua.filter(c => (c.cual === 'hoy' || h0 >= 18) && c.peor);
-  if (aguaQueVale.length) {
+  if (AVISAR_CAMBIOS && aguaQueVale.length) {
     const c = aguaQueVale[0];
     avisos.push({
       titulo: `🌧 AGUA ${c.cual.toUpperCase()} · ${aguaQueVale.length > 1 ? `${aguaQueVale.length} torres` : c.n}`,
@@ -1540,7 +1564,7 @@ export default async function handler(req, res) {
   /* Y LA RACHA DE 70, que no es la de la torre: es la del viaje. Va como
      importante porque es la que le hace no salir de casa. */
   const rachaQueVale = cambiosRacha.filter(c => (c.cual === 'hoy' || h0 >= 18) && c.peor);
-  if (rachaQueVale.length) {
+  if (AVISAR_CAMBIOS && rachaQueVale.length) {
     const c = rachaQueVale[0];
     const rMax = Math.max(...rachaQueVale.map(x => x.kmh ?? 0));
     avisos.push({
@@ -1910,7 +1934,7 @@ export default async function handler(req, res) {
 
          Ahora solo se marca si llegó a algún aparato. Si no llegó, se
          deja lo que hubiera y la pasada siguiente vuelve a intentarlo. */
-      ultimoAviso: !inminentes.length ? null
+      ultimoAviso: !proximas.length ? null
         : (enviados.some(e => e.tag === 'tormenta' && (e.enviados || 0) > 0)
              ? firmaAhora
              : (antes?.ultimoAviso ?? null)),

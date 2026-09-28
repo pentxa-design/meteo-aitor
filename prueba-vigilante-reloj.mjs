@@ -285,7 +285,7 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      /* A las 22:30 las tres horas siguientes llegan hasta la 01h: se dice
         hasta ahí, que es lo que cuenta ahora (deManana). */
      Array.isArray(H.b.inminentes) && H.b.inminentes[0] === 'BERMEO mañana 00h-01h'
-     && titulos(H.b).some(t => /armando/i.test(t)), resumen(H));
+     && titulos(H.b).some(t => /Próximas 3 h|crítico/.test(t)), resumen(H));
 }
 
 /* ── 14:00 · EL CÓDIGO DE TORMENTA CUENTA COMO RAYO ────────────────── */
@@ -293,7 +293,7 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const I = await pasada({ hora: '14:00', antes: tranquilo('14:00', 130),
                            esc: { codigo: [{ k: 0, dia: 'hoy', horas: [15, 16], om: 'ecmwf_ifs025' }] } });
   ok('14:00 · «tormenta» (código 95) con CAPE 40 en un modelo cuenta como rayo, como en la app',
-     !I.reventó && (I.b.inminentes || []).includes('BERMEO 15h-16h') && titulos(I.b).some(t => /armando/i.test(t)), resumen(I));
+     !I.reventó && (I.b.inminentes || []).includes('BERMEO 15h-16h') && titulos(I.b).some(t => /Próximas 3 h|crítico/.test(t)), resumen(I));
 }
 
 /* ── 14:00 · «NO HE PODIDO MIRAR» SOLO SI PUEDE CAMBIAR ALGO ──────── */
@@ -337,8 +337,9 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      !N.reventó && !titulos(N.b).some(t => /AGUA/i.test(t)), resumen(N));
   const N2 = await pasada({ hora: '20:00', antes: conAguaGuardada('20:00', 130),
                            esc: { agua: [{ k: 1, dia: 'hoy', horas: [21, 22], mm: 2.5 }] } });
-  ok('20:00 · agua nueva HOY en ORDUNA sí es aviso, y el título dice HOY',
-     !N2.reventó && titulos(N2.b).some(t => /AGUA HOY/.test(t)), resumen(N2));
+  const c2 = (N2.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo))?.cuerpo || '';
+  ok('20:00 · agua FUERTE hoy en ORDUNA a las 21-22 (dentro de 3 h) sale en el aviso de «Próximas 3 h», con su hora y sus mm',
+     !N2.reventó && /ORDUNA: agua fuerte de 21h a 22h \(2,5 mm\/h\)/.test(c2), c2 || resumen(N2));
   const N3 = await pasada({ hora: '20:00', antes: conAguaGuardada('20:00', 130),
                            esc: { rayo: [{ k: 0, dia: 'man', horas: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] }] } });
   ok('20:00 · un rayo de MAÑANA de 00 a 13 h no es «CAMBIO» a las 20:00 (empieza a 4 h; va en el parte de las 06:30)',
@@ -346,13 +347,13 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const N5 = await pasada({ hora: '22:00', antes: tranquilo('22:00', 130, {
                               sitios: { BERMEO: { [MAN]: { ini: 13, fin: 19, tramos: [{ ini: 13, fin: 19 }] } } }, aguaSitios: {}, rachaSitios: {} }),
                             esc: { rayo: [{ k: 0, dia: 'man', horas: Array.from({ length: 20 }, (_, i) => i) }] } });
-  const c5 = (N5.b.avisados || []).find(a => /CAMBIO/.test(a.titulo))?.cuerpo || '';
-  ok('22:00 · el CAMBIO de mañana solo cuenta la madrugada que cae en las 3 h siguientes: «ahora da rayo de 00h a 01h», no «13h-19h pasa a 00h-19h» (su aviso de las 22:00)',
-     /ahora da rayo de 00h a 01h/.test(c5) && !/19h/.test(c5), c5 || resumen(N5));
+  const c5 = (N5.b.avisados || []).find(a => /Próximas 3 h|crítico/.test(a.titulo))?.cuerpo || '';
+  ok('22:00 · del rayo de mañana solo se dice la madrugada que cae en las 3 h siguientes: «BERMEO: rayo mañana 00h-01h», nada de «13h-19h pasa a…» (su aviso de las 22:00)',
+     /BERMEO: rayo mañana 00h-01h/.test(c5) && !/19h|pasa a/.test(c5), c5 || resumen(N5));
   const N4 = await pasada({ hora: '22:00', antes: conAguaGuardada('22:00', 130),
                            esc: { rayo: [{ k: 0, dia: 'man', horas: [0, 1, 2] }] } });
   ok('22:00 · pero el rayo de madrugada (00-02 h) sí avisa, que es la noche de guardia',
-     !N4.reventó && titulos(N4.b).some(t => /CAMBIO|armando/i.test(t)), resumen(N4));
+     !N4.reventó && titulos(N4.b).some(t => /Próximas 3 h|crítico/.test(t)), resumen(N4));
 }
 
 /* ── EL RUIDO DEL LUNES 28-09 A MEDIODÍA (su pantallazo de las 12:01) ──
@@ -370,17 +371,18 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   ok('12:00 · en el «se está armando» no se cuenta lo ya pasado: BERMEO «13h-17h», no «00h-01h y 13h-17h»',
      !R1.reventó && (R1.b.inminentes || [])[0] === 'BERMEO 13h-17h', resumen(R1));
   ok('12:00 · si ya avisó de BERMEO y solo se han movido las horas, NO lo repite (la firma es el sitio, no las horas)',
-     !R1.reventó && !titulos(R1.b).some(t => /armando|crítico/i.test(t)), resumen(R1));
+     !R1.reventó && !titulos(R1.b).some(t => /Próximas 3 h|crítico/.test(t)), resumen(R1));
   ok('12:00 · y alargar el final una hora (13h-16h → 13h-17h) NO es un «CAMBIO»',
      !R1.reventó && !titulos(R1.b).some(t => /CAMBIO/.test(t)), resumen(R1));
   const R2 = await pasada({ hora: '12:00', antes: conRayoGuardado('12:00', 40, 15, 19),
                             esc: { rayo: [{ k: 0, dia: 'hoy', horas: [13, 14, 15, 16, 17, 18, 19] }] } });
-  ok('12:00 · pero adelantarse dos horas (15h → 13h) SÍ es un «CAMBIO»',
-     !R2.reventó && titulos(R2.b).some(t => /CAMBIO/.test(t)), resumen(R2));
+  ok('12:00 · si ya avisó de BERMEO, que el rayo se mueva de las 15h a las 13h NO vuelve a sonar: «si cambia o no cambia no me interesa» (suyo, 28-09)',
+     !R2.reventó && !titulos(R2.b).some(t => /CAMBIO|Próximas 3 h|crítico/.test(t)), resumen(R2));
   const R3 = await pasada({ hora: '12:00', antes: conRayoGuardado('12:00', 40, 13, 16),
                             esc: { rayo: [{ k: 0, dia: 'hoy', horas: [13, 14, 15, 16] }, { k: 1, dia: 'hoy', horas: [14, 15] }] } });
-  ok('12:00 · y si entra un sitio NUEVO (ORDUNA) sí vuelve a sonar el «se está armando»',
-     !R3.reventó && titulos(R3.b).some(t => /armando|crítico/i.test(t)), resumen(R3));
+  const c3 = (R3.b.avisados || []).find(a => /Próximas 3 h|crítico/.test(a.titulo))?.cuerpo || '';
+  ok('12:00 · y si entra un sitio NUEVO (ORDUNA) sí vuelve a sonar «Próximas 3 h», con los dos sitios y sus horas',
+     !R3.reventó && /ORDUNA: rayo 14h-15h/.test(c3) && /BERMEO: rayo 13h-16h/.test(c3), c3 || resumen(R3));
 }
 
 /* ── EL PULSO, 60 s DE CDN ─────────────────────────────────────────── */
