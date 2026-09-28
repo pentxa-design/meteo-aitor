@@ -349,7 +349,7 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
                             esc: { rayo: [{ k: 0, dia: 'man', horas: Array.from({ length: 20 }, (_, i) => i) }] } });
   const c5 = (N5.b.avisados || []).find(a => /Próximas 3 h|crítico/.test(a.titulo))?.cuerpo || '';
   ok('22:00 · del rayo de mañana solo se dice la madrugada que cae en las 3 h siguientes: «BERMEO: rayo mañana 00h-01h», nada de «13h-19h pasa a…» (su aviso de las 22:00)',
-     /BERMEO: rayo mañana 00h-01h/.test(c5) && !/19h|pasa a/.test(c5), c5 || resumen(N5));
+     /BERMEO: riesgo de rayo mañana 00h-01h/.test(c5) && !/19h|pasa a/.test(c5), c5 || resumen(N5));
   const N4 = await pasada({ hora: '22:00', antes: conAguaGuardada('22:00', 130),
                            esc: { rayo: [{ k: 0, dia: 'man', horas: [0, 1, 2] }] } });
   ok('22:00 · pero el rayo de madrugada (00-02 h) sí avisa, que es la noche de guardia',
@@ -381,8 +381,8 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const R3 = await pasada({ hora: '12:00', antes: conRayoGuardado('12:00', 40, 13, 16),
                             esc: { rayo: [{ k: 0, dia: 'hoy', horas: [13, 14, 15, 16] }, { k: 1, dia: 'hoy', horas: [14, 15] }] } });
   const c3 = (R3.b.avisados || []).find(a => /Próximas 3 h|crítico/.test(a.titulo))?.cuerpo || '';
-  ok('12:00 · y si entra un sitio NUEVO (ORDUNA) sí vuelve a sonar «Próximas 3 h», con los dos sitios y sus horas recortadas a las 3 h siguientes (hasta las 15h)',
-     !R3.reventó && /ORDUNA: rayo 14h-15h/.test(c3) && /BERMEO: rayo 13h-15h/.test(c3) && !/16h/.test(c3), c3 || resumen(R3));
+  ok('12:00 · y si entra un sitio NUEVO (ORDUNA) sí vuelve a sonar «Próximas 3 h», con los dos sitios, «riesgo de rayo» (modelo, no medida) y sus horas recortadas a las 3 h siguientes (hasta las 15h)',
+     !R3.reventó && /ORDUNA: riesgo de rayo 14h-15h/.test(c3) && /BERMEO: riesgo de rayo 13h-15h/.test(c3) && !/16h/.test(c3), c3 || resumen(R3));
 }
 
 /* ── EL PULSO, 60 s DE CDN ─────────────────────────────────────────── */

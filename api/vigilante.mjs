@@ -1517,10 +1517,10 @@ export default async function handler(req, res) {
   const queViene = d => {
     const f = [];
     for (const t of tramosEnVentana(deHoy(d.dias[claveHoy])))
-      f.push({ que: 'rayo', clave: `rayo:${t.ini}`, txt: `rayo ${tramoTxt3(t, '')}` });
+      f.push({ que: 'rayo', clave: `rayo:${t.ini}`, txt: `riesgo de rayo ${tramoTxt3(t, '')}` });   // «riesgo»: es modelo, no medida (28-09-2026, 15:32)
     const rm = deManana(d.dias[claveManana]);
     for (const t of (rm?.tramos || []))
-      f.push({ que: 'rayo', clave: `rayo:m${t.ini}`, txt: `rayo mañana ${t.ini === t.fin ? hh(t.ini) : `${hh(t.ini)}-${hh(t.fin)}`}` });
+      f.push({ que: 'rayo', clave: `rayo:m${t.ini}`, txt: `riesgo de rayo mañana ${t.ini === t.fin ? hh(t.ini) : `${hh(t.ini)}-${hh(t.fin)}`}` });
     const ag = d.agua?.[claveHoy];
     if (ag?.fuerte) for (const t of tramosEnVentana(deHoy(ag)))
       f.push({ que: 'agua', clave: `agua:${t.ini}`, txt: `agua fuerte ${tramoTxt3(t, '')} (${coma(ag.mm)} mm/h)` });
