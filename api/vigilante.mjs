@@ -75,6 +75,9 @@ const MODELOS_AGUA = [...MODELOS, 'ecmwf_ifs025'];
    ficha de Torre, que decía AROME HD y enseñaba datos de ECMWF.       */
 const NOMBRE = { best_match: 'Automático', icon_eu: 'ICON', gfs_seamless: 'GFS', ecmwf_ifs025: 'ECMWF' };
 const nombreDe = m => NOMBRE[m] || m;
+/* «rayo en 17» se lee como una hora (suyo, 28-09-2026 13:49: «¿rayo en 17
+   qué es? confunde»). Con la palabra: «en 17 sitios», «en 1 sitio». */
+const sitiosTxt = n => `${n} ${n === 1 ? 'sitio' : 'sitios'}`;
 /* Los milímetros van con coma, como en la app: «7.2 mm/h» en un aviso del
    26-09 (segundo parte) era un fallo tonto de los suyos. */
 const coma = v => String(v).replace('.', ',');
@@ -1746,19 +1749,19 @@ export default async function handler(req, res) {
 
     const trozos = [];
     if (conRayo.length) {
-      trozos.push(`⚡ rayo en ${conRayo.length}: `
+      trozos.push(`⚡ rayo en ${sitiosTxt(conRayo.length)}: `
         + conRayo.slice(0, 3).map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana, deManana, h0)}`).join(' · ')
         + (conRayo.length > 3 ? ` y ${conRayo.length - 3} más` : ''));
     }
     if (conAgua.length) {
       const peor = conAgua.reduce((a2, b2) => b2.agua[claveHoy].mm > a2.agua[claveHoy].mm ? b2 : a2);
-      trozos.push(`🌧 agua en ${conAgua.length}: lo más fuerte ${peor.n} `
+      trozos.push(`🌧 agua en ${sitiosTxt(conAgua.length)}: lo más fuerte ${peor.n} `
         + `${coma(peor.agua[claveHoy].mm)} mm/h ${picoTxt(peor.agua[claveHoy].hPico, peor.agua[claveHoy].ini)}`
         + `, y llueve ${tramosTxt(peor.agua[claveHoy].tramos, peor.agua[claveHoy].ini, peor.agua[claveHoy].fin)}`);
     }
     if (conRacha.length) {
       const peor = conRacha.reduce((a2, b2) => b2.racha[claveHoy].kmh > a2.racha[claveHoy].kmh ? b2 : a2);
-      trozos.push(`💨 racha de ${RACHA_TOPE}+ en ${conRacha.length}: lo peor ${peor.n} `
+      trozos.push(`💨 racha de ${RACHA_TOPE}+ en ${sitiosTxt(conRacha.length)}: lo peor ${peor.n} `
         + `${peor.racha[claveHoy].kmh} km/h ${picoTxt(peor.racha[claveHoy].hPico, peor.racha[claveHoy].ini)}`
         + `, y pasa de ${RACHA_TOPE} ${tramosTxt(peor.racha[claveHoy].tramos, peor.racha[claveHoy].ini, peor.racha[claveHoy].fin)}`);
     }
@@ -1833,17 +1836,17 @@ export default async function handler(req, res) {
         cmp(conRacha.map(d => d.n), nombres(antesR.racha), 'racha');
       }
       const trozos2 = [];
-      if (conRayo.length) trozos2.push(`⚡ rayo en ${conRayo.length}: `
+      if (conRayo.length) trozos2.push(`⚡ rayo en ${sitiosTxt(conRayo.length)}: `
         + conRayo.slice(0, 3).map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana, deManana, h0)}`).join(' · ')
         + (conRayo.length > 3 ? ` y ${conRayo.length - 3} más` : ''));
       if (conAgua.length) {
         const peor = conAgua.reduce((a2, b2) => b2.agua[claveHoy].mm > a2.agua[claveHoy].mm ? b2 : a2);
-        trozos2.push(`🌧 agua en ${conAgua.length}: lo más fuerte ${peor.n} `
+        trozos2.push(`🌧 agua en ${sitiosTxt(conAgua.length)}: lo más fuerte ${peor.n} `
           + `${coma(peor.agua[claveHoy].mm)} mm/h ${picoTxt(peor.agua[claveHoy].hPico, peor.agua[claveHoy].ini)}`);
       }
       if (conRacha.length) {
         const peor = conRacha.reduce((a2, b2) => b2.racha[claveHoy].kmh > a2.racha[claveHoy].kmh ? b2 : a2);
-        trozos2.push(`💨 racha de ${RACHA_TOPE}+ en ${conRacha.length}: lo peor ${peor.n} `
+        trozos2.push(`💨 racha de ${RACHA_TOPE}+ en ${sitiosTxt(conRacha.length)}: lo peor ${peor.n} `
           + `${peor.racha[claveHoy].kmh} km/h ${picoTxt(peor.racha[claveHoy].hPico, peor.racha[claveHoy].ini)}`);
       }
       avisos.push({

@@ -197,7 +197,7 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
                            esc: { agua: [{ k: 0, dia: 'hoy', horas: [15, 16], mm: 2.5 }] } });
   const c = cuerpoDe(A.b, /parte/i);
   ok('13:15 · con agua hoy por delante sale el segundo parte, y nombra el sitio',
-     !A.reventó && /parte/i.test(titulos(A.b).join('|')) && /BERMEO/.test(c), resumen(A));
+     !A.reventó && /parte/i.test(titulos(A.b).join('|')) && /BERMEO/.test(c) && /agua en 1 sitio:/.test(c), resumen(A));
   ok('   y los milímetros van con coma (2,5 mm/h), no «2.5» como en el aviso del 26-09',
      /2,5 mm\/h/.test(c) && !/2\.5/.test(c), c);
   ok('   y dice qué ha cambiado respecto a la mañana, por sitio',
@@ -247,8 +247,8 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const P = await pasada({ hora: '07:30', antes: tranquilo('07:30', 10, { parteDe: AYER, parte2De: AYER }),
                            esc: { racha: [{ k: 0, dia: 'hoy', horas: [16], v: 75 }] } });
   const cp = cuerpoDe(P.b, /parte de hoy/i);
-  ok('07:30 · el parte de la mañana sale, con la racha de 70+ de BERMEO por delante',
-     !P.reventó && /racha de 70\+ en 1/.test(cp) && /BERMEO/.test(cp), cp || resumen(P));
+  ok('07:30 · el parte de la mañana sale, con la racha de 70+ de BERMEO por delante, y el recuento dice «sitio», no un número que se lee como hora',
+     !P.reventó && /racha de 70\+ en 1 sitio:/.test(cp) && /BERMEO/.test(cp) && !/en 1:/.test(cp), cp || resumen(P));
   ok('   y su resumen guarda el NOMBRE del sitio con racha, con la fecha de hoy',
      P.estado?.parteResumen?.fecha === HOY && Array.isArray(P.estado?.parteResumen?.racha)
      && P.estado.parteResumen.racha.includes('BERMEO'), JSON.stringify(P.estado?.parteResumen));
