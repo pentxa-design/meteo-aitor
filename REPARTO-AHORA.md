@@ -2056,3 +2056,4 @@ Lo apunto en TRASPASO §16 con builds y medidas. `deploy.sh` desde el portátil:
 10. **(20:10, 27-09)** Con la tormenta encima: push con prioridad alta en todo; lo de mañana fuera de los avisos de hoy (salvo el rayo de madrugada). Builds 1956/2001/2005. TRASPASO §44. Pendiente mañana: radar observado en el vigilante.
 11. **(21:20, 27-09)** Inminente de madrugada solo con la madrugada (build 2112); rutina del iMac «Vigilante tormentas» APAGADA (duplicaba y mandaba lo de mañana de noche). TRASPASO §44 bis.
 12. **(23:30, 27-09)** Raíz única `deManana()` para todo lo de mañana en el vigilante (build 2327). TRASPASO §44 ter.
+13. **(12:10, 28-09)** Vigilante sin ruido de mediodía: firma por sitios, deHoy, CAMBIO solo si se adelanta 2 h. Build 2026.09.28-1206. TRASPASO §45.

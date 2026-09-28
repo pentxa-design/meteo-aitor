@@ -355,6 +355,34 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      !N4.reventó && titulos(N4.b).some(t => /CAMBIO|armando/i.test(t)), resumen(N4));
 }
 
+/* ── EL RUIDO DEL LUNES 28-09 A MEDIODÍA (su pantallazo de las 12:01) ──
+   «MATIENA (crítico) y 18 más» a las 11:00 y «y 16 más» a las 12:00 con las
+   mismas torres y las horas movidas una; «BERMEO 00h-01h y 13h-14h» a las
+   12:00 (lo de las 00h ya pasó); «DURAÑONA 00h-14h pasa a 00h-15h». Suyo:
+   «a veces no sé ni lo que estoy leyendo». */
+{
+  const conRayoGuardado = (hora, min, ini, fin) => tranquilo(hora, min, {
+    sitios: { BERMEO: { [HOY]: { ini, fin, tramos: [{ ini, fin }] } }, ORDUNA: {}, MUNGIA: {}, DURANGO: {}, GERNIKA: {}, OIZ: {} },
+    ultimoAviso: 'BERMEO', aguaSitios: {}, rachaSitios: {},
+  });
+  const R1 = await pasada({ hora: '12:00', antes: conRayoGuardado('12:00', 40, 13, 16),
+                            esc: { rayo: [{ k: 0, dia: 'hoy', horas: [0, 1, 13, 14, 15, 16, 17] }] } });
+  ok('12:00 · en el «se está armando» no se cuenta lo ya pasado: BERMEO «13h-17h», no «00h-01h y 13h-17h»',
+     !R1.reventó && (R1.b.inminentes || [])[0] === 'BERMEO 13h-17h', resumen(R1));
+  ok('12:00 · si ya avisó de BERMEO y solo se han movido las horas, NO lo repite (la firma es el sitio, no las horas)',
+     !R1.reventó && !titulos(R1.b).some(t => /armando|crítico/i.test(t)), resumen(R1));
+  ok('12:00 · y alargar el final una hora (13h-16h → 13h-17h) NO es un «CAMBIO»',
+     !R1.reventó && !titulos(R1.b).some(t => /CAMBIO/.test(t)), resumen(R1));
+  const R2 = await pasada({ hora: '12:00', antes: conRayoGuardado('12:00', 40, 15, 19),
+                            esc: { rayo: [{ k: 0, dia: 'hoy', horas: [13, 14, 15, 16, 17, 18, 19] }] } });
+  ok('12:00 · pero adelantarse dos horas (15h → 13h) SÍ es un «CAMBIO»',
+     !R2.reventó && titulos(R2.b).some(t => /CAMBIO/.test(t)), resumen(R2));
+  const R3 = await pasada({ hora: '12:00', antes: conRayoGuardado('12:00', 40, 13, 16),
+                            esc: { rayo: [{ k: 0, dia: 'hoy', horas: [13, 14, 15, 16] }, { k: 1, dia: 'hoy', horas: [14, 15] }] } });
+  ok('12:00 · y si entra un sitio NUEVO (ORDUNA) sí vuelve a sonar el «se está armando»',
+     !R3.reventó && titulos(R3.b).some(t => /armando|crítico/i.test(t)), resumen(R3));
+}
+
 /* ── EL PULSO, 60 s DE CDN ─────────────────────────────────────────── */
 {
   const M = await pasada({ hora: '14:00', antes: tranquilo('14:00', 10), metodo: 'GET', query: { pulso: '1' } });
