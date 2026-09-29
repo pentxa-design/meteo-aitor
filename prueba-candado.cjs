@@ -118,17 +118,17 @@ console.log('\n  El código de seis cifras\n');
 
   const hasta = Number(a.guardado['candado.hasta']);
   const horas = (hasta - Date.now()) / 3600000;
-  ok('la sesión dura 24 h, que es lo que él pidió', horas > 23.9 && horas < 24.1,
+  ok('la sesión dura 12 h, que es lo que él pidió el 29-09-2026 («cada 12 horas que pida el código»)', horas > 11.9 && horas < 12.1,
      `dura ${horas.toFixed(1)} h`);
 }
 
 console.log('\n  Y caduca de verdad\n');
 {
   const dentro = await correr({ hasta: Date.now() + 3600e3 });
-  ok('dentro de las 24 h no lo vuelve a pedir', !dentro.bloqueado());
+  ok('dentro de las 12 h no lo vuelve a pedir', !dentro.bloqueado());
 
   const fuera = await correr({ hasta: Date.now() - 1000 });
-  ok('pasadas las 24 h lo pide otra vez', fuera.bloqueado());
+  ok('pasadas las 12 h lo pide otra vez', fuera.bloqueado());
 }
 
 console.log('\n  El número no está escrito en la página\n');
@@ -138,14 +138,16 @@ console.log('\n  El número no está escrito en la página\n');
   ok('lo que va es el hash', /[0-9a-f]{64}/.test(HTML));
 }
 
-console.log('\n  Apagado hasta nueva orden (17-09-2026)\n');
+console.log('\n  Encendido otra vez (29-09-2026)\n');
 {
-  /* Suyo: «quítale el código hasta que tengamos rematada la app» · «hasta nueva orden». */
-  const off = await correr({ probar: false });
-  ok('con el interruptor apagado (como está ahora) la app abre sin pedir código',
-     !off.bloqueado() && !!off.w.document.getElementById('candado').hidden);
-  ok('y el interruptor está apagado en index.html de verdad', /var APAGADO = true;/.test(HTML),
-     'cuando él diga, APAGADO = false y vuelve el candado');
+  /* 17-09: «quítale el código hasta que tengamos rematada la app». 29-09:
+     «ponle el código, una vez al día que lo pida». Con el interruptor
+     como está en index.html (sin forzar nada), la app tiene que PEDIRLO. */
+  const on = await correr({ probar: false });
+  ok('con el interruptor tal como está en index.html, la app pide el código',
+     on.bloqueado() && !on.w.document.getElementById('candado').hidden);
+  ok('y el interruptor está ENCENDIDO en index.html de verdad (orden suya, 29-09-2026: «una vez al día que lo pida»)', /var APAGADO = false;/.test(HTML),
+     'si un día lo quiere quitar: APAGADO = true');
 }
 
 console.log(`\n  ${bien} bien, ${mal} mal\n`);

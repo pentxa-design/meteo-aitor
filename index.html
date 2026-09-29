@@ -138,14 +138,17 @@ html[data-bloqueado]{overflow:hidden}
   var HASH = 'd65347e656486b4830fdf47563164c8d3bfcc7d41bae311270e7086bc40253f7';
   var SAL = 'aitor-meteo:';
   var LLAVE = 'candado.hasta';
-  var DIA = 24 * 3600 * 1000;
+  var DIA = 12 * 3600 * 1000;               // cada 12 h (suyo, 29-09-2026: «cada 12 horas que pida el código»)
   /* APAGADO HASTA NUEVA ORDEN (17-09-2026, 10:05). Suyo, en mayúsculas:
      «QUÍTALE LOS CÓDIGOS HASTA QUE TENGAMOS REMATADA LA APP» · «QUÍTALE
      EL CÓDIGO HASTA NUEVA ORDEN». Con APAGADO = true la app abre sin
      pedir nada. Todo lo demás del candado se queda tal cual, y la prueba
      (prueba-candado.cjs) lo enciende con window.__probarCandado para
      seguir vigilándolo. Para volver a ponerlo: APAGADO = false. */
-  var APAGADO = true;
+  /* ENCENDIDO otra vez el 29-09-2026 por orden suya («ponle el código,
+     una vez al día que lo pida»). El código es el mismo de siempre y NO
+     se escribe aquí: solo vive como huella SHA-256 con sal. Cada 12 h. */
+  var APAGADO = false;
   if (APAGADO && !window.__probarCandado) return;
 
   function abrir() {
@@ -160,7 +163,7 @@ html[data-bloqueado]{overflow:hidden}
     /* ¿Sigue viva la sesión de hoy? */
     var hasta = 0;
     try { hasta = Number(localStorage.getItem(LLAVE)) || 0; } catch (e) { hasta = 0; }
-    if (hasta > Date.now()) return;             // dentro de las 24 h: no se pide
+    if (hasta > Date.now()) return;             // dentro de las 12 h: no se pide
 
     /* Sin `crypto.subtle` no se puede comprobar el hash (pasa en http
        sin TLS y en navegadores viejos). Antes que dejarle fuera, se
@@ -217,7 +220,7 @@ html[data-bloqueado]{overflow:hidden}
     <input id="candEntrada" type="password" inputmode="numeric" pattern="[0-9]*"
            maxlength="6" autocomplete="off" aria-label="Código de 6 cifras">
     <p class="cand__err" id="candErr" hidden>No es ese. Vuelve a probar.</p>
-    <p class="cand__n">Se vuelve a pedir cada 24 h. Funciona sin cobertura.</p>
+    <p class="cand__n">Se vuelve a pedir cada 12 h. Funciona sin cobertura.</p>
   </div>
 </div>
 

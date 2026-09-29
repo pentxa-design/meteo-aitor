@@ -2062,3 +2062,4 @@ Lo apunto en TRASPASO §16 con builds y medidas. `deploy.sh` desde el portátil:
 16. **(14:45, 28-09)** Leyenda/AHORA/atribución del mapa móvil (1429) y aviso por tramos recortado a 3 h (1433). TRASPASO §48.
 17. **(16:10, 28-09)** «riesgo de rayo» en el aviso (1535); punto de 12 px en el mapa (1603). TRASPASO §48 bis.
 18. **(22:05, 28-09)** Pantalla completa del mapa en el móvil (589 px, build 2158); guardia de hora en la rutina parte-diario-0630 del iMac. TRASPASO §49.
+19. **(09:35, 29-09)** Candado encendido, cada 12 h (build 2026.09.29-0930). TRASPASO §50. OJO: con el candado puesto, el panel del navegador ya no ve la app; las comprobaciones en pantalla van por pantallas.cjs/abrir.cjs.
