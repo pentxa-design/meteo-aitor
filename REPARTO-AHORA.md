@@ -2064,3 +2064,4 @@ Lo apunto en TRASPASO §16 con builds y medidas. `deploy.sh` desde el portátil:
 18. **(22:05, 28-09)** Pantalla completa del mapa en el móvil (589 px, build 2158); guardia de hora en la rutina parte-diario-0630 del iMac. TRASPASO §49.
 19. **(09:35, 29-09)** Candado encendido, cada 12 h (build 2026.09.29-0930). TRASPASO §50. OJO: con el candado puesto, el panel del navegador ya no ve la app; las comprobaciones en pantalla van por pantallas.cjs/abrir.cjs.
 20. **(18:40, 29-09)** Rutina del iMac «Notas de campo de Aitor (cada media hora)» APAGADA por orden suya («quítalo, no vale y no envío»). Quedan encendidas: parte-diario-0630 (con candado de hora), parte-instalaciones-pdf y repaso-diario-meteo. Si vuelve a mandar notas desde la app, se enciende.
+21. **(18:50, 29-09)** Cuaderno de campo escondido en la app (build 1843) y rutina apagada; limpieza del código muerto apuntada en TRASPASO §51.

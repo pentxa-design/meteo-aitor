@@ -2809,6 +2809,15 @@ grupo('El mapa en el móvil: la cabecera se mide aunque la sección esté fija (
      && /\.view\[data-v="models"\]\.is-on #mapTime\{flex:1 1 60px; min-width:60px/.test(Cs));
 }
 
+grupo('El cuaderno de campo está FUERA de la app (29-09-2026, suyo: «no la uso ni usaré»)');
+{
+  const ix = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  ok('la tarjeta del cuaderno de campo va escondida (hidden) en index.html',
+     /<div class="card" id="campoCard" hidden>/.test(ix));
+  ok('y el hilo no pide nada al servidor mientras esté escondida',
+     /if \(el\.closest\('#campoCard'\)\?\.hidden\) return;/.test(src));
+}
+
 grupo('La tapa de AguaceroWx: no hay regla (27-08-2026)');
 
 const capaCin = (mapsSrc.match(/id:'cin'[\s\S]*?\},\n/) || [''])[0];

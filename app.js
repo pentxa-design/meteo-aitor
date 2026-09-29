@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.29-0930';
+const BUILD = '2026.09.29-1843';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -20042,6 +20042,8 @@ function refrescarHilo() {
 async function pintarHilo() {
   const el = $('#campoHilo');
   if (!el) return;
+  /* Con el cuaderno escondido (29-09-2026, orden suya) no se pide nada. */
+  if (el.closest('#campoCard')?.hidden) return;
 
   let notas = [];
   try {
