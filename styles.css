@@ -856,6 +856,16 @@ canvas.mvals{width:100%;height:100%;display:block}
 .barb{position:absolute;width:44px;height:44px;transform:translate(-50%,-50%);
   pointer-events:none;overflow:visible;
   filter:drop-shadow(0 0 2px rgba(255,255,255,.95)) drop-shadow(0 0 4px rgba(255,255,255,.7))}
+/* La peor racha de 12 h (29-09-2026): número en km/h, su hora debajo, y
+   el color de SUS listones. Fondo macizo para leerse sobre cualquier capa. */
+.mpeor{position:absolute;transform:translate(-50%,-50%);pointer-events:none;
+  padding:2px 6px 3px;border-radius:8px;text-align:center;white-space:nowrap;
+  font-weight:800;font-size:0.875rem;line-height:1.1;color:#fff;
+  background:rgba(22,110,64,.9);border:1px solid rgba(255,255,255,.55);
+  box-shadow:0 1px 4px rgba(0,0,0,.45)}
+.mpeor i{display:block;font-style:normal;font-weight:600;font-size:0.625rem;opacity:.9}
+.mpeor--warn{background:rgba(196,120,10,.94)}
+.mpeor--no{background:rgba(190,30,40,.95)}
 
 /* Grupos de capas: que se lean de verdad */
 .lgrp__k{font-size:0.8125rem!important;letter-spacing:.1em;font-weight:800!important;

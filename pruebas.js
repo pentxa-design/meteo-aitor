@@ -8854,12 +8854,12 @@ grupo('Los tres del mapa: el clic del viento, el cartel pegado y el «Ahora» (2
      'el código de barbas y motas se conserva entero para el día que se traiga la rejilla de la API');
 
   ok('el rumbo del clic sale de la API de pronóstico, no de la tesela, y se dice de quién es',
-     /if \(L_\.rumbo && R\.meta\?\.valid_times\?\.\[this\.t\]\)/.test(M)
-     && /hourly=wind_direction_10m,wind_speed_10m/.test(M)
-     && /a 10 m, \$\{esc\(typeof nombreDeModelo === 'function'/.test(M),
+     /if \(L_\.rumbo && hIso\)/.test(M)
+     && /hourly: 'wind_direction_10m,wind_speed_10m'/.test(M)
+     && /a 10 m, \$\{esc\(nombreRumbo\)\}/.test(M),
      'la tesela no sabe dar el rumbo; la API sí, y poner de quién es no cuesta nada');
   ok('y un rumbo de OTRA hora no vale como rumbo',
-     /if \(has\(gr\) && dif <= 30 \* 60e3\)/.test(M),
+     /if \(has\(gr\) && d\?\.hourly\?\.time\?\.\[0\] === hIso\)/.test(M) && /start_hour: hIso, end_hour: hIso/.test(M),
      'el deslizador puede estar en una hora que la API no tenga: antes sin rumbo que con el de otra hora');
 
   /* ── 2 · EL CARTEL SE APAGA ANTES DE LOS CUATRO ATAJOS ───────────── */
@@ -10137,6 +10137,190 @@ grupo('La lluvia de un paso de 3 h se enseña por hora, y las horas del modelo v
   const sinEscala = capas.filter(l => (acum.has(l.v) && !l.escala) || (acum.has(l.encima) && !l.encimaEscala)).map(l => l.id);
   ok('toda capa de lluvia o nieve (propia o «encima») lleva escala propia, que es donde se aplica el paso',
      capas.length > 20 && sinEscala.length === 0, sinEscala.join(', ') || `capas: ${capas.length}`);
+}
+
+/* ── EL VIENTO VUELVE A TENER RUMBO EN EL MAPA, DE LA API (29-09-2026) ──
+   Suyo, con Windy delante: «y viento algo de copiar?» · «dale» · «todo lo
+   que sea mejorar adelante, sin preguntar». Lo que Windy tiene y la app
+   no: la DIRECCIÓN pintada (flechas y partículas; las nuestras se
+   quitaron el 21-09 porque la librería de teselas lee u donde pides v) y
+   la PEOR RACHA de un periodo («Acumulación de viento»: 37 km/h frente a
+   Bermeo de 20:00 a 08:00). Ahora las dos salen de la API de pronóstico,
+   en una sola petición por vista, del MISMO modelo que pinta la capa.
+   Y la ola, que Windy da «1 m 300°», tiene su rumbo al pulsar. Aquí las
+   funciones se EJECUTAN, y el pintado de barbas también, con un mapa de
+   mentira. */
+grupo('El viento vuelve a tener rumbo en el mapa, de la API, y la peor racha de 12 h (29-09-2026)');
+{
+  const M = mapsSrc;
+  const fnDe = (nombre) => {
+    const i = M.indexOf(`\nfunction ${nombre}(`);
+    if (i < 0) throw new Error(`no encuentro function ${nombre} en maps.js`);
+    return M.slice(i, M.indexOf('\n}', i) + 2);
+  };
+  const bloqueConst = (nombre) => {
+    const i = M.indexOf(`\nconst ${nombre} = `);
+    if (i < 0) throw new Error(`no encuentro const ${nombre} en maps.js`);
+    const limpio = M.replace(/\/\*[\s\S]*?\*\//g, c => c.replace(/[^\n]/g, ' '));
+    return M.slice(i, limpio.indexOf(';\n', i) + 2);
+  };
+  let X = null, porque = '';
+  try {
+    const cuerpo = [bloqueConst('MODELO_EN_API'), bloqueConst('modeloEnApi'), fnDe('vientoDeUV'), fnDe('uvDeViento'),
+                    fnDe('rejillaViento'), fnDe('uvEnRejilla'), fnDe('rachaMaxVentana')].join('\n');
+    X = new Function(`${cuerpo}; return { MODELO_EN_API, modeloEnApi, vientoDeUV, uvDeViento, rejillaViento, uvEnRejilla, rachaMaxVentana };`)();
+  } catch (e) { porque = e.message; }
+  ok('las funciones del viento por la API existen en maps.js y se pueden ejecutar', !!X, porque);
+
+  if (X) {
+    /* Nombres MEDIDOS el 29-09-2026 contra /om: los doce devolvieron 24/24
+       horas de dirección (icon_d2 en Fráncfort, que es donde llega). */
+    let capas = [];
+    try {
+      const i = M.indexOf('const TMODELS = ['); const j = M.indexOf('\n];', i) + 3;
+      capas = new Function(`${M.slice(i, j)}; return TMODELS;`)();
+    } catch {}
+    const sinNombre = capas.filter(m => !X.modeloEnApi(m.id)).map(m => m.id);
+    ok('cada modelo del mapa (aire y olas) tiene su nombre en la API: el viento sale del MISMO que pinta',
+       capas.length >= 12 && sinNombre.length === 0, sinNombre.join(', ') || `${capas.length} modelos`);
+    ok('los nombres medidos: ecmwf_ifs → ecmwf_ifs (9 km, ya lo sirve la API), dwd_icon_eu → icon_eu, ncep_gfs013 → gfs_global, dwd_ewam → ewam',
+       X.modeloEnApi('ecmwf_ifs') === 'ecmwf_ifs' && X.modeloEnApi('dwd_icon_eu') === 'icon_eu'
+       && X.modeloEnApi('ncep_gfs013') === 'gfs_global' && X.modeloEnApi('dwd_ewam') === 'ewam'
+       && X.modeloEnApi('dwd_icon_d2') === 'icon_d2' && X.modeloEnApi('inventado') === null);
+
+    const ida = [0, 90, 180, 270, 315, 30].map(d => { const w = X.uvDeViento(10, d); const r = X.vientoDeUV(w.u, w.v + 1e-12); return [d, r]; });
+    ok('uvDeViento es la inversa de vientoDeUV: 10 m/s del 315° vuelven como 10 m/s del 315°',
+       ida.every(([d, r]) => r && Math.abs(r.ms - 10) < 1e-6 && Math.abs(((r.desde - d + 540) % 360) - 180) < 1e-6),
+       ida.map(([d, r]) => `${d}→${r?.desde?.toFixed(3)}`).join(' '));
+    ok('viento del NORTE sopla hacia el sur: v negativo; del OESTE sopla hacia el este: u positivo',
+       X.uvDeViento(5, 0).v < -4.99 && Math.abs(X.uvDeViento(5, 0).u) < 1e-9 && X.uvDeViento(5, 270).u > 4.99
+       && X.uvDeViento(null, 3) === null && X.uvDeViento(4, NaN) === null);
+
+    /* Mapa de su portátil, zoom 7, Cantábrico: 1.400 × 800 px. */
+    const caja = { sur: 41.9, norte: 44.9, oeste: -8.6, este: -0.9 };
+    const G = X.rejillaViento(caja, 7);
+    const anclada = G && G.puntos.every(p => Math.abs(p.lat / G.paso - Math.round(p.lat / G.paso)) < 1e-6
+                                           && Math.abs(p.lon / G.paso - Math.round(p.lon / G.paso)) < 1e-6);
+    ok('la rejilla va anclada a múltiplos de su paso (misma URL para la misma vista: la caché sirve) y no pasa del tope',
+       !!G && anclada && G.puntos.length <= 100 && G.puntos.length === G.nx * G.ny && G.paso === 1,
+       G ? `paso ${G.paso}° · ${G.nx}×${G.ny} = ${G.puntos.length}` : 'sin rejilla');
+    ok('y cubre la vista con un anillo de margen (las motas no se paran en el borde)',
+       !!G && G.lat0 < caja.sur && G.lon0 < caja.oeste && G.lat0 + (G.ny - 1) * G.paso > caja.norte
+       && G.lon0 + (G.nx - 1) * G.paso > caja.este);
+    const Gg = X.rejillaViento({ sur: 30, norte: 60, oeste: -30, este: 30 }, 4);
+    ok('con media Europa a la vista el paso crece hasta no pasar del tope (nunca 400 puntos a la API)',
+       !!Gg && Gg.puntos.length <= 100 && Gg.paso >= 4, Gg ? `paso ${Gg.paso}° · ${Gg.puntos.length} puntos` : '');
+    ok('en el móvil (zoom 9, un valle) el paso baja y sigue anclado',
+       (() => { const g = X.rejillaViento({ sur: 43.1, norte: 43.5, oeste: -3.0, este: -2.6 }, 9); return !!g && g.paso <= 0.5 && g.puntos.length <= 100; })());
+
+    const Gp = { paso: 1, nx: 2, ny: 2, lat0: 43, lon0: -3 };
+    const U = new Float32Array([0, 10, 0, 10]), V = new Float32Array([2, 2, 4, 4]);
+    const m = X.uvEnRejilla(Gp, U, V, 43.5, -2.5);
+    ok('uvEnRejilla interpola entre las cuatro esquinas (u 5, v 3 en el centro)',
+       !!m && Math.abs(m.u - 5) < 1e-9 && Math.abs(m.v - 3) < 1e-9, JSON.stringify(m));
+    U[3] = NaN;
+    ok('y con una esquina sin dato NO se inventa: null (la mota renace en otro sitio)',
+       X.uvEnRejilla(Gp, U, V, 43.5, -2.5) === null && X.uvEnRejilla(Gp, U, V, 45, -2.5) === null);
+
+    /* La peor racha de 12 h: de las 20:00 a las 08:00 cuentan las rachas
+       de las 21:00 a las 08:00 (cada una es la de la hora anterior). */
+    const T = Array.from({ length: 36 }, (_, i) => Date.UTC(2026, 8, 29, 12) + i * 3600e3);
+    const serie = T.map((_, i) => i === 8 ? 30 : i === 9 ? 12 : i === 14 ? 20 : 5);   // 20:00Z vale 30 (fuera), 21:00Z 12, 02:00Z 20
+    const P = X.rachaMaxVentana(T, serie, T[8], 12);
+    ok('la peor racha de 12 h NO cuenta la hora de partida (su racha es de la hora anterior) y sí la última',
+       !!P && P.v === 20 && P.t === T[14] && P.n === 12, JSON.stringify(P));
+    ok('si el modelo se acaba antes, lo dice: cuántas horas ha podido mirar',
+       (() => { const q = X.rachaMaxVentana(T.slice(0, 12), serie.slice(0, 12), T[8], 12); return q && q.n === 3; })()
+       && X.rachaMaxVentana(T, T.map(() => null), T[8], 12) === null);
+  }
+
+  /* ── EJECUTADO: el pintado de flechas con un mapa de mentira ── */
+  const iB = M.indexOf('\n  async barbasDeApi(');
+  let B = null, porqueB = '';
+  try {
+    const metodo = M.slice(iB + 1, M.indexOf('\n  },', iB) + 4);
+    const cuerpo = [fnDe('svgBarba'), bloqueConst('KT_POR_MS'), fnDe('rachaMaxVentana'), bloqueConst('RACHA_VENTANA_H')].join('\n');
+    B = (doc, extra) => new Function('document', 'TMODELS', 'listonRafaga', 'esc', 'rumboLargo',
+      `${cuerpo}; return Object.assign({ ${metodo} }, arguments[5]);`)(
+      doc, [{ id: 'ecmwf_ifs', name: 'ECMWF HRES' }], () => ({ warn: 70, no: 90 }), s => String(s), () => 'noroeste', extra);
+  } catch (e) { porqueB = e.message; }
+  ok('barbasDeApi se puede ejecutar aislado', iB > 0 && !!B, porqueB);
+  if (B) {
+    const el = () => ({ innerHTML: '', textContent: '' });
+    const cont = el(), pie = el();
+    const doc = { querySelector: s => s === '#mapViento' ? pie : null };
+    const t0 = Date.UTC(2026, 8, 29, 18);
+    const T = Array.from({ length: 24 }, (_, i) => t0 + i * 3600e3);
+    const D = { G: { puntos: [{ lat: 43.4, lon: -2.7 }, { lat: 43.4, lon: -2.2 }, { lat: 60, lon: 10 }] },
+                T, modelo: 'ecmwf_ifs', prestado: false,
+                vel: [T.map(() => 8), T.map(() => 3), T.map(() => 3)],
+                dir: [T.map(() => 315), T.map(() => 90), T.map(() => 90)],
+                rac: [T.map((_, i) => i === 6 ? 25 : 10), T.map(() => 12), T.map(() => 50)] };
+    const base = (verPeor, Dx = D) => ({
+      usando: { modelo: 'ecmwf_ifs', meta: { valid_times: [new Date(t0).toISOString()] } }, t: 0,
+      verBarbas: true, verPeor, _turnoBarb: 0,
+      map: { getCanvas: () => ({ clientWidth: 800, clientHeight: 600 }),
+             project: ([lon, lat]) => ({ x: lat > 50 ? 5000 : 400 + (lon + 2.7) * 400, y: 300 }) },
+      rejillaDeApi: async () => Dx });
+    (globalThis.__pendientes ??= []).push((async () => {
+      const o = B(doc, base(false));
+      await o.barbasDeApi(cont, { id: 'gusts', vientoApi: true });
+      const barbas = (cont.innerHTML.match(/class="barb"/g) || []).length;
+      ok('con el mapa de mentira salen 2 flechas (la de fuera de la vista no) y giradas a su rumbo: 315° y 90°',
+         barbas === 2 && /rotate\(315 /.test(cont.innerHTML) && /rotate\(90 /.test(cont.innerHTML), `${barbas} barbas`);
+      ok('el pie dice de QUÉ modelo es el viento de las flechas, que es viento MEDIO a 10 m, y que salen de la API',
+         /ECMWF HRES/.test(pie.textContent) && /MEDIO a 10 m/.test(pie.textContent) && /API/.test(pie.textContent), pie.textContent);
+      const o2 = B(doc, base(true));
+      await o2.barbasDeApi(cont, { id: 'gusts', vientoApi: true });
+      ok('con «Peor 12 h» salen los números de la peor racha en km/h (25 m/s = 90) con su hora, y NO las flechas',
+         /mpeor--no/.test(cont.innerHTML) && />90</.test(cont.innerHTML) && !/class="barb"/.test(cont.innerHTML)
+         && />43<i>\d\d:\d\d<\/i>/.test(cont.innerHTML), cont.innerHTML.slice(0, 200));
+      ok('y el pie dice que los números son la PEOR de 12 h y que el color es la racha de esa hora',
+         /PEOR racha/.test(pie.textContent) && /color/.test(pie.textContent), pie.textContent);
+      const o3 = B(doc, base(false, { error: 'HTTP 429', G: D.G }));
+      await o3.barbasDeApi(cont, { id: 'gusts', vientoApi: true });
+      ok('si la API no contesta NO se calla: sin flechas y el pie dice por qué (el hueco no parece calma)',
+         cont.innerHTML === '' && /HTTP 429/.test(pie.textContent) && /al pulsar/.test(pie.textContent), pie.textContent);
+      const o4 = B(doc, base(false, { pausa: true, G: D.G }));
+      await o4.barbasDeApi(cont, { id: 'gusts', vientoApi: true });
+      ok('y si se acaba el cupo de la hora, lo dice y nombra al vigilante que comparte el cupo',
+         cont.innerHTML === '' && /vigilante/.test(pie.textContent), pie.textContent);
+    })().catch(e => ok('el pintado de flechas con el mapa de mentira no revienta', false, e.message)));
+  }
+
+  /* ── Enganches ── */
+  const barbas = M.slice(M.indexOf('\n  async barbas()'), M.indexOf('\n  limpiarBarbas()'));
+  const part = M.slice(M.indexOf('\n  async particulas()'), M.indexOf('\n  animarParticulas('));
+  ok('las barbas y las motas de la capa de Ráfagas van por la API (vientoApi), las de teselas siguen cerradas',
+     /if \(L_\?\.vientoApi\) return this\.barbasDeApi\(cont, L_\);/.test(barbas)
+     && /if \(L_\?\.vientoApi\) return this\.particulasDeApi\(cv, L_\);/.test(part)
+     && /id:'gusts',[^\n]*vientoApi: true/.test(M));
+  const rej = M.slice(M.indexOf('\n  async rejillaDeApi('), M.indexOf('\n  async rejillaDeApi(') + 3500);
+  ok('la rejilla se pide UNA vez por vista y día, con caché y con cupo por hora (el vigilante usa el mismo)',
+     /this\._vientoCache\.has\(clave\)/.test(rej) && /VIENTO_CUPO_HORA/.test(rej) && /start_hour/.test(rej)
+     && /wind_speed_unit: 'ms'/.test(rej) && /modeloEnApi\(R\.modelo\)/.test(rej));
+  ok('valores() se calla con «Peor 12 h» puesto: nunca dos juegos de números en la misma capa',
+     /if \(L_\?\.vientoApi && this\.verPeor\) \{ this\.limpiarValores\(\); return; \}/.test(M));
+  ok('los tres botones (Flechas, Movimiento, Peor 12 h) solo salen en la capa que los usa, y app.js los atiende',
+     /data-tbb="1"/.test(M) && /data-tmv="1"/.test(M) && /data-tpr="1"/.test(M) && /L_act\?\.vientoApi/.test(M)
+     && /if \(b\.dataset\.tbb\) Maps\.setBarbas\(!Maps\.verBarbas\);/.test(src)
+     && /if \(b\.dataset\.tmv\) Maps\.setParticulas\(!Maps\.verParticulas\);/.test(src)
+     && /if \(b\.dataset\.tpr\) Maps\.setPeor\(!Maps\.verPeor\);/.test(src));
+  const cons = M.slice(M.indexOf('\n  async consultar('), M.indexOf('\n  /* ---------- Barbas de viento'));
+  ok('al pulsar, el rumbo del viento sale del MISMO modelo que pinta (no del automático) y de su hora exacta',
+     /models: modeloEnApi\(R\.modelo\) \|\| 'best_match'/.test(cons) && /start_hour: hIso, end_hour: hIso/.test(cons));
+  ok('y la ola tiene su rumbo al pulsar, de la API marina y con su modelo (Windy: «1 m 300°»)',
+     /jget\(API\.mar,/.test(cons) && /hourly: L_\.direccion/.test(cons) && /de la API marina/.test(cons));
+  /* Esta la lee la guardia de NO-SE-TOCA, que corre antes que las pruebas
+     en diferido; la EJECUTADA (arriba, con el 429 de mentira) sigue
+     parando la publicación si falla. */
+  const bApi = M.slice(M.indexOf('\n  async barbasDeApi('), M.indexOf('\n  async particulasDeApi('));
+  ok('sin flechas por la API caída o por el cupo, el pie lo dice: un mapa sin flechas nunca callado',
+     /if \(D\?\.pausa\) \{[\s\S]{0,120}cont\.innerHTML = '';[\s\S]{0,80}decir\('↗ Flechas en pausa/.test(bApi)
+     && /if \(!D \|\| D\.error \|\| !D\.T\) \{[\s\S]{0,120}decir\(`↗ Sin flechas: la API de pronóstico no ha contestado/.test(bApi)
+     && /No es calma/.test(bApi));
+  ok('el pie del viento existe en la página (#mapViento), que un pie sin sitio es un aviso mudo',
+     /id="mapViento"/.test(fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8')));
 }
 
 grupo('La caché de bloques del mapa va a 256 KB: tres viajes por tesela, no once (14-09-2026)');

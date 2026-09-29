@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.29-1935';
+const BUILD = '2026.09.29-2008';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -18419,11 +18419,12 @@ function bind() {
     if (b.dataset.tr) Maps.setTerrain(!Maps.terrain);
     if (b.dataset.tv) Maps.setValores(!Maps.verValores);
     if (b.dataset.tp) Maps.setPaso(+b.dataset.tp);
-    /* Barbas y Partículas: sus botones se retiraron el 21-09-2026 (la
-       librería de teselas no sabe dar la componente norte-sur, así que
-       todas las barbas apuntaban del suroeste). Sin botón no hay clic
-       que atender, y sus dos interruptores también se fueron: un método
-       que no llama nadie parece un interruptor que existe. */
+    /* Flechas, Movimiento y Peor 12 h: vuelven el 29-09-2026 con el rumbo
+       traído de la API de pronóstico (se quitaron el 21-09 porque la
+       librería de teselas no sabe dar la componente norte-sur). */
+    if (b.dataset.tbb) Maps.setBarbas(!Maps.verBarbas);
+    if (b.dataset.tmv) Maps.setParticulas(!Maps.verParticulas);
+    if (b.dataset.tpr) Maps.setPeor(!Maps.verPeor);
     if (b.dataset.tl) Maps.setRayos(!Maps.verRayos);
   });
   // El botón de rayos de la barra del reloj (Mac y móvil)

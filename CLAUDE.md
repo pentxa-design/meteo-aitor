@@ -2371,7 +2371,9 @@ van del mismo dueño.
 
 1. *«windy utiliza el europeo de 9 km»*. **Y no es el mismo.** Comprobado:
    Open-Meteo NO sirve el de 9 km por la API (`ecmwf_ifs025` son 25 km,
-   `ecmwf_ifs04` 44 km, los `aifs` de IA a 0,25°). El de 9 km existe solo
+   `ecmwf_ifs04` 44 km, los `aifs` de IA a 0,25°). **CORREGIDO el 29-09-2026:
+   la API YA sirve `ecmwf_ifs` (9 km): medido contra `/om`, 24/24 horas
+   de dirección del viento en Bermeo. Las flechas del mapa lo usan.** El de 9 km existe solo
    en las TESELAS del mapa — y por eso **el mapa arranca ahora en
    `ecmwf_ifs`, los 9 km, el mismo que pinta Windy**.
 2. Ese ECMWF de 25 km, en Bermeo, lee el nudo **18,3 km tierra adentro**.
