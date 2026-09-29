@@ -197,7 +197,7 @@ async function elegirOrigenTeselas() {
 async function jgetMeta(url, { timeout = 12000, tries = 3 } = {}) {
   let ultimo;
   for (let i = 0; i < tries; i++) {
-    try { return await jget(url, {}, { timeout }); }
+    try { return ordenarHoras(await jget(url, {}, { timeout })); }
     catch (e) {
       ultimo = e;
       if (i < tries - 1) await new Promise(r => setTimeout(r, 600 * (i + 1) * (i + 1)));
@@ -611,6 +611,62 @@ function fueraDeRango(L_, valor) {
        + `La fuente ha debido de cambiar la unidad: NO te fíes de esta capa hasta revisarla.`;
 }
 const marcaDe = u => u.match(new RegExp(`${MARCA}=([A-Za-z0-9_]+)`))?.[1] ?? null;
+
+/* ── LA LLUVIA DE UN PASO DE 3 H NO ES «POR HORA» (29-09-2026, 19:10) ─────
+   Suyo, con dos capturas de Santiago a las 20:00: «pues entre un europeo y
+   el otro hay diferencia de litros» — ECMWF 25 km ponía 15 mm/h y ECMWF
+   HRES 6,9. MEDIDO por tres vías que coinciden:
+     · la tesela cruda del ECMWF 25 km (paso de 3 h) guarda en el nudo
+       43/−8,5 **13,4 mm** (leída con @openmeteo/file-reader);
+     · la API, por `/om`, reparte esa misma cantidad en tres horas de 4,5;
+     · Windy, con su ECMWF, rotula «0,53 in · Lluvia (3h)» = 13,5 mm.
+   O sea que la tesela trae LA SUMA DEL PASO, y el mapa la pintaba y la
+   rotulaba como mm/h: ×3 en todo el ECMWF 25 km (49 pasos de 3 h) y en
+   la cola de 3 h de GFS (desde las 120 h), ECMWF HRES (90 h) e ICON.
+   Lo mismo vale para la nieve (`snowfall_water_equivalent`).
+
+   El arreglo va en TRES sitios, y los tres pasan por aquí:
+     · el COLOR: la URL de la tesela lleva la marca «lluvia_x3», y el
+       protocolo «om» multiplica los cortes de la escala por 3, así que
+       13,4 mm en 3 h se pinta con el color de 4,5 mm/h;
+     · los NÚMEROS (ciudades y clic): `porHora()` divide antes de convertir;
+     · y se DICE: la barra de estado y el popup lo cuentan. */
+const ACUMULADAS = new Set(['precipitation', 'snowfall_water_equivalent', 'rain', 'showers', 'snowfall']);
+const esAcumulada = v => ACUMULADAS.has(v);
+/** Horas que cubre el paso `t` de la lista de horas del modelo (la
+ *  diferencia con el paso anterior; en el primero, con el siguiente).
+ *  Sin lista, con una sola hora o con basura devuelve 1: no se divide
+ *  por nada raro. */
+function horasDelPaso(T, t) {
+  if (!Array.isArray(T) || T.length < 2) return 1;
+  const i = Math.min(Math.max(Number(t) || 0, 1), T.length - 1);
+  const h = (new Date(T[i]).getTime() - new Date(T[i - 1]).getTime()) / 3600e3;
+  return Number.isFinite(h) && h >= 1 ? Math.round(h) : 1;
+}
+/** El valor de la tesela pasado a «por hora» si la variable es una suma. */
+const porHora = (v, variable, h) => (esAcumulada(variable) && h > 1 && Number.isFinite(v)) ? v / h : v;
+/** La misma escala con los cortes multiplicados por las horas del paso. */
+function escalaDelPaso(scale, h) {
+  if (!(h > 1) || !Array.isArray(scale?.breakpoints)) return scale;
+  return { ...scale, breakpoints: scale.breakpoints.map(b => Math.round(b * h * 1e6) / 1e6) };
+}
+/** «lluvia_x3» → { nombre: 'lluvia', h: 3 }; «lluvia» → h 1. */
+const partirMarca = m => { const x = /^([A-Za-z0-9_]+?)_x(\d+)$/.exec(m || ''); return x ? { nombre: x[1], h: +x[2] } : { nombre: m || null, h: 1 }; };
+/* ── Y LAS HORAS DEL MODELO, ORDENADAS (mismo día) ──────────────────────
+   HARMONIE publica su latest.json con las horas DESORDENADAS (medido a las
+   19:10: 19,18,17,16,15,14,00,23,22,21,20,06,05,…). El mapa las recorre
+   por posición, así que «siguiente» iba hacia atrás y el paso salía de
+   −1 h o de 10 h. Se ordenan (y se quitan repetidas) nada más leerlas:
+   el nombre del fichero .om sale de la hora, no de la posición, así que
+   ordenar no cambia qué tesela se pide. */
+function ordenarHoras(meta) {
+  if (!meta || !Array.isArray(meta.valid_times)) return meta;
+  const vistas = new Set();
+  meta.valid_times = meta.valid_times
+    .filter(t => { const k = new Date(t).getTime(); if (!Number.isFinite(k) || vistas.has(k)) return false; vistas.add(k); return true; })
+    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+  return meta;
+}
 
 /* ── NADA POR DEBAJO DE 5 dBZ (17-09-2026, 13:55, portátil) ──────────
    Suyo, con AguaceroWx al lado: «me gusta más su pintada, el nuestro
@@ -1778,12 +1834,14 @@ const Maps = {
       this.ajustarCacheDeBloques();
 
       maplibregl.addProtocol('om', (params, ac) => {
-        const nombre = marcaDe(params.url);
+        const { nombre, h } = partirMarca(marcaDe(params.url));
         const url = nombre ? limpiarMarca(params.url) : params.url;
         const E = nombre ? escalasPropias()[nombre] : null;
+        // Con paso de 3 h («lluvia_x3») los cortes van ×3: la suma del
+        // paso se pinta con el color que le toca por hora.
         const ajustes = E
           ? { ...OMWeatherMapLayer.defaultOmProtocolSettings,
-              colorScales: { custom: E.scale } }
+              colorScales: { custom: escalaDelPaso(E.scale, h) } }
           : undefined;
         return Peticiones.conReintento(
           () => OMWeatherMapLayer.omProtocol({ ...params, url }, ac, ajustes), ac);
@@ -2239,7 +2297,10 @@ const Maps = {
     // esquema `om://`. Registrar un esquema aparte NO funciona: la librería
     // devuelve "Invalid OM protocol URL" y la capa se queda sin una sola
     // tesela, con el mapa en blanco y sin decir nada.
-    if (L_?.escala) q.set(MARCA, L_.escala);  // se retira antes de llamar a la librería
+    /* La suma del paso, por hora: con paso de 3 h la marca va como
+       «lluvia_x3» y el protocolo escala los cortes (ver ACUMULADAS). */
+    const h = esAcumulada(variable) ? horasDelPaso(meta?.valid_times, t) : 1;
+    if (L_?.escala) q.set(MARCA, h > 1 ? `${L_.escala}_x${h}` : L_.escala);  // se retira antes de llamar a la librería
     return `om://${TILES}/${modelo}/${dir}/${file}.om?${q}`;
   },
 
@@ -3278,7 +3339,11 @@ const Maps = {
           { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
       : '—';
     const dias = (T.length && new Date(T[T.length-1]) - new Date(T[0])) / 864e5;
+    // Paso de 3 h en una capa de lluvia o nieve: se dice que va por hora.
+    const L_ = TLAYERS.find(l => l.id === this.layer);
+    const h = (esAcumulada(L_?.v) || esAcumulada(L_?.encima)) ? horasDelPaso(T, this.t) : 1;
     this.status(`${M.name} · ${M.res} · pasada de las ${ref} · ${T.length} pasos (${dias.toFixed(0)} días)`
+      + (h > 1 ? ` · paso de ${h} h: la lluvia se enseña POR HORA (la suma de ${h} h ÷ ${h})` : '')
       + (this.usando?.sustituido ? ' · CAPA SUSTITUIDA' : '')
       + (this._sinEncima ? ` · SIN ${this._sinEncima === 'snowfall_water_equivalent' ? 'NIEVE' : this._sinEncima.toUpperCase()}: este modelo no la publica, solo se pinta la lluvia` : ''));
   },
@@ -4155,7 +4220,9 @@ const Maps = {
     // Algunas capas no se leen en las unidades de la tesela (pascales →
     // hPa, metros → km, mm/h → dBZ). Se convierte SIEMPRE con el mismo
     // conversor que usa la escala, para que el número y el color cuadren.
-    const aTexto = v => e?.conv ? e.conv(v) : v * f;
+    // Y la lluvia de un paso de 3 h, por hora ANTES de convertir (ACUMULADAS).
+    const h = horasDelPaso(R?.meta?.valid_times, this.t);
+    const aTexto = v => { const w = porHora(v, L_.v, h); return e?.conv ? e.conv(w) : w * f; };
     /* mm/h con UN decimal: con cero decimales, 0,3 mm/h salía como «0»
        encima de una mancha azul, que es un número que miente. */
     const dec = (e?.unidad === 'm' || e?.unidad === 'mm' || e?.unidad === 'mm/h') ? 1 : 0;
@@ -4444,8 +4511,13 @@ const Maps = {
         return;
       }
 
-      const val = e?.conv ? e.conv(v) : v * f;
+      // La lluvia de un paso de 3 h, por hora ANTES de convertir (ACUMULADAS).
+      const h = horasDelPaso(R.meta?.valid_times, this.t);
+      const vh = porHora(v, L_.v, h);
+      const val = e?.conv ? e.conv(vh) : vh * f;
       const uTxt = u;
+      const delPaso = (h > 1 && esAcumulada(L_.v))
+        ? `<br><small>el modelo da ${v.toFixed(1)} mm en un paso de ${h} h: se enseña por hora</small>` : '';
       // Con los números apagados esta es la única lectura que hay, así
       // que el aviso de «esto no puede ser» va también aquí. Un número
       // imposible dado sin más se lee como un dato bueno.
@@ -4513,7 +4585,7 @@ const Maps = {
           }
         } catch { /* sin dirección: se enseña la altura sola */ }
       }
-      pop.setHTML(`<b>${val.toFixed(Math.abs(val) < 10 ? 1 : 0)} ${esc(uTxt)}</b>${deDonde}
+      pop.setHTML(`<b>${val.toFixed(Math.abs(val) < 10 ? 1 : 0)} ${esc(uTxt)}</b>${deDonde}${delPaso}
          ${imposible ? `<small style="color:var(--no);font-weight:700">${esc(imposible)}</small>` : ''}
          <br><small>${esc(L_.name)} · ${esc(hora)}
          <br>${lngLat.lat.toFixed(3)}, ${lngLat.lng.toFixed(3)}

@@ -10000,6 +10000,145 @@ grupo('La marca de escala propia vale para TODAS las escalas, con mayúsculas y 
    ~280 ms seguidas (3,0 s); con 256 KB, 3 peticiones (1,0 s) y los mismos
    bytes; 1 MB no gana tiempo y dobla los bytes. Esa era la causa de raíz
    de «tarda 15 s en abrir cualquier capa». La regla se guarda aquí.     */
+/* ── LA LLUVIA DE UN PASO DE 3 H NO ES «POR HORA» (29-09-2026, 19:10) ─────
+   Suyo, con dos capturas de Santiago a las 20:00: «pues entre un europeo y
+   el otro hay diferencia de litros» — ECMWF 25 km ponía 15 mm/h y ECMWF
+   HRES 6,9. MEDIDO por tres vías que coinciden: la tesela cruda del ECMWF
+   25 km (paso de 3 h) guarda en el nudo 43/−8,5 **13,4 mm**; la API (`/om`)
+   reparte esa misma cantidad en tres horas de 4,5; y Windy, con su
+   ECMWF, rotula «0,53 in · Lluvia (3h)» = 13,5 mm. O sea: la tesela trae
+   LA SUMA DEL PASO, y el mapa la pintaba y la rotulaba como mm/h. ×3 en
+   todo el ECMWF 25 km y en la cola de 3 h de GFS, ECMWF HRES e ICON.
+   Y de paso: HARMONIE publica sus horas DESORDENADAS en latest.json
+   (medido: 19,18,17,16,15,14,00,23,22,21,20,06,…) y el mapa las recorría
+   por posición. Aquí las funciones puras se EJECUTAN con esos datos. */
+grupo('La lluvia de un paso de 3 h se enseña por hora, y las horas del modelo van ordenadas (29-09-2026)');
+{
+  const M = mapsSrc;
+  const fnDe = (nombre) => {
+    const i = M.indexOf(`\nfunction ${nombre}(`);
+    if (i < 0) throw new Error(`no encuentro function ${nombre} en maps.js`);
+    return M.slice(i, M.indexOf('\n}', i) + 2);
+  };
+  const constDe = (nombre) => {
+    const m = M.match(new RegExp(`\\nconst ${nombre} = ([^\\n]+);`));
+    if (!m) throw new Error(`no encuentro const ${nombre} (en una línea) en maps.js`);
+    return `const ${nombre} = ${m[1]};`;
+  };
+  let X = null, porque = '';
+  try {
+    const cuerpo = [constDe('ACUMULADAS'), constDe('esAcumulada'), fnDe('horasDelPaso'), constDe('porHora'),
+                    fnDe('escalaDelPaso'), constDe('partirMarca'), fnDe('ordenarHoras')].join('\n');
+    X = new Function(`${cuerpo}; return { esAcumulada, horasDelPaso, porHora, escalaDelPaso, partirMarca, ordenarHoras };`)();
+  } catch (e) { porque = e.message; }
+  ok('las funciones del paso de lluvia existen en maps.js y se pueden ejecutar', !!X, porque);
+
+  const iso = (h) => new Date(Date.UTC(2026, 8, 29, 6) + h * 3600e3).toISOString().replace('.000Z', 'Z');
+  const cada3 = Array.from({ length: 49 }, (_, i) => iso(i * 3));                       // ECMWF 25 km, medido: 49 pasos de 3 h
+  const gfs = [...Array.from({ length: 121 }, (_, i) => iso(i)), ...Array.from({ length: 88 }, (_, i) => iso(123 + i * 3))]; // 209 pasos, 1 h y luego 3 h
+  if (X) {
+    ok('ECMWF 25 km (49 pasos de 3 h): el paso vale 3 h en el primero, en medio y en el último',
+       X.horasDelPaso(cada3, 0) === 3 && X.horasDelPaso(cada3, 4) === 3 && X.horasDelPaso(cada3, 48) === 3,
+       [0, 4, 48].map(t => X.horasDelPaso(cada3, t)).join(','));
+    ok('GFS (1 h hasta las 120 h, luego 3 h): a las 10 h es 1, a las 120 es 1 y a las 123 es 3',
+       X.horasDelPaso(gfs, 10) === 1 && X.horasDelPaso(gfs, 120) === 1 && X.horasDelPaso(gfs, 121) === 3,
+       [10, 120, 121].map(t => X.horasDelPaso(gfs, t)).join(','));
+    ok('sin horas, con una sola o con basura, el paso es 1 (no se divide por nada raro)',
+       X.horasDelPaso([], 0) === 1 && X.horasDelPaso([iso(0)], 0) === 1 && X.horasDelPaso(null, 3) === 1
+       && X.horasDelPaso(['x', 'y'], 1) === 1);
+    ok('13,4 mm en un paso de 3 h son 4,47 por hora (la lluvia y la nieve); la temperatura no se divide',
+       Math.abs(X.porHora(13.4, 'precipitation', 3) - 4.4667) < 1e-3
+       && Math.abs(X.porHora(13.4, 'snowfall_water_equivalent', 3) - 4.4667) < 1e-3
+       && X.porHora(13.4, 'temperature_2m', 3) === 13.4 && X.porHora(5, 'precipitation', 1) === 5
+       && X.porHora(null, 'precipitation', 3) === null);
+    const esc = { type: 'breakpoint', unit: 'mm/h', breakpoints: [0, 0.099, 0.1, 0.3, 1, 60], colors: ['a', 'b', 'c', 'd', 'e', 'f'] };
+    const e3 = X.escalaDelPaso(esc, 3);
+    ok('la escala de un paso de 3 h lleva los cortes ×3 (0,3 mm/h pasa a 0,9 mm en el paso) y los mismos colores',
+       JSON.stringify(e3.breakpoints) === JSON.stringify([0, 0.297, 0.3, 0.9, 3, 180]) && e3.colors === esc.colors
+       && e3.type === 'breakpoint' && esc.breakpoints[3] === 0.3, JSON.stringify(e3.breakpoints));
+    ok('con paso de 1 h la escala es la misma de siempre, sin copiar', X.escalaDelPaso(esc, 1) === esc && X.escalaDelPaso(esc, undefined) === esc);
+    ok('la marca «lluvia_x3» se parte en escala y paso; «lluvia», «capeE» y «t850» quedan como están',
+       JSON.stringify(X.partirMarca('lluvia_x3')) === '{"nombre":"lluvia","h":3}'
+       && JSON.stringify(X.partirMarca('nieveAzul_x6')) === '{"nombre":"nieveAzul","h":6}'
+       && X.partirMarca('lluvia').h === 1 && X.partirMarca('capeE').nombre === 'capeE' && X.partirMarca('t850').nombre === 't850'
+       && X.partirMarca(null).h === 1);
+    /* Las once primeras horas de HARMONIE tal como llegaron el 29-09-2026
+       a las 19:10 (latest.json, ref 14:00Z), más un duplicado a propósito. */
+    const harmonie = ['2026-09-29T19:00:00Z', '2026-09-29T18:00:00Z', '2026-09-29T17:00:00Z', '2026-09-29T16:00:00Z',
+      '2026-09-29T15:00:00Z', '2026-09-29T14:00:00Z', '2026-09-30T00:00:00Z', '2026-09-29T23:00:00Z', '2026-09-29T22:00:00Z',
+      '2026-09-29T21:00:00Z', '2026-09-29T20:00:00Z', '2026-09-30T06:00:00Z', '2026-09-30T05:00:00Z', '2026-09-29T20:00:00Z'];
+    const meta = X.ordenarHoras({ reference_time: '2026-09-29T14:00:00Z', valid_times: harmonie.slice() });
+    const T = meta?.valid_times ?? [];
+    const crecen = T.every((t, i) => i === 0 || new Date(t) > new Date(T[i - 1]));
+    ok('HARMONIE del 29-09 (19,18,17,16,15,14,00,23,…): tras leerlas van de 14:00Z en adelante, sin saltos atrás ni repetidas',
+       T.length === 13 && T[0] === '2026-09-29T14:00:00Z' && T[12] === '2026-09-30T06:00:00Z' && crecen, T.join(' '));
+    ok('ordenar conserva el resto de la ficha, y una ficha sin horas o nula sale como entró',
+       meta.reference_time === '2026-09-29T14:00:00Z' && X.ordenarHoras(null) === null
+       && JSON.stringify(X.ordenarHoras({ a: 1 })) === '{"a":1}');
+    ok('con las horas ya ordenadas HARMONIE tiene paso de 1 h (antes salían saltos de −1 y 10 h)',
+       X.horasDelPaso(T, 1) === 1 && X.horasDelPaso(T, 12) === 1);
+  }
+
+  /* ── EJECUTADO, no leído: omUrl con una ficha de 3 h pide la escala con
+     el paso pegado, y con una de 1 h no. ── */
+  let om = null, porqueOm = '';
+  try {
+    const iOm = M.indexOf('\n  omUrl(variable, t, modelo');
+    const metodo = M.slice(iOm + 1, M.indexOf('\n  },', iOm) + 4);
+    const capas = [{ id: 'precipitation', v: 'precipitation', escala: 'lluvia' }, { id: 'tempc', v: 'temperature_2m', escala: 'tempc' }];
+    om = new Function('TILES', 'MARCA', 'TLAYERS', 'interpolacionDe', 'ESCALAS_SUAVES', 'horasDelPaso', 'esAcumulada',
+      `return { layer: 'precipitation', ${metodo} };`)('https://teselas', 'escala_propia', capas, () => 'linear', new Set(), X?.horasDelPaso, X?.esAcumulada);
+  } catch (e) { porqueOm = e.message; }
+  ok('omUrl se puede ejecutar aislado', !!om, porqueOm);
+  if (om && X) {
+    const m3 = { reference_time: iso(0), valid_times: cada3 }, m1 = { reference_time: iso(0), valid_times: gfs };
+    const u3 = om.omUrl('precipitation', 4, 'ecmwf_ifs025', m3), u1 = om.omUrl('precipitation', 4, 'ncep_gfs013', m1);
+    om.layer = 'tempc';
+    const uT = om.omUrl('temperature_2m', 4, 'ecmwf_ifs025', m3);
+    ok('con paso de 3 h la URL de la lluvia pide «escala_propia=lluvia_x3»; con paso de 1 h, «lluvia» a secas',
+       /[&?]escala_propia=lluvia_x3(?:$|[&/])/.test(u3) && /[&?]escala_propia=lluvia(?:$|[&/])/.test(u1) && !/_x/.test(u1),
+       `${u3.slice(-40)} · ${u1.slice(-40)}`);
+    ok('la temperatura NO lleva paso aunque el modelo sea de 3 h: no es una suma',
+       /[&?]escala_propia=tempc(?:$|[&/])/.test(uT) && !/_x/.test(uT), uT.slice(-40));
+    const MARCA = 'escala_propia';
+    const limpiarMarca = new Function('MARCA', `return ${(M.match(/const limpiarMarca = (u => [^\n]+);/) || [])[1]};`)(MARCA);
+    const marcaDe = new Function('MARCA', `return ${(M.match(/const marcaDe = (u => [^\n]+);/) || [])[1]};`)(MARCA);
+    const conTesela = `${u3}/5/15/11`;
+    ok('la marca con paso se quita ENTERA antes de dársela a la librería, también con /z/x/y detrás',
+       limpiarMarca(conTesela) === `${u3.replace(/[&?]escala_propia=lluvia_x3/, '')}/5/15/11` && !/escala_propia|_x3/.test(limpiarMarca(conTesela)),
+       limpiarMarca(conTesela).slice(-50));
+    ok('y el protocolo la lee entera: partirMarca(marcaDe(url)) = lluvia / 3',
+       JSON.stringify(X.partirMarca(marcaDe(conTesela))) === '{"nombre":"lluvia","h":3}', marcaDe(conTesela));
+  }
+
+  /* ── Enganches (esto sí es un recordatorio, para que nadie los quite) ── */
+  const proto = M.slice(M.indexOf("maplibregl.addProtocol('om'"), M.indexOf("maplibregl.addProtocol('om'") + 900);
+  ok('el protocolo «om» parte la marca (partirMarca(marcaDe(…))) y escala los cortes con escalaDelPaso',
+     /partirMarca\(marcaDe\(params\.url\)\)/.test(proto) && /escalaDelPaso\(E\.scale, h\)/.test(proto));
+  const valores = M.slice(M.indexOf('\n  async valores('), M.indexOf('\n  capasEtiqueta()'));
+  const consultar = M.slice(M.indexOf('\n  async consultar('), M.indexOf('\n  /* ---------- Barbas de viento'));
+  ok('los números sobre las ciudades y el número al pulsar pasan por porHora() antes de convertir',
+     /porHora\(v, L_\.v, h\)/.test(valores) && /porHora\(v, L_\.v, h\)/.test(consultar) && /horasDelPaso\(/.test(valores) && /horasDelPaso\(/.test(consultar));
+  ok('al pulsar, con paso de 3 h, el popup dice cuánto da el modelo en el paso entero',
+     /en un paso de \$\{h\} h/.test(consultar));
+  const jgm = M.slice(M.indexOf('async function jgetMeta('), M.indexOf('async function jgetMeta(') + 500);
+  ok('jgetMeta ordena las horas de latest.json al leerlas (ordenarHoras)', /ordenarHoras\(await jget\(/.test(jgm));
+  const stamp = M.slice(M.indexOf('\n  stamp()'), M.indexOf('\n  stamp()') + 2600);
+  ok('la barra de estado dice que la lluvia va por hora cuando el paso es de más de 1 h',
+     /paso de \$\{h\} h/.test(stamp) && /horasDelPaso\(/.test(stamp));
+  /* Toda capa acumulada tiene escala propia: sin ella el protocolo no
+     podría escalar los cortes y la librería pintaría la suma como mm/h. */
+  let capas = [];
+  try {
+    const i = M.indexOf('const TLAYERS = ['); const j = M.indexOf('\n];', i) + 3;
+    capas = new Function(`const MODELOS_OLAS = []; ${M.slice(i, j)}; return TLAYERS;`)();
+  } catch {}
+  const acum = new Set(['precipitation', 'snowfall_water_equivalent', 'rain', 'showers', 'snowfall']);
+  const sinEscala = capas.filter(l => (acum.has(l.v) && !l.escala) || (acum.has(l.encima) && !l.encimaEscala)).map(l => l.id);
+  ok('toda capa de lluvia o nieve (propia o «encima») lleva escala propia, que es donde se aplica el paso',
+     capas.length > 20 && sinEscala.length === 0, sinEscala.join(', ') || `capas: ${capas.length}`);
+}
+
 grupo('La caché de bloques del mapa va a 256 KB: tres viajes por tesela, no once (14-09-2026)');
 {
   const M = mapsSrc;
