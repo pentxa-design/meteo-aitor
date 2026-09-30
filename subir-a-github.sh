@@ -6,9 +6,13 @@
 #  se sube como RAMA NUEVA `casa-<fecha>`, NUNCA a main y NUNCA con
 #  --force, para que el portátil parta de ahí la próxima vez.
 #
-#  Lo lanza Aitor a mano. `git push` está en la lista `deny` de
-#  ~/.claude/settings.json A PROPÓSITO (26-08-2026, red de seguridad
-#  que vale en todos los modos), así que Claude solo lo deja preparado.
+#  `git push` a secas está en la lista `deny` de ~/.claude/settings.json
+#  A PROPÓSITO (26-08-2026, red de seguridad que vale en todos los
+#  modos). Hasta el 29-09 este script lo lanzaba Aitor con un clic; desde
+#  el 30-09-2026 lo lanza Claude después de cada publicación, por orden
+#  suya: «te autorizo a subir estos reparos, actualizaciones a github» ·
+#  «así no me estás esperando a que toque yo». Siempre por aquí, nunca
+#  con `git push` directo.
 #
 #    ./subir-a-github.sh              → rama casa-AAAA-MM-DD (hoy)
 #    ./subir-a-github.sh casa-loquesea → rama con ese nombre
