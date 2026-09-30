@@ -441,7 +441,7 @@ async function unSitio(s, previo = null, reloj = null) {
         const dia = H_.time[i].slice(0, 10), h = Number(H_.time[i].slice(11, 13));
         const d = porDia[dia] ??= { horas: new Set(), cape: 0, quien: null, deLado: false };
         d.horas.add(h);
-        if (!d.quien) { d.quien = nombreDe(m) + ' (código de tormenta)' + (deLado ? ' (celda de al lado)' : ''); d.deLado = deLado; }
+        if (!d.quien) { d.quien = nombreDe(m) + ' (código de tormenta)' + (deLado ? ', celda de al lado' : ''); d.deLado = deLado; }
       }
     }
   }
@@ -458,7 +458,7 @@ async function unSitio(s, previo = null, reloj = null) {
         d.horas.add(h);
         if (c > d.cape) {
           d.cape = Math.round(c);
-          d.quien = nombreDe(m) + (deLado ? ' (celda de al lado)' : '');
+          d.quien = nombreDe(m) + (deLado ? ' en la celda de al lado' : '');
           d.deLado = deLado;
         }
       }
@@ -479,7 +479,7 @@ async function unSitio(s, previo = null, reloj = null) {
         const dia = H_.time[i].slice(0, 10), h = Number(H_.time[i].slice(11, 13));
         const g = aguaDia[dia] ??= { horas: new Set(), mm: 0, quien: null, porHora: {} };
         g.horas.add(h);
-        const quien = nombreDe(m) + (deLado ? ' (celda de al lado)' : '');
+        const quien = nombreDe(m) + (deLado ? ' en la celda de al lado' : '');
         if (v > g.mm) { g.mm = v; g.hPico = h; g.quien = quien; }
         /* Y EL MÁXIMO DE CADA HORA, con su modelo (30-09-2026): el aviso
            de las 3 h siguientes decía «agua fuerte ahora y hasta las 16h
@@ -505,7 +505,7 @@ async function unSitio(s, previo = null, reloj = null) {
         const dia = H_.time[i].slice(0, 10), h = Number(H_.time[i].slice(11, 13));
         const r = rachaDia[dia] ??= { horas: new Set(), kmh: 0, quien: null, porHora: {} };
         r.horas.add(h);
-        const quienR = nombreDe(m) + (deLado ? ' (celda de al lado)' : '');
+        const quienR = nombreDe(m) + (deLado ? ' en la celda de al lado' : '');
         if (!(r.porHora[h]?.v >= v)) r.porHora[h] = { v, quien: quienR };   // ver picoEnHoras
         /* Y LA HORA DEL PICO. Encontrado el 20-09-2026: `kmh` era el máximo
            del día y `ini` la PRIMERA hora que pasaba de 70, y el parte de la
@@ -514,7 +514,7 @@ async function unSitio(s, previo = null, reloj = null) {
            modelo, y él manda la cuadrilla a las siete creyendo que lo peor ya
            ha pasado. La app cliente sí guarda la hora del pico; el servidor
            no. */
-        if (v > r.kmh) { r.kmh = v; r.hPico = h; r.quien = nombreDe(m) + (deLado ? ' (celda de al lado)' : ''); }
+        if (v > r.kmh) { r.kmh = v; r.hPico = h; r.quien = nombreDe(m) + (deLado ? ' en la celda de al lado' : ''); }
       }
     }
   }
@@ -1618,10 +1618,15 @@ export default async function handler(req, res) {
     const ico = simboloDe(proximas.flatMap(x => x.f.map(f => f.que)));
     const lista = orden.slice(0, 5).map(x => `${x.d.n}: ${x.f.map(f => f.txt).join(' · ')}`).join('. ');
     avisos.push({
-      titulo: crit ? `${ico} ${orden[0].d.n} (crítico)${proximas.length > 1 ? ` y ${proximas.length - 1} más` : ''}`
-                   : `${ico} Próximas 3 h · ${proximas.length === 1 ? orden[0].d.n : `${proximas.length} sitios`}`,
+      /* TÍTULO CORTO (30-09-2026, su captura de las 14:40): en su móvil,
+         con su tamaño de letra y el icono a la derecha, caben unas diez
+         letras por línea y dos líneas. «⚡ MATIENA (crítico) y 7 más» salía
+         «⚡ / MATIENA (…». El título dice QUÉ (el símbolo) y el sitio que
+         manda; cuántos y dónde van en la primera línea del cuerpo, que
+         tiene todo el ancho. */
+      titulo: crit ? `${ico} ${orden[0].d.n} crítico` : `${ico} Próximas 3 h`,
       url: './?v=torres',
-      cuerpo: `${lista}${proximas.length > 5 ? `. Y ${proximas.length - 5} más` : ''}. Datos de las ${hh(h0)}.`,
+      cuerpo: `${proximas.length > 1 ? `${sitiosTxt(proximas.length)}. ` : ''}${lista}${proximas.length > 5 ? `. Y ${proximas.length - 5} más` : ''}. Datos de las ${hh(h0)}.`,
       tag: 'tormenta', importante: true,
     });
   }

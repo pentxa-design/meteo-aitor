@@ -346,8 +346,8 @@ const evPush = (datos, ventanas) => ({
     const swA = arrancar({ ua: 'Mozilla/5.0 (Linux; Android 13; Ulefone) AppleWebKit/537.36 Chrome/129.0 Mobile Safari/537.36' });
     await swA.disparar('push', evPush(JSON.stringify({ titulo: 'prueba', cuerpo: 'prueba' })));
     const nA = swA.registro.notificaciones[0];
-    ok('en Android el aviso va SIN icono grande (se comía el título) y con el badge blanco sobre transparente',
-       nA && nA.icon === undefined && /badge-96\.png/.test(nA.badge || ''), JSON.stringify(nA));
+    ok('en Android el aviso lleva el icono de la app (sin él Chrome pinta una «W» en el mismo sitio) y el badge blanco sobre transparente',
+       nA && /icon-192\.png/.test(nA.icon || '') && /badge-96\.png/.test(nA.badge || ''), JSON.stringify(nA));
     ok('en el Mac sigue con su icono de siempre, y el badge es el mismo blanco',
        n && /icon-192\.png/.test(n.icon || '') && /badge-96\.png/.test(n.badge || ''), JSON.stringify(n));
     const png = fs.readFileSync(path.join(__dirname, 'icons', 'badge-96.png'));

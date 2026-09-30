@@ -10,7 +10,7 @@
      pantalla con la hora de la descarga.
    ═══════════════════════════════════════════════════════════════════ */
 
-const V     = 'torre-2026.09.30-1413';
+const V     = 'torre-2026.09.30-1445';
 const SHELL = [
   './', './index.html', './styles.css', './app.js', './maps.js',
   './manifest.webmanifest',
@@ -296,16 +296,17 @@ self.addEventListener('push', e => {
   try { d = e.data ? e.data.json() : {}; } catch { d = { cuerpo: e.data && e.data.text() }; }
 
   const titulo = d.titulo || 'Aitor Meteo';
-  /* ── EN ANDROID, SIN ICONO GRANDE (30-09-2026, su captura de las 13:34) ──
-     El `icon` sale grande a la derecha y se come el título («Próximas 3 h
-     · 12 siti…»); y el `badge` a color, Android lo pinta como un cuadrado
-     blanco. Allí va sin `icon` y con un badge blanco sobre transparente
-     (una nube), que es lo que pide el sistema. En el Mac y en el iPhone,
-     el icono de siempre. */
-  const android = /Android/i.test((self.navigator && self.navigator.userAgent) || '');
+  /* ── EL ICONO, Y EL BADGE BLANCO (30-09-2026) ─────────────────────────
+     Su captura de las 13:34: el `badge` a color, Android lo pintaba como un
+     cuadrado blanco → ahora una nube blanca sobre transparente, que es lo
+     que pide el sistema. Y el `icon` se quitó en Android porque se comía el
+     título… y su captura de las 14:40 enseñó que Chrome pone EN SU SITIO un
+     círculo con una «W»: el mismo hueco, y encima un símbolo que no dice
+     nada. Así que el icono de la app vuelve en todos, y lo que se arregla
+     es la causa del título cortado: títulos cortos (api/vigilante.mjs). */
   const opciones = {
     body: d.cuerpo || '',
-    ...(android ? {} : { icon: './icons/icon-192.png?v=20260827' }),
+    icon: './icons/icon-192.png?v=20260827',
     badge: './icons/badge-96.png?v=20260930',
     tag: d.tag || 'meteo',        // uno nuevo del mismo tipo sustituye al viejo
     renotify: true,

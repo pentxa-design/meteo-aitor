@@ -97,6 +97,11 @@ const AYER = clave(new RealDate(RealDate.now() - 86400e3));
      ojoCape: [{ k, dia, horas, v }]           CAPE sin tapa abierta
      caidos:  [k]                              ese sitio no contesta */
 function red(esc, fijo, llamadas) {
+  /* `esc.criticos: [k]` pone ese sitio donde está MATIENA de verdad: el
+     vigilante reconoce los críticos por estar a menos de 300 m de los
+     suyos, no por un campo de la lista. */
+  const SITIOS_ESC = SITIOS.map((x, k) => (esc.criticos || []).includes(k)
+    ? { name: 'BI MATIENA', lat: 43.159627, lon: -2.626779 } : x);
   const hoy0 = new RealDate(fijo); hoy0.setHours(0, 0, 0, 0);
   const iso = d => `${clave(d)}T${p2(d.getHours())}:00`;
   const R = (o, okk = true, status = 200) =>
@@ -116,7 +121,7 @@ function red(esc, fijo, llamadas) {
   return (u = '', init = {}) => {
     const s = String(u); llamadas.push({ u: s, init });
     const q = new URL(s).searchParams;
-    if (s.includes('/api/torres')) return R({ torres: SITIOS });
+    if (s.includes('/api/torres')) return R({ torres: SITIOS_ESC });
     if (s.includes('/api/euskalmet')) return R({ ok: true, puntos: [] });
     if (s.includes('/api/marcador')) return R({ ok: true });
     if (s.includes('/om')) {
@@ -124,7 +129,7 @@ function red(esc, fijo, llamadas) {
       const modelos = (q.get('models') || 'best_match').split(',');
       const campos = (q.get('hourly') || '').split(',').filter(Boolean);
       const T = []; for (let i = 0; i < 48; i++) T.push(new RealDate(hoy0.getTime() + i * 3600e3));
-      const kDe = lat => SITIOS.findIndex(x => Math.abs(x.lat - Number(lat)) < 1e-6);
+      const kDe = lat => SITIOS_ESC.findIndex(x => Math.abs(x.lat - Number(lat)) < 1e-6);
       const uno = (lat, lon) => {
         const k = kDe(lat);
         if ((esc.caidos || []).includes(k)) return { latitude: +lat, longitude: +lon, hourly: null };
@@ -454,6 +459,29 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   ok('y solo lo gordo, por SUS listones: la racha de 65 (ORDUNA) y el agua de 1,5 (MUNGIA) no entran',
      !B2.reventó && /BERMEO/.test(cb2) && !/ORDUNA|MUNGIA/.test(cb2), cb2 || resumen(B2));
 }
+
+/* ── EL TÍTULO CABE EN SU MÓVIL (30-09-2026, su captura de las 14:40) ──
+   «⚡ MATIENA (crítico) y 7 más» salía «⚡ / MATIENA (…»: con su tamaño de
+   letra y el icono a la derecha caben unas diez letras por línea y dos
+   líneas. Y «(2 mm/h, ICON (celda de al lado))», paréntesis dentro de
+   paréntesis. */
+{
+  const T1 = await pasada({ hora: '14:00', antes: tranquilo('14:00', 130),
+    esc: { criticos: [3], rayo: [{ k: 3, dia: 'hoy', horas: [16, 17] }, { k: 5, dia: 'hoy', horas: [17] }], agua: [{ k: 0, dia: 'hoy', horas: [15], mm: 2.2 }] } });
+  const t1 = (T1.b.avisados || []).find(a => /crítico|Próximas 3 h/.test(a.titulo));
+  const T2 = await pasada({ hora: '14:00', antes: tranquilo('14:00', 130),
+    esc: { rayo: [{ k: 5, dia: 'hoy', horas: [17] }], agua: [{ k: 0, dia: 'hoy', horas: [15], mm: 2.2 }] } });
+  const t2 = (T2.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
+  ok('los títulos del aviso de las 3 h caben en su móvil (18 letras como mucho) y cuántos sitios va en el cuerpo',
+     !T1.reventó && !T2.reventó && t1?.titulo === '⚡ MATIENA crítico' && t2?.titulo === '⚡ Próximas 3 h'
+     && [...t1.titulo].length <= 18 && [...t2.titulo].length <= 18
+     && /^3 sitios\. MATIENA: riesgo de rayo 16h-17h\./.test(t1.cuerpo) && /^2 sitios\. /.test(t2.cuerpo),
+     `${t1?.titulo} — ${t1?.cuerpo} | ${t2?.titulo} — ${t2?.cuerpo}`);
+}
+
+ok('«celda de al lado» va sin paréntesis propio: dentro de «(2 mm/h, ICON …)» salía «(… ICON (celda de al lado))»',
+   !/' \(celda de al lado\)'/.test(fs.readFileSync(path.join(tmp, 'api', 'vigilante.mjs'), 'utf8'))
+   && /' en la celda de al lado'/.test(fs.readFileSync(path.join(tmp, 'api', 'vigilante.mjs'), 'utf8')));
 
 /* ── LA REGLA Y NO EL CASO (30-09-2026) ────────────────────────────────
    Suyo: «hay que reparar el porqué, de raíz, para que la siguiente no lo
