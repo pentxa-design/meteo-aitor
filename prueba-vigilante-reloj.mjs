@@ -150,10 +150,16 @@ function resFalso() {
   return r;
 }
 
+/* El guardia de las pasadas saltadas, en una función para poder probarlo. */
+const saltadaSinQuerer = (metodo, b, seSalta) => metodo === 'POST' && b?.saltada === true && !seSalta;
+ok('el guardia está puesto: una pasada que se salta sin haberlo pedido es un fallo, y una del freno (seSalta) no',
+   saltadaSinQuerer('POST', { saltada: true }, false) === true && saltadaSinQuerer('POST', { saltada: true }, true) === false
+   && saltadaSinQuerer('POST', { mirados: 6 }, false) === false && saltadaSinQuerer('GET', { saltada: true }, false) === false);
+
 /* ── UNA PASADA A UNA HORA ─────────────────────────────────────────── */
 const fetchReal = globalThis.fetch;
 let n = 0;
-async function pasada({ hora, antes = null, esc = {}, metodo = 'POST', query = {} }) {
+async function pasada({ hora, antes = null, esc = {}, metodo = 'POST', query = {}, seSalta = false }) {
   const fijo = new RealDate(); const [H, M] = hora.split(':').map(Number); fijo.setHours(H, M, 0, 0);
   globalThis.__ALMACEN = new Map();
   if (antes) globalThis.__ALMACEN.set(ESTADO, JSON.stringify(antes));
@@ -171,7 +177,16 @@ async function pasada({ hora, antes = null, esc = {}, metodo = 'POST', query = {
   } catch (e) { reventó = `${e?.constructor?.name}: ${e?.message}`; }
   globalThis.Date = RealDate; globalThis.fetch = fetchReal;
   const estado = JSON.parse(globalThis.__ALMACEN.get(ESTADO) || 'null');
-  return { res, b: res.body || {}, reventó, estado, llamadas };
+  /* ── UNA PASADA SALTADA NO COMPRUEBA NADA (30-09-2026) ──────────────
+     La prueba de las 13:30 del agua salió VERDE con el código roto: la
+     pasada se saltaba («verde: se pasa cada 120 min») y «no dice agua
+     fuerte» era verdad porque no decía nada. Aquí no se le deja a cada
+     prueba acordarse: toda pasada que se salte sin haberlo pedido
+     (`seSalta: true`, solo las pruebas del freno) es un fallo. */
+  const b = res.body || {};
+  if (saltadaSinQuerer(metodo, b, seSalta))
+    ok(`la pasada de las ${hora} corre de verdad (se ha saltado: «${b.nota || ''}», y lo que se mire detrás no mira nada)`, false, JSON.stringify(b).slice(0, 160));
+  return { res, b, reventó, estado, llamadas };
 }
 /* Un estado «antes» tranquilo, con la última pasada hace `min` minutos. */
 const hace = (hora, min) => {
@@ -233,7 +248,7 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   ok('13:15 · el parte de AYER no sirve para comparar: lo dice, no afirma «igual que esta mañana»',
      /Sin parte de esta mañana/.test(ce) && !/Igual que esta mañana/.test(ce), ce || resumen(E));
 
-  const F = await pasada({ hora: '13:20', antes: tranquilo('13:20', 5, { parte2De: null, parteIntentoEn: hace('13:20', 5) }) });
+  const F = await pasada({ hora: '13:20', antes: tranquilo('13:20', 5, { parte2De: null, parteIntentoEn: hace('13:20', 5) }), seSalta: true });
   ok('13:20 · el envío del parte falló hace 5 min: NO se reintenta en cada tic (como mucho cada 30 min)',
      !F.reventó && F.b.saltada === true, resumen(F));
   const F2 = await pasada({ hora: '13:50', antes: tranquilo('13:50', 35, { parte2De: null, parteIntentoEn: hace('13:50', 35) }),
@@ -263,7 +278,7 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const G = await pasada({ hora: '17:10', antes: tranquilo('17:10', 117) });
   ok('17:10 verde · 117 min desde la anterior: PASA (la cadencia es 120 y el sello se escribe al final)',
      !G.reventó && G.b.saltada !== true && Number(G.b.mirados) === 6, resumen(G));
-  const G2 = await pasada({ hora: '17:10', antes: tranquilo('17:10', 100) });
+  const G2 = await pasada({ hora: '17:10', antes: tranquilo('17:10', 100), seSalta: true });
   ok('17:10 verde · 100 min: se salta, y la nota dice la cadencia de verdad',
      !G2.reventó && G2.b.saltada === true && G2.b.nota === 'verde: se pasa cada 120 min', resumen(G2));
   const G3 = await pasada({ hora: '17:10', antes: tranquilo('17:10', 100), query: { mirar: '1' } });
@@ -416,6 +431,74 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const a3 = (A3.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
   ok('12:00 · si en el aviso hay rayo, el título lleva el ⚡ aunque también haya agua',
      !A3.reventó && /^⚡ Próximas 3 h/.test(a3?.titulo || ''), a3?.titulo || resumen(A3));
+}
+
+/* ── LA RACHA, CON SU HORA (30-09-2026) ─────────────────────────────
+   La misma familia que el agua: «racha 110 km/h a las 15h» con 75 a las
+   15 y 110 a las 23; y el «no he podido mirar» decía «racha 95 km/h a las
+   08h» con 72 a las 08 y 95 a las 16 (el máximo del día con la PRIMERA
+   hora que pasaba de 70). */
+{
+  const B1 = await pasada({ hora: '14:00', antes: tranquilo('14:00', 130),
+                            esc: { racha: [{ k: 0, dia: 'hoy', horas: [15], v: 75 }, { k: 0, dia: 'hoy', horas: [23], v: 110 }] } });
+  const b1 = (B1.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
+  ok('14:00 · racha de 75 a las 15 y de 110 a las 23: el aviso de las 3 h dice 75 a las 15h, no el 110 de la noche, y con 💨',
+     !B1.reventó && /BERMEO: racha prevista a las 15h \(75 km\/h, /.test(b1?.cuerpo || '') && !/110/.test(b1?.cuerpo || '')
+     && /^💨 Próximas 3 h/.test(b1?.titulo || ''), (b1 && `${b1.titulo} — ${b1.cuerpo}`) || resumen(B1));
+  const B2 = await pasada({ hora: '14:00', antes: null,
+                            esc: { racha: [{ k: 0, dia: 'hoy', horas: [8], v: 72 }, { k: 0, dia: 'hoy', horas: [16], v: 95 }, { k: 1, dia: 'hoy', horas: [17], v: 65 }],
+                                   agua: [{ k: 2, dia: 'hoy', horas: [18], mm: 1.5 }] } });
+  const cb2 = (B2.b.cambios || []).join(' | ');
+  ok('14:00 sin estado («no he podido mirar»): «racha 95 km/h a las 16h», el pico con SU hora y solo lo que queda (no «a las 08h»)',
+     !B2.reventó && /BERMEO racha 95 km\/h a las 16h/.test(cb2) && !/08h/.test(cb2), cb2 || resumen(B2));
+  ok('y solo lo gordo, por SUS listones: la racha de 65 (ORDUNA) y el agua de 1,5 (MUNGIA) no entran',
+     !B2.reventó && /BERMEO/.test(cb2) && !/ORDUNA|MUNGIA/.test(cb2), cb2 || resumen(B2));
+}
+
+/* ── LA REGLA Y NO EL CASO (30-09-2026) ────────────────────────────────
+   Suyo: «hay que reparar el porqué, de raíz, para que la siguiente no lo
+   vuelva a hacer». Los casos de arriba guardan los fallos que YA pasaron;
+   esta guarda la REGLA: en tardes inventadas al azar (semilla fija, así
+   que si falla, falla siempre igual), cada «agua fuerte prevista …» y
+   cada «racha prevista …» del aviso tiene que decir el MÁXIMO de las
+   horas que nombra, todas esas horas tienen que pasar el listón y ninguna
+   puede salirse de las 3 h siguientes. Se lee el TEXTO que le llega a él. */
+{
+  const TOPE_R = Number((fs.readFileSync(path.join(tmp, 'api', 'vigilante.mjs'), 'utf8').match(/const RACHA_TOPE = (\d+);/) || [])[1]);
+  const TOPE_A = Number((fs.readFileSync(path.join(tmp, 'api', 'vigilante.mjs'), 'utf8').match(/const AGUA_FUERTE = ([\d.]+);/) || [])[1]);
+  let semilla = 20260930;
+  const azar = () => (semilla = (semilla * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const nombres = SITIOS.map(x => x.name.replace(/^[A-Z]{2} /, ''));
+  const malos = []; let frases = 0;
+  for (let caso = 0; caso < 20; caso++) {
+    const h0 = 6 + Math.floor(azar() * 16);
+    const esc = { agua: [], racha: [] }, verdad = {};
+    for (let k = 0; k < SITIOS.length; k++) for (let h = 0; h < 24; h++) {
+      if (azar() < 0.2) { const mm = Math.round((0.3 + azar() * 8) * 10) / 10; esc.agua.push({ k, dia: 'hoy', horas: [h], mm }); verdad[`${k}:agua:${h}`] = mm; }
+      if (azar() < 0.1) { const v = Math.round(55 + azar() * 60); esc.racha.push({ k, dia: 'hoy', horas: [h], v }); verdad[`${k}:racha:${h}`] = v; }
+    }
+    const hora = `${p2(h0)}:05`;
+    const P = await pasada({ hora, antes: tranquilo(hora, 200), esc });   // 200: de noche el verde va cada 180 (el guardia de arriba lo cazó)
+    const cuerpo = (P.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo))?.cuerpo || '';
+    for (const trozo of cuerpo.split(/\.\s+(?=[A-ZÑ]{3,}[A-Z0-9 ]*:)/)) {
+      const m0 = trozo.match(/^([A-ZÑ][A-Z0-9Ñ ]+):/); if (!m0) continue;
+      const k = nombres.indexOf(m0[1].trim()); if (k < 0) continue;
+      const re = /(agua fuerte prevista|racha prevista) (?:ahora y hasta las (\d\d)h|a las (\d\d)h|(\d\d)h-(\d\d)h) \((\d+(?:,\d)?) (mm\/h|km\/h)/g;
+      let m;
+      while ((m = re.exec(trozo))) {
+        frases++;
+        const tipo = m[1].startsWith('agua') ? 'agua' : 'racha', tope = tipo === 'agua' ? TOPE_A : TOPE_R;
+        const desde = m[2] ? h0 : Number(m[3] ?? m[4]), hasta = Number(m[2] ?? m[3] ?? m[5]);
+        const dicho = Number(m[6].replace(',', '.'));
+        let max = -Infinity, todas = true;
+        for (let h = desde; h <= hasta; h++) { const v = verdad[`${k}:${tipo}:${h}`]; if (!(v >= tope)) todas = false; if (v > max) max = v; }
+        if (Math.abs(dicho - max) > 0.05 || !todas || hasta > h0 + 3 || desde < h0)
+          malos.push(`${hora} ${nombres[k]} «${m[0]}» → máximo de ${desde}-${hasta}h: ${max}${todas ? '' : ', con horas bajo el listón'}`);
+      }
+    }
+  }
+  ok('la regla y no el caso: en 20 tardes al azar, cada «agua fuerte prevista» y «racha prevista» dice el MÁXIMO de las horas que nombra, todas pasan el listón y ninguna se sale de las 3 h',
+     malos.length === 0 && frases >= 20, malos.slice(0, 3).join(' · ') || `${frases} frases miradas`);
 }
 
 /* ── EL PULSO, 60 s DE CDN ─────────────────────────────────────────── */

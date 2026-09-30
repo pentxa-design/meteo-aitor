@@ -238,6 +238,33 @@ const tramosTxt = (t, ini, fin) => (Array.isArray(t) && t.length
 /* Y la hora del pico se dice aparte, porque el máximo del día casi nunca
    cae en la primera hora del tramo. */
 const picoTxt = (hPico, ini) => `a las ${hh(hPico ?? ini)}`;
+/* ── EL NÚMERO VA CON SU HORA, SIEMPRE (30-09-2026) ───────────────────
+   Suyo, 13:34, con el cielo seco: «BERMEO: agua fuerte ahora y hasta las
+   16h (6,7 mm/h)». Y al pedirle la causa: «hay que reparar el porqué, de
+   raíz, para que la siguiente no lo vuelva a hacer».
+
+   LA CAUSA: el agua y la racha se guardaban por DÍA con dos cosas sueltas
+   —las horas en que pasa algo y el PEOR número del día— y cada texto las
+   pegaba como si fueran de la misma hora. Así salieron tres fallos de la
+   misma familia: el agua de las 13-16 h con los 6,9 mm de las 20 h; la
+   racha de las 3 h siguientes con el máximo del día; y «racha X km/h a
+   las HH» en el «no he podido mirar» con el máximo del día y la PRIMERA
+   hora que pasaba de 70.
+
+   EL ARREGLO DE RAÍZ: cada hora guarda su máximo y su modelo (`porHora`),
+   y todo número que se diga junto a unas horas sale de AQUÍ, del máximo
+   de ESAS horas. El peor del día (`mm`, `kmh`) solo se dice con su propia
+   hora (`hPico`, `picoTxt`). Y una prueba de la REGLA, no del caso
+   (prueba-vigilante-reloj.mjs, «la regla y no el caso»), la comprueba
+   en tardes al azar sobre el texto que le llega. */
+function picoEnHoras(x, desde, hasta) {
+  let p = null;
+  for (let h = desde; h <= hasta; h++) {
+    const e = x?.porHora?.[h];
+    if (e && Number.isFinite(e.v) && (!p || e.v > p.v)) p = { v: e.v, quien: e.quien, h };
+  }
+  return p;
+}
 const rangoTxt = (ini, fin) => (ini === fin ? hh(ini) : `${hh(ini)}-${hh(fin)}`);
 
 /* Parte horas sueltas en tramos SEGUIDOS. Sin esto, un sitio que salta a
@@ -454,7 +481,7 @@ async function unSitio(s, previo = null, reloj = null) {
            (6,7 mm/h)» con 0,5-1,9 mm de 13 a 16 h, porque el «fuerte» y
            los mm eran los del peor momento del DÍA (el Automático a las
            20:00). Lo fuerte se decide hora a hora. */
-        if (!(g.porHora[h]?.mm >= v)) g.porHora[h] = { mm: v, quien };
+        if (!(g.porHora[h]?.v >= v)) g.porHora[h] = { v, quien };
       }
     }
   }
@@ -471,8 +498,10 @@ async function unSitio(s, previo = null, reloj = null) {
         const v = g[i];
         if (v == null || v < RACHA_TOPE) continue;
         const dia = H_.time[i].slice(0, 10), h = Number(H_.time[i].slice(11, 13));
-        const r = rachaDia[dia] ??= { horas: new Set(), kmh: 0, quien: null };
+        const r = rachaDia[dia] ??= { horas: new Set(), kmh: 0, quien: null, porHora: {} };
         r.horas.add(h);
+        const quienR = nombreDe(m) + (deLado ? ' (celda de al lado)' : '');
+        if (!(r.porHora[h]?.v >= v)) r.porHora[h] = { v, quien: quienR };   // ver picoEnHoras
         /* Y LA HORA DEL PICO. Encontrado el 20-09-2026: `kmh` era el máximo
            del día y `ini` la PRIMERA hora que pasaba de 70, y el parte de la
            mañana los pegaba: con 71 a las 07, 94 a las 17 y 88 a las 18
@@ -488,19 +517,20 @@ async function unSitio(s, previo = null, reloj = null) {
   for (const [dia, r] of Object.entries(rachaDia)) {
     const hs = [...r.horas].sort((a2, b2) => a2 - b2);
     racha[dia] = { ini: hs[0], fin: hs.at(-1), tramos: enTramos(hs),
-                   kmh: Math.round(r.kmh), hPico: r.hPico, quien: r.quien };
+                   kmh: Math.round(r.kmh), hPico: r.hPico, quien: r.quien,
+                   porHora: Object.fromEntries(hs.map(h => [h, { v: Math.round(r.porHora[h].v), quien: r.porHora[h].quien }])) };
   }
 
   const agua = {};
   for (const [dia, g] of Object.entries(aguaDia)) {
     const hs = [...g.horas].sort((a2, b2) => a2 - b2);
-    const hsFuerte = hs.filter(h => g.porHora[h]?.mm >= AGUA_FUERTE);
+    const hsFuerte = hs.filter(h => g.porHora[h]?.v >= AGUA_FUERTE);
     agua[dia] = { ini: hs[0], fin: hs.at(-1), tramos: enTramos(hs),
                   mm: Math.round(g.mm * 10) / 10, hPico: g.hPico, quien: g.quien,
                   fuerte: g.mm >= AGUA_FUERTE,
                   // Solo las horas que pasan de AGUA_FUERTE, y el pico de cada una.
                   fuertes: enTramos(hsFuerte),
-                  porHora: Object.fromEntries(hsFuerte.map(h => [h, { mm: Math.round(g.porHora[h].mm * 10) / 10, quien: g.porHora[h].quien }])) };
+                  porHora: Object.fromEntries(hsFuerte.map(h => [h, { v: Math.round(g.porHora[h].v * 10) / 10, quien: g.porHora[h].quien }])) };
   }
 
   const dias = {};
@@ -1391,10 +1421,11 @@ export default async function handler(req, res) {
          aquí era el listón viejo de la torre: el 25-09 él los subió a 70
          de aviso y 90 de límite y este 60 se quedó como estaba, avisando
          por debajo de su propio ámbar. */
-      if (r?.kmh != null && r.kmh >= RACHA_TOPE)
-        gordos.push(`${d.n} racha ${Math.round(r.kmh)} km/h${r.ini != null ? ` a las ${hh(r.ini)}` : ''}`);
-      else if (ag?.mm != null && ag.mm >= 2)
-        gordos.push(`${d.n} lluvia fuerte ${coma(ag.mm.toFixed(1))} mm/h`);
+      /* Lo que QUEDA por delante, y cada número con la hora de SU pico
+         (antes: el máximo del día con la primera hora que pasaba de 70). */
+      const pr = picoEnHoras(r, h0, 23), pa = picoEnHoras(ag, h0, 23);
+      if (pr) gordos.push(`${d.n} racha ${pr.v} km/h a las ${hh(pr.h)}`);
+      else if (pa) gordos.push(`${d.n} lluvia fuerte ${coma(pa.v)} mm/h a las ${hh(pa.h)}`);
     }
     if (gordos.length) {
       cambios.push({ n: gordos[0].split(' ')[0], cual: 'hoy', peor: true, critico: false,
@@ -1468,7 +1499,7 @@ export default async function handler(req, res) {
         if (vb && !va && hayAguaGuardada && !(cual === 'hoy' && vb.fin < h0)) {
           cambiosAgua.push({ n: d.n, lat: d.lat, lon: d.lon, cual, peor: true, critico: d.critico,
             txt: `${vb.fuerte ? 'lluvia fuerte' : 'agua'} ${tramosTxt(vb.tramos, vb.ini, vb.fin)}`
-               + ` (${coma(vb.mm)} mm/h, lo ve ${vb.quien})` });
+               + ` (pico ${coma(vb.mm)} mm/h ${picoTxt(vb.hPico, vb.ini)}, lo ve ${vb.quien})` });
         } else if (vb && va && !(cual === 'hoy' && vb.fin < h0)) {
           const aFuerte = !va.fuerte && vb.fuerte;
           const antesDe = vb.ini <= va.ini - 2;
@@ -1545,17 +1576,17 @@ export default async function handler(req, res) {
        su captura de las 13:34 con el cielo gris y seco). */
     const ag = d.agua?.[claveHoy];
     for (const t of tramosEnVentana(deHoy({ tramos: ag?.fuertes }))) {
-      let pico = null;
-      for (let h = Math.max(t.ini, h0); h <= Math.min(t.fin, H3); h++) {
-        const x = ag.porHora?.[h];
-        if (x && (!pico || x.mm > pico.mm)) pico = x;
-      }
+      const p = picoEnHoras(ag, Math.max(t.ini, h0), Math.min(t.fin, H3));
       f.push({ que: 'agua', clave: `agua:${t.ini}`,
-               txt: `agua fuerte prevista ${tramoTxt3(t, '')}${pico ? ` (${coma(pico.mm)} mm/h, ${pico.quien})` : ''}` });
+               txt: `agua fuerte prevista ${tramoTxt3(t, '')}${p ? ` (${coma(p.v)} mm/h, ${p.quien})` : ''}` });
     }
+    /* La racha, igual: su número es el de ESAS horas, no el máximo del día. */
     const ra = d.racha?.[claveHoy];
-    if (ra && (ra.kmh ?? 0) >= RACHA_TOPE) for (const t of tramosEnVentana(deHoy(ra)))
-      f.push({ que: 'racha', clave: `racha:${t.ini}`, txt: `racha ${ra.kmh} km/h ${tramoTxt3(t, '')}` });
+    for (const t of tramosEnVentana(deHoy(ra))) {
+      const p = picoEnHoras(ra, Math.max(t.ini, h0), Math.min(t.fin, H3));
+      f.push({ que: 'racha', clave: `racha:${t.ini}`,
+               txt: `racha prevista ${tramoTxt3(t, '')}${p ? ` (${p.v} km/h, ${p.quien})` : ''}` });
+    }
     return f;
   };
   const proximas = buenos.map(d => ({ d, f: queViene(d) })).filter(x => x.f.length);

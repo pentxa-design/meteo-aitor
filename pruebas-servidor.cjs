@@ -937,7 +937,13 @@ ok('y entonces avisa por estado absoluto, no por cambio',
    es 70 y está en `RACHA_TOPE`. El nombre decía una cosa y la regex otra,
    así que el 26-09, cuando él subió los listones, nadie se enteró. */
 ok('solo de lo gordo: su tope de racha (por su nombre, no por un número) y la lluvia fuerte',
-   /r\.kmh >= RACHA_TOPE/.test(vgc) && /ag\.mm >= 2/.test(vgc),
+   /* 30-09-2026: el tope ya no se mira aquí, va en los datos: la racha solo
+      guarda horas de RACHA_TOPE para arriba y el agua fuerte solo las de
+      AGUA_FUERTE, y el «no he podido mirar» lee su pico con picoEnHoras.
+      Lo EJECUTA prueba-vigilante-reloj.mjs (72/95 salen; 65 y 1,5 no). */
+   /if \(v == null \|\| v < RACHA_TOPE\) continue;/.test(vgc)
+   && /const hsFuerte = hs\.filter\(h => g\.porHora\[h\]\?\.v >= AGUA_FUERTE\);/.test(vgc)
+   && /const pr = picoEnHoras\(r, h0, 23\), pa = picoEnHoras\(ag, h0, 23\);/.test(vgc),
    'avisar de todo sin poder comparar sería darle la lata 25 días');
 ok('y se dice que es un aviso por lo que hay, no por lo que ha cambiado',
    /el vigilante no puede comparar con antes/.test(vgc));
@@ -1256,8 +1262,8 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
      'sin esto solo se puede suponer, y de suposiciones ya van dos esta semana');
 
   ok('en modo ciego se avisa por SU tope de racha, no por un número escrito a mano',
-     /if \(r\?\.kmh != null && r\.kmh >= RACHA_TOPE\)/.test(V)
-     && !/r\.kmh >= \d+/.test(V),
+     /if \(v == null \|\| v < RACHA_TOPE\) continue;/.test(V) && /const pr = picoEnHoras\(r, h0, 23\)/.test(V)
+     && !/r\.kmh >= \d+/.test(V) && !/v < \d+\) continue/.test(V),
      'avisaba a partir de 60 con su aviso en 70: dos listones distintos para lo mismo');
   ok('y los tres listones del ojo están por debajo de los de aviso',
      (() => { const n = t => Number((V.match(new RegExp(t)) || [])[1]);

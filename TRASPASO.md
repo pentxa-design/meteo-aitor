@@ -1287,3 +1287,19 @@ Su captura de las 13:34: «⚡ Próximas 3 h · 12 siti… — BERMEO: agua fuer
 **El icono (sw.js):** en Android el `icon` sale grande a la derecha y se come el título, y el `badge` a color Android lo pinta como un cuadrado blanco (el «□» de su captura). En Android va sin `icon` y con `icons/badge-96.png`, una nube blanca sobre transparente (96×96 RGBA, 756 B), que es lo que pide el sistema; en el Mac y el iPhone, el icono de siempre. El badge va en el SHELL.
 
 **Pruebas:** 5 nuevas en `prueba-vigilante-reloj.mjs` y 3 en `prueba-sw.cjs` (el push se EJECUTA con un aparato Android y otro Mac). **Trampa cazada al romper:** la prueba de las 13:30 salió VERDE con el código viejo porque la pasada se saltaba («verde: se pasa cada 120 min» con la última hace 30 min) y no miraba nada; ahora va con 130 min y exige `saltada !== true`. Cinco roturas a propósito (ventana de cualquier agua, pico del día, siempre ⚡, el agua pisando al rayo, icono grande en Android): las cinco rojas. Cuatro filas en NO-SE-TOCA.
+
+### §55 · 30-09-2026, 14:20-15:00, iMac: LA CAUSA DE RAÍZ — EL NÚMERO VA CON SU HORA, Y LAS PRUEBAS QUE NO MIRABAN
+
+Suyo, tras §54: «una cagada que ponga el rayo si solo ve un pelín de agua… hay que reparar el porqué siempre, de raíz, para que la siguiente no lo vuelva a hacer».
+
+**La causa de fondo (api/vigilante.mjs):** el agua y la racha se guardaban por DÍA con dos cosas sueltas —las horas en que pasa algo y el PEOR número del día— y cada texto las pegaba como si fueran de la misma hora. Buscando la familia entera salieron **tres**: el agua de §54; **la racha del aviso de las 3 h** («racha X km/h ahora…» con el máximo del día); y **el «no he podido mirar»** («racha X km/h a las HH» con el máximo del día y la PRIMERA hora que pasaba de 70). La app no lo tiene (su línea «viene» ya pone cada número con su hora; revisado).
+
+**Arreglo de raíz:** agua y racha guardan el máximo de cada hora con su modelo (`porHora`), y UNA función, `picoEnHoras(x, desde, hasta)`, da todo número que se diga junto a unas horas. El peor del día (`mm`, `kmh`) solo sale con su propia hora (`picoTxt`). La racha dice «racha prevista … (X km/h, modelo)», como el agua. El «no he podido mirar» dice lo que QUEDA. El cambio de agua (apagado) también dice «pico X mm/h a las HH».
+
+**Las pruebas, de raíz también:**
+- **La regla y no el caso:** 20 tardes al azar (semilla fija) sobre el texto que le llega: cada «agua fuerte prevista»/«racha prevista» dice el máximo de las horas que nombra, todas pasan el listón, ninguna fuera de las 3 h. Rompiendo a propósito «la racha mira horas fuera de la ventana», **solo esta la cazó**.
+- **El guardia de pasadas saltadas** en `pasada()`: toda pasada que se salte sin `seSalta: true` es un fallo. Al ponerlo cazó al momento que 7 de las 20 tardes al azar (las de 06 a 10 h) se saltaban: de noche el verde va cada 180 min. Solo las dos del freno llevan `seSalta`.
+- Casos: racha 75 a las 15 / 110 a las 23; «no he podido mirar» con 72 a las 08 y 95 a las 16.
+Cinco roturas a propósito, las cinco rojas. Cuatro filas en NO-SE-TOCA.
+
+**Pendiente, pedido suyo a las 14:05:** «los iconos de lluvia etc revisar que falla mucho» (los de la app).
