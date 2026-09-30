@@ -241,7 +241,7 @@ const fetchReal = globalThis.fetch;
   const titulos = [...(res.body?.avisados || []).map(a => a.titulo), ...(res.body?.habriaAvisado || [])];
   ok('y ese sitio sale como inminente, con su aviso de tormenta preparado',
      !reventó && Array.isArray(res.body?.inminentes) && res.body.inminentes.length === 1
-     && /mañana/.test(res.body.inminentes[0]) && titulos.some(t => /Próximas 3 h|crítico/.test(String(t))),
+     && /mañana/.test(res.body.inminentes[0]) && titulos.some(t => /Próximas 3 h|crítico/i.test(String(t))),
      JSON.stringify({ inminentes: res.body?.inminentes, titulos }).slice(0, 200));
 }
 globalThis.fetch = fetchReal;

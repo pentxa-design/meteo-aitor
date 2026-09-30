@@ -1652,9 +1652,12 @@ export default async function handler(req, res) {
          «⚡ / MATIENA (…». El título dice QUÉ (el símbolo) y el sitio que
          manda; cuántos y dónde van en la primera línea del cuerpo, que
          tiene todo el ancho. */
-      titulo: crit ? `${ico} ${orden[0].d.n} crítico` : `${ico} Próximas 3 h`,
+      /* Y SIN NOMBRE (30-09-2026, 20:06): «🌧 SANTAMAÑA crítico» salía
+         «SANT / AMAÑA crí…». Los nombres pueden ser largos (SOLLUBEMENDI):
+         el título es fijo y el crítico abre el cuerpo. */
+      titulo: crit ? `${ico} Crítico` : `${ico} Próximas 3 h`,
       url: './?v=torres',
-      cuerpo: `${proximas.length > 1 ? `${sitiosTxt(proximas.length)}. ` : ''}${lista}${proximas.length > 5 ? `. Y ${proximas.length - 5} más` : ''}. Datos de las ${hh(h0)}.`,
+      cuerpo: `${crit ? `Crítico: ${orden[0].d.n}. ` : ''}${proximas.length > 1 ? `${sitiosTxt(proximas.length)}. ` : ''}${lista}${proximas.length > 5 ? `. Y ${proximas.length - 5} más` : ''}. Datos de las ${hh(h0)}.`,
       tag: 'tormenta', importante: true,
     });
   }
