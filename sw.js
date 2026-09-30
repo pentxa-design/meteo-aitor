@@ -10,14 +10,14 @@
      pantalla con la hora de la descarga.
    ═══════════════════════════════════════════════════════════════════ */
 
-const V     = 'torre-2026.09.29-2008';
+const V     = 'torre-2026.09.30-1343';
 const SHELL = [
   './', './index.html', './styles.css', './app.js', './maps.js',
   './manifest.webmanifest',
   // Catálogo de emplazamientos: para que el buscador los encuentre sin
   // cobertura, justo donde están. ~300 KB, se baja una vez por versión.
   './data/estaciones.json',
-  './icons/icon-192.png?v=20260827', './icons/icon-512.png?v=20260827',
+  './icons/icon-192.png?v=20260827', './icons/icon-512.png?v=20260827', './icons/badge-96.png?v=20260930',
   // Las librerías del mapa. Sin ellas, sin cobertura no hay mapa: ni
   // modelos, ni radar, ni satélite. Son 3,8 MB y se bajan una vez por
   // versión publicada, pero en el monte valen su peso en oro.
@@ -296,10 +296,17 @@ self.addEventListener('push', e => {
   try { d = e.data ? e.data.json() : {}; } catch { d = { cuerpo: e.data && e.data.text() }; }
 
   const titulo = d.titulo || 'Aitor Meteo';
+  /* ── EN ANDROID, SIN ICONO GRANDE (30-09-2026, su captura de las 13:34) ──
+     El `icon` sale grande a la derecha y se come el título («Próximas 3 h
+     · 12 siti…»); y el `badge` a color, Android lo pinta como un cuadrado
+     blanco. Allí va sin `icon` y con un badge blanco sobre transparente
+     (una nube), que es lo que pide el sistema. En el Mac y en el iPhone,
+     el icono de siempre. */
+  const android = /Android/i.test((self.navigator && self.navigator.userAgent) || '');
   const opciones = {
     body: d.cuerpo || '',
-    icon: './icons/icon-192.png?v=20260827',
-    badge: './icons/icon-192.png?v=20260827',
+    ...(android ? {} : { icon: './icons/icon-192.png?v=20260827' }),
+    badge: './icons/badge-96.png?v=20260930',
     tag: d.tag || 'meteo',        // uno nuevo del mismo tipo sustituye al viejo
     renotify: true,
     requireInteraction: !!d.importante,

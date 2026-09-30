@@ -130,6 +130,7 @@ function arrancar(op = {}) {
       warn: (...a) => { registro.avisosConsola.push(a.join(' ')); },
     },
     location: { origin: new URL(BASE).origin, href: BASE + 'sw.js' },
+    navigator: { userAgent: op.ua || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/129.0 Safari/537.36' },
     addEventListener: (t, fn) => { (manejadores[t] = manejadores[t] || []).push(fn); },
     skipWaiting: async () => { registro.skipWaiting++; },
     clients: {
@@ -337,6 +338,21 @@ const evPush = (datos, ventanas) => ({
        JSON.stringify(lista1));
     ok('con la app abierta se le manda {tipo:"avisoNuevo"} para que repinte la lista',
        sw.registro.mensajes.some(m => m.tipo === 'avisoNuevo'), JSON.stringify(sw.registro.mensajes));
+
+    /* ── EN ANDROID, SIN EL ICONO GRANDE (30-09-2026, su captura de las
+       13:34): el `icon` sale grande a la derecha y se come el título
+       («Próximas 3 h · 12 siti…»), y el `badge` a color Android lo pinta
+       como un cuadrado blanco. Se ejecuta el push con cada aparato. */
+    const swA = arrancar({ ua: 'Mozilla/5.0 (Linux; Android 13; Ulefone) AppleWebKit/537.36 Chrome/129.0 Mobile Safari/537.36' });
+    await swA.disparar('push', evPush(JSON.stringify({ titulo: 'prueba', cuerpo: 'prueba' })));
+    const nA = swA.registro.notificaciones[0];
+    ok('en Android el aviso va SIN icono grande (se comía el título) y con el badge blanco sobre transparente',
+       nA && nA.icon === undefined && /badge-96\.png/.test(nA.badge || ''), JSON.stringify(nA));
+    ok('en el Mac sigue con su icono de siempre, y el badge es el mismo blanco',
+       n && /icon-192\.png/.test(n.icon || '') && /badge-96\.png/.test(n.badge || ''), JSON.stringify(n));
+    const png = fs.readFileSync(path.join(__dirname, 'icons', 'badge-96.png'));
+    ok('el badge existe, es PNG de 96×96 y con canal alfa (RGBA): Android usa solo la transparencia',
+       png.readUInt32BE(16) === 96 && png.readUInt32BE(20) === 96 && png[25] === 6, `${png.readUInt32BE(16)}×${png.readUInt32BE(20)} tipo ${png[25]}`);
 
     /* 44 más: 45 en total. Solo caben 40, el más nuevo delante. */
     for (let i = 2; i <= 45; i++) {

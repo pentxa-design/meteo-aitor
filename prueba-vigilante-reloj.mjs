@@ -339,7 +339,7 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
                            esc: { agua: [{ k: 1, dia: 'hoy', horas: [21, 22], mm: 2.5 }] } });
   const c2 = (N2.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo))?.cuerpo || '';
   ok('20:00 · agua FUERTE hoy en ORDUNA a las 21-22 (dentro de 3 h) sale en el aviso de «Próximas 3 h», con su hora y sus mm',
-     !N2.reventó && /ORDUNA: agua fuerte 21h-22h \(2,5 mm\/h\)/.test(c2), c2 || resumen(N2));
+     !N2.reventó && /ORDUNA: agua fuerte prevista 21h-22h \(2,5 mm\/h, /.test(c2), c2 || resumen(N2));
   const N3 = await pasada({ hora: '20:00', antes: conAguaGuardada('20:00', 130),
                            esc: { rayo: [{ k: 0, dia: 'man', horas: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] }] } });
   ok('20:00 · un rayo de MAÑANA de 00 a 13 h no es «CAMBIO» a las 20:00 (empieza a 4 h; va en el parte de las 06:30)',
@@ -383,6 +383,39 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const c3 = (R3.b.avisados || []).find(a => /Próximas 3 h|crítico/.test(a.titulo))?.cuerpo || '';
   ok('12:00 · y si entra un sitio NUEVO (ORDUNA) sí vuelve a sonar «Próximas 3 h», con los dos sitios, «riesgo de rayo» (modelo, no medida) y sus horas recortadas a las 3 h siguientes (hasta las 15h)',
      !R3.reventó && /ORDUNA: riesgo de rayo 14h-15h/.test(c3) && /BERMEO: riesgo de rayo 13h-15h/.test(c3) && !/16h/.test(c3), c3 || resumen(R3));
+}
+
+/* ── «AGUA FUERTE AHORA» SIN AGUA FUERTE (30-09-2026, 13:34) ──────────
+   Su captura: «⚡ Próximas 3 h · 12 sitios — BERMEO: agua fuerte ahora y
+   hasta las 16h (6,7 mm/h)», con él mirando por la ventana un cielo gris y
+   seco. MEDIDO por /om: de 13 a 16 h los modelos daban 0,5-1,9 mm (poco) y
+   los 6,9 mm/h eran del Automático A LAS 20:00. El aviso cogía la hora de
+   las horas con algo de agua (≥ 0,3) y el «fuerte» y los mm del PEOR MOMENTO
+   DEL DÍA. Y encima con el ⚡ del rayo en un aviso que solo era de agua. */
+{
+  const escBermeo = { agua: [{ k: 0, dia: 'hoy', horas: [13, 14, 15, 16], mm: 0.5 }, { k: 0, dia: 'hoy', horas: [20], mm: 6.9 }] };
+  /* 130 min desde la última: con 30 la pasada se SALTABA («verde: se pasa
+     cada 120 min») y la prueba salía verde sin mirar nada. Por eso además
+     se exige que no se haya saltado. */
+  const A1 = await pasada({ hora: '13:30', antes: tranquilo('13:30', 130), esc: escBermeo });
+  ok('13:30 · agua floja de 13 a 16 h y fuerte a las 20 h: el aviso de las 3 h siguientes NO dice «agua fuerte» (lo fuerte es a las 20)',
+     !A1.reventó && A1.b.saltada !== true && !(A1.b.avisados || []).some(a => /agua fuerte/.test(a.cuerpo || '')), resumen(A1));
+  const A2 = await pasada({ hora: '18:00', antes: tranquilo('18:00', 130), esc: escBermeo });
+  const a2 = (A2.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
+  ok('18:00 · la misma tarde, cuando las 20 h entran en la ventana: «agua fuerte prevista a las 20h (6,9 mm/h» con el pico de ESA hora',
+     !A2.reventó && /BERMEO: agua fuerte prevista a las 20h \(6,9 mm\/h, /.test(a2?.cuerpo || ''), (a2?.cuerpo) || resumen(A2));
+  ok('y un aviso que solo es de agua va con 🌧, no con el ⚡ del rayo',
+     !A2.reventó && /^🌧 Próximas 3 h/.test(a2?.titulo || ''), a2?.titulo || resumen(A2));
+  const A4 = await pasada({ hora: '14:00', antes: tranquilo('14:00', 130),
+                            esc: { agua: [{ k: 0, dia: 'hoy', horas: [15], mm: 3 }, { k: 0, dia: 'hoy', horas: [22], mm: 8 }] } });
+  const a4 = (A4.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
+  ok('14:00 · fuerte a las 15 (3 mm/h) y más fuerte a las 22 (8): el aviso de las 3 h dice 3, el de SU hora, no el 8 de la noche',
+     !A4.reventó && /BERMEO: agua fuerte prevista a las 15h \(3 mm\/h, /.test(a4?.cuerpo || '') && !/8 mm/.test(a4?.cuerpo || ''), (a4?.cuerpo) || resumen(A4));
+  const A3 = await pasada({ hora: '12:00', antes: tranquilo('12:00', 130),
+                            esc: { rayo: [{ k: 0, dia: 'hoy', horas: [13, 14] }], agua: [{ k: 1, dia: 'hoy', horas: [13], mm: 3 }] } });
+  const a3 = (A3.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
+  ok('12:00 · si en el aviso hay rayo, el título lleva el ⚡ aunque también haya agua',
+     !A3.reventó && /^⚡ Próximas 3 h/.test(a3?.titulo || ''), a3?.titulo || resumen(A3));
 }
 
 /* ── EL PULSO, 60 s DE CDN ─────────────────────────────────────────── */

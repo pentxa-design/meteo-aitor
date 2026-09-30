@@ -445,9 +445,16 @@ async function unSitio(s, previo = null, reloj = null) {
         const v = mm[i];
         if (v == null || v < AGUA_MIN) continue;
         const dia = H_.time[i].slice(0, 10), h = Number(H_.time[i].slice(11, 13));
-        const g = aguaDia[dia] ??= { horas: new Set(), mm: 0, quien: null };
+        const g = aguaDia[dia] ??= { horas: new Set(), mm: 0, quien: null, porHora: {} };
         g.horas.add(h);
-        if (v > g.mm) { g.mm = v; g.hPico = h; g.quien = nombreDe(m) + (deLado ? ' (celda de al lado)' : ''); }
+        const quien = nombreDe(m) + (deLado ? ' (celda de al lado)' : '');
+        if (v > g.mm) { g.mm = v; g.hPico = h; g.quien = quien; }
+        /* Y EL MÁXIMO DE CADA HORA, con su modelo (30-09-2026): el aviso
+           de las 3 h siguientes decía «agua fuerte ahora y hasta las 16h
+           (6,7 mm/h)» con 0,5-1,9 mm de 13 a 16 h, porque el «fuerte» y
+           los mm eran los del peor momento del DÍA (el Automático a las
+           20:00). Lo fuerte se decide hora a hora. */
+        if (!(g.porHora[h]?.mm >= v)) g.porHora[h] = { mm: v, quien };
       }
     }
   }
@@ -487,9 +494,13 @@ async function unSitio(s, previo = null, reloj = null) {
   const agua = {};
   for (const [dia, g] of Object.entries(aguaDia)) {
     const hs = [...g.horas].sort((a2, b2) => a2 - b2);
+    const hsFuerte = hs.filter(h => g.porHora[h]?.mm >= AGUA_FUERTE);
     agua[dia] = { ini: hs[0], fin: hs.at(-1), tramos: enTramos(hs),
                   mm: Math.round(g.mm * 10) / 10, hPico: g.hPico, quien: g.quien,
-                  fuerte: g.mm >= AGUA_FUERTE };
+                  fuerte: g.mm >= AGUA_FUERTE,
+                  // Solo las horas que pasan de AGUA_FUERTE, y el pico de cada una.
+                  fuertes: enTramos(hsFuerte),
+                  porHora: Object.fromEntries(hsFuerte.map(h => [h, { mm: Math.round(g.porHora[h].mm * 10) / 10, quien: g.porHora[h].quien }])) };
   }
 
   const dias = {};
@@ -1529,9 +1540,19 @@ export default async function handler(req, res) {
     const rm = deManana(d.dias[claveManana]);
     for (const t of (rm?.tramos || []))
       f.push({ que: 'rayo', clave: `rayo:m${t.ini}`, txt: `riesgo de rayo mañana ${t.ini === t.fin ? hh(t.ini) : `${hh(t.ini)}-${hh(t.fin)}`}` });
+    /* Solo las horas que de verdad pasan de 2 mm/h, con el pico de ESAS
+       horas y su modelo, y «prevista»: es modelo, no medida (30-09-2026,
+       su captura de las 13:34 con el cielo gris y seco). */
     const ag = d.agua?.[claveHoy];
-    if (ag?.fuerte) for (const t of tramosEnVentana(deHoy(ag)))
-      f.push({ que: 'agua', clave: `agua:${t.ini}`, txt: `agua fuerte ${tramoTxt3(t, '')} (${coma(ag.mm)} mm/h)` });
+    for (const t of tramosEnVentana(deHoy({ tramos: ag?.fuertes }))) {
+      let pico = null;
+      for (let h = Math.max(t.ini, h0); h <= Math.min(t.fin, H3); h++) {
+        const x = ag.porHora?.[h];
+        if (x && (!pico || x.mm > pico.mm)) pico = x;
+      }
+      f.push({ que: 'agua', clave: `agua:${t.ini}`,
+               txt: `agua fuerte prevista ${tramoTxt3(t, '')}${pico ? ` (${coma(pico.mm)} mm/h, ${pico.quien})` : ''}` });
+    }
     const ra = d.racha?.[claveHoy];
     if (ra && (ra.kmh ?? 0) >= RACHA_TOPE) for (const t of tramosEnVentana(deHoy(ra)))
       f.push({ que: 'racha', clave: `racha:${t.ini}`, txt: `racha ${ra.kmh} km/h ${tramoTxt3(t, '')}` });
@@ -1555,10 +1576,14 @@ export default async function handler(req, res) {
   if (proximas.length && !yaAvisado) {
     const orden = [...proximas].sort((a, b) => (b.d.critico ? 1 : 0) - (a.d.critico ? 1 : 0));
     const crit = orden[0].d.critico;
+    /* El símbolo dice QUÉ viene (30-09-2026): un aviso que solo era de agua
+       salía con el ⚡ del rayo, que es su veto y le hace leerlo distinto. */
+    const hay = q => proximas.some(x => x.f.some(f => f.que === q));
+    const ico = hay('rayo') ? '⚡' : hay('agua') ? '🌧' : '💨';
     const lista = orden.slice(0, 5).map(x => `${x.d.n}: ${x.f.map(f => f.txt).join(' · ')}`).join('. ');
     avisos.push({
-      titulo: crit ? `⚡ ${orden[0].d.n} (crítico) y ${proximas.length - 1} más`
-                   : `⚡ Próximas 3 h · ${proximas.length === 1 ? orden[0].d.n : `${proximas.length} sitios`}`,
+      titulo: crit ? `${ico} ${orden[0].d.n} (crítico)${proximas.length > 1 ? ` y ${proximas.length - 1} más` : ''}`
+                   : `${ico} Próximas 3 h · ${proximas.length === 1 ? orden[0].d.n : `${proximas.length} sitios`}`,
       url: './?v=torres',
       cuerpo: `${lista}${proximas.length > 5 ? `. Y ${proximas.length - 5} más` : ''}. Datos de las ${hh(h0)}.`,
       tag: 'tormenta', importante: true,
@@ -1679,7 +1704,7 @@ export default async function handler(req, res) {
   const loQueAcaboDeVer = buenos.some(d =>
     (d.dias && (porDelanteHoy(d.dias[claveHoy]) || deManana(d.dias[claveManana])))
     || (d.racha && porDelanteHoy(d.racha[claveHoy]))
-    || (d.agua && porDelanteHoy(d.agua[claveHoy]) && d.agua[claveHoy].fuerte));
+    || (d.agua?.[claveHoy]?.fuertes || []).some(t => t.fin >= h0));
   /* Sin poder leer el estado no se puede comparar, y ahí el hueco pesa
      MÁS, no menos: `nivel` valdría verde por defecto y callaría. */
   const aCiegas = !antes;
