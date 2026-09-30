@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.09.30-1810';
+const BUILD = '2026.09.30-1819';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -1431,23 +1431,54 @@ function chipsOtrosHora(h, parte) {
   return parte === 'lluvia' ? ` ${out.join(' ')}` : `<div class="hcard__otros">${out.join(' ')}</div>`;
 }
 
+/* ── EL ICONO Y LA PALABRA, UNA SOLA DECISIÓN (30-09-2026) ───────────
+   Suyo: «los iconos de lluvia etc revisar que falla mucho». MEDIDO esa
+   tarde en Bermeo con el app.js de verdad y datos reales: a las 20:00
+   icono «Cubierto» con la palabra «Sirimiri» al lado; a las 21:00 icono
+   «Llovizna débil» con «Llueve bien 2,3 mm». Y barriendo todas las horas
+   posibles, 717 combinaciones en que se contradecían.
+
+   LA CAUSA: el icono (aquí) y la palabra (`comoLlueve`) decidían lo mismo
+   en dos sitios y con prioridades distintas: el icono se fiaba del CÓDIGO
+   («si ya habla de agua, no se toca») y la palabra de los MILÍMETROS.
+
+   EL ARREGLO: la parte de agua del icono sale de `comoLlueve()`, que es
+   la que escribe la palabra y la que lee el semáforo para el sirimiri
+   —y esa NO se toca: con sirimiri no se sube—. Sin gotas si dice «Sin
+   lluvia»; llovizna si dice «Sirimiri»; lluvia si dice «Llueve poco»;
+   fuerte si dice «Llueve bien». El código solo afina lo que la cantidad
+   no sabe decir: hielo, nieve, chubasco. Y la TORMENTA (95-99) sale
+   siempre, que no es «agua» y el semáforo ya la cuenta. Lo que vean
+   otros modelos sigue en su etiqueta. Guardado por una prueba de la
+   REGLA sobre todas las combinaciones (pruebas.js). */
+const ENGELANTE = new Set([56, 57, 66, 67]);     // llovizna y lluvia que hielan: el hielo dice más que la cantidad
+function iconoDeAgua(k, c, mm, thr) {
+  const moja = has(mm) && mm >= (thr?.rainWarn ?? 0.2);
+  if (ENGELANTE.has(c)) return k === 'bien' ? 67 : (moja || c >= 66) ? 66 : c;   // si hiela, sigue helando
+  if (has(c) && ((c >= 71 && c <= 77) || c === 85 || c === 86)) return c;        // nieve
+  const chubasco = has(c) && c >= 80 && c <= 82;
+  if (k === 'bien') return chubasco ? 81 : (c === 65 ? 65 : 63);
+  if (k === 'sirimiri') return esLlovizna(c) ? c : 51;
+  /* «Llueve poco» o «Cuatro gotas» */
+  if (moja) return chubasco ? 80 : 61;
+  return has(c) && c >= 61 && c <= 65 ? 61 : 51;
+}
+
 function codigoQueSeVe(h, codigoDelCielo, thr = S.thr) {
-  if (aguaPrestada(h) !== null) {
-    codigoDelCielo = 3;            // seco según su número: nube, sin gotas
+  const cl = h?.codeLluvia;
+  const tormenta = [cl, codigoDelCielo].find(c => has(c) && c >= 95);
+  if (has(tormenta)) return tormenta;
+  if (has(h?.prec)) {
+    const k = comoLlueve(h, thr).k;
+    if (k === 'sirimiri' || k === 'poco' || k === 'bien')
+      return iconoDeAgua(k, [cl, codigoDelCielo].find(c => has(c) && c >= HAY_AGUA), h.prec, thr);
+    /* «Sin lluvia»: ni una gota en el icono. Lo que vea otro modelo va
+       en su etiqueta («⚠ ECMWF ve lluvia»), no en el dibujo. */
+    if (has(codigoDelCielo) && codigoDelCielo >= HAY_AGUA) codigoDelCielo = 3;
   } else {
-    const cl = h?.codeLluvia;
+    /* Sin milímetros no hay palabra: manda el código, como siempre. */
     if (has(cl) && cl >= HAY_AGUA) return cl;
-
-    /* ¿El que se va a pintar habla ya de agua? Entonces no se toca. */
     if (has(codigoDelCielo) && codigoDelCielo >= HAY_AGUA) return codigoDelCielo;
-  }
-
-  /* ¿Y el modelo cargado dice que moja? Si es que sí, manda el número. */
-  const mm = h?.prec;
-  if (has(mm) && mm > 0) {
-    if (mm >= (thr?.rainNo ?? 2))    return 63;   // llueve bien
-    if (mm >= (thr?.rainWarn ?? 0.2)) return 61;  // llueve poco
-    return 51;                                    // sirimiri: moja igual
   }
   /* La niebla tampoco se vota: es un dato de visibilidad, no de nubes. */
   if (codigoDelCielo === 45 || codigoDelCielo === 48) return codigoDelCielo;
@@ -1496,6 +1527,11 @@ function comoLlueve(h, thr = S.thr) {
   if (esLlovizna(h.codeLluvia ?? h.code))
                               return { k: 'sirimiri', et: 'Sirimiri' };
   if (h.prec > 0)             return { k: 'poco', et: 'Cuatro gotas' };
+  /* El código de lluvia del MISMO modelo que da los milímetros, con 0,0
+     por redondeo: moja algo (regla del 08-09), y el icono lo pintaba con
+     gotas mientras aquí se decía «Sin lluvia» (30-09-2026). */
+  if (has(h.codeLluvia) && h.codeLluvia >= 61 && h.codeLluvia < 95)
+                              return { k: 'poco', et: 'Cuatro gotas' };
   return { k: 'no', et: 'Sin lluvia' };
 }
 

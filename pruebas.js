@@ -3074,6 +3074,8 @@ eval(sacarConst('HAY_AGUA'));
 /* Desde el 30-08 cada hora se lee con `codigoQueSeVe()`: cielo del
    dueño del cielo, agua del dueño de la lluvia. */
 if (typeof HAY_AGUA === 'undefined') globalThis.HAY_AGUA = 51;
+eval(sacarConst('ENGELANTE'));
+eval(sacar('function iconoDeAgua('));   // el agua del icono sale de aquí (30-09-2026)
 eval(sacar('function codigoQueSeVe(h, codigoDelCielo, thr = S.thr) {'));
 eval(sacar('function codigoFranja(sel) {'));   // sacada a nivel de módulo el 28-08
 
@@ -9596,12 +9598,52 @@ console.log('\n  El icono cuadra con la lluvia que él está leyendo');
 
   /* Si el prestado ya habla de agua, manda él: de lluvia sabe más el
      que la publica que una cuenta hecha con los milímetros. */
-  ok('si el icono prestado ya dice agua, se respeta y no se recalcula',
-     codigoQueSeVe({ prec: 5 }, LLOVIZNA, THR) === LLOVIZNA);
+  /* 30-09-2026: esto PEDÍA la contradicción. Con 5 mm la palabra dice
+     «Llueve bien» y el icono se quedaba en llovizna (su tarde del 30-09 en
+     Bermeo: 21:00, «Llovizna débil» con «Llueve bien 2,3 mm» al lado). */
+  ok('si el código dice llovizna y caen 5 mm, el icono dice «llueve bien», como la palabra',
+     codigoQueSeVe({ prec: 5 }, LLOVIZNA, THR) === LLUEVE_BIEN);
 
   /* Y lo que ya estaba: la lluvia prestada viaja con su propio código. */
   ok('el código del dueño de la lluvia sigue mandando sobre todo',
      codigoQueSeVe({ prec: 0, codeLluvia: LLUVIA }, DESPEJADO, THR) === LLUVIA);
+
+  /* ── LA REGLA Y NO EL CASO: EL ICONO Y LA PALABRA DICEN LO MISMO ──
+     Suyo, 30-09-2026: «los iconos de lluvia etc revisar que falla mucho».
+     Medido esa tarde en Bermeo con el app.js de verdad: 20:00 icono
+     «Cubierto» y palabra «Sirimiri»; 21:00 icono «Llovizna débil» y
+     palabra «Llueve bien 2,3 mm». La causa: el icono y la palabra se
+     decidían en dos sitios, con prioridades distintas. Ahora el agua del
+     icono sale de comoLlueve(), la misma que escribe la palabra y que
+     lee el semáforo para el sirimiri. Aquí se barren todas las horas
+     posibles (milímetros × código × código de lluvia × prestado). */
+  {
+    const MM = [null, 0, 0.04, 0.1, 0.19, 0.2, 0.5, 1.6, 1.99, 2, 2.3, 6];
+    const COD = [0, 1, 3, 45, 51, 53, 55, 56, 61, 63, 65, 66, 71, 80, 81, 95];
+    const CLL = [undefined, 51, 55, 61, 63];
+    const seco = c => c < 51, llovizna = c => c >= 51 && c <= 57, fuerte = c => [63, 65, 66, 67, 81, 82].includes(c) || c >= 71 && c <= 86 || c >= 95;
+    const malos = [];
+    for (const prec of MM) for (const code of COD) for (const codeLluvia of CLL) for (const codigoAjeno of [false, true]) {
+      const h = { prec, code, codeLluvia, codigoAjeno };
+      const ic = codigoQueSeVe(h, code, THR);
+      const w = has(prec) ? comoLlueve(h, THR) : { k: 'nd' };
+      let bien = true;
+      if (w.k === 'no') bien = seco(ic) || ic >= 95;                    // «Sin lluvia»: sin gotas (la tormenta no es agua)
+      else if (w.k === 'sirimiri') bien = llovizna(ic) || ic >= 95;
+      else if (w.k === 'poco') bien = ic >= 51 && !(prec >= THR.rainWarn && llovizna(ic) && ic !== 56 && ic !== 57);
+      else if (w.k === 'bien') bien = fuerte(ic);
+      if (!bien) malos.push(`${JSON.stringify(h)} → icono ${ic} con «${w.et}»`);
+    }
+    ok('la regla y no el caso: en todas las horas posibles, el icono y la palabra de la lluvia dicen lo mismo',
+       malos.length === 0, `${malos.length} contradicciones: ${malos.slice(0, 3).join(' · ')}`);
+    ok('su tarde del 30-09: 20:00 (0 mm, llovizna de otro modelo) icono de llovizna con «Sirimiri»; 21:00 (2,3 mm, código llovizna) «llueve bien»',
+       codigoQueSeVe({ prec: 0, code: 51, codigoAjeno: true }, 51, THR) === LLOVIZNA
+       && comoLlueve({ prec: 0, code: 51, codigoAjeno: true }, THR).k === 'sirimiri'
+       && codigoQueSeVe({ prec: 2.3, code: 51 }, 51, THR) === LLUEVE_BIEN
+       && codigoQueSeVe({ prec: 1.6, code: 51 }, 51, THR) === LLUVIA);
+    ok('y la tormenta sale siempre como tormenta, aunque el dueño del agua dé 0 mm (el semáforo ya la cuenta)',
+       codigoQueSeVe({ prec: 0, code: 95, codigoAjeno: true }, 95, THR) === 95);
+  }
 
   /* Sus listones, no unos fijos. */
   ok('usa SUS umbrales, no números clavados en el código',
