@@ -1302,4 +1302,6 @@ Suyo, tras §54: «una cagada que ponga el rayo si solo ve un pelín de agua… 
 - Casos: racha 75 a las 15 / 110 a las 23; «no he podido mirar» con 72 a las 08 y 95 a las 16.
 Cinco roturas a propósito, las cinco rojas. Cuatro filas en NO-SE-TOCA.
 
-**Pendiente, pedido suyo a las 14:05:** «los iconos de lluvia etc revisar que falla mucho» (los de la app).
+**El símbolo, de raíz:** `simboloDe(ques)` en un solo sitio (⚡ rayo, 🌧 agua, 💨 racha); lo usan «Próximas 3 h» y el «CAMBIO» (apagado, que llevaba el ⚡ a mano y metía racha y agua del «no he podido mirar»). Fijándolo a mano se ponen rojas dos pruebas.
+
+**Sus iconos de lluvia de la app («revisar que falla mucho», 14:05), MEDIDOS:** con el `app.js` de verdad arrancado en node con datos reales (plantilla `real3.cjs`, sin la página: como abrir.cjs) y `cieloVisto()` hora a hora contra la lluvia medida por AEMET (estación con pluviómetro a ≤15 km), 8 sitios, 00-12 h de hoy: **0 gotas sin lluvia, 5 lluvias sin gota, 91 bien**. Las 5 son el sirimiri de 04-06 h (0,1-0,4 mm en Matxitxako, Forua, aeropuerto, Elgoibar) que AROME HD —el dueño del agua, porque `ELEGIDO_POR_ACIERTO` está vacío y manda el cargado— no vio. Por modelo, sobre 24 h y 20 sitios: el CÓDIGO de cielo de ECMWF 25 km pone llovizna 57 horas sin lluvia medida e ICON 58, pero la app no se los come (`aguaPrestada()`: si el dueño del agua da 0, sale nube). No se ha tocado la regla del icono: un día no basta, y el fallo medido es el contrario (se come el sirimiri de madrugada). Si vuelve a verlo, pedir la captura con la hora y medir ESE caso.

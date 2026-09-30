@@ -257,6 +257,11 @@ const picoTxt = (hPico, ini) => `a las ${hh(hPico ?? ini)}`;
    hora (`hPico`, `picoTxt`). Y una prueba de la REGLA, no del caso
    (prueba-vigilante-reloj.mjs, «la regla y no el caso»), la comprueba
    en tardes al azar sobre el texto que le llega. */
+/* EL SÍMBOLO SALE DE LO QUE SE DICE, EN UN SOLO SITIO (30-09-2026): un
+   aviso que solo era de agua salía con el ⚡ del rayo porque el título se
+   escribía a mano, aparte del cuerpo. ⚡ si hay rayo, 🌧 si hay agua,
+   💨 si es solo racha. Lo usan «Próximas 3 h» y «CAMBIO». */
+const simboloDe = ques => (ques.includes('rayo') ? '⚡' : ques.includes('agua') ? '🌧' : '💨');
 function picoEnHoras(x, desde, hasta) {
   let p = null;
   for (let h = desde; h <= hasta; h++) {
@@ -1429,6 +1434,7 @@ export default async function handler(req, res) {
     }
     if (gordos.length) {
       cambios.push({ n: gordos[0].split(' ')[0], cual: 'hoy', peor: true, critico: false,
+        que: gordos.some(g => / racha /.test(g)) ? 'racha' : 'agua',
         soloEstado: true,
         txt: `${gordos.slice(0, 3).join(' · ')}${gordos.length > 3 ? ` y ${gordos.length - 3} más` : ''}`
            + ' — (aviso por lo que hay: el vigilante no puede comparar con antes)' });
@@ -1609,8 +1615,7 @@ export default async function handler(req, res) {
     const crit = orden[0].d.critico;
     /* El símbolo dice QUÉ viene (30-09-2026): un aviso que solo era de agua
        salía con el ⚡ del rayo, que es su veto y le hace leerlo distinto. */
-    const hay = q => proximas.some(x => x.f.some(f => f.que === q));
-    const ico = hay('rayo') ? '⚡' : hay('agua') ? '🌧' : '💨';
+    const ico = simboloDe(proximas.flatMap(x => x.f.map(f => f.que)));
     const lista = orden.slice(0, 5).map(x => `${x.d.n}: ${x.f.map(f => f.txt).join(' · ')}`).join('. ');
     avisos.push({
       titulo: crit ? `${ico} ${orden[0].d.n} (crítico)${proximas.length > 1 ? ` y ${proximas.length - 1} más` : ''}`
@@ -1623,7 +1628,7 @@ export default async function handler(req, res) {
   if (AVISAR_CAMBIOS && cambiosQueValen.length) {
     const c = cambiosQueValen[0];
     avisos.push({
-      titulo: `⚡ CAMBIO ${c.cual.toUpperCase()} · ${cambiosQueValen.length > 1 ? `${cambiosQueValen.length} torres` : c.n}`,
+      titulo: `${simboloDe(cambiosQueValen.map(x => x.que ?? 'rayo'))} CAMBIO ${c.cual.toUpperCase()} · ${cambiosQueValen.length > 1 ? `${cambiosQueValen.length} torres` : c.n}`,
       /* De un sitio concreto: se abre ESE. */
       url: c.lat != null && c.lon != null ? `./?sitio=${c.lat},${c.lon}` : './?v=torres',
       cuerpo: cambiosQueValen.slice(0, 6).map(x => `${x.n} (${x.cual}): ${x.txt}`).join('. ')
