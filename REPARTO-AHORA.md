@@ -2070,3 +2070,4 @@ Lo apunto en TRASPASO §16 con builds y medidas. `deploy.sh` desde el portátil:
 24. **(14:20, 30-09)** Vigilante: «agua fuerte» solo en horas de ≥2 mm/h con su pico y «prevista»; 🌧/⚡/💨 según lo que viene; en Android sin icono grande y con badge blanco. TRASPASO §54.
 25. **(15:00, 30-09)** Causa de raíz del vigilante: todo número dicho junto a unas horas sale de `picoEnHoras` (agua, racha, «no he podido mirar»); prueba de la regla en tardes al azar; guardia de pasadas saltadas. TRASPASO §55.
 26. **(15:10, 30-09)** Títulos cortos del aviso de las 3 h («⚡ Próximas 3 h», «⚡ MATIENA crítico») y el icono de la app de vuelta en Android (sin él salía una «W»). TRASPASO §56.
+27. **(18:30, 30-09)** El «no he podido mirar» dice el motivo y el pulso lo guarda (`noMiradosPor`). TRASPASO §57.

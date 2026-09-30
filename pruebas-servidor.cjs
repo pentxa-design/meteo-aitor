@@ -1192,6 +1192,7 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
     const resp = SITIOS.map(s => ({ latitude: s.lat, longitude: s.lon, hourly: { time: ['x'], quien: s.n } }));
     const APP = 'x', MODELOS_AGUA = ['a'];
     ${(V.match(/const selloTanda = [^\n]+/) || ['const selloTanda = () => "";'])[0]}
+    ${(V.match(/const TOPE_S = [^\n]+/) || ['const TOPE_S = 15;'])[0]}
     let DEVUELVE = resp;
     const fetch = async () => ({ ok: true, status: 200, json: async () => DEVUELVE });
     ${trozo}

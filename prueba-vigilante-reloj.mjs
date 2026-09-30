@@ -95,7 +95,8 @@ const AYER = clave(new RealDate(RealDate.now() - 86400e3));
      codigo:  [{ k, dia, horas, om? }]         código de tormenta 95
      racha:   [{ k, dia, horas, v }]
      ojoCape: [{ k, dia, horas, v }]           CAPE sin tapa abierta
-     caidos:  [k]                              ese sitio no contesta */
+     caidos:  [k]                              ese sitio no contesta (503)
+     lentos:  [k]                              ese sitio tarda más que el tope (TimeoutError) */
 function red(esc, fijo, llamadas) {
   /* `esc.criticos: [k]` pone ese sitio donde está MATIENA de verdad: el
      vigilante reconoce los críticos por estar a menos de 300 m de los
@@ -137,6 +138,10 @@ function red(esc, fijo, llamadas) {
         for (const om of modelos) for (const c of campos) h[`${c}_${om}`] = T.map(d => valor(k, om, c, d));
         return { latitude: +lat, longitude: +lon, hourly: h };
       };
+      /* Lento: como el `AbortSignal.timeout` de verdad, la petición se cae con
+         TimeoutError; y si va en la tanda de los veinte, se cae la tanda. */
+      if (lats.some(la => (esc.lentos || []).includes(kDe(la))))
+        return Promise.reject(new DOMException('The operation was aborted due to timeout', 'TimeoutError'));
       if (lats.length > 1) return R(lats.map((la, i) => uno(la, lons[i])));
       if ((esc.caidos || []).includes(kDe(lats[0]))) return R({ error: 'caído a propósito' }, false, 503);
       return R(uno(lats[0], lons[0]));
@@ -328,6 +333,18 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      !K.reventó && (K.b.fallos || []).length === 4 && titulos(K.b).some(t => /no he podido mirar/i.test(t)), resumen(K));
   const K2 = await pasada({ hora: '14:00', antes: tranquilo('14:00', 130),
                            esc: { caidos: [2, 3, 4, 5], rayo: [{ k: 0, dia: 'hoy', horas: [9] }] } });
+  /* ── Y DICE POR QUÉ (30-09-2026, su aviso de las 18:03: «⚠ No he podido
+     mirar» 12 sitios, y ni él ni yo pudimos saber el motivo: no se
+     guardaba en ningún sitio). */
+  const cK = (K.b.avisados || []).find(a => /no he podido mirar/i.test(a.titulo))?.cuerpo || '';
+  ok('el aviso de «no he podido mirar» dice el MOTIVO: sitios caídos → «el servidor de datos falló (503)»',
+     /Motivo: el servidor de datos falló \(503\)\./.test(cK) && /503/.test(K.estado?.noMiradosPor || ''), cK || resumen(K));
+  const K3 = await pasada({ hora: '14:00', antes: tranquilo('14:00', 130),
+                            esc: { lentos: [2, 3, 4, 5], rayo: [{ k: 0, dia: 'hoy', horas: [18] }] } });
+  const cK3 = (K3.b.avisados || []).find(a => /no he podido mirar/i.test(a.titulo))?.cuerpo || '';
+  ok('y si tardan más que el tope: «el servidor de datos no contestó a tiempo (15 s)», y el estado lo guarda para el pulso',
+     !K3.reventó && /Motivo: el servidor de datos no contestó a tiempo \(15 s\)\./.test(cK3)
+     && /no contestó a tiempo/.test(K3.estado?.noMiradosPor || ''), cK3 || resumen(K3));
   ok('14:00 · con el rayo de BERMEO ya PASADO (09h) no suena: lo que ha pasado no pesa',
      !K2.reventó && !titulos(K2.b).some(t => /no he podido mirar/i.test(t)), resumen(K2));
 

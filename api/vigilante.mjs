@@ -380,6 +380,33 @@ function cuandoTxt(d, claveHoy, claveManana, deManana = x => x, h0 = null) {
    Y si la tanda falla entera, cada sitio vuelve a pedir lo suyo por su
    cuenta, como antes. Un atajo nuevo no puede dejarlo sin vigilante.
    ══════════════════════════════════════════════════════════════════════ */
+/* ── POR QUÉ NO SE PUDO MIRAR, CON PALABRAS (30-09-2026) ──────────────
+   Su aviso de las 18:03: «⚠ No he podido mirar» 12 sitios, y ni él ni yo
+   pudimos saber el motivo: el error de cada sitio se tiraba al terminar
+   la pasada. La de las 18:00 duró casi dos minutos (en los registros de
+   Vercel), así que lo más probable es que el servidor de datos tardara
+   más que el tope; pero «lo más probable» no es un dato. Ahora el motivo
+   va en el aviso y en el estado (el pulso lo canta). */
+const TOPE_S = 15;
+function motivoDe(fallo) {
+  const m = String(fallo || '');
+  if (/timeout|aborted|TimeoutError|AbortError/i.test(m)) return `el servidor de datos no contestó a tiempo (${TOPE_S} s)`;
+  const st = m.match(/contesta (\d{3})/)?.[1];
+  if (st === '429') return 'Open-Meteo dice que le hemos pedido demasiado (429)';
+  if (st && st[0] === '5') return `el servidor de datos falló (${st})`;
+  if (st) return `el servidor de datos contestó ${st}`;
+  if (/sin datos/i.test(m)) return 'la respuesta llegó vacía';
+  if (/fetch failed|ENOTFOUND|ECONNRESET|ECONNREFUSED|network/i.test(m)) return 'no hubo conexión con el servidor de datos';
+  return m.slice(0, 80) || 'sin motivo conocido';
+}
+/** «el servidor de datos falló (503)», o «8: …; 4: …» si hay varios. */
+function motivosTxt(fallos) {
+  const c = new Map();
+  for (const f of fallos) { const k = motivoDe(f.fallo); c.set(k, (c.get(k) || 0) + 1); }
+  const L = [...c.entries()].sort((a, b) => b[1] - a[1]);
+  return L.length === 1 ? L[0][0] : L.map(([k, n]) => `${n}: ${k}`).join('; ');
+}
+
 async function pedirTanda(sitios, cel) {
   const u = `${APP}/om?api=fc&latitude=${sitios.map(s => s.lat).join(',')}`
           + `&longitude=${sitios.map(s => s.lon).join(',')}&timezone=auto`
@@ -387,7 +414,7 @@ async function pedirTanda(sitios, cel) {
           + `&cell_selection=${cel}&models=${MODELOS_AGUA.join(',')}${selloTanda()}`;
   /* Con tope (27-09-2026): sin él, Open-Meteo colgado se comía la pasada
      entera hasta el límite de Vercel, sin estado y sin aviso. */
-  const r = await fetch(u, { signal: AbortSignal.timeout(15000) });
+  const r = await fetch(u, { signal: AbortSignal.timeout(TOPE_S * 1000) });
   if (!r.ok) throw new Error(`la app contesta ${r.status}`);
   const j = await r.json();
   const lista = Array.isArray(j) ? j : [j];
@@ -413,7 +440,7 @@ async function unSitio(s, previo = null, reloj = null) {
     const u = `${APP}/om?api=fc&latitude=${s.lat}&longitude=${s.lon}&timezone=auto`
             + `&hourly=cape,convective_inhibition,precipitation,wind_gusts_10m,weather_code&forecast_days=2`
             + `&cell_selection=${cel}&models=${MODELOS_AGUA.join(',')}${selloTanda()}`;
-    const r = await fetch(u, { signal: AbortSignal.timeout(15000) });
+    const r = await fetch(u, { signal: AbortSignal.timeout(TOPE_S * 1000) });
     if (!r.ok) throw new Error(`la app contesta ${r.status}`);
     return (await r.json()).hourly;
   };
@@ -904,6 +931,7 @@ export default async function handler(req, res) {
         sitios: Object.keys(e.sitios || {}).length,
         nLista: e.nLista ?? null,
         noMirados: e.noMirados ?? [],
+        noMiradosPor: e.noMiradosPor ?? null,
         /* Lo que se está armando, en crudo: es lo que decide cada cuánto
            pasa el vigilante, y un número que decide tiene que poder
            mirarse desde fuera. Ya nos pasó con `envia` y con `nLista`. */
@@ -1758,7 +1786,8 @@ export default async function handler(req, res) {
     avisos.push({
       titulo: `⚠ No he podido mirar ${fallos.length} emplazamiento(s)`,
       url: './?v=torres',
-      cuerpo: fallos.map(f => f.n).join(', ') + '. No des por hecho que están tranquilos.' + porQue,
+      cuerpo: fallos.map(f => f.n).join(', ') + '. No des por hecho que están tranquilos.'
+            + ` Motivo: ${motivosTxt(fallos)}.` + porQue,
       tag: 'fallo', importante: false,
     });
   }
@@ -2043,6 +2072,7 @@ export default async function handler(req, res) {
          no se pudieron mirar, y el pulso los canta. */
       nLista: datos.length,
       noMirados: fallos.map(f => f.n).slice(0, 8),
+      noMiradosPor: fallos.length ? motivosTxt(fallos) : null,   // el porqué, para el pulso
       /* ── LO QUE SE ESTÁ ARMANDO, PARA LA PASADA SIGUIENTE ──────────
          El peor de los veinte en las horas que quedan, en crudo y sin
          listón. La pasada siguiente lo lee para decidir cada cuánto
