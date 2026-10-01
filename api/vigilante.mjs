@@ -120,6 +120,24 @@ const selloTanda = () => `&_=${Math.floor(Date.now() / 600000)}`;
    cada tres horas y **una app que grita se deja de creer**. */
 const AGUA_MIN = 0.3;
 const AGUA_FUERTE = 2.0;
+/* ── «AGUA FUERTE» NO LA DICE UN MODELO SOLO (01-10-2026) ──────────────
+   Su captura de las 12:14: a las 10:00 «BERMEO: agua fuerte prevista a las
+   11h (5 mm/h, Automático)» y a las 11:00 «SOLLUBEMENDI 7,7 mm/h», y NO
+   LLOVIÓ («seco total», estación a 0 mm). A esa hora ICON, GFS y ECMWF daban
+   0,1-0,2: lo veía el Automático solo. Y la tarde anterior, «agua fuerte
+   en 20 sitios, 21-22 h, 4-7 mm/h» tampoco llegó. Cada pasada lo volvía a
+   predecir 1-3 h por delante y se iba corriendo. Un aviso que no se
+   cumple le asusta y le hace dejar de creer los de verdad.
+
+   Ahora: «agua fuerte» exige que el pico llegue a 2 mm/h Y que al menos
+   DOS modelos pasen de 1 mm/h esa misma hora. Si lo ve uno solo, no es
+   aviso (sigue en la app y en el parte, con su modelo). Y el agua sola
+   NUNCA es aviso «importante» (vibración larga): eso es del rayo y de la
+   racha de 70, que es lo que le para. 2 de 4 es una calibración fina
+   —en 24 h solo hubo dos horas con el Automático ≥2—; si se queda corta
+   para algo que sí caiga, se baja y se dice. */
+const AGUA_ACUERDO = 1.0;
+const AGUA_MODELOS = 3;
 
 /* ── Y LA RACHA QUE LE VUELCA EL COCHE ────────────────────────────────
    Suyo, la misma mañana: *«y que avise de rachas superiores a 70 km/h
@@ -266,7 +284,7 @@ function picoEnHoras(x, desde, hasta) {
   let p = null;
   for (let h = desde; h <= hasta; h++) {
     const e = x?.porHora?.[h];
-    if (e && Number.isFinite(e.v) && (!p || e.v > p.v)) p = { v: e.v, quien: e.quien, h };
+    if (e && Number.isFinite(e.v) && (!p || e.v > p.v)) p = { v: e.v, quien: e.quien, ven: e.ven, h };
   }
   return p;
 }
@@ -513,7 +531,9 @@ async function unSitio(s, previo = null, reloj = null) {
            (6,7 mm/h)» con 0,5-1,9 mm de 13 a 16 h, porque el «fuerte» y
            los mm eran los del peor momento del DÍA (el Automático a las
            20:00). Lo fuerte se decide hora a hora. */
-        if (!(g.porHora[h]?.v >= v)) g.porHora[h] = { v, quien };
+        const ph = g.porHora[h] ??= { v: 0, quien: null, ven: new Set() };
+        if (v > ph.v) { ph.v = v; ph.quien = quien; }
+        if (v >= AGUA_ACUERDO) ph.ven.add(nombreDe(m));       // cuántos modelos lo ven (el de al lado no cuenta doble)
       }
     }
   }
@@ -559,10 +579,11 @@ async function unSitio(s, previo = null, reloj = null) {
     const hsFuerte = hs.filter(h => g.porHora[h]?.v >= AGUA_FUERTE);
     agua[dia] = { ini: hs[0], fin: hs.at(-1), tramos: enTramos(hs),
                   mm: Math.round(g.mm * 10) / 10, hPico: g.hPico, quien: g.quien,
-                  fuerte: g.mm >= AGUA_FUERTE,
-                  // Solo las horas que pasan de AGUA_FUERTE, y el pico de cada una.
+                  fuerte: hsFuerte.length > 0,
+                  // Solo las horas que pasan de AGUA_FUERTE con al menos AGUA_MODELOS de acuerdo.
                   fuertes: enTramos(hsFuerte),
-                  porHora: Object.fromEntries(hsFuerte.map(h => [h, { v: Math.round(g.porHora[h].v * 10) / 10, quien: g.porHora[h].quien }])) };
+                  porHora: Object.fromEntries(hsFuerte.map(h => [h, { v: Math.round(g.porHora[h].v * 10) / 10, quien: g.porHora[h].quien,
+                                                                      ven: [...g.porHora[h].ven] }])) };
   }
 
   const dias = {};
@@ -1612,7 +1633,7 @@ export default async function handler(req, res) {
     for (const t of tramosEnVentana(deHoy({ tramos: ag?.fuertes }))) {
       const p = picoEnHoras(ag, Math.max(t.ini, h0), Math.min(t.fin, H3));
       f.push({ que: 'agua', clave: `agua:${t.ini}`,
-               txt: `agua fuerte prevista ${tramoTxt3(t, '')}${p ? ` (${coma(p.v)} mm/h, ${p.quien})` : ''}` });
+               txt: `agua fuerte prevista ${tramoTxt3(t, '')}${p ? ` (${coma(p.v)} mm/h, lo dan ${(p.ven?.length ? p.ven : [p.quien]).join(', ')})` : ''}` });
     }
     /* La racha, igual: su número es el de ESAS horas, no el máximo del día. */
     const ra = d.racha?.[claveHoy];
@@ -1658,6 +1679,8 @@ export default async function handler(req, res) {
       titulo: crit ? `${ico} Crítico` : `${ico} Próximas 3 h`,
       url: './?v=torres',
       cuerpo: `${crit ? `Crítico: ${orden[0].d.n}. ` : ''}${proximas.length > 1 ? `${sitiosTxt(proximas.length)}. ` : ''}${lista}${proximas.length > 5 ? `. Y ${proximas.length - 5} más` : ''}. Datos de las ${hh(h0)}.`,
+      /* Solo el rayo y la racha de 70 son «importantes» (vibración larga y no
+         se quita sola). El agua, sola, avisa sin gritar (01-10-2026). */
       tag: 'tormenta', importante: true,
     });
   }
@@ -2171,7 +2194,7 @@ export default async function handler(req, res) {
     listaDeRespaldo, cuantosSitios: sitios.length,
     inminentes: inminentes.map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana, deManana, h0)}`),
     cambios: cambios.map(c => `${c.n} (${c.cual}): ${c.txt}`),
-    avisados: enviados.map(e => ({ titulo: e.titulo, cuerpo: e.cuerpo, tag: e.tag, enviados: e.enviados, nota: e.nota })),
+    avisados: enviados.map(e => ({ titulo: e.titulo, cuerpo: e.cuerpo, tag: e.tag, importante: !!e.importante, enviados: e.enviados, nota: e.nota })),
     callado: !enviados.length,
     /* Se distingue «no había nada que decir» de «tenía algo y está mudo». */
     mudo: !puedeEnviar,

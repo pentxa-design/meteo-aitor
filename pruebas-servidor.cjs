@@ -383,7 +383,9 @@ ok('el agua no se mezcla con el rayo: lleva su propio aviso',
 ok('y la racha el suyo',
    /titulo: `💨 RACHA/.test(vig) && /tag: 'racha'/.test(vig));
 ok('el rayo sigue siendo el único que manda con su veto, sin tocar',
-   /tag: 'tormenta', importante: true/.test(vig));
+   /* 01-10-2026: importante solo si hay rayo o racha de 70; el agua sola avisa
+      sin vibrar. Lo EJECUTA prueba-vigilante-reloj.mjs. */
+   /tag: 'tormenta', importante: proximas\.some\(x => x\.f\.some\(f => f\.que === 'rayo' \|\| f\.que === 'racha'\)\)/.test(vig));
 
 ok('del vaivén de milímetros NO se avisa: solo aparecer, agravarse o adelantarse',
    /const aFuerte = !va\.fuerte && vb\.fuerte;/.test(vig)
@@ -452,7 +454,7 @@ ok('lo inminente mira también las primeras horas de mañana',
    Si el parte diario se marcara importante, vibraría todos los días y él
    acabaría silenciando la app entera — y entonces no avisaría de nada. */
 ok('vibran los que decidan algo: tormenta, racha de 70 y «llevo sin vigilar»',
-   /tag: 'tormenta', importante: true/.test(vig)
+   /tag: 'tormenta', importante: proximas\.some\(x => x\.f\.some\(f => f\.que === 'rayo' \|\| f\.que === 'racha'\)\)/.test(vig)
    && /tag: 'racha', importante: true/.test(vig)
    && /tag: 'parado', importante: true/.test(vig));
 ok('y el parte de la mañana NO vibra: llega todos los días',
@@ -942,7 +944,7 @@ ok('solo de lo gordo: su tope de racha (por su nombre, no por un número) y la l
       AGUA_FUERTE, y el «no he podido mirar» lee su pico con picoEnHoras.
       Lo EJECUTA prueba-vigilante-reloj.mjs (72/95 salen; 65 y 1,5 no). */
    /if \(v == null \|\| v < RACHA_TOPE\) continue;/.test(vgc)
-   && /const hsFuerte = hs\.filter\(h => g\.porHora\[h\]\?\.v >= AGUA_FUERTE\);/.test(vgc)
+   && /const hsFuerte = hs\.filter\(h => g\.porHora\[h\]\?\.v >= AGUA_FUERTE && g\.porHora\[h\]\.ven\.size >= AGUA_MODELOS\);/.test(vgc)
    && /const pr = picoEnHoras\(r, h0, 23\), pa = picoEnHoras\(ag, h0, 23\);/.test(vgc),
    'avisar de todo sin poder comparar sería darle la lata 25 días');
 ok('y se dice que es un aviso por lo que hay, no por lo que ha cambiado',

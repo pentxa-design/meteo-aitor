@@ -477,6 +477,34 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      !B2.reventó && /BERMEO/.test(cb2) && !/ORDUNA|MUNGIA/.test(cb2), cb2 || resumen(B2));
 }
 
+/* ── EL AGUA FUERTE DE UN SOLO MODELO NO ES AVISO (01-10-2026) ────────
+   Su captura de las 12:14: a las 10:00 «BERMEO: agua fuerte prevista a las
+   11h (5 mm/h, Automático)», y no llovió; ICON, GFS y ECMWF daban 0,1-0,2.
+   Y el aviso de agua sola vibraba como el del rayo. */
+{
+  const solo = [{ k: 0, dia: 'hoy', horas: [11], mm: 5, om: 'best_match' }];
+  const L1 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200), esc: { agua: solo } });
+  ok('10:00 · 5 mm/h a las 11h que solo ve el Automático (los demás, 0): NO hay aviso de agua fuerte',
+     !L1.reventó && !(L1.b.avisados || []).some(a => /agua fuerte/.test(a.cuerpo || '')), resumen(L1));
+  const L2 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200),
+                            esc: { agua: [...solo, { k: 0, dia: 'hoy', horas: [11], mm: 1.2, om: 'icon_eu' }] } });
+  const l2 = (L2.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
+  ok('10:00 · si además ICON pasa de 1 mm/h a esa hora, SÍ avisa, y dice QUIÉN lo da: «5 mm/h, lo dan Automático, ICON»',
+     !L2.reventó && /BERMEO: agua fuerte prevista a las 11h \(5 mm\/h, lo dan Automático, ICON\)/.test(l2?.cuerpo || ''), l2?.cuerpo || resumen(L2));
+  ok('y el agua sola avisa SIN vibrar (importante: false): la vibración larga es del rayo y la racha de 70',
+     l2 && l2.importante === false && /^🌧/.test(l2.titulo), JSON.stringify(l2));
+  const L3 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200),
+                            esc: { agua: [{ k: 0, dia: 'hoy', horas: [11], mm: 3 }], rayo: [{ k: 1, dia: 'hoy', horas: [11] }] } });
+  const l3 = (L3.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
+  ok('con rayo en el mismo aviso SÍ es importante (vibra): es su veto',
+     l3 && l3.importante === true && /^⚡/.test(l3.titulo), JSON.stringify(l3));
+  const L4 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200),
+                            esc: { racha: [{ k: 0, dia: 'hoy', horas: [11], v: 80 }] } });
+  const l4 = (L4.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
+  ok('y con una racha de 70 o más también',
+     l4 && l4.importante === true && /^💨/.test(l4.titulo), JSON.stringify(l4));
+}
+
 /* ── EL TÍTULO CABE EN SU MÓVIL (30-09-2026, su captura de las 14:40) ──
    «⚡ MATIENA (crítico) y 7 más» salía «⚡ / MATIENA (…»: con su tamaño de
    letra y el icono a la derecha caben unas diez letras por línea y dos
