@@ -2074,3 +2074,4 @@ Lo apunto en TRASPASO §16 con builds y medidas. `deploy.sh` desde el portátil:
 28. **(19:15, 30-09)** Iconos de lluvia: el icono sale de la misma decisión que la palabra (`comoLlueve`); 717 contradicciones a 0. TRASPASO §58.
 29. **(13:00, 01-10)** «Agua fuerte» solo si ≥2 modelos pasan de 1 mm/h; el agua sola no vibra. TRASPASO §60.
 30. **(14:15, 01-10)** El vigilante, con cada cosa de su dueño (lluvia y racha: AROME HD) y los avisos dicen quién ve qué. TRASPASO §61.
+31. **(17:30, 01-10)** Registro de lo avisado contra lo medido por AEMET (`lib/verificacion.mjs`, `?verificar=1`). Falta calibrar con datos de varios días. TRASPASO §62.

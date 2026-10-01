@@ -66,6 +66,7 @@ for (const d of ['api', 'lib']) {
 fs.writeFileSync(path.join(tmp, 'lib', 'motor.mjs'), MOTOR);
 
 const ESTADO = 'avisos/vigilante.json';
+const { localAUTC, resumen: resumenVerif } = await import(pathToFileURL(path.join(tmp, 'lib', 'verificacion.mjs')).href);
 process.env.VIGILANTE_ENVIA = '1';        // que construya y «mande» (sin claves: 0 enviados, pero se ve)
 delete process.env.MOVILES_EXTRA;
 delete process.env.VAPID_PUBLICA; delete process.env.VAPID_PRIVADA;
@@ -96,7 +97,9 @@ const AYER = clave(new RealDate(RealDate.now() - 86400e3));
      racha:   [{ k, dia, horas, v }]
      ojoCape: [{ k, dia, horas, v }]           CAPE sin tapa abierta
      caidos:  [k]                              ese sitio no contesta (503)
-     lentos:  [k]                              ese sitio tarda más que el tope (TimeoutError) */
+     lentos:  [k]                              ese sitio tarda más que el tope (TimeoutError)
+     medido:  [{ k, horas: { 11: mm } }]       lo que MIDIÓ la estación de AEMET (hora local de hoy)
+     estacionesCaidas: true                    /estaciones contesta 503 */
 function red(esc, fijo, llamadas) {
   /* `esc.criticos: [k]` pone ese sitio donde está MATIENA de verdad: el
      vigilante reconoce los críticos por estar a menos de 300 m de los
@@ -123,6 +126,17 @@ function red(esc, fijo, llamadas) {
     const s = String(u); llamadas.push({ u: s, init });
     const q = new URL(s).searchParams;
     if (s.includes('/api/torres')) return R({ torres: SITIOS_ESC });
+    if (s.includes('/estaciones')) {
+      if (esc.estacionesCaidas) return R({ error: 'caído a propósito' }, false, 503);
+      const pts = (q.get('puntos') || '').split('|').filter(Boolean).map(x => x.split(',').map(Number));
+      return R({ puntos: pts.map(([la, lo]) => {
+        const k = SITIOS_ESC.findIndex(x => Math.abs(x.lat - la) < 1e-3 && Math.abs(x.lon - lo) < 1e-3);
+        const filas = [];
+        for (const m of (esc.medido || []).filter(x => x.k === k))
+          for (const [h, mm] of Object.entries(m.horas)) filas.push({ cuando: `${localAUTC(`${clave(hoy0)}T${p2(h)}:00`)}:00:00+0000`, lluvia: mm });
+        return { lat: la, lon: lo, estaciones: filas.length ? [{ nombre: `EST${k}`, km: 3, historia: filas }] : [] };
+      }) });
+    }
     if (s.includes('/api/euskalmet')) return R({ ok: true, puntos: [] });
     if (s.includes('/api/marcador')) return R({ ok: true });
     if (s.includes('/om')) {
@@ -169,9 +183,9 @@ ok('el guardia está puesto: una pasada que se salta sin haberlo pedido es un fa
 /* ── UNA PASADA A UNA HORA ─────────────────────────────────────────── */
 const fetchReal = globalThis.fetch;
 let n = 0;
-async function pasada({ hora, antes = null, esc = {}, metodo = 'POST', query = {}, seSalta = false }) {
+async function pasada({ hora, antes = null, esc = {}, metodo = 'POST', query = {}, seSalta = false, conservar = false }) {
   const fijo = new RealDate(); const [H, M] = hora.split(':').map(Number); fijo.setHours(H, M, 0, 0);
-  globalThis.__ALMACEN = new Map();
+  if (!conservar) globalThis.__ALMACEN = new Map();
   if (antes) globalThis.__ALMACEN.set(ESTADO, JSON.stringify(antes));
   globalThis.__ultimaPasadaVigilante = undefined;
   const llamadas = [];
@@ -541,6 +555,81 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   }
   ok('la palabra sigue la escala de AEMET: 5 mm/h «llueve bien», 20 «lluvia fuerte», 40 «muy fuerte», 70 «torrencial»',
      palabras.join(' | ') === 'que llueve bien | lluvia fuerte | lluvia muy fuerte | lluvia torrencial', palabras.join(' | '));
+}
+
+/* ── EL REGISTRO DE LO AVISADO CONTRA LO QUE CAYÓ (01-10-2026) ────────
+   Suyo, tras los avisos que no se cumplieron: «lo haces: comparas y pones
+   bien todo». Pasada 1 a las 10:00 apunta lo previsto para las 11h (AROME
+   HD 5 mm/h, ICON 4); pasada 2 a las 14:00 lo compara con lo que midió la
+   estación de AEMET. */
+{
+  const AR = 'meteofrance_arome_france_hd';
+  const previsto = { agua: [{ k: 0, dia: 'hoy', horas: [11], mm: 5, om: AR }, { k: 0, dia: 'hoy', horas: [11], mm: 4, om: 'icon_eu' }] };
+  const cadena = async (esc2, extra = {}) => {
+    const P1 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200), esc: previsto });
+    const P2 = await pasada({ hora: '14:00', conservar: true, esc: esc2, ...extra });
+    return { P1, P2, v: JSON.parse(globalThis.__ALMACEN.get('avisos/verificacion.json') || 'null') };
+  };
+  ok('la conversión de hora local de Madrid a UTC cuadra: verano −2 h, invierno −1 h, y el cambio de hora de marzo',
+     localAUTC('2026-10-01T11:00') === '2026-10-01T09' && localAUTC('2026-12-01T11:00') === '2026-12-01T10'
+     && localAUTC('2026-03-29T04:00') === '2026-03-29T02', [localAUTC('2026-10-01T11:00'), localAUTC('2026-12-01T11:00'), localAUTC('2026-03-29T04:00')].join(' '));
+
+  const C0 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200), esc: previsto });
+  const v0 = JSON.parse(globalThis.__ALMACEN.get('avisos/verificacion.json') || 'null');
+  ok('la pasada de las 10:00 APUNTA lo previsto para las 11h, con lo que daba cada modelo y la antelación (1 h)',
+     !C0.reventó && v0?.pend?.some(p => p.n === 'BERMEO' && p.t.endsWith('T11:00') && p.l === 1 && p.m['AROME HD'] === 5 && p.m.ICON === 4),
+     JSON.stringify(v0?.pend?.slice(0, 2)));
+  ok('y no apunta lo seco (solo horas con algo de agua previsto): los demás sitios no salen',
+     (v0?.pend || []).every(p => p.n === 'BERMEO'), [...new Set((v0?.pend || []).map(p => p.n))].join(','));
+
+  const { P2: S2, v: vSeco } = await cadena({ medido: [{ k: 0, horas: { 11: 0 } }] });
+  ok('14:00 · la estación midió 0 mm a las 11h: el aviso «llueve bien» NO se cumplió, y queda contado (falsa alarma)',
+     !S2.reventó && S2.b.verificacion?.comparadas === 1 && vSeco?.stats?.regla?.seco === 1 && vSeco.stats.regla.bien === 0,
+     JSON.stringify(S2.b.verificacion) + ' ' + JSON.stringify(vSeco?.stats?.regla));
+  ok('y por modelo y tramo: AROME HD daba 5 (tramo 5-15) y no cayó; ICON daba 4 (tramo 2-5) y no cayó',
+     vSeco?.stats?.modelos?.['AROME HD']?.['5-15']?.seco === 1 && vSeco?.stats?.modelos?.ICON?.['2-5']?.seco === 1, JSON.stringify(vSeco?.stats?.modelos));
+  ok('y la previsión ya comparada sale de la lista de pendientes (no se cuenta dos veces)',
+     !(vSeco?.pend || []).some(p => p.n === 'BERMEO' && p.t.endsWith('T11:00')), JSON.stringify(vSeco?.pend?.length));
+
+  const { v: vBien } = await cadena({ medido: [{ k: 0, horas: { 11: 6.4 } }] });
+  ok('si cayó 6,4 mm a las 11h, es un ACIERTO del aviso (bien: 1, seco: 0), y por antelación cae en «0-1»',
+     vBien?.stats?.regla?.bien === 1 && vBien.stats.regla.seco === 0 && vBien.stats.regla.plazo['0-1']?.bien === 1, JSON.stringify(vBien?.stats?.regla));
+
+  const { v: vPoco } = await cadena({ medido: [{ k: 0, horas: { 11: 0.8 } }] });
+  ok('si cayó 0,8 mm, es «poco»: ni acierto ni falsa alarma',
+     vPoco?.stats?.regla?.poco === 1 && vPoco.stats.regla.bien === 0 && vPoco.stats.regla.seco === 0, JSON.stringify(vPoco?.stats?.regla));
+
+  const { v: vPerd } = await cadena({ medido: [{ k: 0, horas: { 11: 0, 12: 3.1 } }] });
+  ok('cayeron 3,1 mm a las 12h y NADIE lo había previsto: se cuenta aparte (perdidas: 1), con su hora',
+     vPerd?.stats?.perdidas === 1 && /BERMEO .* 3,1|BERMEO .* 3\.1 mm/.test(vPerd?.stats?.perdidasHoras?.[0] || ''), JSON.stringify(vPerd?.stats?.perdidasHoras));
+
+  const { P2: S5, v: vCaido } = await cadena({ estacionesCaidas: true });
+  ok('si /estaciones no contesta, la pasada NO se cae, dice por qué y las previsiones esperan para la siguiente',
+     !S5.reventó && /estaciones contesta 503/.test(S5.b.verificacion?.error || '') && vCaido?.pend?.some(p => p.n === 'BERMEO' && p.t.endsWith('T11:00')),
+     JSON.stringify(S5.b.verificacion));
+
+  await cadena({ medido: [{ k: 0, horas: { 11: 0 } }] });
+  const RV = await pasada({ hora: '14:30', conservar: true, metodo: 'GET', query: { verificar: '1' } });
+  ok('?verificar=1 lo cuenta con palabras: «salió 1 vez… NO cayó en 1 (100 %)»',
+     RV.b.hay === true && /salió 1 veces/.test(RV.b.texto) && /NO cayó en 1 \(100 %\)/.test(RV.b.texto), RV.b.texto || JSON.stringify(RV.b).slice(0, 200));
+  ok('y sin nada guardado lo dice, no inventa porcentajes',
+     resumenVerif(null).hay === false && /Todavía no hay nada/.test(resumenVerif(null).texto));
+
+  /* Y si el propio almacén falla al leer el registro, la pasada y sus avisos siguen. */
+  {
+    const M0 = new Map();
+    M0.get = k => { if (k === 'avisos/verificacion.json') throw new Error('almacén caído a propósito'); return Map.prototype.get.call(M0, k); };
+    globalThis.__ALMACEN = M0;
+    const C9 = await pasada({ hora: '10:00', conservar: true, antes: tranquilo('10:00', 200), esc: { ...previsto, rayo: [{ k: 0, dia: 'hoy', horas: [11] }] } });
+    // `pasada()` mete `antes` en el almacén que ya hay: aquí es el de mentira que falla solo en el registro
+    ok('si el almacén falla al leer el registro, la pasada NO se cae, sigue avisando del rayo y lo dice',
+       !C9.reventó && /almacén caído/.test(C9.b.verificacion?.error || '') && (C9.b.avisados || []).some(a => /Próximas 3 h/.test(a.titulo)),
+       JSON.stringify(C9.b.verificacion) + ' ' + resumen(C9));
+  }
+
+  const M2 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200), esc: previsto, query: { mirar: '1' } });
+  ok('con «mirar=1» NO se apunta nada (esa ojeada no toca nada guardado)',
+     !globalThis.__ALMACEN.get('avisos/verificacion.json') && M2.b.verificacion == null, JSON.stringify(M2.b.verificacion));
 }
 
 /* ── EL TÍTULO CABE EN SU MÓVIL (30-09-2026, su captura de las 14:40) ──

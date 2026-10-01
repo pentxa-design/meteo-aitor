@@ -26,6 +26,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 import { leerJSON, guardarJSON } from '../lib/almacen.mjs';
+import { verificar, resumen as resumenVerificacion, RUTA as RUTA_VERIF } from '../lib/verificacion.mjs';
 import { leer, guardar } from './suscribir.mjs';
 
 const ESTADO = 'avisos/vigilante.json';
@@ -699,7 +700,42 @@ async function unSitio(s, previo = null, reloj = null) {
   }
 
   /* lat/lon viajan para que el aviso pueda abrir ESE emplazamiento */
-  return { n: s.n, lat: s.lat, lon: s.lon, critico: !!s.critico, dias, agua, racha, ojo, horas: H.time };
+  /* Lo previsto de lluvia, hora a hora y modelo a modelo, de aquí a seis
+     horas: es lo que se apunta en el registro (lib/verificacion.mjs) para
+     compararlo después con lo medido. Solo las horas con algo de agua. */
+  let pv = null;
+  if (reloj?.desde) {
+    pv = {}; let n = 0;
+    for (let i = 0; i < H.time.length && n < 7; i++) {
+      if (H.time[i] < reloj.desde) continue;
+      n++;
+      const vals = {}; let mx = 0;
+      for (const m of MODELOS_AGUA) {
+        const v = H[`precipitation_${m}`]?.[i];
+        if (v != null) { vals[nombreDe(m)] = Math.round(v * 10) / 10; if (v > mx) mx = v; }
+      }
+      if (mx >= AGUA_MIN) pv[H.time[i]] = vals;
+    }
+  }
+  return { n: s.n, lat: s.lat, lon: s.lon, critico: !!s.critico, dias, agua, racha, ojo, horas: H.time, pv };
+}
+
+/** Lo que MIDIÓ AEMET en las últimas 24 h junto a cada sitio: la estación más
+ *  cercana (≤ 15 km) con pluviómetro. Map(sitio → Map('YYYY-MM-DDTHH' UTC → mm)). */
+async function medidasAEMET(sitios) {
+  const u = `${APP}/estaciones?puntos=${sitios.map(s => `${s.lat.toFixed(4)},${s.lon.toFixed(4)}`).join('|')}&historia=24&radio=15`;
+  const r = await fetch(u, { signal: AbortSignal.timeout(12000) });
+  if (!r.ok) throw new Error(`estaciones contesta ${r.status}`);
+  const j = await r.json();
+  const out = new Map();
+  (j.puntos || []).forEach((p, k) => {
+    const est = (p.estaciones || []).find(x => (x.historia || []).some(h => h.lluvia != null));
+    if (!est || !sitios[k]) return;
+    const mapa = new Map();
+    for (const h of est.historia) if (h.lluvia != null && h.cuando) mapa.set(String(h.cuando).slice(0, 13), Math.round(h.lluvia * 10) / 10);
+    out.set(sitios[k].n, mapa);
+  });
+  return out;
 }
 
 /* Por la única puerta. Aquí el `null` de «no existe» y el `null` de «no
@@ -912,6 +948,12 @@ export default async function handler(req, res) {
      **Un vigilante parado se ve igual que un vigilante tranquilo.** La
      única forma de que eso no vuelva a pasar es que el aviso salga donde
      él SÍ mira, que es la app, y que no dependa de que corra nada. */
+  /* Lo avisado contra lo que cayó (lib/verificacion.mjs). */
+  if (req.method === 'GET' && req.query?.verificar === '1') {
+    res.setHeader('Cache-Control', 'no-store');
+    try { return res.status(200).json(resumenVerificacion((await leerJSON(RUTA_VERIF, null)).dato)); }
+    catch (e) { return res.status(200).json({ error: String(e?.message || e).slice(0, 100) }); }
+  }
   if (req.method === 'GET' && req.query?.pulso === '1') {
     /* 60 s de CDN (27-09-2026): cada apertura de la app lo pedía y la
        función arrancaba para decir lo mismo que hace medio minuto. */
@@ -2228,6 +2270,22 @@ export default async function handler(req, res) {
     // si no cambia nada y el sello es de hace menos de 25 min, no se escribe
   }
 
+  /* ── EL REGISTRO DE LO AVISADO CONTRA LO QUE CAYÓ (01-10-2026) ───────
+     Después de todo lo demás y con el fallo tragado: es un instrumento, no
+     puede quitarle un aviso. Solo en pasadas que avisan de verdad. */
+  let verif = null;
+  if (!soloMirar) {
+    try {
+      verif = await verificar({
+        sitios: buenos.map(d => ({ n: d.n, lat: d.lat, lon: d.lon, pv: d.pv })),
+        ahoraISO: new Date().toISOString(), ahoraMs: Date.now(),
+        desde: `${claveHoy}T${String(h0).padStart(2, '0')}`,
+        dueno: nombreDe(DUENO_AGUA),
+        pedirMedidas: nombres => medidasAEMET(buenos.filter(d => nombres.includes(d.n))),
+      });
+    } catch (e) { verif = { error: String(e?.message || e).slice(0, 80) }; }
+  }
+
   /* ── Y DE PASO, EL MARCADOR ────────────────────────────────────────
      Lo último de la pasada y con el fallo tragado: si esto falla, los
      avisos ya han salido. Nunca al revés. */
@@ -2256,6 +2314,7 @@ export default async function handler(req, res) {
     listaDeRespaldo, cuantosSitios: sitios.length,
     inminentes: inminentes.map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana, deManana, h0)}`),
     cambios: cambios.map(c => `${c.n} (${c.cual}): ${c.txt}`),
+    verificacion: verif,
     avisados: enviados.map(e => ({ titulo: e.titulo, cuerpo: e.cuerpo, tag: e.tag, importante: !!e.importante, enviados: e.enviados, nota: e.nota })),
     callado: !enviados.length,
     /* Se distingue «no había nada que decir» de «tenía algo y está mudo». */
