@@ -137,6 +137,11 @@ const selloTanda = () => `&_=${Math.floor(Date.now() / 600000)}`;
    cada tres horas y **una app que grita se deja de creer**. */
 const AGUA_MIN = 0.3;
 const AGUA_FUERTE = 2.0;
+/** La palabra de la lluvia por su intensidad, con la escala OFICIAL de AEMET
+ *  (mm/h): moderada 2-15 («llueve bien», que es su palabra), fuerte 15-30,
+ *  muy fuerte 30-60, torrencial >60. Suyo, 01-10-2026: «agua fuerte no, que
+ *  estaríamos en Valencia» (esa tarde AROME daba 67 mm/h allí). */
+const palabraAgua = v => (v >= 60 ? 'lluvia torrencial' : v >= 30 ? 'lluvia muy fuerte' : v >= 15 ? 'lluvia fuerte' : 'que llueve bien');
 /* ── «AGUA FUERTE» NO LA DICE UN MODELO SOLO (01-10-2026) ──────────────
    Su captura de las 12:14: a las 10:00 «BERMEO: agua fuerte prevista a las
    11h (5 mm/h, Automático)» y a las 11:00 «SOLLUBEMENDI 7,7 mm/h», y NO
@@ -1687,7 +1692,7 @@ export default async function handler(req, res) {
          las 11h (5 mm/h; también ICON)». */
       const tambien = (p?.ven || []).filter(n => n !== p.quien);
       f.push({ que: 'agua', clave: `agua:${t.ini}`,
-               txt: p ? `${p.quien} ve que llueve bien ${tramoTxt3(t, '')} (${coma(p.v)} mm/h${tambien.length ? `; también ${tambien.join(', ')}` : ''})`
+               txt: p ? `${p.quien} ve ${palabraAgua(p.v)} ${tramoTxt3(t, '')} (${coma(p.v)} mm/h${tambien.length ? `; también ${tambien.join(', ')}` : ''})`
                       : `llueve bien ${tramoTxt3(t, '')}` });
     }
     /* La racha, igual: su número es el de ESAS horas, no el máximo del día. */

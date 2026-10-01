@@ -526,6 +526,23 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      l4 && l4.importante === true && /^💨/.test(l4.titulo), JSON.stringify(l4));
 }
 
+/* ── LA PALABRA SEGÚN LA INTENSIDAD (01-10-2026) ──────────────────────
+   Suyo: «agua fuerte no, que estaríamos en Valencia, 200 litros esta tarde;
+   alerta roja en Valencia y Barcelona: eso sí que son lluvias». Escala
+   oficial de AEMET en mm/h: moderada 2-15, fuerte 15-30, muy fuerte 30-60,
+   torrencial más de 60. */
+{
+  const AR = 'meteofrance_arome_france_hd';
+  const palabras = [];
+  for (const mm of [5, 20, 40, 70]) {
+    const Z = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200),
+      esc: { agua: [{ k: 0, dia: 'hoy', horas: [11], mm, om: AR }, { k: 0, dia: 'hoy', horas: [11], mm: 4, om: 'icon_eu' }] } });
+    palabras.push((Z.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo))?.cuerpo?.match(/BERMEO: AROME HD ve (que llueve bien|lluvia fuerte|lluvia muy fuerte|lluvia torrencial) a las 11h/)?.[1] ?? '—');
+  }
+  ok('la palabra sigue la escala de AEMET: 5 mm/h «llueve bien», 20 «lluvia fuerte», 40 «muy fuerte», 70 «torrencial»',
+     palabras.join(' | ') === 'que llueve bien | lluvia fuerte | lluvia muy fuerte | lluvia torrencial', palabras.join(' | '));
+}
+
 /* ── EL TÍTULO CABE EN SU MÓVIL (30-09-2026, su captura de las 14:40) ──
    «⚡ MATIENA (crítico) y 7 más» salía «⚡ / MATIENA (…»: con su tamaño de
    letra y el icono a la derecha caben unas diez letras por línea y dos
@@ -577,11 +594,11 @@ ok('«celda de al lado» va sin paréntesis propio: dentro de «(2 mm/h, ICON �
     for (const trozo of cuerpo.split(/\.\s+(?=[A-ZÑ]{3,}[A-Z0-9 ]*:)/)) {
       const m0 = trozo.match(/^([A-ZÑ][A-Z0-9Ñ ]+):/); if (!m0) continue;
       const k = nombres.indexOf(m0[1].trim()); if (k < 0) continue;
-      const re = /ve (que llueve bien|racha de \d+ km\/h) (?:ahora y hasta las (\d\d)h|a las (\d\d)h|(\d\d)h-(\d\d)h)(?: \((\d+(?:,\d)?) mm\/h)?/g;
+      const re = /ve (que llueve bien|lluvia (?:fuerte|muy fuerte|torrencial)|racha de \d+ km\/h) (?:ahora y hasta las (\d\d)h|a las (\d\d)h|(\d\d)h-(\d\d)h)(?: \((\d+(?:,\d)?) mm\/h)?/g;
       let m;
       while ((m = re.exec(trozo))) {
         frases++;
-        const tipo = m[1].startsWith('que') ? 'agua' : 'racha', tope = tipo === 'agua' ? TOPE_A : TOPE_R;
+        const tipo = /^(que|lluvia)/.test(m[1]) ? 'agua' : 'racha', tope = tipo === 'agua' ? TOPE_A : TOPE_R;
         m[6] = tipo === 'agua' ? m[6] : m[1].match(/\d+/)[0];
         const desde = m[2] ? h0 : Number(m[3] ?? m[4]), hasta = Number(m[2] ?? m[3] ?? m[5]);
         const dicho = Number(m[6].replace(',', '.'));
