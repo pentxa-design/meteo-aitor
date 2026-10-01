@@ -137,7 +137,7 @@ const AGUA_FUERTE = 2.0;
    —en 24 h solo hubo dos horas con el Automático ≥2—; si se queda corta
    para algo que sí caiga, se baja y se dice. */
 const AGUA_ACUERDO = 1.0;
-const AGUA_MODELOS = 3;
+const AGUA_MODELOS = 2;
 
 /* ── Y LA RACHA QUE LE VUELCA EL COCHE ────────────────────────────────
    Suyo, la misma mañana: *«y que avise de rachas superiores a 70 km/h
@@ -576,7 +576,7 @@ async function unSitio(s, previo = null, reloj = null) {
   const agua = {};
   for (const [dia, g] of Object.entries(aguaDia)) {
     const hs = [...g.horas].sort((a2, b2) => a2 - b2);
-    const hsFuerte = hs.filter(h => g.porHora[h]?.v >= AGUA_FUERTE);
+    const hsFuerte = hs.filter(h => g.porHora[h]?.v >= AGUA_FUERTE && g.porHora[h].ven.size >= AGUA_MODELOS);
     agua[dia] = { ini: hs[0], fin: hs.at(-1), tramos: enTramos(hs),
                   mm: Math.round(g.mm * 10) / 10, hPico: g.hPico, quien: g.quien,
                   fuerte: hsFuerte.length > 0,
@@ -1681,7 +1681,7 @@ export default async function handler(req, res) {
       cuerpo: `${crit ? `Crítico: ${orden[0].d.n}. ` : ''}${proximas.length > 1 ? `${sitiosTxt(proximas.length)}. ` : ''}${lista}${proximas.length > 5 ? `. Y ${proximas.length - 5} más` : ''}. Datos de las ${hh(h0)}.`,
       /* Solo el rayo y la racha de 70 son «importantes» (vibración larga y no
          se quita sola). El agua, sola, avisa sin gritar (01-10-2026). */
-      tag: 'tormenta', importante: true,
+      tag: 'tormenta', importante: proximas.some(x => x.f.some(f => f.que === 'rayo' || f.que === 'racha')),
     });
   }
   if (AVISAR_CAMBIOS && cambiosQueValen.length) {
