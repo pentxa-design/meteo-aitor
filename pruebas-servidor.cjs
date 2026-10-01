@@ -612,9 +612,12 @@ ok('la purga retroactiva existe y va con clave, como reiniciar',
    modelos daban cero y el único que lo veía no estaba en la lista. */
 console.log('\n  El vigilante mira al que ve el agua');
 
-ok('la lista del agua incluye al europeo',
-   /const MODELOS_AGUA = \[\.\.\.MODELOS, 'ecmwf_ifs025'\]/.test(vig));
-ok('la petición trae a los cuatro', /models=\$\{MODELOS_AGUA\.join/.test(vig));
+ok('la lista del agua incluye al europeo, y AROME HD va el primero: es el dueño de la lluvia (01-10-2026)',
+   /const MODELOS_AGUA = \[AROME, 'icon_eu', 'gfs_seamless', 'ecmwf_ifs025'\];/.test(vig)
+   && /const DUENO_AGUA = AROME;/.test(vig));
+ok('la petición trae a todos (incluidos AROME HD y la mezcla, que sigue para el rayo)',
+   /models=\$\{MODELOS_PEDIDOS\.join/.test(vig)
+   && /const MODELOS_PEDIDOS = \[\.\.\.MODELOS, AROME, 'ecmwf_ifs025'\];/.test(vig));
 ok('el bucle del agua recorre los cuatro',
    /for \(const m of MODELOS_AGUA\) \{\s*\n\s*const mm = H_\[`precipitation_/.test(vig));
 ok('pero la TORMENTA sigue solo con los que publican la tapa',
@@ -944,7 +947,7 @@ ok('solo de lo gordo: su tope de racha (por su nombre, no por un número) y la l
       AGUA_FUERTE, y el «no he podido mirar» lee su pico con picoEnHoras.
       Lo EJECUTA prueba-vigilante-reloj.mjs (72/95 salen; 65 y 1,5 no). */
    /if \(v == null \|\| v < RACHA_TOPE\) continue;/.test(vgc)
-   && /const hsFuerte = hs\.filter\(h => g\.porHora\[h\]\?\.v >= AGUA_FUERTE && g\.porHora\[h\]\.ven\.size >= AGUA_MODELOS\);/.test(vgc)
+   && /const hsFuerte = hs\.filter\(h => g\.porHora\[h\]\?\.dueno >= AGUA_FUERTE && g\.porHora\[h\]\.ven\.size >= AGUA_MODELOS\);/.test(vgc)
    && /const pr = picoEnHoras\(r, h0, 23\), pa = picoEnHoras\(ag, h0, 23\);/.test(vgc),
    'avisar de todo sin poder comparar sería darle la lata 25 días');
 ok('y se dice que es un aviso por lo que hay, no por lo que ha cambiado',
@@ -1192,7 +1195,7 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
       { n: 'MUNGIA', lat: 43.354, lon: -2.846 },
     ];
     const resp = SITIOS.map(s => ({ latitude: s.lat, longitude: s.lon, hourly: { time: ['x'], quien: s.n } }));
-    const APP = 'x', MODELOS_AGUA = ['a'];
+    const APP = 'x', MODELOS_AGUA = ['a'], MODELOS_PEDIDOS = ['a'];
     ${(V.match(/const selloTanda = [^\n]+/) || ['const selloTanda = () => "";'])[0]}
     ${(V.match(/const TOPE_S = [^\n]+/) || ['const TOPE_S = 15;'])[0]}
     let DEVUELVE = resp;

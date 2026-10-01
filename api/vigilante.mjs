@@ -66,14 +66,31 @@ const MODELOS = ['best_match', 'icon_eu', 'gfs_seamless'];
 
    SOLO para el agua. En la tormenta ECMWF no entra: no publica la tapa
    y la regla CAPE+tapa necesita las dos cosas del mismo modelo. */
-const MODELOS_AGUA = [...MODELOS, 'ecmwf_ifs025'];
+/* ── CADA COSA, DE SU DUEÑO (01-10-2026) ───────────────────────────────
+   Suyo: «¿Automático? No tenemos una para cada cosa: el mejor para cada
+   cosa sí lo dije. Si X es el bueno para la lluvia, siempre ese para la
+   lluvia; y pon que XXX ve agua a tal hora o ve CAPE a tal hora». La app
+   ya lo hace: elegir «Automático» = AROME HD para lo que decide (lluvia,
+   viento, ráfaga, CAPE) y el cielo del europeo (LO_QUE_DECIDE en app.js).
+   El vigilante usaba «best_match», que cambia de identidad sin avisar y no
+   se puede nombrar. Ahora la LLUVIA y la RACHA son de AROME HD (publica las
+   dos y contesta los 20 sitios, medido el 01-10), y los avisos dicen quién
+   ve qué. La pareja CAPE+tapa del rayo se queda como está —AROME no
+   publica la tapa—, y se nombra al modelo que la da. */
+const AROME = 'meteofrance_arome_france_hd';
+const DUENO_AGUA = AROME;
+const MODELOS_AGUA = [AROME, 'icon_eu', 'gfs_seamless', 'ecmwf_ifs025'];
+const MODELOS_RACHA = [AROME, 'icon_eu', 'gfs_seamless'];
+/* Lo que se le pide a /om: los de todo + AROME + ECMWF (best_match sigue
+   para el rayo, que lo calibró así). */
+const MODELOS_PEDIDOS = [...MODELOS, AROME, 'ecmwf_ifs025'];
 /* EL NOMBRE DE CADA MODELO, en una tabla y no en un `if`.
 
    Al añadir GFS, el `m === 'icon_eu' ? 'ICON' : 'Automático'` que había
    lo habría llamado **«Automático»**: el nombre de un modelo encima de
    los números de otro. Es exactamente el fallo del 24-08-2026 en la
    ficha de Torre, que decía AROME HD y enseñaba datos de ECMWF.       */
-const NOMBRE = { best_match: 'Automático', icon_eu: 'ICON', gfs_seamless: 'GFS', ecmwf_ifs025: 'ECMWF' };
+const NOMBRE = { best_match: 'La mezcla de Open-Meteo', icon_eu: 'ICON', gfs_seamless: 'GFS', ecmwf_ifs025: 'ECMWF', [AROME]: 'AROME HD' };
 const nombreDe = m => NOMBRE[m] || m;
 /* «rayo en 17» se lee como una hora (suyo, 28-09-2026 13:49: «¿rayo en 17
    qué es? confunde»). Con la palabra: «en 17 sitios», «en 1 sitio». */
@@ -280,6 +297,25 @@ const picoTxt = (hPico, ini) => `a las ${hh(hPico ?? ini)}`;
    escribía a mano, aparte del cuerpo. ⚡ si hay rayo, 🌧 si hay agua,
    💨 si es solo racha. Lo usan «Próximas 3 h» y «CAMBIO». */
 const simboloDe = ques => (ques.includes('rayo') ? '⚡' : ques.includes('agua') ? '🌧' : '💨');
+/** Qué modelo ve qué en las horas de rayo de esa ventana: «ICON ve CAPE 920,
+ *  tapa 23», o «ICON da tormenta» si es el código. null si no hay detalle. */
+function rayoEnHoras(d, desde, hasta) {
+  let mejor = null, cod = null;
+  for (let h = desde; h <= hasta; h++) {
+    const e = d?.porHora?.[h]; if (!e) continue;
+    if (e.codigo) { cod ??= e; continue; }
+    if (Number.isFinite(e.v) && (!mejor || e.v > mejor.v)) mejor = e;
+  }
+  if (mejor) return `${mejor.quien} ve CAPE ${mejor.v}, tapa ${mejor.tapa}`;
+  if (cod) return `${cod.quien} da tormenta`;
+  return null;
+}
+/** Para el parte: el pico del día de la lluvia SEGÚN SU DUEÑO, con hora y
+ *  nombre; si el dueño no ve nada pero otro sí, el de ese otro. */
+function aguaDeParte(a) {
+  if (a?.dueno) return { mm: a.dueno.mm, h: a.dueno.h, quien: nombreDe(DUENO_AGUA) };
+  return { mm: a.mm, h: a.hPico ?? a.ini, quien: a.quien };
+}
 function picoEnHoras(x, desde, hasta) {
   let p = null;
   for (let h = desde; h <= hasta; h++) {
@@ -429,7 +465,7 @@ async function pedirTanda(sitios, cel) {
   const u = `${APP}/om?api=fc&latitude=${sitios.map(s => s.lat).join(',')}`
           + `&longitude=${sitios.map(s => s.lon).join(',')}&timezone=auto`
           + `&hourly=cape,convective_inhibition,precipitation,wind_gusts_10m,weather_code&forecast_days=2`
-          + `&cell_selection=${cel}&models=${MODELOS_AGUA.join(',')}${selloTanda()}`;
+          + `&cell_selection=${cel}&models=${MODELOS_PEDIDOS.join(',')}${selloTanda()}`;
   /* Con tope (27-09-2026): sin él, Open-Meteo colgado se comía la pasada
      entera hasta el límite de Vercel, sin estado y sin aviso. */
   const r = await fetch(u, { signal: AbortSignal.timeout(TOPE_S * 1000) });
@@ -457,7 +493,7 @@ async function unSitio(s, previo = null, reloj = null) {
   const pide = async cel => {
     const u = `${APP}/om?api=fc&latitude=${s.lat}&longitude=${s.lon}&timezone=auto`
             + `&hourly=cape,convective_inhibition,precipitation,wind_gusts_10m,weather_code&forecast_days=2`
-            + `&cell_selection=${cel}&models=${MODELOS_AGUA.join(',')}${selloTanda()}`;
+            + `&cell_selection=${cel}&models=${MODELOS_PEDIDOS.join(',')}${selloTanda()}`;
     const r = await fetch(u, { signal: AbortSignal.timeout(TOPE_S * 1000) });
     if (!r.ok) throw new Error(`la app contesta ${r.status}`);
     return (await r.json()).hourly;
@@ -477,15 +513,16 @@ async function unSitio(s, previo = null, reloj = null) {
      como hora de rayo, con su modelo, para todos los modelos del agua. */
   for (const [H_, deLado] of [[H, false], [C, true]]) {
     if (!H_?.time) continue;
-    for (const m of MODELOS_AGUA) {
+    for (const m of MODELOS_PEDIDOS) {
       const wc = H_[`weather_code_${m}`];
       if (!wc) continue;
       for (let i = 0; i < H_.time.length; i++) {
         const w = wc[i];
         if (w == null || w < 95 || w > 99) continue;
         const dia = H_.time[i].slice(0, 10), h = Number(H_.time[i].slice(11, 13));
-        const d = porDia[dia] ??= { horas: new Set(), cape: 0, quien: null, deLado: false };
+        const d = porDia[dia] ??= { horas: new Set(), cape: 0, quien: null, deLado: false, porHora: {} };
         d.horas.add(h);
+        if (!d.porHora[h]) d.porHora[h] = { codigo: true, quien: nombreDe(m) + (deLado ? ' en la celda de al lado' : '') };
         if (!d.quien) { d.quien = nombreDe(m) + ' (código de tormenta)' + (deLado ? ', celda de al lado' : ''); d.deLado = deLado; }
       }
     }
@@ -499,8 +536,10 @@ async function unSitio(s, previo = null, reloj = null) {
         const c = cape[i], t = cin[i];
         if (c == null || t == null || c < CAPE_MIN || t >= TAPA_MAX) continue;
         const dia = H_.time[i].slice(0, 10), h = Number(H_.time[i].slice(11, 13));
-        const d = porDia[dia] ??= { horas: new Set(), cape: 0, quien: null, deLado: false };
+        const d = porDia[dia] ??= { horas: new Set(), cape: 0, quien: null, deLado: false, porHora: {} };
         d.horas.add(h);
+        // El CAPE y la tapa de ESA hora y de quién (como el agua y la racha): ver rayoEnHoras.
+        if (!(d.porHora[h]?.v >= c)) d.porHora[h] = { v: Math.round(c), tapa: Math.round(t), quien: nombreDe(m) + (deLado ? ' en la celda de al lado' : '') };
         if (c > d.cape) {
           d.cape = Math.round(c);
           d.quien = nombreDe(m) + (deLado ? ' en la celda de al lado' : '');
@@ -531,8 +570,9 @@ async function unSitio(s, previo = null, reloj = null) {
            (6,7 mm/h)» con 0,5-1,9 mm de 13 a 16 h, porque el «fuerte» y
            los mm eran los del peor momento del DÍA (el Automático a las
            20:00). Lo fuerte se decide hora a hora. */
-        const ph = g.porHora[h] ??= { v: 0, quien: null, ven: new Set() };
+        const ph = g.porHora[h] ??= { v: 0, quien: null, ven: new Set(), dueno: 0 };
         if (v > ph.v) { ph.v = v; ph.quien = quien; }
+        if (m === DUENO_AGUA && v > ph.dueno) ph.dueno = v;      // lo que dice el bueno para la lluvia
         if (v >= AGUA_ACUERDO) ph.ven.add(nombreDe(m));       // cuántos modelos lo ven (el de al lado no cuenta doble)
       }
     }
@@ -543,7 +583,7 @@ async function unSitio(s, previo = null, reloj = null) {
   const rachaDia = {};
   for (const [H_, deLado] of [[H, false], [C, true]]) {
     if (!H_?.time) continue;
-    for (const m of MODELOS) {
+    for (const m of MODELOS_RACHA) {
       const g = H_[`wind_gusts_10m_${m}`];
       if (!g) continue;
       for (let i = 0; i < H_.time.length; i++) {
@@ -576,13 +616,19 @@ async function unSitio(s, previo = null, reloj = null) {
   const agua = {};
   for (const [dia, g] of Object.entries(aguaDia)) {
     const hs = [...g.horas].sort((a2, b2) => a2 - b2);
-    const hsFuerte = hs.filter(h => g.porHora[h]?.v >= AGUA_FUERTE && g.porHora[h].ven.size >= AGUA_MODELOS);
+    /* «Fuerte» lo dice el DUEÑO de la lluvia (AROME HD) y otro modelo al
+       menos le da la razón (más de 1 mm/h). Que lo vea ICON y no AROME no es
+       aviso: «si X es el bueno para la lluvia, siempre ese». */
+    const hsFuerte = hs.filter(h => g.porHora[h]?.dueno >= AGUA_FUERTE && g.porHora[h].ven.size >= AGUA_MODELOS);
+    let dueno = null;   // el pico del día del dueño, con su hora, para el parte
+    for (const h of hs) { const x = g.porHora[h]?.dueno; if (x > 0.05 && (!dueno || x > dueno.mm)) dueno = { mm: Math.round(x * 10) / 10, h }; }
     agua[dia] = { ini: hs[0], fin: hs.at(-1), tramos: enTramos(hs),
                   mm: Math.round(g.mm * 10) / 10, hPico: g.hPico, quien: g.quien,
                   fuerte: hsFuerte.length > 0,
                   // Solo las horas que pasan de AGUA_FUERTE con al menos AGUA_MODELOS de acuerdo.
                   fuertes: enTramos(hsFuerte),
-                  porHora: Object.fromEntries(hsFuerte.map(h => [h, { v: Math.round(g.porHora[h].v * 10) / 10, quien: g.porHora[h].quien,
+                  dueno,
+                  porHora: Object.fromEntries(hsFuerte.map(h => [h, { v: Math.round(g.porHora[h].dueno * 10) / 10, quien: nombreDe(DUENO_AGUA),
                                                                       ven: [...g.porHora[h].ven] }])) };
   }
 
@@ -593,7 +639,7 @@ async function unSitio(s, previo = null, reloj = null) {
        Pero NO son la ventana: son los extremos. Lo que se le enseña son
        los `tramos`, que sí están comprobados como horas seguidas. */
     dias[dia] = { ini: hs[0], fin: hs.at(-1), tramos: enTramos(hs),
-                  cape: d.cape, quien: d.quien, deLado: !!d.deLado };
+                  cape: d.cape, quien: d.quien, deLado: !!d.deLado, porHora: d.porHora };
   }
   /* ── LO QUE SE ESTÁ ARMANDO, NO SOLO LO QUE YA SALTA (21-09-2026) ──
      Suyo, de guardia: *«aquí a veces hay un día bueno y al de unas horas
@@ -642,7 +688,7 @@ async function unSitio(s, previo = null, reloj = null) {
     };
     for (const H_ of [H, C]) {
       mira(H_, { k: 'cape', modelos: MODELOS, campo: 'cape' });
-      mira(H_, { k: 'wind_gusts_10m', modelos: MODELOS, campo: 'racha' });   // los mismos que el aviso de racha (27-09-2026)
+      mira(H_, { k: 'wind_gusts_10m', modelos: MODELOS_RACHA, campo: 'racha' });   // los mismos que el aviso de racha (27-09-2026)
       mira(H_, { k: 'precipitation',  modelos: MODELOS_AGUA, campo: 'agua'  });
     }
   }
@@ -1621,8 +1667,10 @@ export default async function handler(req, res) {
   const tramosEnVentana = x => (x?.tramos || []).filter(t => t.ini <= H3 && t.fin >= h0);
   const queViene = d => {
     const f = [];
-    for (const t of tramosEnVentana(deHoy(d.dias[claveHoy])))
-      f.push({ que: 'rayo', clave: `rayo:${t.ini}`, txt: `riesgo de rayo ${tramoTxt3(t, '')}` });   // «riesgo»: es modelo, no medida (28-09-2026, 15:32)
+    for (const t of tramosEnVentana(deHoy(d.dias[claveHoy]))) {
+      const r = rayoEnHoras(d.dias[claveHoy], Math.max(t.ini, h0), Math.min(t.fin, H3));
+      f.push({ que: 'rayo', clave: `rayo:${t.ini}`, txt: `riesgo de rayo ${tramoTxt3(t, '')}${r ? `: ${r}` : ''}` });
+    }   // «riesgo»: es modelo, no medida (28-09-2026, 15:32)
     const rm = deManana(d.dias[claveManana]);
     for (const t of (rm?.tramos || []))
       f.push({ que: 'rayo', clave: `rayo:m${t.ini}`, txt: `riesgo de rayo mañana ${t.ini === t.fin ? hh(t.ini) : `${hh(t.ini)}-${hh(t.fin)}`}` });
@@ -1632,15 +1680,19 @@ export default async function handler(req, res) {
     const ag = d.agua?.[claveHoy];
     for (const t of tramosEnVentana(deHoy({ tramos: ag?.fuertes }))) {
       const p = picoEnHoras(ag, Math.max(t.ini, h0), Math.min(t.fin, H3));
+      /* QUIÉN lo ve, con su hora (suyo, 01-10): «AROME HD ve agua fuerte a
+         las 11h (5 mm/h; también ICON)». */
+      const tambien = (p?.ven || []).filter(n => n !== p.quien);
       f.push({ que: 'agua', clave: `agua:${t.ini}`,
-               txt: `agua fuerte prevista ${tramoTxt3(t, '')}${p ? ` (${coma(p.v)} mm/h, lo dan ${(p.ven?.length ? p.ven : [p.quien]).join(', ')})` : ''}` });
+               txt: p ? `${p.quien} ve agua fuerte ${tramoTxt3(t, '')} (${coma(p.v)} mm/h${tambien.length ? `; también ${tambien.join(', ')}` : ''})`
+                      : `agua fuerte ${tramoTxt3(t, '')}` });
     }
     /* La racha, igual: su número es el de ESAS horas, no el máximo del día. */
     const ra = d.racha?.[claveHoy];
     for (const t of tramosEnVentana(deHoy(ra))) {
       const p = picoEnHoras(ra, Math.max(t.ini, h0), Math.min(t.fin, H3));
       f.push({ que: 'racha', clave: `racha:${t.ini}`,
-               txt: `racha prevista ${tramoTxt3(t, '')}${p ? ` (${p.v} km/h, ${p.quien})` : ''}` });
+               txt: p ? `${p.quien} ve racha de ${p.v} km/h ${tramoTxt3(t, '')}` : `racha ${tramoTxt3(t, '')}` });
     }
     return f;
   };
@@ -1900,9 +1952,10 @@ export default async function handler(req, res) {
         + (conRayo.length > 3 ? ` y ${conRayo.length - 3} más` : ''));
     }
     if (conAgua.length) {
-      const peor = conAgua.reduce((a2, b2) => b2.agua[claveHoy].mm > a2.agua[claveHoy].mm ? b2 : a2);
+      const peor = conAgua.reduce((a2, b2) => aguaDeParte(b2.agua[claveHoy]).mm > aguaDeParte(a2.agua[claveHoy]).mm ? b2 : a2);
+      const pp = aguaDeParte(peor.agua[claveHoy]);
       trozos.push(`🌧 agua en ${sitiosTxt(conAgua.length)}: lo más fuerte ${peor.n} `
-        + `${coma(peor.agua[claveHoy].mm)} mm/h ${picoTxt(peor.agua[claveHoy].hPico, peor.agua[claveHoy].ini)}`
+        + `${coma(pp.mm)} mm/h ${picoTxt(pp.h, peor.agua[claveHoy].ini)} (${pp.quien})`
         + `, y llueve ${tramosTxt(peor.agua[claveHoy].tramos, peor.agua[claveHoy].ini, peor.agua[claveHoy].fin)}`);
     }
     if (conRacha.length) {
@@ -1986,9 +2039,10 @@ export default async function handler(req, res) {
         + conRayo.slice(0, 3).map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana, deManana, h0)}`).join(' · ')
         + (conRayo.length > 3 ? ` y ${conRayo.length - 3} más` : ''));
       if (conAgua.length) {
-        const peor = conAgua.reduce((a2, b2) => b2.agua[claveHoy].mm > a2.agua[claveHoy].mm ? b2 : a2);
+        const peor = conAgua.reduce((a2, b2) => aguaDeParte(b2.agua[claveHoy]).mm > aguaDeParte(a2.agua[claveHoy]).mm ? b2 : a2);
+        const pp = aguaDeParte(peor.agua[claveHoy]);
         trozos2.push(`🌧 agua en ${sitiosTxt(conAgua.length)}: lo más fuerte ${peor.n} `
-          + `${coma(peor.agua[claveHoy].mm)} mm/h ${picoTxt(peor.agua[claveHoy].hPico, peor.agua[claveHoy].ini)}`);
+          + `${coma(pp.mm)} mm/h ${picoTxt(pp.h, peor.agua[claveHoy].ini)} (${pp.quien})`);
       }
       if (conRacha.length) {
         const peor = conRacha.reduce((a2, b2) => b2.racha[claveHoy].kmh > a2.racha[claveHoy].kmh ? b2 : a2);
