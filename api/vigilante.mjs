@@ -1680,12 +1680,15 @@ export default async function handler(req, res) {
     const ag = d.agua?.[claveHoy];
     for (const t of tramosEnVentana(deHoy({ tramos: ag?.fuertes }))) {
       const p = picoEnHoras(ag, Math.max(t.ini, h0), Math.min(t.fin, H3));
-      /* QUIÉN lo ve, con su hora (suyo, 01-10): «AROME HD ve agua fuerte a
+      /* LA PALABRA ES LA SUYA (01-10-2026): «agua fuerte» para 2-5 mm/h era
+         exagerar —«estaríamos en Valencia, que han dado 200 litros esta
+         tarde»—. Su escala es sirimiri · poco · bien: 2 mm/h es «llueve
+         bien». QUIÉN lo ve, con su hora: «AROME HD ve que llueve bien a
          las 11h (5 mm/h; también ICON)». */
       const tambien = (p?.ven || []).filter(n => n !== p.quien);
       f.push({ que: 'agua', clave: `agua:${t.ini}`,
-               txt: p ? `${p.quien} ve agua fuerte ${tramoTxt3(t, '')} (${coma(p.v)} mm/h${tambien.length ? `; también ${tambien.join(', ')}` : ''})`
-                      : `agua fuerte ${tramoTxt3(t, '')}` });
+               txt: p ? `${p.quien} ve que llueve bien ${tramoTxt3(t, '')} (${coma(p.v)} mm/h${tambien.length ? `; también ${tambien.join(', ')}` : ''})`
+                      : `llueve bien ${tramoTxt3(t, '')}` });
     }
     /* La racha, igual: su número es el de ESAS horas, no el máximo del día. */
     const ra = d.racha?.[claveHoy];

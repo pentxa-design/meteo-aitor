@@ -384,7 +384,7 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
                            esc: { agua: [{ k: 1, dia: 'hoy', horas: [21, 22], mm: 2.5 }] } });
   const c2 = (N2.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo))?.cuerpo || '';
   ok('20:00 · agua FUERTE hoy en ORDUNA a las 21-22 (dentro de 3 h) sale en el aviso de «Próximas 3 h», con su hora y sus mm',
-     !N2.reventó && /ORDUNA: AROME HD ve agua fuerte 21h-22h \(2,5 mm\/h/.test(c2), c2 || resumen(N2));
+     !N2.reventó && /ORDUNA: AROME HD ve que llueve bien 21h-22h \(2,5 mm\/h/.test(c2), c2 || resumen(N2));
   const N3 = await pasada({ hora: '20:00', antes: conAguaGuardada('20:00', 130),
                            esc: { rayo: [{ k: 0, dia: 'man', horas: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] }] } });
   ok('20:00 · un rayo de MAÑANA de 00 a 13 h no es «CAMBIO» a las 20:00 (empieza a 4 h; va en el parte de las 06:30)',
@@ -443,19 +443,19 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      cada 120 min») y la prueba salía verde sin mirar nada. Por eso además
      se exige que no se haya saltado. */
   const A1 = await pasada({ hora: '13:30', antes: tranquilo('13:30', 130), esc: escBermeo });
-  ok('13:30 · agua floja de 13 a 16 h y fuerte a las 20 h: el aviso de las 3 h siguientes NO dice «agua fuerte» (lo fuerte es a las 20)',
-     !A1.reventó && A1.b.saltada !== true && !(A1.b.avisados || []).some(a => /agua fuerte/.test(a.cuerpo || '')), resumen(A1));
+  ok('13:30 · agua floja de 13 a 16 h y fuerte a las 20 h: el aviso de las 3 h siguientes NO dice «llueve bien» (lo fuerte es a las 20)',
+     !A1.reventó && A1.b.saltada !== true && !(A1.b.avisados || []).some(a => /llueve bien/.test(a.cuerpo || '')), resumen(A1));
   const A2 = await pasada({ hora: '18:00', antes: tranquilo('18:00', 130), esc: escBermeo });
   const a2 = (A2.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
   ok('18:00 · la misma tarde, cuando las 20 h entran en la ventana: «agua fuerte prevista a las 20h (6,9 mm/h» con el pico de ESA hora',
-     !A2.reventó && /BERMEO: AROME HD ve agua fuerte a las 20h \(6,9 mm\/h/.test(a2?.cuerpo || ''), (a2?.cuerpo) || resumen(A2));
+     !A2.reventó && /BERMEO: AROME HD ve que llueve bien a las 20h \(6,9 mm\/h/.test(a2?.cuerpo || ''), (a2?.cuerpo) || resumen(A2));
   ok('y un aviso que solo es de agua va con 🌧, no con el ⚡ del rayo',
      !A2.reventó && /^🌧 Próximas 3 h/.test(a2?.titulo || ''), a2?.titulo || resumen(A2));
   const A4 = await pasada({ hora: '14:00', antes: tranquilo('14:00', 130),
                             esc: { agua: [{ k: 0, dia: 'hoy', horas: [15], mm: 3 }, { k: 0, dia: 'hoy', horas: [22], mm: 8 }] } });
   const a4 = (A4.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
   ok('14:00 · fuerte a las 15 (3 mm/h) y más fuerte a las 22 (8): el aviso de las 3 h dice 3, el de SU hora, no el 8 de la noche',
-     !A4.reventó && /BERMEO: AROME HD ve agua fuerte a las 15h \(3 mm\/h/.test(a4?.cuerpo || '') && !/8 mm/.test(a4?.cuerpo || ''), (a4?.cuerpo) || resumen(A4));
+     !A4.reventó && /BERMEO: AROME HD ve que llueve bien a las 15h \(3 mm\/h/.test(a4?.cuerpo || '') && !/8 mm/.test(a4?.cuerpo || ''), (a4?.cuerpo) || resumen(A4));
   const A3 = await pasada({ hora: '12:00', antes: tranquilo('12:00', 130),
                             esc: { rayo: [{ k: 0, dia: 'hoy', horas: [13, 14] }], agua: [{ k: 1, dia: 'hoy', horas: [13], mm: 3 }] } });
   const a3 = (A3.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
@@ -493,19 +493,19 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const AR = 'meteofrance_arome_france_hd';
   const solo = [{ k: 0, dia: 'hoy', horas: [11], mm: 5, om: AR }];
   const L1 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200), esc: { agua: solo } });
-  ok('10:00 · 5 mm/h a las 11h que solo ve AROME HD (los demás, 0): NO hay aviso de agua fuerte',
-     !L1.reventó && !(L1.b.avisados || []).some(a => /agua fuerte/.test(a.cuerpo || '')), resumen(L1));
+  ok('10:00 · 5 mm/h a las 11h que solo ve AROME HD (los demás, 0): NO hay aviso de «llueve bien»',
+     !L1.reventó && !(L1.b.avisados || []).some(a => /llueve bien/.test(a.cuerpo || '')), resumen(L1));
   const L2 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200),
                             esc: { agua: [...solo, { k: 0, dia: 'hoy', horas: [11], mm: 1.2, om: 'icon_eu' }] } });
   const l2 = (L2.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
-  ok('10:00 · si además ICON pasa de 1 mm/h a esa hora, SÍ avisa, y dice QUIÉN lo ve: «AROME HD ve agua fuerte a las 11h (5 mm/h; también ICON)»',
-     !L2.reventó && /BERMEO: AROME HD ve agua fuerte a las 11h \(5 mm\/h; también ICON\)/.test(l2?.cuerpo || ''), l2?.cuerpo || resumen(L2));
+  ok('10:00 · si además ICON pasa de 1 mm/h a esa hora, SÍ avisa, y dice QUIÉN lo ve: «AROME HD ve que llueve bien a las 11h (5 mm/h; también ICON)»',
+     !L2.reventó && /BERMEO: AROME HD ve que llueve bien a las 11h \(5 mm\/h; también ICON\)/.test(l2?.cuerpo || ''), l2?.cuerpo || resumen(L2));
   /* El dueño de la lluvia decide (suyo, 01-10): si el bueno para la lluvia no
-     ve agua fuerte, que la vean otros no es aviso. */
+     ve que llueve bien, que la vean otros no es aviso. */
   const L5 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200),
     esc: { agua: [{ k: 0, dia: 'hoy', horas: [11], mm: 5, om: 'icon_eu' }, { k: 0, dia: 'hoy', horas: [11], mm: 1.5, om: 'gfs_seamless' }, { k: 0, dia: 'hoy', horas: [11], mm: 0.5, om: AR }] } });
-  ok('10:00 · ICON ve 5 mm/h y GFS 1,5 pero AROME HD (el bueno para la lluvia) solo 0,5: NO hay aviso de agua fuerte',
-     !L5.reventó && !(L5.b.avisados || []).some(a => /agua fuerte/.test(a.cuerpo || '')), resumen(L5));
+  ok('10:00 · ICON ve 5 mm/h y GFS 1,5 pero AROME HD (el bueno para la lluvia) solo 0,5: NO hay aviso de «llueve bien»',
+     !L5.reventó && !(L5.b.avisados || []).some(a => /llueve bien/.test(a.cuerpo || '')), resumen(L5));
   /* Y el rayo dice quién ve qué CAPE y a qué hora. */
   const L6 = await pasada({ hora: '14:00', antes: tranquilo('14:00', 200),
     esc: { rayo: [{ k: 0, dia: 'hoy', horas: [16, 17], om: 'icon_eu' }] } });
@@ -577,11 +577,11 @@ ok('«celda de al lado» va sin paréntesis propio: dentro de «(2 mm/h, ICON �
     for (const trozo of cuerpo.split(/\.\s+(?=[A-ZÑ]{3,}[A-Z0-9 ]*:)/)) {
       const m0 = trozo.match(/^([A-ZÑ][A-Z0-9Ñ ]+):/); if (!m0) continue;
       const k = nombres.indexOf(m0[1].trim()); if (k < 0) continue;
-      const re = /ve (agua fuerte|racha de \d+ km\/h) (?:ahora y hasta las (\d\d)h|a las (\d\d)h|(\d\d)h-(\d\d)h)(?: \((\d+(?:,\d)?) mm\/h)?/g;
+      const re = /ve (que llueve bien|racha de \d+ km\/h) (?:ahora y hasta las (\d\d)h|a las (\d\d)h|(\d\d)h-(\d\d)h)(?: \((\d+(?:,\d)?) mm\/h)?/g;
       let m;
       while ((m = re.exec(trozo))) {
         frases++;
-        const tipo = m[1].startsWith('agua') ? 'agua' : 'racha', tope = tipo === 'agua' ? TOPE_A : TOPE_R;
+        const tipo = m[1].startsWith('que') ? 'agua' : 'racha', tope = tipo === 'agua' ? TOPE_A : TOPE_R;
         m[6] = tipo === 'agua' ? m[6] : m[1].match(/\d+/)[0];
         const desde = m[2] ? h0 : Number(m[3] ?? m[4]), hasta = Number(m[2] ?? m[3] ?? m[5]);
         const dicho = Number(m[6].replace(',', '.'));
