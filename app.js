@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.02-2205';
+const BUILD = '2026.10.02-2216';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -8881,7 +8881,9 @@ function calcularParte(sitios, arr) {
         const mm = pre[i];
         if (!has(mm)) continue;
         total += mm;
-        if (mm < 0.05) continue;
+        const c = cod?.[i];
+        const moja = mojaEsaHora(mm, c);
+        if (!moja.cuenta) continue;
         const t = new Date(H.time[i]);
         const marca = t.getTime();
         conAgua.add(marca);
@@ -8890,8 +8892,7 @@ function calcularParte(sitios, arr) {
         if (!desdeCada.has(m.nom) || t < desdeCada.get(m.nom)) desdeCada.set(m.nom, t);
         (veCada.get(m.nom) ?? veCada.set(m.nom, []).get(m.nom)).push(marca);
         if (mm > pico) { pico = mm; hPico = t; quien = m.nom; }
-        const c = cod?.[i];
-        if (c >= 51 && c <= 57 && mm < 0.2) conSirimiri.add(marca);
+        if (moja.sirimiri) conSirimiri.add(marca);
       }
       if (total < seco) seco = total;
       if (total > mojado) mojado = total;
@@ -13627,11 +13628,14 @@ function cambioDeCielo(clave, code, dia = 1, bajada = null, forma = null, txtAho
     if (antesTxt && ahoraTxt) {
       /* Lo que se lee manda: igual → nada que decir; el «antes» es el
          principio del «ahora» → «antes solo …»; distinto → «antes …». */
+      /* «Ha cambiado a las 22:08: antes … lluvia débil desde las 09:00»
+         se leía como lo de AHORA (suyo, 02-10-2026: «llovizna desde las
+         9 y en el dibujo es más tarde»). Ahora dice que es lo VIEJO. */
       if (antesTxt === ahoraTxt) txt = '';
-      else if (ahoraTxt.startsWith(antesTxt)) txt = `Ha cambiado a las ${hora}: antes solo ${antesTxt}`;
-      else txt = `Ha cambiado a las ${hora}: antes ${antesTxt}`;
+      else if (ahoraTxt.startsWith(antesTxt)) txt = `Previsión cambiada a las ${hora}. Antes decía solo: ${antesTxt}`;
+      else txt = `Previsión cambiada a las ${hora}. Antes decía: ${antesTxt}`;
     } else {
-      txt = `Ha cambiado a las ${hora}: antes ${String(textoVisto(r.antes, dia) ?? '').toLowerCase()}`;
+      txt = `Previsión cambiada a las ${hora}. Antes decía: ${String(textoVisto(r.antes, dia) ?? '').toLowerCase()}`;
     }
   }
   // Solo hoy y mañana: lo demás se tira para que no crezca.
@@ -13640,6 +13644,49 @@ function cambioDeCielo(clave, code, dia = 1, bajada = null, forma = null, txtAho
   for (const k of Object.keys(reg)) if (!vale(k)) delete reg[k];
   try { LS.set('cieloFranjas', reg); } catch { /* sin sitio no pasa nada */ }
   return txt;
+}
+
+/* ¿Esa hora de ese modelo moja? Con 0,05 mm o más, sí. Y con el CÓDIGO
+   de llovizna (51-57) aunque no marque milímetros: es la regla del
+   sirimiri de esta app (CLAUDE.md, 25-08). Hasta el 02-10-2026 el parte de
+   Mis torres tiraba esas horas y decía «Sin lluvia» mientras la franja de
+   Ahora decía que ECMWF veía llovizna. */
+function mojaEsaHora(mm, c) {
+  const llovizna = has(c) && c >= 51 && c <= 57;
+  return { cuenta: (has(mm) && mm >= 0.05) || llovizna, sirimiri: llovizna && (!has(mm) || mm < 0.2) };
+}
+
+/* ── LA LLOVIZNA DE UNO Y LOS MILÍMETROS DE OTRO (02-10-2026) ──────────
+   Suyo, 22:10, con la franja del sábado delante: arriba «Cubierto ·
+   llovizna débil desde las 12:00» (y «Llovizna intensa» la tarde), y
+   debajo «AROME HD la ve seca · 0,0 mm». Las dos cosas eran verdad y de
+   dos modelos: AROME HD manda en la lluvia y NO publica el código del
+   cielo, así que la llovizna sale del código de ECMWF.
+
+   No se quita la llovizna: el sirimiri no marca en el pluviómetro y ese
+   código es la única forma de verlo (con sirimiri no se sube). Lo que se
+   hace es decir de quién es cada cosa, en la misma línea. */
+/* LA REGLA, no el caso: si alguna hora de la franja MOJA según la misma
+   lectura que pinta su dibujo (`comoLlueve`) y los milímetros suman cero,
+   esta línea NO puede decir «Sin lluvia» ni «la ve seca». Dice que moja
+   sin marcar y, si la llovizna sale del código de otro modelo, cuál. */
+function lloviznaPrestada(sel) {
+  return (sel || []).some(h => !has(h.codeLluvia) && has(h.prec) && comoLlueve(h).k === 'sirimiri');
+}
+function quienDaElCielo() {
+  const x = (S.data?.fc?.prestadosDe || []).find(y => y.k === 'weather_code');
+  return nombreDeModelo(x ? x.de : modeloDato()?.om);
+}
+function lineaSinMm(sel, otros) {
+  const dueno = nombreDeModelo(duenoLluvia()) || 'Tu modelo';
+  const moja = (sel || []).some(h => has(h.prec) && ['sirimiri', 'poco', 'bien'].includes(comoLlueve(h).k));
+  if (moja) {
+    const cielo = quienDaElCielo();
+    return lloviznaPrestada(sel) && cielo && cielo !== dueno
+      ? `La llovizna la ve ${cielo} (no marca en el pluviómetro) · ${dueno} 0,0 mm`
+      : `Moja sin marcar en el pluviómetro · ${dueno} 0,0 mm`;
+  }
+  return otros ? `${dueno} la ve seca · 0,0 mm` : 'Sin lluvia · 0,0 mm';
 }
 
 /* ═══ EL RESUMEN DE UN CONJUNTO DE HORAS, UNA SOLA VEZ ═════════════════
@@ -14387,8 +14434,7 @@ function renderNow() {
             const o = lluviaEnLaFranjaQueNoVesTu(sel[0].date, sel[sel.length - 1].date);
             /* `duenoLluvia()`, como los otros siete sitios: con el elegido vacío
                salía «otro modelo la ve seca». Revisión del 04-09-2026. */
-            return o ? `${nombreDeModelo(duenoLluvia()) || 'Tu modelo'} la ve seca · 0,0 mm`
-                     : 'Sin lluvia · 0,0 mm';
+            return lineaSinMm(sel, o);
           }
           if (mm < 0.1) return 'Menos de 0,1 mm en la franja';
           return `${mmTxt(mm)} mm en la franja${desde}`;

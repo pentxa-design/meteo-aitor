@@ -5469,6 +5469,52 @@ ok('se dice de quién sale ese dato, no aparece a secas',
      && /cargarRayosAemet\(\{ forzar: true \}\)\.catch\(\(\) => \{\}\);\n    cargarRayosSatelite\(\{ forzar: true \}\)/.test(src));
 }
 
+/* ── LA FRANJA NO DICE «LLOVIZNA» ARRIBA Y «SECA» ABAJO (02-10-2026) ──
+   Suyo, 22:10: «Cubierto · llovizna débil desde las 12:00» y debajo
+   «AROME HD la ve seca · 0,0 mm». AROME HD manda en la lluvia y no publica
+   el código del cielo: la llovizna era de ECMWF. La regla, recorrida en
+   TODAS las combinaciones: si el dibujo de alguna hora moja y la franja
+   suma 0,0 mm, la línea no puede decir «Sin lluvia» ni «la ve seca». */
+{
+  const S0 = globalThis.S; const nm0 = globalThis.nombreDeModelo, dl0 = globalThis.duenoLluvia, md0 = globalThis.modeloDato;
+  globalThis.S = { thr: { rainWarn: 0.2, rainNo: 2 }, data: { fc: { prestadosDe: [{ k: 'weather_code', de: 'ecmwf_ifs025' }] } } };
+  globalThis.nombreDeModelo = om => ({ ecmwf_ifs025: 'ECMWF', meteofrance_arome_france_hd: 'AROME HD' }[om] || 'otro modelo');
+  globalThis.duenoLluvia = () => 'meteofrance_arome_france_hd';
+  globalThis.modeloDato = () => ({ om: 'meteofrance_arome_france_hd' });
+  for (const n of ['function esLlovizna(', 'function mmRedonda(', 'function comoLlueve(', 'function lloviznaPrestada(', 'function quienDaElCielo(', 'function lineaSinMm('])
+    if (src.includes(n)) eval(sacar(n));
+  const malos = [];
+  for (const prestado of [true, false]) {
+    globalThis.S.data.fc.prestadosDe = prestado ? [{ k: 'weather_code', de: 'ecmwf_ifs025' }] : [];
+    for (const cl of [undefined, 3, 51, 53, 55, 61, 63]) for (const c of [0, 3, 51, 53, 55, 61, 63, 80]) for (const otros of [null, { quien: 'GFS' }]) {
+      const sel = [0, 1, 2, 3].map(i => ({ code: c, codeLluvia: cl, prec: 0, t: null }));
+      const moja = sel.some(h => codigoQueSeVe(h, h.code) >= HAY_AGUA);
+      const l = lineaSinMm(sel, otros);
+      if (moja && /Sin lluvia|la ve seca/.test(l)) malos.push(`código ${c}, código de la lluvia ${cl}, ${prestado ? 'cielo de ECMWF' : 'cielo del mismo'} → «${l}»`);
+    }
+  }
+  ok('la regla y no el caso: con el dibujo mojado y 0,0 mm, la franja nunca dice «Sin lluvia» ni «la ve seca»',
+     malos.length === 0, malos.slice(0, 3).join(' · '));
+  const sab = [0, 1, 2, 3].map(() => ({ code: 53, prec: 0 }));
+  globalThis.S.data.fc.prestadosDe = [{ k: 'weather_code', de: 'ecmwf_ifs025' }];
+  ok('el sábado de su captura: «La llovizna la ve ECMWF (no marca en el pluviómetro) · AROME HD 0,0 mm»',
+     lineaSinMm(sab, { quien: 'ECMWF y GFS' }) === 'La llovizna la ve ECMWF (no marca en el pluviómetro) · AROME HD 0,0 mm',
+     lineaSinMm(sab, { quien: 'ECMWF y GFS' }));
+  ok('y con todo seco sigue diciendo lo de siempre',
+     lineaSinMm([{ code: 3, prec: 0 }], null) === 'Sin lluvia · 0,0 mm'
+     && lineaSinMm([{ code: 3, prec: 0 }], { quien: 'GFS' }) === 'AROME HD la ve seca · 0,0 mm');
+  ok('y la franja la usa',
+     /return lineaSinMm\(sel, o\);/.test(src));
+  eval(sacar('function mojaEsaHora('));
+  ok('y el parte de Mis torres cuenta la llovizna sin milímetros como sirimiri, no como «Sin lluvia»',
+     mojaEsaHora(0, 53).cuenta && mojaEsaHora(0, 53).sirimiri && mojaEsaHora(0.1, 51).sirimiri
+     && !mojaEsaHora(0, 3).cuenta && mojaEsaHora(0.3, 3).cuenta && !mojaEsaHora(0.3, 3).sirimiri
+     && !mojaEsaHora(0.5, 53).sirimiri && !mojaEsaHora(0.01, undefined).cuenta);
+  ok('   y el parte la usa',
+     /const moja = mojaEsaHora\(mm, c\);\n\s*if \(!moja\.cuenta\) continue;/.test(src) && /if \(moja\.sirimiri\) conSirimiri\.add\(marca\);/.test(src));
+  globalThis.S = S0; globalThis.nombreDeModelo = nm0; globalThis.duenoLluvia = dl0; globalThis.modeloDato = md0;
+}
+
 /* ── LA LLUVIA ES DEL EUROPEO — ELEGIDA POR ACIERTO, 30-08-2026 ───────
    Decisión SUYA con dos episodios medidos delante: el 26-08 y el 30-08
    solo ECMWF vio el sirimiri que caía de verdad (gotitas 12:30, tanda
@@ -9908,11 +9954,11 @@ grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
   ok('si se repinta con el mismo cielo, tampoco', cdc(k, 0, 0) === '');
   const c3 = cdc(k, 3, 0);
   ok('si cambia el cielo, lo dice con la hora y con el de antes',
-     /^Ha cambiado a las \d\d:\d\d: antes despejado$/.test(c3), `salió «${c3}»`);
+     /^Previsión cambiada a las \d\d:\d\d\. Antes decía: despejado$/.test(c3), `salió «${c3}»`);
   ok('y lo sigue diciendo mientras el nuevo se mantenga',
-     /antes despejado$/.test(cdc(k, 3, 0) || ''));
+     /Antes decía: despejado$/.test(cdc(k, 3, 0) || ''));
   ok('de noche el «antes» se dice con la palabra de noche',
-     (() => { const k2 = `${hoyK}·Noche2·prueba`; cdc(k2, 4, 0); return /antes velo de nubes altas$/.test(cdc(k2, 0, 0) || ''); })());
+     (() => { const k2 = `${hoyK}·Noche2·prueba`; cdc(k2, 4, 0); return /Antes decía: velo de nubes altas$/.test(cdc(k2, 0, 0) || ''); })());
   /* El voto de modelos llega segundos después del primer pintado, dentro de la
      MISMA bajada: eso no es un cambio del tiempo (medido en producción, 22:55). */
   const k3 = `${hoyK}·Tarde·prueba`;
@@ -9921,7 +9967,7 @@ grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
      'el voto de modelos salía como «ha cambiado a las 22:55»');
   const c5 = cdc(k3, 0, 0, 300);
   ok('y entre dos bajadas distintas sí se dice',
-     /^Ha cambiado a las \d\d:\d\d: antes cubierto$/.test(c5 || ''), `salió «${c5}»`);
+     /^Previsión cambiada a las \d\d:\d\d\. Antes decía: cubierto$/.test(c5 || ''), `salió «${c5}»`);
   /* EL CASO EXACTO DEL PORTÁTIL (build 2301, 13-09-2026 23:54): registro con
      bajada 1789336462550 y desde 1789336465675, tres segundos después: mismo
      fetch, primer pintado sin voto (mayormente despejado) contra pintado con
@@ -9938,7 +9984,7 @@ grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
   ok('la misma hora en curso repintada por cualquier motivo tampoco cuenta',
      cdc(k4, 0, 0, '2026-09-13T23:45', f2) === '');
   ok('con otra hora en curso del modelo (bajada nueva) y el mismo tramo de horas, sí se dice',
-     /^Ha cambiado a las \d\d:\d\d: antes despejado$/.test(cdc(k4, 4, 0, '2026-09-14T00:00', f2) || ''));
+     /^Previsión cambiada a las \d\d:\d\d\. Antes decía: despejado$/.test(cdc(k4, 4, 0, '2026-09-14T00:00', f2) || ''));
   ok('si la franja ha perdido horas por el reloj, no se compara: se empieza de nuevo sin decir nada',
      cdc(k4, 0, 0, '2026-09-14T00:15', { n: 1, ini: `${hoyK}T23:00`, votado: true }) === ''
      && cdc(k4, 0, 0, '2026-09-14T00:30', { n: 1, ini: `${hoyK}T23:00`, votado: true }) === '');
@@ -9952,7 +9998,7 @@ grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
   cdc(k5, 4, 0, 'A', f2, 'Velo de nubes altas');
   const c6 = cdc(k5, 3, 0, 'B', f2, 'Velo de nubes altas · cubierto desde las 02:00');
   ok('si el «antes» es el principio del «ahora», dice «antes solo …»',
-     /^Ha cambiado a las \d\d:\d\d: antes solo velo de nubes altas$/.test(c6 || ''), `salió «${c6}»`);
+     /^Previsión cambiada a las \d\d:\d\d\. Antes decía solo: velo de nubes altas$/.test(c6 || ''), `salió «${c6}»`);
   const k6 = `${hoyK}·Madrugada2·prueba`;
   cdc(k6, 4, 0, 'A', f2, 'Velo de nubes altas · cubierto desde las 02:00');
   ok('si cambia el código pero se lee lo mismo, no dice nada',
@@ -9961,7 +10007,7 @@ grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
   cdc(k7, 3, 0, 'A', f2, 'Cubierto');
   const c8 = cdc(k7, 0, 0, 'B', f2, 'Despejado · cubierto desde las 04:00');
   ok('y si lo de antes era otra cosa, la dice entera',
-     /^Ha cambiado a las \d\d:\d\d: antes cubierto$/.test(c8 || ''), `salió «${c8}»`);
+     /^Previsión cambiada a las \d\d:\d\d\. Antes decía: cubierto$/.test(c8 || ''), `salió «${c8}»`);
   ok('la franja pinta esa línea junto al titular',
      /const cambio = cambioDeCielo\(`\$\{String\(sel\[0\]\?\.t \?\? ''\)\.slice\(0, 10\)\}·\$\{name\}·\$\{S\.model\}`, code, R\?\.dia \?\? esDeDia\(sel\),[\s\S]{0,400}S\.data\?\.fc\?\.current\?\.time \?\? null,\n\s*\{ n: sel\.length, ini: sel\[0\]\?\.t \?\? null, votado: !!deEsteSitio\(S\.comparativa\) \},\n\s*tituloFranja\(sel, code\)\)/.test(src)
      && /class="part__cambio">\$\{esc\(cambio\)\}/.test(src));
