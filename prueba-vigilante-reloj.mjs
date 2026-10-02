@@ -66,7 +66,7 @@ for (const d of ['api', 'lib']) {
 fs.writeFileSync(path.join(tmp, 'lib', 'motor.mjs'), MOTOR);
 
 const ESTADO = 'avisos/vigilante.json';
-const { localAUTC, resumen: resumenVerif } = await import(pathToFileURL(path.join(tmp, 'lib', 'verificacion.mjs')).href);
+const { localAUTC, resumen: resumenVerif, PUNTOS_CONTRASTE, ranking, duenoAprendido } = await import(pathToFileURL(path.join(tmp, 'lib', 'verificacion.mjs')).href);
 process.env.VIGILANTE_ENVIA = '1';        // que construya y «mande» (sin claves: 0 enviados, pero se ve)
 delete process.env.MOVILES_EXTRA;
 delete process.env.VAPID_PUBLICA; delete process.env.VAPID_PRIVADA;
@@ -130,7 +130,8 @@ function red(esc, fijo, llamadas) {
       if (esc.estacionesCaidas) return R({ error: 'caído a propósito' }, false, 503);
       const pts = (q.get('puntos') || '').split('|').filter(Boolean).map(x => x.split(',').map(Number));
       return R({ puntos: pts.map(([la, lo]) => {
-        const k = SITIOS_ESC.findIndex(x => Math.abs(x.lat - la) < 1e-3 && Math.abs(x.lon - lo) < 1e-3);
+        let k = SITIOS_ESC.findIndex(x => Math.abs(x.lat - la) < 1e-3 && Math.abs(x.lon - lo) < 1e-3);
+        if (k < 0) { const r = PUNTOS_CONTRASTE.findIndex(x => Math.abs(x.lat - la) < 1e-3 && Math.abs(x.lon - lo) < 1e-3); k = r >= 0 ? 100 + r : -1; }
         const filas = [];
         for (const m of (esc.medido || []).filter(x => x.k === k))
           for (const [h, mm] of Object.entries(m.horas)) filas.push({ cuando: `${localAUTC(`${clave(hoy0)}T${p2(h)}:00`)}:00:00+0000`, lluvia: mm });
@@ -144,7 +145,8 @@ function red(esc, fijo, llamadas) {
       const modelos = (q.get('models') || 'best_match').split(',');
       const campos = (q.get('hourly') || '').split(',').filter(Boolean);
       const T = []; for (let i = 0; i < 48; i++) T.push(new RealDate(hoy0.getTime() + i * 3600e3));
-      const kDe = lat => SITIOS_ESC.findIndex(x => Math.abs(x.lat - Number(lat)) < 1e-6);
+      const kDe = lat => { const i = SITIOS_ESC.findIndex(x => Math.abs(x.lat - Number(lat)) < 1e-6); if (i >= 0) return i;
+        const r = PUNTOS_CONTRASTE.findIndex(x => Math.abs(x.lat - Number(lat)) < 1e-6); return r >= 0 ? 100 + r : -1; };
       const uno = (lat, lon) => {
         const k = kDe(lat);
         if ((esc.caidos || []).includes(k)) return { latitude: +lat, longitude: +lon, hourly: null };
@@ -587,7 +589,7 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      !S2.reventó && S2.b.verificacion?.comparadas === 1 && vSeco?.stats?.regla?.seco === 1 && vSeco.stats.regla.bien === 0,
      JSON.stringify(S2.b.verificacion) + ' ' + JSON.stringify(vSeco?.stats?.regla));
   ok('y por modelo y tramo: AROME HD daba 5 (tramo 5-15) y no cayó; ICON daba 4 (tramo 2-5) y no cayó',
-     vSeco?.stats?.modelos?.['AROME HD']?.['5-15']?.seco === 1 && vSeco?.stats?.modelos?.ICON?.['2-5']?.seco === 1, JSON.stringify(vSeco?.stats?.modelos));
+     vSeco?.stats?.cubos?.['AROME HD']?.['5-15']?.seco === 1 && vSeco?.stats?.cubos?.ICON?.['2-5']?.seco === 1, JSON.stringify(vSeco?.stats?.cubos));
   ok('y la previsión ya comparada sale de la lista de pendientes (no se cuenta dos veces)',
      !(vSeco?.pend || []).some(p => p.n === 'BERMEO' && p.t.endsWith('T11:00')), JSON.stringify(vSeco?.pend?.length));
 
@@ -614,6 +616,59 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      RV.b.hay === true && /salió 1 veces/.test(RV.b.texto) && /NO cayó en 1 \(100 %\)/.test(RV.b.texto), RV.b.texto || JSON.stringify(RV.b).slice(0, 200));
   ok('y sin nada guardado lo dice, no inventa porcentajes',
      resumenVerif(null).hay === false && /Todavía no hay nada/.test(resumenVerif(null).texto));
+
+  /* ── Y APRENDE (01-10-2026) ─────────────────────────────────────────── */
+  ok('cada modelo lleva su MATRIZ: AROME HD dijo «llueve bien» (5 mm) y no cayó → [seco][bien] = 1; ICON (4 mm) igual',
+     vSeco?.stats?.matriz?.eus?.['AROME HD']?.m?.[0]?.[2] === 1 && vSeco.stats.matriz.eus.ICON?.m?.[0]?.[2] === 1 && vSeco.stats.matriz.eus['AROME HD'].n === 1,
+     JSON.stringify(vSeco?.stats?.matriz?.eus?.['AROME HD']));
+  ok('y su error medio: AROME HD se pasó 5 mm (sesgo +5), ICON 4',
+     Math.abs((vSeco?.stats?.matriz?.eus?.['AROME HD']?.se ?? 0) - 5) < 1e-9 && Math.abs((vSeco?.stats?.matriz?.eus?.ICON?.se ?? 0) - 4) < 1e-9);
+
+  // Puntos de contraste: REF Tarragona (el primero) llueve 5 y 4 mm a las 11h, y la estación midió 0,3.
+  const refPrev = { agua: [{ k: 100, dia: 'hoy', horas: [11], mm: 5, om: AR }, { k: 100, dia: 'hoy', horas: [11], mm: 4, om: 'icon_eu' }] };
+  await pasada({ hora: '10:00', antes: tranquilo('10:00', 200), esc: refPrev });
+  const vRef0 = JSON.parse(globalThis.__ALMACEN.get('avisos/verificacion.json') || 'null');
+  ok('los puntos de contraste (fuera de Euskadi) se apuntan también, con su zona «ref»',
+     vRef0?.pend?.some(p => p.n === 'REF Tarragona' && p.z === 'ref' && p.m['AROME HD'] === 5), JSON.stringify(vRef0?.pend?.filter(p => p.n.startsWith('REF')).slice(0, 1)));
+  await pasada({ hora: '14:00', conservar: true, esc: { medido: [{ k: 100, horas: { 11: 0.3 } }] } });
+  const vRef1 = JSON.parse(globalThis.__ALMACEN.get('avisos/verificacion.json') || 'null');
+  ok('y se comparan aparte: la matriz «ref» aprende (AROME HD: dijo bien y cayó poco) y la «eus» no se toca',
+     vRef1?.stats?.matriz?.ref?.['AROME HD']?.m?.[1]?.[2] === 1 && !vRef1.stats.matriz.eus['AROME HD'], JSON.stringify(vRef1?.stats?.matriz));
+
+  // ── ELEGIR EL DUEÑO CON LO APRENDIDO ──
+  const matriz = (filas) => Object.fromEntries(Object.entries(filas).map(([n, m]) => [n, { n: m.flat().reduce((a, b) => a + b, 0), ae: 0, se: 0, m }]));
+  const registro = (filas, dueno = null) => ({ desde: '2026-10-01T10:00:00.000Z', pend: [], vistos: [], ultima: null, dueno,
+    stats: { regla: { n: 0, seco: 0, poco: 0, bien: 0, plazo: {} }, reglaRef: { n: 0, seco: 0, poco: 0, bien: 0 }, cubos: {}, matriz: { eus: matriz(filas), ref: {} }, perdidas: 0, perdidasHoras: [], sinMedida: 0 } });
+  const FLOJO = [[40, 5, 5], [10, 10, 10], [10, 8, 12]];          // seco .80 · poco .33 · bien .40 → .51
+  const BUENO = [[40, 5, 5], [2, 24, 4], [2, 4, 24]];             // .80 · .80 · .80 → .80
+  const MEDIO = [[40, 5, 5], [5, 15, 10], [5, 10, 15]];          // .80 · .50 · .50 → .60
+  const POCO = [[3, 1, 1], [1, 2, 1], [0, 1, 2]];                 // muy pocos casos
+  const rk = ranking(registro({ 'AROME HD': FLOJO, ICON: BUENO, GFS: MEDIO }), 'eus');
+  ok('el ranking ordena por acierto EQUILIBRADO (la media de lo que acierta de seco, poco y bien): ICON 80 %, GFS 60 %, AROME HD 51 %',
+     rk.map(r => r.nombre).join() === 'ICON,GFS,AROME HD' && Math.round(rk[0].acierto * 100) === 80 && Math.round(rk[2].acierto * 100) === 51,
+     JSON.stringify(rk.map(r => [r.nombre, r.acierto])));
+  const dX = duenoAprendido(registro({ 'AROME HD': POCO, ICON: POCO }), 'AROME HD', '2026-10-02T10:00:00Z');
+  ok('con pocos casos NO cambia el dueño y dice que faltan: «faltan casos para aprender»',
+     dX.nombre === 'AROME HD' && dX.cambio === false && /faltan casos para aprender/.test(dX.porque), dX.porque);
+  const vC = registro({ 'AROME HD': FLOJO, ICON: BUENO, GFS: MEDIO });
+  const dC = duenoAprendido(vC, 'AROME HD', '2026-10-02T10:00:00Z');
+  ok('con casos de sobra y ICON acertando 80 % contra 51 %, el dueño de la lluvia pasa a ICON, y queda anotado desde cuándo y de quién venía',
+     dC.nombre === 'ICON' && dC.cambio === true && vC.dueno?.nombre === 'ICON' && vC.dueno.antes === 'AROME HD' && /ICON acierta 80 %/.test(dC.porque), JSON.stringify(vC.dueno));
+  const vH = registro({ 'AROME HD': MEDIO, ICON: [[40, 5, 5], [4, 16, 10], [4, 10, 16]] });   // .60 contra .62: dentro del margen
+  const dH = duenoAprendido(vH, 'AROME HD', '2026-10-02T10:00:00Z');
+  ok('y con una diferencia pequeña (62 % contra 60 %) NO cambia: hace falta un margen de 5 puntos; una tarde no cambia el dueño',
+     dH.nombre === 'AROME HD' && dH.cambio === false && /no los 5 puntos de margen/.test(dH.porque), dH.porque);
+
+  // Y en una pasada de verdad: el registro dice que ICON es el bueno → la lluvia fuerte la dice ICON.
+  globalThis.__ALMACEN = new Map(); globalThis.__ALMACEN.set('avisos/verificacion.json', JSON.stringify(registro({ 'AROME HD': FLOJO, ICON: BUENO, GFS: MEDIO }, { nombre: 'ICON', desde: '2026-10-02T08:00:00Z', antes: 'AROME HD', acierto: 0.8 })));
+  const LD = await pasada({ hora: '10:00', conservar: true, antes: tranquilo('10:00', 200),
+    esc: { agua: [{ k: 0, dia: 'hoy', horas: [11], mm: 5, om: 'icon_eu' }, { k: 0, dia: 'hoy', horas: [11], mm: 1.5, om: AR }] } });
+  const ld = (LD.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
+  ok('con ICON de dueño: «ICON ve que llueve bien a las 11h (5 mm/h; también AROME HD)» (antes, con AROME de dueño, 1,5 mm no era aviso)',
+     !LD.reventó && /BERMEO: ICON ve que llueve bien a las 11h \(5 mm\/h; también AROME HD\)/.test(ld?.cuerpo || ''), ld?.cuerpo || resumen(LD));
+  const RK = await pasada({ hora: '14:30', conservar: true, metodo: 'GET', query: { verificar: '1' } });
+  ok('?verificar=1 enseña el ranking, el dueño actual y por qué',
+     /Dueño de la lluvia: ICON/.test(RK.b.texto || '') && RK.b.ranking?.eus?.[0]?.nombre === 'ICON', (RK.b.texto || '').slice(0, 200));
 
   /* Y si el propio almacén falla al leer el registro, la pasada y sus avisos siguen. */
   {

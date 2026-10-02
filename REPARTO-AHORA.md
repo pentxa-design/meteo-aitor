@@ -2075,3 +2075,4 @@ Lo apunto en TRASPASO §16 con builds y medidas. `deploy.sh` desde el portátil:
 29. **(13:00, 01-10)** «Agua fuerte» solo si ≥2 modelos pasan de 1 mm/h; el agua sola no vibra. TRASPASO §60.
 30. **(14:15, 01-10)** El vigilante, con cada cosa de su dueño (lluvia y racha: AROME HD) y los avisos dicen quién ve qué. TRASPASO §61.
 31. **(17:30, 01-10)** Registro de lo avisado contra lo medido por AEMET (`lib/verificacion.mjs`, `?verificar=1`). Falta calibrar con datos de varios días. TRASPASO §62.
+32. **(19:00, 02-10)** La app aprende el dueño de la lluvia (matrices por modelo y zona, puntos de contraste, margen de 5 puntos). TRASPASO §63.

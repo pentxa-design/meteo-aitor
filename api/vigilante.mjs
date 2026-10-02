@@ -26,7 +26,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 import { leerJSON, guardarJSON } from '../lib/almacen.mjs';
-import { verificar, resumen as resumenVerificacion, RUTA as RUTA_VERIF } from '../lib/verificacion.mjs';
+import { verificar, cargar as cargarRegistro, resumen as resumenVerificacion, RUTA as RUTA_VERIF, PUNTOS_CONTRASTE } from '../lib/verificacion.mjs';
 import { leer, guardar } from './suscribir.mjs';
 
 const ESTADO = 'avisos/vigilante.json';
@@ -319,7 +319,7 @@ function rayoEnHoras(d, desde, hasta) {
 /** Para el parte: el pico del día de la lluvia SEGÚN SU DUEÑO, con hora y
  *  nombre; si el dueño no ve nada pero otro sí, el de ese otro. */
 function aguaDeParte(a) {
-  if (a?.dueno) return { mm: a.dueno.mm, h: a.dueno.h, quien: nombreDe(DUENO_AGUA) };
+  if (a?.dueno) return { mm: a.dueno.mm, h: a.dueno.h, quien: a.dueno.quien ?? nombreDe(DUENO_AGUA) };
   return { mm: a.mm, h: a.hPico ?? a.ini, quien: a.quien };
 }
 function picoEnHoras(x, desde, hasta) {
@@ -495,7 +495,39 @@ async function pedirTanda(sitios, cel) {
   });
 }
 
+/** Lo que da cada modelo hora a hora de aquí a seis horas, solo las horas con
+ *  algo de agua: lo que se apunta en el registro. */
+function pvDe(H, desde) {
+  if (!H?.time) return null;
+  const pv = {}; let n = 0;
+  for (let i = 0; i < H.time.length && n < 7; i++) {
+    if (H.time[i] < desde) continue;
+    n++;
+    const vals = {}; let mx = 0;
+    for (const m of MODELOS_AGUA) {
+      const v = H[`precipitation_${m}`]?.[i];
+      if (v != null) { vals[nombreDe(m)] = Math.round(v * 10) / 10; if (v > mx) mx = v; }
+    }
+    if (mx >= AGUA_MIN) pv[H.time[i]] = vals;
+  }
+  return pv;
+}
+/** Los puntos de contraste (fuera de Euskadi): lo previsto, para aprender de más casos. */
+async function pedirContraste(desde) {
+  const u = `${APP}/om?api=fc&latitude=${PUNTOS_CONTRASTE.map(x => x.lat).join(',')}&longitude=${PUNTOS_CONTRASTE.map(x => x.lon).join(',')}`
+          + `&timezone=auto&hourly=precipitation&forecast_days=2&cell_selection=land&models=${MODELOS_AGUA.join(',')}${selloTanda()}`;
+  const r = await fetch(u, { signal: AbortSignal.timeout(TOPE_S * 1000) });
+  if (!r.ok) throw new Error(`la app contesta ${r.status}`);
+  const j = await r.json(); const L = Array.isArray(j) ? j : [j];
+  if (L.length !== PUNTOS_CONTRASTE.length) throw new Error(`pedí ${PUNTOS_CONTRASTE.length} puntos de contraste y contestó ${L.length}`);
+  // Todos, también los que hoy no tienen lluvia prevista: hay que poder pedir lo MEDIDO para comparar lo apuntado antes.
+  return PUNTOS_CONTRASTE.map((x, i) => ({ n: x.n, lat: x.lat, lon: x.lon, zona: 'ref', pv: pvDe(L[i]?.hourly, desde) ?? {} }));
+}
+
 async function unSitio(s, previo = null, reloj = null) {
+  /* El dueño de la lluvia de ESTA pasada: el que la app ha aprendido que mejor
+     acierta (lib/verificacion.mjs), o AROME HD mientras no haya datos. */
+  const duenoM = reloj?.dueno ?? DUENO_AGUA;
   const pide = async cel => {
     const u = `${APP}/om?api=fc&latitude=${s.lat}&longitude=${s.lon}&timezone=auto`
             + `&hourly=cape,convective_inhibition,precipitation,wind_gusts_10m,weather_code&forecast_days=2`
@@ -578,7 +610,7 @@ async function unSitio(s, previo = null, reloj = null) {
            20:00). Lo fuerte se decide hora a hora. */
         const ph = g.porHora[h] ??= { v: 0, quien: null, ven: new Set(), dueno: 0 };
         if (v > ph.v) { ph.v = v; ph.quien = quien; }
-        if (m === DUENO_AGUA && v > ph.dueno) ph.dueno = v;      // lo que dice el bueno para la lluvia
+        if (m === duenoM && v > ph.dueno) ph.dueno = v;      // lo que dice el bueno para la lluvia
         if (v >= AGUA_ACUERDO) ph.ven.add(nombreDe(m));       // cuántos modelos lo ven (el de al lado no cuenta doble)
       }
     }
@@ -627,14 +659,14 @@ async function unSitio(s, previo = null, reloj = null) {
        aviso: «si X es el bueno para la lluvia, siempre ese». */
     const hsFuerte = hs.filter(h => g.porHora[h]?.dueno >= AGUA_FUERTE && g.porHora[h].ven.size >= AGUA_MODELOS);
     let dueno = null;   // el pico del día del dueño, con su hora, para el parte
-    for (const h of hs) { const x = g.porHora[h]?.dueno; if (x > 0.05 && (!dueno || x > dueno.mm)) dueno = { mm: Math.round(x * 10) / 10, h }; }
+    for (const h of hs) { const x = g.porHora[h]?.dueno; if (x > 0.05 && (!dueno || x > dueno.mm)) dueno = { mm: Math.round(x * 10) / 10, h, quien: nombreDe(duenoM) }; }
     agua[dia] = { ini: hs[0], fin: hs.at(-1), tramos: enTramos(hs),
                   mm: Math.round(g.mm * 10) / 10, hPico: g.hPico, quien: g.quien,
                   fuerte: hsFuerte.length > 0,
                   // Solo las horas que pasan de AGUA_FUERTE con al menos AGUA_MODELOS de acuerdo.
                   fuertes: enTramos(hsFuerte),
                   dueno,
-                  porHora: Object.fromEntries(hsFuerte.map(h => [h, { v: Math.round(g.porHora[h].dueno * 10) / 10, quien: nombreDe(DUENO_AGUA),
+                  porHora: Object.fromEntries(hsFuerte.map(h => [h, { v: Math.round(g.porHora[h].dueno * 10) / 10, quien: nombreDe(duenoM),
                                                                       ven: [...g.porHora[h].ven] }])) };
   }
 
@@ -703,20 +735,7 @@ async function unSitio(s, previo = null, reloj = null) {
   /* Lo previsto de lluvia, hora a hora y modelo a modelo, de aquí a seis
      horas: es lo que se apunta en el registro (lib/verificacion.mjs) para
      compararlo después con lo medido. Solo las horas con algo de agua. */
-  let pv = null;
-  if (reloj?.desde) {
-    pv = {}; let n = 0;
-    for (let i = 0; i < H.time.length && n < 7; i++) {
-      if (H.time[i] < reloj.desde) continue;
-      n++;
-      const vals = {}; let mx = 0;
-      for (const m of MODELOS_AGUA) {
-        const v = H[`precipitation_${m}`]?.[i];
-        if (v != null) { vals[nombreDe(m)] = Math.round(v * 10) / 10; if (v > mx) mx = v; }
-      }
-      if (mx >= AGUA_MIN) pv[H.time[i]] = vals;
-    }
-  }
+  const pv = reloj?.desde ? pvDe(H, reloj.desde) : null;
   return { n: s.n, lat: s.lat, lon: s.lon, critico: !!s.critico, dias, agua, racha, ojo, horas: H.time, pv };
 }
 
@@ -1489,9 +1508,18 @@ export default async function handler(req, res) {
   tandaL = await conReintento('land');
   tandaC = await conReintento('nearest');
 
+  /* EL DUEÑO DE LA LLUVIA, APRENDIDO (01-10-2026): se lee el registro antes de
+     mirar los sitios. Sin registro o sin datos de sobra, manda AROME HD. */
+  let ledger = null, duenoId = DUENO_AGUA;
+  try {
+    ledger = await cargarRegistro(new Date().toISOString());
+    const id = MODELOS_AGUA.find(m => nombreDe(m) === ledger.v.dueno?.nombre);
+    if (id) duenoId = id;
+  } catch { /* sin registro: manda el de siempre */ }
+
   const pedirUno = (s, i) =>
     unSitio(s, { H: tandaL?.[i] || null, C: tandaC?.[i] || null },
-            { desde: `${claveHoy}T${String(h0).padStart(2, '0')}` })
+            { desde: `${claveHoy}T${String(h0).padStart(2, '0')}`, dueno: duenoId })
       .then(x => ({ ...x, ok: true }))
       .catch(e => ({ n: s.n, critico: !!s.critico, ok: false, fallo: String(e.message || e) }));
 
@@ -2276,12 +2304,15 @@ export default async function handler(req, res) {
   let verif = null;
   if (!soloMirar) {
     try {
+      const desde = `${claveHoy}T${String(h0).padStart(2, '0')}`;
+      let contraste = [];
+      try { contraste = await pedirContraste(desde); } catch { /* sin contraste: se aprende solo de los suyos */ }
+      const todos = [...buenos.map(d => ({ n: d.n, lat: d.lat, lon: d.lon, pv: d.pv })), ...contraste];
       verif = await verificar({
-        sitios: buenos.map(d => ({ n: d.n, lat: d.lat, lon: d.lon, pv: d.pv })),
-        ahoraISO: new Date().toISOString(), ahoraMs: Date.now(),
-        desde: `${claveHoy}T${String(h0).padStart(2, '0')}`,
-        dueno: nombreDe(DUENO_AGUA),
-        pedirMedidas: nombres => medidasAEMET(buenos.filter(d => nombres.includes(d.n))),
+        sitios: todos, cargado: ledger, porDefecto: nombreDe(DUENO_AGUA),
+        ahoraISO: new Date().toISOString(), ahoraMs: Date.now(), desde,
+        dueno: nombreDe(duenoId),
+        pedirMedidas: nombres => medidasAEMET(todos.filter(d => nombres.includes(d.n))),
       });
     } catch (e) { verif = { error: String(e?.message || e).slice(0, 80) }; }
   }
