@@ -1375,3 +1375,15 @@ EUMETView (el mismo visor sin clave del satélite de nubes) publica `mtg_fd:li_a
 **Lo que más publica EUMETView y puede servir** (sin medir aún): `mtg_fd:h40b` lluvia estimada (satélite + microondas), `msg_fes:cth` altura del tope de nube, `mtg_fd:rgb_fog` niebla/nubes bajas, `eps:m0x_ascat_wind` viento sobre el mar (solo al pasar el satélite). Medir antes de poner, como el radar.
 
 **Meteocat (02-10-2026, 21:25):** solicitud ENVIADA por él (plan gratuito «Acceso ciudadano», uso personal, XEMA y XDDE por 1 año, al correo personal). Respuesta en ≤7 días. Cuando pase la clave: variable de entorno en Vercel (nunca en código ni GitHub), y conectar pluviómetros XEMA y rayos XDDE al registro de acierto (`lib/verificacion.mjs`, puntos de contraste de Cataluña).
+
+### §65 · 02-10-2026, 21:00-22:00, iMac: LA LLUVIA DEL SATÉLITE NO SIRVE — MEDIDO, NO SE PONE
+
+`mtg_fd:h40b` (lluvia instantánea Meteosat MTG + microondas, cada 10 min, EUMETView sin clave; los valores se bajan por WCS `coverageId=mtg_fd__h40b`, GeoTIFF en baldosas float64, banda 0 = mm/h, banda 1 = calidad; posición comprobada contra GetFeatureInfo en 6 puntos, exacta). Cruzada con 52 estaciones AEMET (Euskadi y este), 02-10 06-20 UTC, **631 pares estación-hora** (`scratchpad/lluviasat.py`):
+
+| medido \ satélite | seco | poco | bien |
+|---|---|---|---|
+| seco | 431 | 93 | 12 |
+| poco | 18 | 27 | 23 |
+| bien | **4** | 8 | 15 |
+
+Correlación 0,39. **Se come los chaparrones fuertes y locales, que son los que importan:** Barcelona aeropuerto 17,5 mm medidos → 1,6 del satélite; Carcaixent 12,0 → 0,5; Turís 10,6 → 0,1. Y en 105 de 536 horas secas dice que llueve (20 %). En Euskadi ese día no llovió en ninguna estación y el satélite tampoco dijo nada (305 pares): no sirve de prueba en ningún sentido. **Conclusión: no entra en la app**, ni como aviso ni como dato. Igual que el radar del 25-08: medirlo antes evitó una función bonita que miente. Si se vuelve a mirar, que sea con días de lluvia en Euskadi.
