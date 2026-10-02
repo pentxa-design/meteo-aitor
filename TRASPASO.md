@@ -1373,3 +1373,5 @@ EUMETView (el mismo visor sin clave del satélite de nubes) publica `mtg_fd:li_a
 **Lo que NO se ha hecho, a propósito:** no entra en el semáforo ni en la ficha de Torre. Su silencio no prueba nada (en Bermeo salió en 4 de 12 imágenes: cada imagen puede recoger solo un trozo de cada 5 min). Si él quiere que vete, se decide con estos números delante.
 
 **Lo que más publica EUMETView y puede servir** (sin medir aún): `mtg_fd:h40b` lluvia estimada (satélite + microondas), `msg_fes:cth` altura del tope de nube, `mtg_fd:rgb_fog` niebla/nubes bajas, `eps:m0x_ascat_wind` viento sobre el mar (solo al pasar el satélite). Medir antes de poner, como el radar.
+
+**Meteocat (02-10-2026, 21:25):** solicitud ENVIADA por él (plan gratuito «Acceso ciudadano», uso personal, XEMA y XDDE por 1 año, al correo personal). Respuesta en ≤7 días. Cuando pase la clave: variable de entorno en Vercel (nunca en código ni GitHub), y conectar pluviómetros XEMA y rayos XDDE al registro de acierto (`lib/verificacion.mjs`, puntos de contraste de Cataluña).
