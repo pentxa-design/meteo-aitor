@@ -98,16 +98,21 @@ import { readFileSync, readdirSync } from 'node:fs';
      La maquinaria se CONSERVA entera: vuelve el día que las dos componentes
      se traigan de la API de pronóstico. */
   const indice = readFileSync('index.html', 'utf8'), app = readFileSync('app.js', 'utf8');
-  ok('las partículas y las barbas están dormidas, con su maquinaria entera y sin botones que no encienden nada',
-     /<canvas class="mvals" id="mapParticulas"><\/canvas>/.test(indice)
-     && /async particulas\(\)/.test(mapa) && /animarParticulas\(cv, \{/.test(mapa) && /pararParticulas\(\) \{/.test(mapa)
-     && /async barbas\(\) \{\n    this\.particulas\(\);/.test(mapa)
-     && /limpiarBarbas\(\) \{ this\.pararParticulas\(\);/.test(mapa)
-     && !/setBarbas\(on\) \{/.test(mapa) && !/setParticulas\(on\) \{/.test(mapa)
-     && !/data-tpart="1"/.test(mapa) && !/data-tb2="1"/.test(mapa)
-     && !/Maps\.setParticulas\(!Maps\.verParticulas\)/.test(app)
-     && !/Maps\.setBarbas\(!Maps\.verBarbas\)/.test(app),
-     'un botón que no puede encender nada hace dudar de todo lo demás');
+  /* 29-09-2026: el viento VUELVE, pero por la otra puerta. La librería de
+     teselas sigue leyendo u = v, así que la capa de ráfagas (`vientoApi`) trae
+     las dos componentes de la API de pronóstico. Los botones existen porque
+     pueden encender algo de verdad; lo que no puede volver es que enciendan
+     la lectura por teselas. Esta prueba seguía exigiendo los botones apagados
+     (de 21-09) y estuvo en rojo días sin que nadie la viera, porque este
+     fichero no bloquea la publicación. */
+  ok('las flechas y el movimiento del viento van de la API de pronóstico, con sus botones, y la librería de teselas no los alimenta',
+     /setBarbas\(on\) \{/.test(mapa) && /setParticulas\(on\) \{/.test(mapa)
+     && /if \(L_\?\.vientoApi\) return this\.barbasDeApi\(cont, L_\);/.test(mapa)
+     && /if \(L_\?\.vientoApi\) return this\.particulasDeApi\(cv, L_\);/.test(mapa)
+     && /vientoApi: true/.test(mapa)
+     && /data-tbb="1"/.test(mapa) && /data-tmv="1"/.test(mapa)
+     && /Maps\.setBarbas\(!Maps\.verBarbas\)/.test(app) && /Maps\.setParticulas\(!Maps\.verParticulas\)/.test(app),
+     'un botón que no enciende nada hace dudar de todo lo demás; y u = v no es un viento');
 }
 
 console.log('\n  El servidor de mapas de Open-Meteo\n');

@@ -2784,6 +2784,7 @@ body.sin-scroll{overflow:hidden}
    lista». Van en ámbar y pegadas al «en pie», que es lo que él lee de un
    vistazo (01-09-2026). */
 .pulso__pega{display:block;margin-top:5px;color:var(--warn,#ffb14d);font-size:.9375em}
+.pulso__dueno{display:block;margin-top:5px;opacity:.8;font-size:.9375em}
 
 /* ── LAS EXPLICACIONES, UNA VEZ Y NO VEINTE ────────────────────────────
    Suyo, 02-09-2026, con la pantalla de «Mis estaciones» delante:

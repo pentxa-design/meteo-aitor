@@ -1048,6 +1048,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ...medida(), ultima: e.cuando, haceMin, envia,
         lista: e.listaDeRespaldo ? 'respaldo' : 'la tuya',
         parteDe: e.parteDe ?? null,
+        dueno: e.dueno ?? null,
         /* El segundo parte (13:00) también se mira desde fuera: decide si
            hoy le llega una confirmación o no, y aquí lo que decide se
            enseña. Misma razón que `envia` y `nLista` (26-09-2026). */
@@ -2247,6 +2248,9 @@ export default async function handler(req, res) {
       aguaSitios: Object.fromEntries(buenos.map(d => [d.n, d.agua || {}])),
       rachaSitios: Object.fromEntries(buenos.map(d => [d.n, d.racha || {}])),
       listaDeRespaldo,
+      /* Quién manda en la lluvia de los avisos y si lo ha elegido el acierto
+         medido o es el de siempre (02-10-2026): la app lo enseña en Avisos. */
+      dueno: { nombre: nombreDe(duenoId), aprendido: duenoId !== DUENO_AGUA },
       /* La fecha del último parte, para no repetirlo en cada pasada. Si
          no se envió (mudo, o fallo), NO se marca: se reintenta luego. */
       /* Mismo trato para el parte de la mañana: el comentario de arriba

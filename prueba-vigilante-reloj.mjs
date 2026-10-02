@@ -757,6 +757,16 @@ ok('«celda de al lado» va sin paréntesis propio: dentro de «(2 mm/h, ICON �
      malos.length === 0 && frases >= 20, malos.slice(0, 3).join(' · ') || `${frases} frases miradas`);
 }
 
+/* ── QUIÉN MANDA EN LA LLUVIA SE VE DESDE LA APP (02-10-2026) ──────── */
+{
+  const A = await pasada({ hora: '14:00', antes: tranquilo('14:00', 200) });
+  ok('la pasada guarda quién manda en la lluvia de los avisos y si lo eligió lo medido',
+     !A.reventó && A.estado?.dueno?.nombre === 'AROME HD' && A.estado?.dueno?.aprendido === false, JSON.stringify(A.estado?.dueno));
+  const P = await pasada({ hora: '14:00', antes: tranquilo('14:00', 10, { dueno: { nombre: 'ICON', aprendido: true } }), metodo: 'GET', query: { pulso: '1' } });
+  ok('y el pulso se lo cuenta a la app tal cual, para que Avisos lo enseñe',
+     !P.reventó && P.b.dueno?.nombre === 'ICON' && P.b.dueno?.aprendido === true, JSON.stringify(P.b));
+}
+
 /* ── EL PULSO, 60 s DE CDN ─────────────────────────────────────────── */
 {
   const M = await pasada({ hora: '14:00', antes: tranquilo('14:00', 10), metodo: 'GET', query: { pulso: '1' } });

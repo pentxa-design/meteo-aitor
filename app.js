@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.02-1705';
+const BUILD = '2026.10.02-1719';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -20369,8 +20369,15 @@ function textoPulso(d) {
      del 20-09-2026 no lo tiene), se dice el número a secas y sin «de tus»,
      que si no queda «19 de tus emplazamientos» y no significa nada. */
   const faltan = has(d.nLista) && d.sitios && d.nLista > d.sitios;
+  /* Quién manda en la lluvia de los AVISOS al móvil (02-10-2026). Solo se
+     cuenta: lo que ves en pantalla sigue siendo el modelo que tú pones. */
+  const dueno = d.dueno?.nombre
+    ? `<br><span class="pulso__dueno">Lluvia de los avisos al móvil: manda <b>${esc(d.dueno.nombre)}</b>`
+      + (d.dueno.aprendido ? ' (elegido por lo que acierta contra AEMET)' : ' (el de siempre: aún faltan casos medidos para cambiarlo)') + '.</span>'
+    : '';
   return `<b>Vigilante en pie.</b> Última pasada por ${
     d.sitios ? (faltan ? `<b>${d.sitios}</b> de tus <b>${d.nLista}</b> ` : `tus <b>${d.sitios}</b> `) : 'tus '
   }emplazamientos <b>${cuanto}</b>.`
-    + (pegas.length ? `<br><span class="pulso__pega">${pegas.join('<br>')}</span>` : '');
+    + (pegas.length ? `<br><span class="pulso__pega">${pegas.join('<br>')}</span>` : '')
+    + dueno;
 }

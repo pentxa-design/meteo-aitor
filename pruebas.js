@@ -3043,6 +3043,11 @@ ok('una pasada reciente se CANTA, no se calla',
    estadoPulso({ haceMin: 20, sitios: 14 }) === 'vivo'
    && /Vigilante en pie/.test(textoPulso({ haceMin: 20, sitios: 14 })),
    'el silencio no puede significar «va bien»');
+ok('Avisos dice quién manda en la lluvia de los avisos al móvil, y si lo ha elegido lo medido',
+   /manda <b>AROME HD<\/b> \(el de siempre/.test(textoPulso({ haceMin: 20, sitios: 14, dueno: { nombre: 'AROME HD', aprendido: false } }))
+   && /manda <b>ICON<\/b> \(elegido por lo que acierta contra AEMET\)/.test(textoPulso({ haceMin: 20, sitios: 14, dueno: { nombre: 'ICON', aprendido: true } }))
+   && !/manda <b>/.test(textoPulso({ haceMin: 20, sitios: 14 })),
+   'si el servidor no dice quién manda, no se inventa: se calla; si lo dice, se dice con su porqué');
 ok('y dice cuánto hace y cuántos sitios',
    /hace 20 min/.test(textoPulso({ haceMin: 20, sitios: 14 }))
    && /14/.test(textoPulso({ haceMin: 20, sitios: 14 })));
