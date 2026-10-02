@@ -1332,7 +1332,7 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
   ok('el ojo mira desde esta hora hacia delante, y la medianoche no lo corta',
      /if \(t < reloj\.desde\) continue;/.test(V)
      && !/t\.slice\(0, 10\) !== reloj\.dia/.test(V)
-     && /\{ desde: `\$\{claveHoy\}T\$\{String\(h0\)\.padStart\(2, '0'\)\}` \}/.test(V),
+     && /\{ desde: `\$\{claveHoy\}T\$\{String\(h0\)\.padStart\(2, '0'\)\}`, dueno: duenoId \}/.test(V),
      'una tormenta de esta mañana ya pasada no puede tener al vigilante en ámbar toda la noche');
 
   ok('el aviso de «no he podido mirar» solo suena si puede cambiar algo: sus listones por delante, no el ojo',
