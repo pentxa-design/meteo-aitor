@@ -1387,3 +1387,5 @@ EUMETView (el mismo visor sin clave del satélite de nubes) publica `mtg_fd:li_a
 | bien | **4** | 8 | 15 |
 
 Correlación 0,39. **Se come los chaparrones fuertes y locales, que son los que importan:** Barcelona aeropuerto 17,5 mm medidos → 1,6 del satélite; Carcaixent 12,0 → 0,5; Turís 10,6 → 0,1. Y en 105 de 536 horas secas dice que llueve (20 %). En Euskadi ese día no llovió en ninguna estación y el satélite tampoco dijo nada (305 pares): no sirve de prueba en ningún sentido. **Conclusión: no entra en la app**, ni como aviso ni como dato. Igual que el radar del 25-08: medirlo antes evitó una función bonita que miente. Si se vuelve a mirar, que sea con días de lluvia en Euskadi.
+
+**§64, remate (02-10, 22:00):** pedido por él, el rayo del satélite también en la ficha de Torre (`#vRayosSat`, `rayoSatTorre`, `pintarRayosSatTorre`), debajo del de AEMET. Se pide al cargar cada sitio (`cargarRayosSatelite({ forzar: true })` junto al de AEMET). Solo sale cuando VE rayos; no toca el semáforo.

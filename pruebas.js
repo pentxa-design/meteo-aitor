@@ -5457,6 +5457,16 @@ ok('se dice de quién sale ese dato, no aparece a secas',
      && /ninguna imagen legible/.test(textoRayosSatelite({ fuente: 'x', pasoMin: 5, filas: filas.map(f => ({ t: f.t, error: true })) }, ahora)));
   ok('y una imagen que no se pudo leer no cuenta como imagen sin rayos',
      /5 de 6 imágenes no se pudieron leer/.test(textoRayosSatelite({ fuente: 'x', pasoMin: 5, filas: filas.map((f, i) => (i ? { t: f.t, error: true } : f)) }, ahora)));
+  eval(sacar('function rayoSatTorre('));
+  ok('en la ficha de Torre sale solo cuando VE rayos: a 4,2 km en rojo, con su hora y sin tocar el semáforo',
+     rayoSatTorre(conRayo, ahora)?.nivel === 'no' && /ve rayos a <b>4,2 km<\/b>/.test(rayoSatTorre(conRayo, ahora).html)
+     && /no cambia el semáforo/.test(rayoSatTorre(conRayo, ahora).html));
+  ok('y si no ve nada, no pudo leer o falló, en Torre no sale: su silencio no es «vía libre»',
+     rayoSatTorre(sin, ahora) === null && rayoSatTorre({ error: 'x' }, ahora) === null
+     && rayoSatTorre({ fuente: 'x', pasoMin: 5, filas: filas.map(f => ({ t: f.t, error: true })) }, ahora) === null);
+  ok('la ficha de Torre lo pinta y la carga de cada sitio lo pide',
+     /\n  pintarRayosTorre\(\);\n  pintarRayosSatTorre\(\);/.test(src)
+     && /cargarRayosAemet\(\{ forzar: true \}\)\.catch\(\(\) => \{\}\);\n    cargarRayosSatelite\(\{ forzar: true \}\)/.test(src));
 }
 
 /* ── LA LLUVIA ES DEL EUROPEO — ELEGIDA POR ACIERTO, 30-08-2026 ───────

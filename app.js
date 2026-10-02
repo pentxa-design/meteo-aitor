@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.02-1954';
+const BUILD = '2026.10.02-2205';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -5100,6 +5100,7 @@ function renderTower() {
      cuenta, después del primer pintado: si no, un cambio de perfil o de
      altura volvería a dibujar la ficha y se lo llevaría por delante. */
   pintarRayosTorre();
+  pintarRayosSatTorre();
   pintarDiscrepancia();
   seguro('antes de salir', pintarAntesDeSalir);
 }
@@ -12258,12 +12259,14 @@ function rayoSatEnImagen(data, W, H, bb, place) {
   return { km, px };
 }
 
-async function cargarRayosSatelite() {
+async function cargarRayosSatelite({ forzar = false } = {}) {
+  /* Ya no depende de la pestaña Rayos: la ficha de Torre también lo
+     enseña (02-10-2026), y ahí es donde decide. */
+  if (!S.place) return;
   const dst = $('#rayosSat');
-  if (!dst || !S.place) return;
   const place = S.place, clave = `${place.lat.toFixed(3)},${place.lon.toFixed(3)}`;
-  if (S.rayosSat?.clave === clave && Date.now() - S.rayosSat.t < 2 * 60e3) { pintarRayosSatelite(); return; }
-  dst.innerHTML = `<p class="note">Mirando las últimas imágenes del satélite…</p>`;
+  if (!forzar && S.rayosSat?.clave === clave && Date.now() - S.rayosSat.t < 2 * 60e3) { pintarRayosSatelite(); return; }
+  if (dst) dst.innerHTML = `<p class="note">Mirando las últimas imágenes del satélite…</p>`;
   try {
     const r = await fetch('/satelite?rayos=1');
     const c = await r.json().catch(() => null);
@@ -12289,6 +12292,7 @@ async function cargarRayosSatelite() {
     S.rayosSat = { clave, t: Date.now(), filas: null, error: String(e.message || e) };
   }
   pintarRayosSatelite();
+  if (S.data) seguro('rayos del satélite en torre', pintarRayosSatTorre);
 }
 
 /** Lo que se lee. Pura: recibe el estado y la hora, devuelve HTML. */
@@ -12320,6 +12324,39 @@ function textoRayosSatelite(R, ahora = Date.now()) {
   return `<div class="ray__t" data-s="${nivel}"><b>El satélite ve rayos a ${kmTxt(cerca.km)} km</b>
       (imagen de las ${horaHM(cerca.t)}), en ${con.length} de ${buenas.length} imágenes de la última media hora.
       La más reciente con rayo es de las <b>${horaHM(reciente.t)}</b>, hace unos ${haceR} min.</div>` + pie;
+}
+
+/* ── Y EN LA FICHA DE TORRE, DONDE DECIDE (02-10-2026) ───────────────
+   Pedido por él: el rayo del satélite llega ~15 min tarde contra la hora
+   larga de AEMET, y él va DURANTE el temporal. Pero aquí solo sale cuando
+   VE algo: «el satélite no ve rayos» en la ficha de decisión se leería
+   como «vía libre», y su silencio no prueba nada (cada imagen recoge solo
+   un trozo de cada 5 min). Lo que no ve, o no pudo leer, se cuenta entero
+   en la pestaña Rayos. Y NO toca el semáforo: lo que veta es AEMET. */
+function rayoSatTorre(R, ahora = Date.now()) {
+  const con = (R?.filas || []).filter(f => !f.error && f.km !== null);
+  if (!con.length) return null;
+  const paso = (R.pasoMin || 5) * 60e3;
+  const cerca = con.reduce((a, b) => (b.km < a.km ? b : a));
+  const reciente = con[con.length - 1];
+  const hace = Math.max(0, Math.round((ahora - (new Date(reciente.t).getTime() + paso)) / 60000));
+  const nivel = cerca.km < 15 ? 'no' : 'warn';
+  return { nivel, html: `<b class="acc__k">Rayos vistos por el satélite</b>
+    <ul class="acc__l"><li data-s="${nivel}">
+      Meteosat ve rayos a <b>${kmTxt(cerca.km)} km</b> en ${con.length} de
+      ${(R.filas || []).filter(f => !f.error).length} imágenes de la última media hora; la más reciente, de las
+      <b>${horaHM(reciente.t)}</b> (hace unos ${hace} min). ${cerca.km < 15
+        ? '<b>Está encima del emplazamiento.</b> ' : 'Hay tormenta en la zona: puede venir. '}
+      Llega antes que AEMET; no cambia el semáforo. Si se oye el trueno, ya estás dentro del alcance.
+    </li></ul>` };
+}
+
+function pintarRayosSatTorre() {
+  const el = $('#vRayosSat');
+  if (!el) return;
+  const x = rayoSatTorre(deEsteSitio(S.rayosSat));
+  if (!x) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false; el.dataset.s = x.nivel; el.innerHTML = x.html;
 }
 
 function pintarRayosSatelite() {
@@ -17215,6 +17252,7 @@ async function go(place, { silent = false } = {}) {
     // Las descargas medidas van por su cuenta: tardan lo suyo y no pueden
     // retrasar la ficha. Si fallan, lo dicen en su sitio y ya está.
     cargarRayosAemet({ forzar: true }).catch(() => {});
+    cargarRayosSatelite({ forzar: true }).catch(() => {});
     // Y si otro modelo ve tormenta donde el tuyo no, que se sepa.
     cargarDiscrepancia(place).catch(() => {});
     if (!silent) toast(`Datos actualizados · ${new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`);
