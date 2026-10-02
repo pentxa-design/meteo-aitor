@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.02-1719';
+const BUILD = '2026.10.02-1954';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -12176,6 +12176,7 @@ function haceCuanto(iso) {
 function renderRayos() {
   pintarRayosVivo();
   cargarRayosAemet();
+  cargarRayosSatelite();
 }
 
 /** El mapa en vivo. Se carga solo al entrar en la pestaña. */
@@ -12223,6 +12224,110 @@ async function cargarRayosAemet({ forzar = false } = {}) {
   /* Y de paso, el cuaderno. Va al final y sin `await`: si falla, él ni
      se entera, porque esto no le sirve HOY para nada. */
   apuntarParaCalibrar(S.rayos);
+}
+
+/* ── LOS RAYOS DEL SATÉLITE (02-10-2026) ─────────────────────────────
+   Meteosat de tercera generación lleva un detector de rayos (LI) y
+   EUMETSAT publica cada 5 minutos dónde los ha visto, sin clave. Llega con
+   unos 15 min de retraso; el mapa de AEMET, con hasta 70. Y él va DURANTE
+   el temporal el 90 % de las veces: esos minutos son los que cuentan.
+
+   MEDIDO antes de ponerlo: 24 h del temporal del este (01/02-10), celdas
+   de ~10 km: AEMET tuvo rayo en 2.047 y el satélite las tenía todas menos
+   dos. Su tarde de los truenos en Bermeo (24-08, 13-14 UTC): el satélite
+   lo tenía a 0 km, AEMET a 3,9. Dos días tranquilos: nada a menos de 15 km.
+
+   LO QUE NO SE SABE, Y POR ESO SUMA Y NUNCA CALLA: cada imagen puede
+   recoger solo un trozo de cada 5 minutos (en Bermeo salió en 4 de 12), así
+   que su silencio no dice que no caigan — como el radar. Y NO entra en el
+   semáforo: eso se decide con él delante de los números. */
+const RAYO_SAT_KM = 25;          // la caja que se mira alrededor del sitio
+const RAYO_SAT_PASOS = 6;        // la última media hora
+
+/** Del recorte RGBA del satélite, el píxel con rayo más cercano al sitio.
+ *  bb = [latS, lonO, latN, lonE]. Devuelve { km, px } o { km: null, px: 0 }. */
+function rayoSatEnImagen(data, W, H, bb, place) {
+  let km = null, px = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (data[(y * W + x) * 4 + 3] <= 40) continue;
+    px++;
+    const d = kmEntre(place, { lat: bb[2] - ((y + 0.5) / H) * (bb[2] - bb[0]),
+                               lon: bb[1] + ((x + 0.5) / W) * (bb[3] - bb[1]) });
+    if (km === null || d < km) km = d;
+  }
+  return { km, px };
+}
+
+async function cargarRayosSatelite() {
+  const dst = $('#rayosSat');
+  if (!dst || !S.place) return;
+  const place = S.place, clave = `${place.lat.toFixed(3)},${place.lon.toFixed(3)}`;
+  if (S.rayosSat?.clave === clave && Date.now() - S.rayosSat.t < 2 * 60e3) { pintarRayosSatelite(); return; }
+  dst.innerHTML = `<p class="note">Mirando las últimas imágenes del satélite…</p>`;
+  try {
+    const r = await fetch('/satelite?rayos=1');
+    const c = await r.json().catch(() => null);
+    if (!r.ok || !c?.horas?.length) throw new Error(c?.reason || `el catálogo del satélite no contesta (${r.status})`);
+    const dLat = RAYO_SAT_KM / 111, dLon = RAYO_SAT_KM / (111 * Math.cos(place.lat * Math.PI / 180));
+    const bb = [place.lat - dLat, place.lon - dLon, place.lat + dLat, place.lon + dLon], W = 160, H = 160;
+    const filas = await Promise.all(c.horas.slice(-RAYO_SAT_PASOS).map(async t => {
+      const q = new URLSearchParams({ service: 'WMS', version: '1.3.0', request: 'GetMap', layers: c.capa, styles: '',
+        crs: 'EPSG:4326', bbox: bb.join(','), width: W, height: H, format: 'image/png', transparent: 'true', time: t });
+      const ac = new AbortController(), reloj = setTimeout(() => ac.abort(), 15000);
+      try {
+        const rr = await fetch(`${c.wms}?${q}`, { signal: ac.signal });
+        if (!rr.ok || !/^image\//.test(rr.headers.get('content-type') || '')) return { t, error: true };
+        const bm = await createImageBitmap(await rr.blob());
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        const cx = cv.getContext('2d'); cx.drawImage(bm, 0, 0, W, H);
+        return { t, ...rayoSatEnImagen(cx.getImageData(0, 0, W, H).data, W, H, bb, place) };
+      } catch { return { t, error: true }; }
+      finally { clearTimeout(reloj); }
+    }));
+    S.rayosSat = { clave, t: Date.now(), filas, pasoMin: c.pasoMin, fuente: c.fuente, error: null };
+  } catch (e) {
+    S.rayosSat = { clave, t: Date.now(), filas: null, error: String(e.message || e) };
+  }
+  pintarRayosSatelite();
+}
+
+/** Lo que se lee. Pura: recibe el estado y la hora, devuelve HTML. */
+function textoRayosSatelite(R, ahora = Date.now()) {
+  const nolose = `<b>Eso no quiere decir que no haya rayos</b>: quiere decir que no lo sé.
+    Mira AEMET, el mapa en vivo y el radar.`;
+  if (!R || R.error) return `<p class="note" data-s="nd"><b>No he podido leer el satélite.</b>
+    ${esc(R?.error || 'sin respuesta')}. ${nolose}</p>`;
+  const buenas = (R.filas || []).filter(f => !f.error);
+  if (!buenas.length) return `<p class="note" data-s="nd"><b>El satélite no ha devuelto ninguna imagen legible.</b> ${nolose}</p>`;
+  const paso = (R.pasoMin || 5) * 60e3;
+  const ultima = buenas[buenas.length - 1].t;
+  const fin = new Date(ultima).getTime() + paso;
+  const hace = Math.max(0, Math.round((ahora - fin) / 60000));
+  const desde = buenas[0].t;
+  const con = buenas.filter(f => f.km !== null);
+  const fallidas = (R.filas || []).length - buenas.length;
+  const pie = `<p class="note dim">Fuente: ${esc(R.fuente || 'EUMETSAT')}. Una imagen cada ${R.pasoMin || 5} min;
+    la última llega hasta las <b>${horaHM(new Date(fin).toISOString())}</b>, hace ${hace} min.${fallidas ? ` ${fallidas} de ${(R.filas || []).length} imágenes no se pudieron leer.` : ''}
+    Es una medida desde el espacio, no una previsión, pero <b>no entra en el semáforo</b>: lo que veta sigue siendo AEMET.</p>`;
+  if (!con.length) return `<div class="ray__t"><b>El satélite no ve rayos</b> a menos de ${RAYO_SAT_KM} km
+      entre las ${horaHM(desde)} y las ${horaHM(new Date(fin).toISOString())}.
+      <b>Eso no quiere decir que no caigan</b>: cada imagen puede recoger solo un trozo de cada ${R.pasoMin || 5} minutos.
+      Si se oye el trueno, ya estás dentro del alcance.</div>` + pie;
+  const cerca = con.reduce((a, b) => (b.km < a.km ? b : a));
+  const reciente = con[con.length - 1];
+  const haceR = Math.max(0, Math.round((ahora - (new Date(reciente.t).getTime() + paso)) / 60000));
+  const nivel = cerca.km < 15 ? 'no' : 'warn';
+  return `<div class="ray__t" data-s="${nivel}"><b>El satélite ve rayos a ${kmTxt(cerca.km)} km</b>
+      (imagen de las ${horaHM(cerca.t)}), en ${con.length} de ${buenas.length} imágenes de la última media hora.
+      La más reciente con rayo es de las <b>${horaHM(reciente.t)}</b>, hace unos ${haceR} min.</div>` + pie;
+}
+
+function pintarRayosSatelite() {
+  const dst = $('#rayosSat');
+  if (!dst) return;
+  /* Solo lo de ESTE sitio: el de antes, mientras llega el nuevo, no. */
+  const R = deEsteSitio(S.rayosSat);
+  dst.innerHTML = R ? textoRayosSatelite(R) : `<p class="note">Mirando las últimas imágenes del satélite…</p>`;
 }
 
 /* ── EL CUADERNO DE CALIBRADO ────────────────────────────────────────

@@ -201,6 +201,26 @@ async function prepararCapa(clave, def, xml, n, ahora) {
 
 export default async (request) => {
   const p = new URL(request.url).searchParams;
+
+  /* ── LOS RAYOS DEL SATÉLITE (02-10-2026) ──────────────────────────────
+     Solo las horas que el catálogo declara para `mtg_fd:li_afa`, el detector
+     de rayos de Meteosat de tercera generación. Sin comprobar imagen: una
+     imagen sin rayos ES pequeña y vacía, y la comprobación de las otras
+     capas la daría por «no servida». Lo que evita pedir una pasada aún no
+     publicada (que vendría vacía y se leería «no hay rayos») es no pasar
+     nunca del fin que declara el catálogo. Caché corta: el valor de esta
+     fuente es llegar antes que AEMET. */
+  if (p.get('rayos') === '1') {
+    try {
+      const r = await fetch(CAPS, { headers: { accept: 'text/xml' } });
+      if (!r.ok) return jsonRayos({ error: true, reason: `EUMETSAT respondió ${r.status}` }, 502);
+      const t = extraerTiempo(await r.text(), RAYOS_SAT);
+      const horas = horasDe(t, 12);
+      if (!horas.length) return jsonRayos({ error: true, reason: 'el catálogo de EUMETSAT no declara horas de rayos' }, 502);
+      return jsonRayos({ fuente: 'EUMETSAT · Meteosat MTG, detector de rayos (LI)', wms: WMS, capa: RAYOS_SAT,
+                         pasoMin: t.pasoMin ?? 5, horas, consultado: new Date().toISOString() }, 200);
+    } catch (e) { return jsonRayos({ error: true, reason: String(e.message || e) }, 502); }
+  }
   const n = Math.max(1, Math.min(24, Number(p.get('n')) || 12));
 
   try {
@@ -235,6 +255,13 @@ export default async (request) => {
     return json({ error: true, reason: String(e.message || e) }, 502);
   }
 };
+
+const RAYOS_SAT = 'mtg_fd:li_afa';
+function jsonRayos(cuerpo, status) {
+  return new Response(JSON.stringify(cuerpo), { status, headers: {
+    'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*',
+    ...cabeceras(status === 200 ? 60 : 0, { navegador: 30, revalidar: 60, origen: 'eumetsat-rayos' }) } });
+}
 
 function json(cuerpo, status) {
   const ok = status === 200;

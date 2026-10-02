@@ -5422,6 +5422,43 @@ ok('se dice de quién sale ese dato, no aparece a secas',
      'el modelo lo ha elegido él; la app pone cifras, no decide');
 }
 
+/* ── LOS RAYOS DEL SATÉLITE: SUMAN Y NUNCA CALLAN (02-10-2026) ─────── */
+{
+  eval(sacarConst('RAYO_SAT_KM'));
+  eval(sacar('function rayoSatEnImagen('));
+  eval(sacar('function textoRayosSatelite('));
+  eval(sacar('function horaHM(iso) {'));
+  eval(sacarConst('kmTxt'));
+  const P = { lat: 43.42, lon: -2.72 };
+  const d = RAYO_SAT_KM / 111, dl = RAYO_SAT_KM / (111 * Math.cos(P.lat * Math.PI / 180));
+  const bb = [P.lat - d, P.lon - dl, P.lat + d, P.lon + dl], W = 40, H = 40;
+  const img = puntos => { const a = new Uint8ClampedArray(W * H * 4); for (const [x, y] of puntos) a[(y * W + x) * 4 + 3] = 255; return a; };
+  const centro = rayoSatEnImagen(img([[20, 20]]), W, H, bb, P);
+  const esquina = rayoSatEnImagen(img([[0, 0]]), W, H, bb, P);
+  const vacia = rayoSatEnImagen(img([]), W, H, bb, P);
+  ok('el píxel con rayo en el centro de la imagen está encima del sitio, y el de la esquina a unos 35 km',
+     centro.km < 1.5 && esquina.km > 30 && esquina.km < 37 && vacia.km === null && vacia.px === 0,
+     JSON.stringify({ centro, esquina, vacia }));
+  const ahora = Date.parse('2026-10-02T17:40:00Z');
+  const filas = ['17:00', '17:05', '17:10', '17:15', '17:20', '17:25'].map(h => ({ t: `2026-10-02T${h}:00Z`, km: null, px: 0 }));
+  const conRayo = { fuente: 'EUMETSAT', pasoMin: 5, filas: filas.map((f, i) => (i === 3 ? { ...f, km: 4.2, px: 3 } : f)) };
+  const sin = { fuente: 'EUMETSAT', pasoMin: 5, filas };
+  ok('con un rayo a 4,2 km lo dice en rojo, con su distancia y cuánto hace',
+     /data-s="no"/.test(textoRayosSatelite(conRayo, ahora)) && /ve rayos a 4,2 km/.test(textoRayosSatelite(conRayo, ahora))
+     && /1 de 6 imágenes/.test(textoRayosSatelite(conRayo, ahora)));
+  ok('sin rayos NO se pinta en verde y dice que su silencio no quiere decir que no caigan',
+     !/data-s="go"/.test(textoRayosSatelite(sin, ahora)) && /no quiere decir que no caigan/.test(textoRayosSatelite(sin, ahora)),
+     textoRayosSatelite(sin, ahora));
+  ok('y siempre dice cuánto retraso lleva y que no entra en el semáforo',
+     /hace 10 min/.test(textoRayosSatelite(sin, ahora)) && /no entra en el semáforo/.test(textoRayosSatelite(conRayo, ahora)));
+  ok('si no se pudo leer, se dice «no lo sé», nunca «no hay rayos»',
+     /No he podido leer el satélite/.test(textoRayosSatelite({ error: 'red caída' }, ahora))
+     && /no quiere decir que no haya rayos/.test(textoRayosSatelite({ error: 'red caída' }, ahora))
+     && /ninguna imagen legible/.test(textoRayosSatelite({ fuente: 'x', pasoMin: 5, filas: filas.map(f => ({ t: f.t, error: true })) }, ahora)));
+  ok('y una imagen que no se pudo leer no cuenta como imagen sin rayos',
+     /5 de 6 imágenes no se pudieron leer/.test(textoRayosSatelite({ fuente: 'x', pasoMin: 5, filas: filas.map((f, i) => (i ? { t: f.t, error: true } : f)) }, ahora)));
+}
+
 /* ── LA LLUVIA ES DEL EUROPEO — ELEGIDA POR ACIERTO, 30-08-2026 ───────
    Decisión SUYA con dos episodios medidos delante: el 26-08 y el 30-08
    solo ECMWF vio el sirimiri que caía de verdad (gotitas 12:30, tanda

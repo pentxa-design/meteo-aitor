@@ -1363,3 +1363,13 @@ El este de España tuvo un temporal histórico (Alcalà de Xivert «más de 145 
 **Qué NO aprende todavía:** la app del navegador (app.js: iconos, palabras, Horas) sigue con AROME HD de dueño; el siguiente paso es que lea el dueño aprendido de `?verificar=1`. Y el registro está vacío: no cambiará de dueño en días.
 
 **§63, remate (02-10, 20:00):** la pasada guarda `dueno: {nombre, aprendido}` en el estado y el pulso lo devuelve; la pestaña Avisos lo dice («manda AROME HD, el de siempre» / «elegido por lo que acierta contra AEMET»). **A propósito NO se hizo que el dueño aprendido cambie la pantalla** (iconos, palabras, Horas): choca con su «yo quiero como Windy» del 02-09 y `ELEGIDO_POR_ACIERTO` sigue vacío. Si quiere que la pantalla también use el aprendido, tiene que decirlo él. **Pendiente suyo:** darse de alta en Meteocat (clave gratuita) para los pluviómetros de Cataluña; la clave irá como variable de entorno, nunca en el código.
+
+### §64 · 02-10-2026, 19:00-20:00, iMac: LOS RAYOS DEL SATÉLITE, EN LA PESTAÑA RAYOS
+
+EUMETView (el mismo visor sin clave del satélite de nubes) publica `mtg_fd:li_afa`, el detector de rayos de Meteosat MTG, cada 5 min y con ~15 min de retraso (AEMET: 8-70). **Medido antes de ponerlo** (`scratchpad/omr/li-vs-aemet.mjs`, `bermeo.mjs`): 24 h del temporal del este en celdas de 0,5°: 892 de 892 celdas de AEMET con rayo las vio el satélite; en celdas de 0,1° (6 h): 2.045 de 2.047. El satélite pinta MÁS zona (~30 % de sus celdas sin AEMET al lado: área de la descarga e intranube). Bermeo 24-08 13Z: satélite a 0 km (4 de 12 imágenes), AEMET 3,9 km. Días tranquilos (26-08, 28-09): nada a menos de 15 km.
+
+**Puesto:** `/satelite?rayos=1` devuelve las horas que declara el catálogo (60 s de CDN, sin comprobar imagen: una imagen sin rayos es vacía y la comprobación de las capas la tiraría). El navegador pide las 6 últimas imágenes (media hora) de una caja de 25 km y mide el píxel más cercano (`rayoSatEnImagen`, `textoRayosSatelite`). Tarjeta nueva en Rayos: «Lo que está cayendo · satélite Meteosat».
+
+**Lo que NO se ha hecho, a propósito:** no entra en el semáforo ni en la ficha de Torre. Su silencio no prueba nada (en Bermeo salió en 4 de 12 imágenes: cada imagen puede recoger solo un trozo de cada 5 min). Si él quiere que vete, se decide con estos números delante.
+
+**Lo que más publica EUMETView y puede servir** (sin medir aún): `mtg_fd:h40b` lluvia estimada (satélite + microondas), `msg_fes:cth` altura del tope de nube, `mtg_fd:rgb_fog` niebla/nubes bajas, `eps:m0x_ascat_wind` viento sobre el mar (solo al pasar el satélite). Medir antes de poner, como el radar.
