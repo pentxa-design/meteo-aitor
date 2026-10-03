@@ -11858,6 +11858,33 @@ grupo('Mis estaciones: cada tarjeta con SUS datos aunque la lista cambie mientra
   })());
 }
 
+grupo('El cambio de hora del 25-10: las horas de Open-Meteo, a la hora de su reloj (03-10-2026)');
+{
+  /* MEDIDO con el cambio de 2025: Open-Meteo da un solo desfase (+2) para
+     toda la serie, y su «27-10 12:00» eran las 10:00 UTC = 11:00 de su reloj.
+     La prueba fija el huso de Bilbao para no depender del aparato. */
+  const tzAntes = process.env.TZ;
+  process.env.TZ = 'Europe/Madrid';
+  eval(sacar('function horasAlReloj('));
+  const serie = { utc_offset_seconds: 7200, hourly: { time: ['2026-10-24T15:00', '2026-10-25T01:00', '2026-10-25T15:00', '2026-10-26T12:00'] } };
+  horasAlReloj(serie);
+  ok('pedido el 24-10 (+2): las horas de antes del cambio no se tocan',
+     serie.hourly.time[0] === '2026-10-24T15:00' && serie.hourly.time[1] === '2026-10-25T01:00', serie.hourly.time.join(' '));
+  ok('   y las de después del cambio se corrigen una hora: su «25-10 15:00» son las 14:00 de su reloj',
+     serie.hourly.time[2] === '2026-10-25T14:00' && serie.hourly.time[3] === '2026-10-26T11:00', serie.hourly.time.join(' '));
+  horasAlReloj(serie);
+  ok('   y no se corrige dos veces (las copias guardadas ya vienen bien)', serie.hourly.time[2] === '2026-10-25T14:00', serie.hourly.time[2]);
+  const hoy = { utc_offset_seconds: 7200, hourly: { time: ['2026-10-03T15:00'] }, current: { time: '2026-10-03T15:15' } };
+  horasAlReloj(hoy);
+  ok('un día normal sale igual que entra (nada que corregir)', hoy.hourly.time[0] === '2026-10-03T15:00' && hoy.current.time === '2026-10-03T15:15');
+  const tenerife = [{ utc_offset_seconds: 3600, hourly: { time: ['2026-10-03T14:00'] } }];
+  horasAlReloj(tenerife);
+  ok('Tenerife (una hora menos): su 14:00 es tu 15:00, y la lista entera de sitios también se corrige',
+     tenerife[0].hourly.time[0] === '2026-10-03T15:00', tenerife[0].hourly.time[0]);
+  ok('y entra por jget: toda respuesta de Open-Meteo pasa por aquí', /return horasAlReloj\(await r\.json\(\)\);/.test(src));
+  if (tzAntes === undefined) delete process.env.TZ; else process.env.TZ = tzAntes;
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');

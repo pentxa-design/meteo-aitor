@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-1553';
+const BUILD = '2026.10.03-1557';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -2853,8 +2853,46 @@ async function jget(url, params, { timeout = 12000 } = {}) {
   try {
     const r = await fetch(u, { signal: ctl.signal });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return await r.json();
+    return horasAlReloj(await r.json());
   } finally { clearTimeout(t); }
+}
+
+/* ── LAS HORAS DE OPEN-METEO, A LA HORA DE SU RELOJ (03-10-2026) ──────────
+   MEDIDO con el cambio de hora de octubre de 2025: Open-Meteo usa UN SOLO
+   desfase para toda la serie, el del momento de la petición. Pedido con el
+   horario de verano (+2), su «27-10 12:00» eran las 10:00 UTC, o sea las
+   11:00 en el reloj de invierno. La app lo leía como las 12:00: TODO lo que
+   viniera después del cambio, una hora tarde. Con una tormenta de 14 a 16 h
+   se pintaba de 15 a 17 y «nada te frena hasta las 15:00». Y el 25-10-2026
+   cambia la hora.
+
+   Se arregla en la ENTRADA, no en las 66 lecturas: cada hora se pasa al
+   instante de verdad con el desfase de la propia respuesta y se reescribe
+   en la hora del reloj del aparato. Las series siguen alineadas (solo
+   cambian las etiquetas). Se marca para no hacerlo dos veces (las copias
+   guardadas ya vienen corregidas). Arregla también los sitios en otro huso
+   (Tenerife: la app tomaba las 15:00 como «ahora» siendo allí las 14:32). */
+function horasAlReloj(d) {
+  const p2 = n => String(n).padStart(2, '0');
+  const pasa = (arr, off) => {
+    if (!Array.isArray(arr)) return arr;
+    return arr.map(t => {
+      if (typeof t !== 'string' || t.length < 16 || t[10] !== 'T') return t;
+      const inst = Date.parse(t.slice(0, 16) + ':00Z') - off;
+      if (!Number.isFinite(inst)) return t;
+      const L = new Date(inst);
+      return `${L.getFullYear()}-${p2(L.getMonth() + 1)}-${p2(L.getDate())}T${p2(L.getHours())}:${p2(L.getMinutes())}`;
+    });
+  };
+  const uno = x => {
+    if (!x || typeof x !== 'object' || x._horasAlReloj || !Number.isFinite(x.utc_offset_seconds)) return;
+    const off = x.utc_offset_seconds * 1000;
+    for (const k of ['hourly', 'minutely_15']) if (Array.isArray(x[k]?.time)) x[k].time = pasa(x[k].time, off);
+    if (typeof x.current?.time === 'string') x.current.time = pasa([x.current.time], off)[0];
+    x._horasAlReloj = true;
+  };
+  if (Array.isArray(d)) d.forEach(uno); else uno(d);
+  return d;
 }
 
 const HOURLY = [
