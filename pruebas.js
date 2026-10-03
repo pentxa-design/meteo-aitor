@@ -6308,7 +6308,7 @@ grupo('«Me pasan a las 2 de la mañana: Arbaiza» — el viaje entra en la resp
   /* Ventana generosa: los comentarios de por qué va cada cifra donde va
      son largos a propósito, y con 3000 caracteres no llegaba ni al
      primer `num(` (02-09-2026). */
-  const bloque = iH < 0 ? '' : src.slice(iH, iH + 9000);
+  const bloque = iH < 0 ? '' : src.slice(iH, iH + 12000);   // 03-10-2026: el comentario del «77 % en rojo» lo alargó
   const orden = [...bloque.matchAll(/num\(has\(h\.(\w+)\)/g)].map(m => m[1]);
   /* 20-09-2026, su orden: «lluvia, viento, CAPE, nieve» y «nubosidad». */
   ok('la fila de cifras va en su orden: lluvia, racha y viento a 10 m, CAPE y tapa, nieve, nubes',
@@ -12026,6 +12026,12 @@ grupo('El sirimiri de ECMWF dentro de la ventana de AROME no se le cuelga a AROM
   ok('y la línea roja nombra al sirimiri con su modelo: «(y el sirimiri, ECMWF)»',
      /\(y el sirimiri, \$\{esc\(L\.sirimiriDe\)\}\)/.test(src));
 }
+
+grupo('El «0,0 · 77 % prob.» en rojo de Mis estaciones (03-10-2026, auditoría)');
+ok('la cifra de lluvia se pone roja con la regla de comoLlueve (sirimiri solo si quien presta el código da ≤ 1 mm/h), no con el código de ECMWF a secas',
+   /h\.prec >= \(S\.thr\?\.rainWarn \?\? 0\.2\) \|\| comoLlueve\(h\)\.k === 'sirimiri'\) \? 'rojo'/.test(src)
+   && !/h\.prec >= \(S\.thr\?\.rainWarn \?\? 0\.2\) \|\| esLlovizna\(h\.codeLluvia \?\? h\.code\)\)\) \? 'rojo'/.test(src));
+ok('y la probabilidad dice de qué modelo es cuando la presta otro', /` · \$\{h\.pop\}% prob\.\$\{popDe\}`/.test(src));
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {

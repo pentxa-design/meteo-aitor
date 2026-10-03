@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-2149';
+const BUILD = '2026.10.03-2153';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11417,9 +11417,20 @@ function renderTorres() {
              y las nubes (% total y lo que se ve), que no estaban. */
           const nieveTxt = has(h.nieve)
             ? (h.nieve > 0 ? `${h.nieve.toFixed(1).replace('.', ',')} cm` : '0') : '—';
+          /* «0,0 · 77 % prob.» EN ROJO (03-10-2026, auditoría): el rojo salía
+             del código de llovizna de ECMWF sin mirar sus milímetros, y el %
+             era de ECMWF sin decirlo. Ahora el rojo es el de `comoLlueve`
+             (sirimiri solo si quien presta el código da ≤ 1 mm/h) y la
+             probabilidad lleva el nombre de quien la publica. */
+          const popDe = (() => {
+            const cargado = modeloDato()?.om;
+            if (COBERTURA.precipitation_probability?.includes(cargado)) return '';
+            const om = quienLoMide('precipitation_probability', cargado);
+            return om ? ` (${nombreDeModelo(om)})` : '';
+          })();
           return num(has(h.prec) ? mmTxt(h.prec) : '—',
-                     'lluvia mm/h' + (has(h.pop) ? ` · ${h.pop}% prob.` : ''),
-                     has(h.prec) && (h.prec >= (S.thr?.rainWarn ?? 0.2) || esLlovizna(h.codeLluvia ?? h.code)) ? 'rojo'
+                     'lluvia mm/h' + (has(h.pop) ? ` · ${h.pop}% prob.${popDe}` : ''),
+                     has(h.prec) && (h.prec >= (S.thr?.rainWarn ?? 0.2) || comoLlueve(h).k === 'sirimiri') ? 'rojo'
                        : has(h.prec) && h.prec > 0, 'decide')
                /* Una sola racha y un solo viento, los de 10 m (a pie de
                   caseta, 20-09-2026): antes salían «racha a 40 m (est.)»
