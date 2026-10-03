@@ -1981,6 +1981,25 @@ grupo('Las reglas del tiempo viven en UN fichero, el mismo para las tres webs (0
      r.code === 65 && R.wmoText(r.code) === 'Lluvia fuerte', JSON.stringify(r));
 }
 
+grupo('rayoEnHoras: el rayo de un grupo de horas, el mismo para 10 días, el Centro Operativo y la agenda (04-10-2026)');
+{
+  const R = globalThis.ReglasTiempo;
+  const H = { time: ['2026-10-04T13:00', '2026-10-04T14:00', '2026-10-04T15:00', '2026-10-04T16:00'],
+    cape_ecmwf_ifs: [300, 740, 500, 100], convective_inhibition_ecmwf_ifs: [50, 6, 80, 90], weather_code_ecmwf_ifs: [3, 3, 3, 95],
+    cape_meteofrance_arome_france_hd: [900, 900, 900, 900], convective_inhibition_icon_seamless: [2, 2, 2, 2], cape_icon_seamless: [100, 100, 100, 100],
+    cape_best_match: [1000, 1000, 1000, 1000], convective_inhibition_best_match: [1, 1, 1, 1] };
+  const r = R.rayoEnHoras(H, [0, 1, 2, 3]);
+  ok('Bermeo domingo: ECMWF 9 km da su pareja 740/6 a las 14 y su código a las 16: dos horas, lo ve ECMWF 9 km, lo peor la pareja de las 14',
+     r && r.horas.length === 2 && r.horas[0] === '2026-10-04T14:00' && r.quien.join() === 'ECMWF 9 km' && r.peor.porPareja && r.peor.cape === 740, JSON.stringify(r));
+  ok('   y ni el Automático (1000/1) ni AROME con la tapa de ICON dan rayo', R.rayoEnHoras(H, [0]) === null && R.rayoEnHoras(H, [2]) === null);
+  ok('   el Centro Operativo usa esta misma función (una copia)',
+     /function rayoDe\(d, idx\) \{ return ReglasTiempo\.rayoEnHoras\(d\.hourly, idx\); \}/.test(require('fs').readFileSync(require('path').join(__dirname, '..', 'centro-operativo', 'js', 'weather.js'), 'utf8')));
+}
+
+grupo('La cabecera de Mis estaciones cuenta TORMENTA de otro modelo, no CAPE sin tapa (04-10-2026)');
+ok('«⚠ en N otro modelo ve tormenta» solo cuenta sitios donde otro da su código de tormenta (a.tor), no el CAPE de ECMWF 25 km sin tapa',
+   /const conDisc = orden\.filter\(t => \(dPorSitio\.get\(key\(t\.place\)\)\?\.avisos \|\| \[\]\)\.some\(a => a\.tor\)\)\.length;/.test(src));
+
 grupo('«¿Coinciden los modelos?» usa la regla del rayo de todos: código o su pareja, sin el Automático (03-10-2026)');
 {
   /* Bilbao, sábado 3 a las 22:00: ICON daba código 95 y la tabla decía en
@@ -7168,7 +7187,7 @@ grupo('Los 10 días pintaban de nube días despejados (31-08-2026, 00:19)');
      día en adelante se caía al código DIARIO —el peor de las 24 h, que
      en la costa es la nube baja de la madrugada—. */
   ok('los días lejanos leen las horas de los 10 días, no las 48 primeras',
-     /const H = S\.data\?\.fc\?\.hourly;/.test(src)
+     /function horasDelDia\(fc, dia\) \{\n  const H = fc\?\.hourly;/.test(src)
      && !/const hs = \(S\.data\?\.hours \|\| \[\]\)\.filter/.test(src),
      'con S.data.hours solo llegaban dos días y el resto caía al código diario');
   ok('y se quedan las horas del día pedido, comparando la fecha del dato',
@@ -9923,8 +9942,9 @@ console.log('\n  Revisión 04-09: clases 1b, 2, 4, 5 y 6 — lo que se imprime c
   ok('el dueño del cielo se pregunta a quienLoMide, no al elegido a pelo',
      /const e = quienLoMide\('cloud_cover'\);/.test(codigo) && !/const e = ELEGIDO_POR_ACIERTO\.cloud_cover;/.test(codigo));
   /* C1b */
-  ok('el ⚡ del día lleva su hora, como ya hacía la franja',
-     /const horaDeTormenta = dia =>/.test(codigo) && /Riesgo de tormenta\$\{horaDeTormenta\(t\)/.test(codigo));
+  ok('el ⚡ del día lleva su hora y quién lo ve, con la regla única del rayo (rayoEnHoras), no una quinta copia',
+     /const rayoDelDia = dia =>/.test(codigo) && /ReglasTiempo\.rayoEnHoras\(C, idx\)/.test(codigo)
+     && /Riesgo de tormenta · \$\{ry\.horas\.length === 1/.test(codigo) && !/isStormCode\(D\.weather_code\[i\]\)/.test(codigo));
 }
 
 console.log('\n  Revisión 04-09: el parte no dice «hoy» para otro día');

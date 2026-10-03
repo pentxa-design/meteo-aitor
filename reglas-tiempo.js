@@ -706,6 +706,31 @@ const ReglasTiempo = (() => {
     return { salta: porCodigo || porPareja, porCodigo, porPareja };
   }
 
+  /* ── EL RAYO EN UN GRUPO DE HORAS, DE QUIÉN Y CUÁNDO (04-10-2026) ──────
+     `H` es un `hourly` con series por modelo (`cape_icon_seamless`…) e `idx`
+     los índices de las horas a mirar (un día, una franja). Es el `rayoDe`
+     del Centro Operativo, subido aquí para que lo usen las tres: «10 días»
+     de la app llevaba su propia regla (el código DIARIO del modelo cargado
+     y el CAPE de AROME con la tapa de ICON), la quinta copia. */
+  function rayoEnHoras(H, idx) {
+    if (!H?.time || !idx?.length) return null;
+    const horas = [], quien = new Set();
+    let peor = null;
+    for (const i of idx) {
+      let aqui = false;
+      for (const m of MODELOS_RAYO) {
+        const c = H[`cape_${m.om}`]?.[i], k = H[`convective_inhibition_${m.om}`]?.[i], w = H[`weather_code_${m.om}`]?.[i];
+        const { porCodigo, porPareja } = rayoDelModelo({ cape: c, cin: k, code: w });
+        if (!porCodigo && !porPareja) continue;
+        aqui = true; quien.add(m.nom);
+        if (!peor || (porPareja && (!peor.porPareja || c > peor.cape)))
+          peor = { i, hora: H.time[i], quien: m.nom, porCodigo, porPareja, cape: porPareja ? c : null, tapa: porPareja ? k : null };
+      }
+      if (aqui) horas.push(H.time[i]);
+    }
+    return horas.length ? { horas, quien: [...quien], peor } : null;
+  }
+
   return Object.freeze({
     has, LISTON, DUENO_AGUA, AGUA_ACUERDO, RELLENO_AGUA, CIELO_PRESTADO, ECMWF_9KM,
     MODELOS_TORMENTA, NOMBRES, nombreDe, mojaEsaHora, lluviaDeUnSitio,
@@ -713,6 +738,6 @@ const ReglasTiempo = (() => {
     palabraLluvia, palabraDeLaVentana, comoLlueve, iconoDeAgua, codigoConAgua, codigoDeVarias, tramosDeCodigos,
     RAYO_ENCIMA, RAYO_CERCA, RAYO_RADIO, RAYO_VIGENTE, kmEntre, loQueAunCuenta, lectorDeRayos,
     rayosConCache, vetaRayo, textoRayos,
-    CAPE_COMBINACION, TAPA_ROMPE, MODELOS_RAYO, rayoDelModelo, otrosDelAgua,
+    CAPE_COMBINACION, TAPA_ROMPE, MODELOS_RAYO, rayoDelModelo, otrosDelAgua, rayoEnHoras,
   });
 })();

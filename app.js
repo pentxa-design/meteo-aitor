@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.04-0120';
+const BUILD = '2026.10.04-0128';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11039,7 +11039,9 @@ function renderTorres() {
      «ninguna fuera de umbrales» hablaba solo de los que SÍ se miraron y se
      leía como si hablara de los veinte (20-09-2026). */
   const sinMirar = orden.filter(t => !t.horas?.[0]).length;
-  const conDisc = orden.filter(t => dPorSitio.get(key(t.place))).length;
+  /* Solo si otro modelo da TORMENTA (su código), no CAPE sin tapa (04-10-2026:
+     «⚠ en 21 otro modelo ve tormenta» contando el CAPE de ECMWF 25 km sin tapa). */
+  const conDisc = orden.filter(t => (dPorSitio.get(key(t.place))?.avisos || []).some(a => a.tor)).length;
   /* «Ninguna fuera de umbrales» a secas es una respuesta, y el 25-08-2026
      era una respuesta falsa: nueve en verde con ECMWF dando tormenta en
      tres de ellas. Si hay discrepancia, se dice aquí arriba. */
@@ -15590,17 +15592,18 @@ function renderDays() {
      («⚡ Riesgo de tormenta · 03:00»). Con sol dibujado y «⚡» debajo,
      sin hora, parecía una contradicción; con «· 03:00» es información.
      Revisión del 04-09-2026. */
-  const horaDeTormenta = dia => {
-    const H = S.data?.fc?.hourly;
-    if (!H?.time) return null;
-    for (let i = 0; i < H.time.length; i++) {
-      if (!String(H.time[i]).startsWith(dia)) continue;
-      const c = H.weather_code?.[i], cape = H.cape?.[i], cin = H.convective_inhibition?.[i];
-      if (isStormCode(c) || (has(cape) && has(cin) && cape >= CAPE_COMBINACION && cin < TAPA_ROMPE))
-        return `${String(new Date(H.time[i]).getHours()).padStart(2, '0')}:00`;
-    }
-    return null;
+  /* EL RAYO DEL DÍA, CON LA REGLA ÚNICA (04-10-2026): antes era el código
+     DIARIO del modelo cargado (`isStormCode(D.weather_code[i])`) más la hora
+     con el CAPE de AROME y la tapa de ICON, una quinta copia. BI MARKINA2: el
+     domingo sin ⚡ (código diario 53) con Ahora diciendo «lo ve ECMWF 9 km».
+     Sin la comparativa del sitio no se afirma nada; al llegar se repinta. */
+  const rayoDelDia = dia => {
+    const C = deEsteSitio(S.comparativa)?.hourly;
+    if (!C?.time) return null;
+    const idx = C.time.map((x, k) => (String(x).startsWith(dia) ? k : -1)).filter(k => k >= 0);
+    return ReglasTiempo.rayoEnHoras(C, idx);
   };
+  const hhDe = t => `${String(new Date(t).getHours()).padStart(2, '0')}:00`;
 
   $('#dlist').innerHTML = D.time.map((t, i) => {
     const d = new Date(t + 'T12:00');
@@ -15636,7 +15639,8 @@ function renderDays() {
        AROME HD (el del día, que por ser el del día no llevaba nombre). */
     const deMm = de('precipitation_sum')
       || (de('precipitation_probability_max') && modeloDia ? ` <small class="dcard__de">${esc(nombreDeModelo(modeloDia))}</small>` : '');
-    const tormenta = isStormCode(D.weather_code[i]);
+    const ry = rayoDelDia(t);
+    const tormenta = !!ry;
     /* ── EL COLOR SALE DE LAS TRES COSAS, NO SOLO DE LA RACHA ─────────
        Encontrado en el repaso del domingo, y es el fallo de siempre: esta
        tarjeta se pintaba SOLO con la racha, así que un día con 30 mm de
@@ -15719,7 +15723,7 @@ function renderDays() {
         if (!X) return '';
         return `<div class="dcard__x" title="${esc(X.secos.join(', '))}: secos">⚠ ${esc(X.texto)}</div>`;
       })()}
-      ${tormenta ? `<div class="dcard__s">⚡ Riesgo de tormenta${horaDeTormenta(t) ? ' · ' + horaDeTormenta(t) : ''}</div>` : ''}
+      ${tormenta ? `<div class="dcard__s">⚡ Riesgo de tormenta · ${ry.horas.length === 1 ? `a las ${hhDe(ry.horas[0])}` : `de ${hhDe(ry.horas[0])} a ${hhDe(ry.horas[ry.horas.length - 1])}`} · lo ve ${esc(ry.quien.join(', '))}</div>` : ''}
     </li>`;
   }).join('');
   renderDiaDetalle();
@@ -16705,7 +16709,7 @@ function renderAlerts() {
            haga con eso es suyo. -->
       <div class="al__h"><span class="al__lvl">FUERA DE TUS UMBRALES</span>
         <span class="al__t">${malas.length} hora${bad.length > 1 ? 's' : ''} en 48 h</span></div>
-      <p>${bad.map(h => `${h.date.toLocaleString('es', { weekday: 'short', hour: '2-digit' })} — ${esc(h.reasons.find(r => r.s === 'no')?.txt ?? '')}`).join('<br>')}</p>
+      <p>${bad.map(h => `${h.date.toLocaleString('es', { weekday: 'short', hour: '2-digit', minute: '2-digit' })} — ${esc(h.reasons.find(r => r.s === 'no')?.txt ?? '')}`).join('<br>')}</p>
       <div class="al__w">Cálculo propio sobre datos de modelo y tus umbrales. No es un aviso oficial.</div>
     </div>` : `
     <div class="al" style="--vc:var(--go)">
