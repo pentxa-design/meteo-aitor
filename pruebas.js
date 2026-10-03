@@ -11196,6 +11196,8 @@ grupo('Avisos oficiales de toda España, solo información (17-09-2026)');
     <entry><cap:areaDesc>Campo de Cartagena y Mazarrón</cap:areaDesc><cap:onset>2026-09-17T01:00:00+00:00</cap:onset><cap:expires>2099-09-17T09:59:59+00:00</cap:expires><cap:identifier>b2</cap:identifier><cap:severity>Severe</cap:severity><title>Orange Thunderstorm Warning issued for Spain - Campo de Cartagena y Mazarrón</title></entry>
     <entry><cap:areaDesc>Campo de Cartagena y Mazarrón</cap:areaDesc><cap:onset>2026-09-17T01:00:00+00:00</cap:onset><cap:expires>2099-09-17T09:59:59+00:00</cap:expires><cap:identifier>b2</cap:identifier><cap:severity>Severe</cap:severity><title>Orange Thunderstorm Warning issued for Spain - Campo de Cartagena y Mazarrón</title></entry>
     <entry><cap:areaDesc>Sierras de Alcudia</cap:areaDesc><cap:onset>2026-09-17T10:00:00+00:00</cap:onset><cap:expires>2099-09-17T17:59:59+00:00</cap:expires><cap:identifier>c3</cap:identifier><cap:severity>Moderate</cap:severity><title>Yellow Rain Warning issued for Spain - Sierras de Alcudia</title></entry>
+    <entry><cap:areaDesc>Bizkaia litoral</cap:areaDesc><cap:onset>2026-09-17T13:00:00+00:00</cap:onset><cap:expires>2099-09-18T01:59:59+00:00</cap:expires><cap:identifier>e5</cap:identifier><cap:severity>Moderate</cap:severity><title>Yellow Thunderstorm Warning issued for Spain - Bizkaia litoral</title></entry>
+    <entry><cap:areaDesc>Llanada alavesa</cap:areaDesc><cap:onset>2026-09-17T13:00:00+00:00</cap:onset><cap:expires>2099-09-18T01:59:59+00:00</cap:expires><cap:identifier>e6</cap:identifier><cap:severity>Moderate</cap:severity><title>Yellow Thunderstorm Warning issued for Spain - Llanada alavesa</title></entry>
     <entry><cap:areaDesc>Caducado</cap:areaDesc><cap:onset>2026-09-10T10:00:00+00:00</cap:onset><cap:expires>2026-09-10T17:59:59+00:00</cap:expires><cap:identifier>d4</cap:identifier><cap:severity>Extreme</cap:severity><title>Red Rain Warning issued for Spain - Caducado</title></entry>
     </feed>`;
   /* leerFeed es una función exportada de un módulo ES: se saca el cuerpo y se evalúa aquí. */
@@ -11204,10 +11206,19 @@ grupo('Avisos oficiales de toda España, solo información (17-09-2026)');
   let d = null, err = null;
   try { d = new Function(cuerpoLeer + '\nreturn leerFeed(arguments[0]);')(feed); } catch (e) { err = e; }
   ok('leerFeed() saca nivel, fenómeno, zona y horas tal cual, en español, y quita repetidos y caducados',
-     !err && d && d.rojos.length === 1 && d.naranjas.length === 1 && d.amarillos === 1 && d.total === 3
+     !err && d && d.rojos.length === 1 && d.naranjas.length === 1 && d.amarillos === 3 && d.total === 5
      && d.rojos[0].zona === 'Litoral sur de Valencia' && d.rojos[0].fenomeno === 'lluvia' && d.rojos[0].nivel === 'rojo'
      && d.naranjas[0].fenomeno === 'tormentas' && d.actualizado === '2026-09-17T07:35:08Z',
      err ? String(err) : JSON.stringify(d).slice(0, 200));
+  /* 04-10-2026: el amarillo de TORMENTAS de Bizkaia —su veto— se contaba entre
+     «205 amarillos» y se tiraba; «Llanada alavesa» no casa con «álava». */
+  ok('su zona lleva TODOS los niveles, amarillos incluidos: Bizkaia litoral y Llanada alavesa salen en «euskadi», Alcudia no',
+     d && d.euskadi && d.euskadi.length === 2 && d.euskadi.every(a => a.nivel === 'amarillo' && a.fenomeno === 'tormentas')
+     && d.euskadi.some(a => a.zona === 'Llanada alavesa') && !d.euskadi.some(a => /Alcudia/.test(a.zona)),
+     JSON.stringify(d && d.euskadi));
+  ok('y la pestaña Avisos pinta EUSKADI antes que ESPAÑA, nivel por nivel, y ya no dice que no puede leer AEMET',
+     /const mios = d\.euskadi \|\| \[\];/.test(appSrc) && /cont\.innerHTML = bloqueMio \+/.test(appSrc)
+     && /Sin avisos oficiales de AEMET en Euskadi ahora/.test(appSrc) && !/Sus webs no permiten/.test(appSrc));
   ok('el intermediario va con las cabeceras de la casa: 30 min de CDN si va bien, no-store si falla, y tiempo tope de 8 s',
      /import \{ cabeceras \} from '\.\.\/lib\/cabeceras\.mjs'/.test(fn) && /cabeceras\(ok \? 1800 : 0, \{ navegador: 600, revalidar: 3600, origen: 'meteoalarm' \}\)/.test(fn)
      && /setTimeout\(\(\) => ac\.abort\(\), 8000\)/.test(fn) && /runtime: 'edge'/.test(fn));
@@ -11216,7 +11227,7 @@ grupo('Avisos oficiales de toda España, solo información (17-09-2026)');
   ok('la pestaña Avisos pinta el apartado ESPAÑA después de lo demás, y si no puede leerlo lo dice (no lo deja vacío)',
      /esp\.id = 'alertasEspana';/.test(appSrc) && /pintarAlertasEspana\(esp\);/.test(appSrc)
      && /fetch\('\/api\/alertas-espana'\)/.test(appSrc) && /No he podido leer los avisos oficiales/.test(appSrc)
-     && /Solo información: no es tu zona ni tus listones\./.test(appSrc));
+     && /El resto de España, solo información: no es tu zona ni tus listones\./.test(appSrc));
   /* 10:35, suyo: «prefiero los datos actualizados en mis sitios que no me gaste créditos por
      España entera, que al final solo era para info» · «no me la juego» · «prefiero para mis
      avisos». El vigilante NO lee España: cero coste de fondo. Solo la pestaña, al abrirla. */

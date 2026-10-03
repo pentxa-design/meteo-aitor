@@ -37,6 +37,7 @@ const etiqueta = (texto, nombre) => {
 
 /* El feed, a la lista de avisos: uno por zona y fenómeno, con su nivel.
    Sale también en las pruebas, con un feed de mentira. */
+const ZONA_MIA = /bizkaia|vizcaya|gipuzkoa|guip[uú]zcoa|[áa]lava|araba|llanada|nervi[oó]n|rioja alavesa|trevi[ñn]o/i;
 export function leerFeed(xml, ahora = Date.now()) {
   const avisos = [];
   const vistos = new Set();
@@ -71,6 +72,11 @@ export function leerFeed(xml, ahora = Date.now()) {
     rojos: avisos.filter(a => a.nivel === 'rojo'),
     naranjas: avisos.filter(a => a.nivel === 'naranja'),
     amarillos: avisos.filter(a => a.nivel === 'amarillo').length,
+    /* SU ZONA, CON LOS AMARILLOS (04-10-2026): el amarillo de TORMENTAS de
+       Bizkaia —justo su veto— se contaba entre «205 amarillos» y se tiraba, y
+       el naranja de Bizkaia salía como «no es tu zona». Las zonas de aviso de
+       AEMET en Euskadi, por nombre: «Llanada alavesa» no casa con «álava». */
+    euskadi: avisos.filter(a => ZONA_MIA.test(a.zona || '')),
     total: avisos.length,
   };
 }

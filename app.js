@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-2344';
+const BUILD = '2026.10.04-0115';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -16674,9 +16674,9 @@ function renderAlerts() {
     <div class="al" style="--vc:var(--warn)">
       <div class="al__h"><span class="al__lvl">IMPORTANTE</span>
         <span class="al__t">Esta app no emite avisos oficiales</span></div>
-      <p>Los avisos con valor legal los emiten <b>AEMET</b> y <b>Euskalmet</b>. Sus webs no permiten
-      la consulta automática desde el navegador, así que aquí tienes el acceso directo abajo.
-      Aquí abajo los tienes en un toque.</p>
+      <p>Los avisos con valor legal los emiten <b>AEMET</b> y <b>Euskalmet</b>. Los de AEMET se
+      leen aquí abajo tal como los publica (los de tu zona primero, con los amarillos); los de
+      Euskalmet no se pueden leer desde el navegador: su acceso directo va en los enlaces.</p>
     </div>` +
     (bad.length ? `
     <div class="al" style="--vc:var(--no)">
@@ -16732,12 +16732,25 @@ async function pintarAlertasEspana(cont) {
   const fila = a => `<li><b>${esc(a.zona || '')}</b> · ${esc(a.fenomeno || '')} <span class="faint">· ${f(a.desde)} → ${f(a.hasta)}</span></li>`;
   const rojos = d.rojos || [], naranjas = d.naranjas || [];
   const n = (k, s, p) => `${k} ${k === 1 ? s : p}`;
+  /* SU ZONA PRIMERO, con los amarillos (04-10-2026): el amarillo de tormentas
+     de Bizkaia es su veto y no salía; el naranja de Bizkaia salía como «no es
+     tu zona». */
+  const mios = d.euskadi || [];
+  const peorMio = mios.some(a => a.nivel === 'rojo') ? 'no' : mios.some(a => a.nivel === 'naranja') ? 'warn' : mios.length ? 'warn' : 'go';
+  const nivelTxt = { rojo: 'ROJO', naranja: 'naranja', amarillo: 'amarillo' };
+  const filaMia = a => `<li><b>${esc(nivelTxt[a.nivel] || a.nivel)}</b> · ${esc(a.zona || '')} · ${esc(a.fenomeno || '')} <span class="faint">· ${f(a.desde)} → ${f(a.hasta)}</span></li>`;
+  const bloqueMio = `<div class="al" style="--vc:var(--${peorMio})">
+    <div class="al__h"><span class="al__lvl">EUSKADI</span>
+      <span class="al__t">${mios.length ? `${mios.length} aviso${mios.length === 1 ? '' : 's'} oficial${mios.length === 1 ? '' : 'es'} de AEMET en tu zona` : 'Sin avisos oficiales de AEMET en Euskadi ahora'}</span></div>
+    ${mios.length ? `<ul class="al__lista">${mios.map(filaMia).join('')}</ul>` : ''}
+    <div class="al__w">Bizkaia, Gipuzkoa y Álava, con los amarillos. Lo que diga AEMET manda sobre esta app.</div>
+  </div>`;
   const partes = [];
   if (rojos.length) partes.push(n(rojos.length, 'aviso ROJO', 'avisos ROJOS'));
   if (naranjas.length) partes.push(n(naranjas.length, 'naranja', 'naranjas'));
   const titulo = partes.length ? partes.join(' y ') : 'Sin avisos naranjas ni rojos';
   const color = rojos.length ? 'var(--no)' : naranjas.length ? 'var(--warn)' : 'var(--go)';
-  cont.innerHTML = `<div class="al" style="--vc:${color}">
+  cont.innerHTML = bloqueMio + `<div class="al" style="--vc:${color}">
     <div class="al__h"><span class="al__lvl">ESPAÑA</span>
       <span class="al__t">${titulo}${d.amarillos ? ` · ${n(d.amarillos, 'amarillo', 'amarillos')}` : ''}</span></div>
     ${rojos.length ? `<p><b>Rojo</b></p><ul class="al__lista">${rojos.map(fila).join('')}</ul>` : ''}
@@ -16745,7 +16758,7 @@ async function pintarAlertasEspana(cont) {
       naranjas.length > 40 ? `<p class="faint">y ${naranjas.length - 40} más</p>` : ''}` : ''}
     <div class="al__w">Avisos oficiales de AEMET tal como los publica Meteoalarm${
       d.actualizado ? ` · actualizado a las ${new Date(d.actualizado).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}` : ''}.
-      Solo información: no es tu zona ni tus listones.</div>
+      El resto de España, solo información: no es tu zona ni tus listones.</div>
   </div>`;
 }
 
