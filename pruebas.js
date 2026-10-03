@@ -2714,6 +2714,7 @@ grupo('La tapa: lo que el adversario rompió sin que nada se pusiera rojo (27-09
      arranca la función con una hora cuya tapa la presta ICON sin ver
      gasolina, y con la misma hora con tapa propia. */
   try {
+    eval(sacar('function quienVeRayo('));
     eval(sacar('function avisoTormentaFranja('));
     if (typeof esc !== 'function') globalThis.esc = x => String(x);
     const thrAntes = S.thr; S.thr = { capeWarn: 300, capeNo: 1000 };
@@ -2727,6 +2728,82 @@ grupo('La tapa: lo que el adversario rompió sin que nada se pusiera rojo (27-09
        /Riesgo de tormenta/.test(propia) && /abierta/.test(propia), propia.trim());
     S.thr = thrAntes;
   } catch (e) { ok('la franja de tormenta se puede arrancar en el banco', false, String(e.message)); }
+
+  /* D7 · LA FRANJA CON TODAS LAS HORAS DE RAYO, LAS VEA QUIEN LAS VEA
+     (03-10-2026, TRASPASO §67 1). Antes cortaba en tu pareja y no miraba
+     el código de tormenta de nadie: «a las 16:00» con ICON dando 95 de 15
+     a 18, y «Sin riesgo eléctrico» con el código solo. Se arranca la
+     función de verdad con la comparativa de un sitio. */
+  {
+    const S0 = { place: S.place, comparativa: S.comparativa, discrepa: S.discrepa, thr: S.thr };
+    const md0 = globalThis.modeloDato, cmp0 = globalThis.COMPARAR;
+    try {
+      eval(sacarConst('COMPARAR'));   // la lista de verdad, con el «Automático» dentro
+      eval(sacar('function quienVeRayo('));
+      eval(sacar('function avisoTormentaFranja('));
+      if (typeof esc !== 'function') globalThis.esc = x => String(x);
+      const sinEt = t => String(t).replace(/<[^>]*>/g, ' ');
+      globalThis.modeloDato = () => ({ name: 'AROME HD', om: 'meteofrance_arome_france_hd' });
+      S.thr = { capeWarn: 300, capeNo: 1000 };
+      S.place = { lat: 43.4, lon: -2.7 };
+      const clave = '43.400,-2.700';
+      const hs = [14, 15, 16, 17, 18, 19].map(k => ({ date: new Date(2026, 9, 3, k), pop: 40, cape: 100, cin: 200, sitio: S.place }));
+      const t = hs.map(h => `2026-10-03T${String(h.date.getHours()).padStart(2, '0')}:00`);
+      const cod = (a, b) => hs.map(h => h.date.getHours() >= a && h.date.getHours() <= b ? 95 : 3);
+
+      hs[2].cape = 900; hs[2].cin = 20;   // tu pareja, solo a las 16
+      S.comparativa = { clave, hourly: { time: t, weather_code_icon_seamless: cod(15, 18) } };
+      const a = sinEt(avisoTormentaFranja(hs));
+      ok('franja: con tu pareja a las 16 e ICON con código de 15 a 18, el tramo es de 15:00 a 18:00 y nombra a ICON',
+         /Riesgo de tormenta de 15:00 a 18:00/.test(a) && /ICON da tormenta/.test(a) && /hay gasolina y está abierta/.test(a), a.trim());
+
+      hs[2].cape = 100; hs[2].cin = 200;  // sin tu pareja: solo el código de ICON
+      const b = sinEt(avisoTormentaFranja(hs));
+      ok('franja: con solo el código de tormenta de ICON sale «Riesgo de tormenta», con su nombre y tus cifras al lado',
+         /Riesgo de tormenta de 15:00 a 18:00/.test(b) && /lo ve ICON/.test(b) && /tu modelo: CAPE 100/.test(b)
+         && !/Sin riesgo/.test(b), b.trim());
+
+      S.comparativa = { clave, hourly: { time: t, weather_code_best_match: cod(15, 18) } };
+      const c = sinEt(avisoTormentaFranja(hs));
+      ok('franja: el código del «Automático» (una mezcla) no cuenta como rayo', !/Riesgo de tormenta/.test(c), c.trim());
+
+      S.comparativa = { clave, hourly: { time: t,
+        cape_ecmwf_ifs: hs.map((h, i) => i === 4 ? 1200 : 50), convective_inhibition_ecmwf_ifs: hs.map(() => 10) } };
+      const d = sinEt(avisoTormentaFranja(hs));
+      ok('franja: la pareja de ECMWF 9 km con su propia tapa (1.200 y 10 a las 18) sale con su nombre y sus cifras',
+         /Riesgo de tormenta a las 18:00/.test(d) && /ECMWF 9 km, lo peor a las 18:00: CAPE 1200 y la tapa en 10/.test(d), d.trim());
+    } catch (e) { ok('la franja con el rayo de todos se puede arrancar en el banco', false, String(e.stack || e.message)); }
+
+    /* D8 · LA BARRA DE 48 h, HORA A HORA. Antes, si el tuyo daba código a
+       cualquier hora de las 48, no se rayaba ninguna hora de código de los
+       demás; y un modelo con una sola hora de código perdía todas sus horas
+       de CAPE. Aquí el tuyo da 95 mañana, e ICON da 95 dentro de 3-5 h y
+       900 de CAPE dentro de 10 h. */
+    try {
+      eval(sacarConst('DISCREPA_HORAS'));
+      eval(sacar('function discrepanciaTormenta('));
+      globalThis.modeloDato = () => ({ name: 'AROME HD', om: 'meteofrance_arome_france_hd' });
+      S.place = { lat: 43.4, lon: -2.7 };
+      const h0 = Math.floor(Date.now() / 3600e3) * 3600e3;
+      const fechas = Array.from({ length: 30 }, (_, k) => new Date(h0 + k * 3600e3));
+      const loc = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      const N = fechas.length, en = (ks, v, resto) => fechas.map((_, k) => ks.includes(k) ? v : resto);
+      S.discrepa = { clave: '43.400,-2.700', d: { hourly: {
+        time: fechas.map(loc),
+        weather_code_meteofrance_arome_france_hd: en([25], 95, 3),
+        cape_meteofrance_arome_france_hd: Array(N).fill(100),
+        weather_code_icon_seamless: en([3, 4, 5, 25], 95, 3),
+        cape_icon_seamless: en([10], 900, 100),
+      } } };
+      const D = discrepanciaTormenta();
+      const icoCod = D?.porCodigo.find(o => o.nom === 'ICON');
+      const icoCape = D?.porCape.find(o => o.nom === 'ICON');
+      ok('barra: el código del tuyo mañana no borra las horas de código de ICON de hoy (3 horas, sin la que el tuyo también da)',
+         icoCod?.horas.length === 3, JSON.stringify(D));
+      ok('barra: ICON con horas de código no pierde su hora de CAPE 900', icoCape?.porCape.length === 1, JSON.stringify(D));
+    } catch (e) { ok('la discrepancia de tormenta se puede arrancar en el banco', false, String(e.stack || e.message)); }
+    Object.assign(S, S0); globalThis.modeloDato = md0; globalThis.COMPARAR = cmp0;
+  }
 
   /* 5.7 · EL BORDE DE LA PAREJA: 700 con 74,9 rompe; 699,9 no; 700 con 75 no. */
   ok('la pareja rompe justo en 700 con 74,9, y no en 699,9 ni con la tapa en 75',

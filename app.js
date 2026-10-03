@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-1908';
+const BUILD = '2026.10.03-1948';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -2384,6 +2384,49 @@ function tormentaQueNoVesTu(h, place = null) {
 function frasOtraTormenta(o) {
   if (!o) return '';
   return `${esc(o.quien)}${o.propio ? ' (tu modelo, con su propia tapa)' : ''} ve tormenta`;
+}
+
+/* ── ¿HAY RAYO A ESTA HORA, Y QUIÉN LO VE? (03-10-2026, TRASPASO §67 1) ──
+   La franja de Ahora solo se fijaba bien en tu modelo: si tu pareja
+   CAPE+tapa rompía, cortaba ahí y no miraba a nadie más; si no rompía,
+   miraba la pareja de los otros, pero ningún código de tormenta. Con ICON
+   dando tormenta (95) de 15 a 21 h y tu modelo viéndola solo a las 16, la
+   franja decía «a las 16:00»; con el código solo, «Sin riesgo eléctrico».
+   El parte de Mis estaciones ya cuenta el código desde esta mañana.
+
+   El rayo no admite promedios: basta con que uno lo vea. Aquí se juntan
+   las dos vías, la pareja de cada modelo con SU tapa y el código de
+   tormenta de cualquiera, y se devuelve quién lo ve y por qué. Tu modelo
+   va con lo que enseña la pantalla (su pareja, con el disparador de la
+   probabilidad, y su código, prestado o no); los demás, de la
+   comparativa. Sin el «Automático», que es una mezcla (ver CON_TAPA). */
+function quienVeRayo(h, place = null) {
+  const ven = [];
+  if (!h?.date) return ven;
+  const yo = modeloDato()?.name ?? 'tu modelo';
+  const mio = modeloDato()?.om;
+  if (laParejaRompe(h.cape, h.cin, h) && (!has(h.pop) || h.pop >= 10))
+    ven.push({ quien: yo, por: 'pareja', cape: h.cape, cin: h.cin, propio: true });
+  if (isStormCode(h.code))
+    ven.push({ quien: h.codigoAjeno && h.cieloDe ? h.cieloDe : yo, por: 'codigo',
+               code: h.code, propio: !h.codigoAjeno });
+  const C = deEsteSitio(S.comparativa, place)?.hourly;
+  if (!C?.time) return ven;
+  const iso = new Date(h.date.getTime() - h.date.getTimezoneOffset() * 60000)
+    .toISOString().slice(0, 13);
+  const i = C.time.findIndex(t => t.slice(0, 13) === iso);
+  if (i < 0) return ven;
+  const MODELOS_RAYO = [...COMPARAR.filter(m => m.om !== 'best_match'), { om: ECMWF_9KM, name: 'ECMWF 9 km' }];
+  for (const m of MODELOS_RAYO) {
+    if (m.om === mio) continue;   // el tuyo ya va arriba, con lo que enseña la pantalla
+    const cape = C[`cape_${m.om}`]?.[i], cin = C[`convective_inhibition_${m.om}`]?.[i];
+    if (has(cape) && has(cin) && cape >= CAPE_COMBINACION && cin < TAPA_ROMPE)
+      ven.push({ quien: m.name, por: 'pareja', cape, cin, propio: false });
+    const code = C[`weather_code_${m.om}`]?.[i];
+    if (isStormCode(code) && !ven.some(v => v.por === 'codigo' && v.quien === m.name))
+      ven.push({ quien: m.name, por: 'codigo', code, propio: false });
+  }
+  return ven;
 }
 
 function peorRacha(h, place = null) {
@@ -11672,6 +11715,13 @@ function discrepanciaTormenta() {
     return t >= ahora - 3600e3 && t <= ahora + DISCREPA_HORAS * 3600e3;
   };
   const capeMio = H[`cape_${mio}`];
+  /* HORA A HORA, NO «EN ALGÚN MOMENTO» (03-10-2026, TRASPASO §67 1).
+     Antes, si el tuyo daba código de tormenta a CUALQUIER hora de las
+     48, no se rayaba ninguna de las de los demás (ICON a las 15-21 de hoy
+     se perdía porque el tuyo la daba mañana a las 16); y un modelo con una
+     sola hora de código perdía todas sus horas de pareja CAPE+tapa. Ahora
+     cada hora se mira contra la tuya de esa misma hora. */
+  const mia = H[`weather_code_${mio}`];
 
   for (const m of MODELOS_TORMENTA) {
     if (m.om === mio) continue;
@@ -11680,7 +11730,7 @@ function discrepanciaTormenta() {
     const horas = [], porCape = [];
     for (let i = 0; i < H.time.length; i++) {
       if (!dentro(i)) continue;
-      if (cod && isStormCode(cod[i])) horas.push(new Date(H.time[i]));
+      if (cod && isStormCode(cod[i])) { if (!isStormCode(mia?.[i])) horas.push(new Date(H.time[i])); }
       else if (has(cap?.[i]) && cap[i] >= CAPE_COMBINACION
             && (!has(capeMio?.[i]) || capeMio[i] < CAPE_COMBINACION)) {
         porCape.push({ d: new Date(H.time[i]), suyo: cap[i], mio: capeMio?.[i] });
@@ -11690,28 +11740,16 @@ function discrepanciaTormenta() {
   }
   if (!otros.length) return null;
 
-  // ¿Y el que estoy mirando? Si también la ve, no hay discrepancia que
-  // contar: la app ya lo está avisando por su cuenta.
-  const mia = H[`weather_code_${mio}`];
-  let laVeoYo = false;
-  if (mia) {
-    for (let i = 0; i < H.time.length; i++) {
-      const t = new Date(H.time[i]).getTime();
-      if (t < ahora - 3600e3 || t > ahora + DISCREPA_HORAS * 3600e3) continue;
-      if (isStormCode(mia[i])) { laVeoYo = true; break; }
-    }
-  }
-  // Si el mío ya la ve por código, la app ya está avisando por su cuenta
-  // y no hay discrepancia que contar en esa parte.
+  // Las horas en que el tuyo ya da código de tormenta no entran arriba: a
+  // esa hora la app ya lo está avisando por su cuenta. Las demás, sí.
   const conCodigo = otros.filter(o => o.horas.length);
-  const conCape   = otros.filter(o => !o.horas.length && o.porCape.length);
-  if (laVeoYo && !conCape.length) return null;
+  const conCape   = otros.filter(o => o.porCape.length);
 
   conCodigo.sort((a, b) => b.horas.length - a.horas.length);
   conCape.sort((a, b) => Math.max(...b.porCape.map(x => x.suyo))
                        - Math.max(...a.porCape.map(x => x.suyo)));
   return {
-    porCodigo: laVeoYo ? [] : conCodigo,
+    porCodigo: conCodigo,
     porCape: conCape,
     mio: modeloDato().name,
     sinCampo: !mia || mia.every(v => !has(v)),
@@ -16144,7 +16182,6 @@ function avisoTormentaFranja(horas) {
      dice si ha caído es la red de AEMET, y eso va en su propio bloque. */
 
   const pico = horas.reduce((a, b) => (b.cape ?? 0) > (a.cape ?? 0) ? b : a, horas[0]);
-  if (!has(pico.cape)) return '';
 
   /* Regla suya, del 25-08-2026: «más datos mejor, pero sin liar al que
      lo lee, y datos verídicos». Verídico incluye DE CUÁNDO es el número:
@@ -16152,7 +16189,8 @@ function avisoTormentaFranja(horas) {
      y se dice a qué hora es. Sin eso, un CAPE de 560 en una franja de
      seis horas no se sabe si es a las cuatro o a las nueve. */
   const hPico = String(pico.date.getHours()).padStart(2, '0');
-  const cifras = `CAPE ${pico.cape.toFixed(0)}`
+  const cifras = !has(pico.cape) ? 'sin dato de CAPE'
+    : `CAPE ${pico.cape.toFixed(0)}`
     + (has(pico.cin) ? ` · tapa ${pico.cin.toFixed(0)}${firmaTapa(pico)}` : '')
     + ` · lo peor a las ${hPico}:00`;
 
@@ -16171,14 +16209,6 @@ function avisoTormentaFranja(horas) {
   const combinacion = horas.filter(h => laParejaRompe(h.cape, h.cin, h));
   const malas = combinacion.filter(h => !has(h.pop) || h.pop >= 10);
 
-  if (malas.length) {
-    const peor = malas.reduce((a, b) => b.cape > a.cape ? b : a);
-    const hh = String(peor.date.getHours()).padStart(2, '0');
-    return `<br><span class="part__ray">⚡ Riesgo de tormenta ${rangoDeHoras(malas)}</span>`
-         + `<br><span class="part__ray--cif">lo peor a las ${hh}:00: CAPE ${peor.cape.toFixed(0)} y la tapa en `
-         + `${peor.cin.toFixed(0)}${esc(firmaTapa(peor))}, hay gasolina y está abierta</span>`;
-  }
-
   /* ── SI OTRO MODELO VE TORMENTA EN LA FRANJA, EL TITULAR NO PUEDE
      DECIR «BAJO» (09-09-2026) ───────────────────────────────────────
      Calpe, esta tarde: la franja decía «Riesgo eléctrico bajo» con AROME
@@ -16189,23 +16219,40 @@ function avisoTormentaFranja(horas) {
      estaba escrita —el rayo no admite promedios, basta con que uno
      acierte— y aquí no se aplicaba. Ahora sí: si tu modelo no la ve
      pero otro sí (CAPE ≥ 700 y tapa < 75 a alguna hora de la franja),
-     sale en ámbar con su nombre y sus cifras, y las tuyas al lado. */
-  {
-    let ajena = null;
-    const horasAjenas = [];
-    for (const h of horas) {
-      const o = typeof tormentaQueNoVesTu === 'function' ? tormentaQueNoVesTu(h, h.sitio) : null;
-      if (!o) continue;
-      horasAjenas.push(h);
-      if (!ajena || o.cape > ajena.cape) ajena = { ...o, h };
+     sale en ámbar con su nombre y sus cifras, y las tuyas al lado.
+
+     ── Y TODAS LAS HORAS, LAS VEA QUIEN LAS VEA (03-10-2026) ──────────
+     Hasta hoy, si tu pareja rompía, la franja cortaba ahí: el tramo era
+     solo el de tu modelo aunque ICON diera tormenta tres horas más, y el
+     código de tormenta de los demás no se miraba nunca. Ahora el tramo
+     sale de `quienVeRayo()`, hora a hora, y cada uno va con su nombre:
+     la pareja con sus cifras y el código con sus horas. */
+  const conRayo = horas.map(h => ({ h, ven: quienVeRayo(h, h.sitio) })).filter(x => x.ven.length);
+  if (conRayo.length) {
+    const todos = conRayo.flatMap(x => x.ven.map(v => ({ ...v, h: x.h })));
+    const nombres = [...new Set(todos.map(v => v.quien))];
+    const hh = h => String(h.date.getHours()).padStart(2, '0');
+    const partes = [];
+    if (malas.length) {
+      const peor = malas.reduce((a, b) => b.cape > a.cape ? b : a);
+      partes.push(`lo peor a las ${hh(peor)}:00: CAPE ${peor.cape.toFixed(0)} y la tapa en `
+        + `${peor.cin.toFixed(0)}${esc(firmaTapa(peor))}, hay gasolina y está abierta`);
+    } else {
+      const ajenas = todos.filter(v => v.por === 'pareja');
+      if (ajenas.length) {
+        const a = ajenas.reduce((x, y) => y.cape > x.cape ? y : x);
+        partes.push(`${esc(a.quien)}, lo peor a las ${hh(a.h)}:00: CAPE ${Math.round(a.cape)} y la tapa en ${Math.round(a.cin)}`);
+      }
     }
-    if (ajena) {
-      const hh = String(ajena.h.date.getHours()).padStart(2, '0');
-      return `<br><span class="part__ray">⚡ Riesgo de tormenta ${rangoDeHoras(horasAjenas)} <small>(lo ve ${esc(ajena.quien)})</small></span>`
-           + `<br><span class="part__ray--cif">${esc(ajena.quien)}, lo peor a las ${hh}:00: CAPE ${Math.round(ajena.cape)} y la tapa en ${Math.round(ajena.cin)}`
-           + ` · tu modelo: ${cifras}</span>`;
-    }
+    const codigos = new Map();
+    for (const v of todos) if (v.por === 'codigo') codigos.set(v.quien, [...(codigos.get(v.quien) ?? []), v.h]);
+    for (const [nom, hs] of codigos) partes.push(`${esc(nom)} da tormenta (su código de tormenta) ${rangoDeHoras(hs)}`);
+    if (!todos.some(v => v.propio)) partes.push(`tu modelo: ${cifras}`);
+    return `<br><span class="part__ray">⚡ Riesgo de tormenta ${rangoDeHoras(conRayo.map(x => x.h))}`
+         + (todos.every(v => v.propio) ? '' : ` <small>(lo ${nombres.length > 1 ? 'ven' : 've'} ${esc(listar(nombres))})</small>`)
+         + `</span><br><span class="part__ray--cif">${partes.join(' · ')}</span>`;
   }
+  if (!has(pico.cape)) return '';
 
   // Cargado, pero sin chispa. Se DICE, no se calla: es distinto de «no
   // hay riesgo», y si el cielo cambia esto cambia con él.
