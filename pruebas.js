@@ -647,12 +647,13 @@ grupo('«La ve X» solo si X ve la ventana entera (27-09-2026, medido)');
      texto(L(true)) === ' · la ve AROME HD', texto(L(true)));
   ok('y si solo tiene el pico, se dice eso y no otra cosa',
      texto(L(false)) === ' · lo más fuerte lo ve AROME HD', texto(L(false)));
-  ok('la marca viaja con el dato, no se recalcula en cada pantalla',
-     /const picoAbarca = !!quien && desdeCada\.has\(quien\) && \+desdeCada\.get\(quien\) <= \+ini;/.test(src)
-     && /picoAbarca, horasAgua,/.test(src));
-  ok('y las TRES pantallas que nombran al modelo del agua la miran',
-     (src.match(/picoAbarca === false/g) || []).length === 3,
-     'la línea roja, la línea de agua de la tarjeta y el parte');
+  /* 03-10-2026: el remedio de raíz. La ventana ya no es la unión de todos:
+     es del DUEÑO (`lluviaDeUnSitio`), así que el que la ve, la ve entera
+     por construcción y `picoAbarca` es siempre cierto. Lo que se fija ahora
+     es eso, y que las pantallas lean de esa única función. */
+  ok('la ventana es del dueño: el que «la ve», la ve entera por construcción',
+     /quien: \[\.\.\.deQuien\]\.join\(' y '\), picoAbarca: true,/.test(src)
+     && /return lluviaDeUnSitio\(H, key\(p\), desde, finVentana\);/.test(src));
 }
 
 grupo('El día se suma de SUS horas: el resumen diario de ECMWF miente (27-09-2026, medido)');
@@ -832,6 +833,7 @@ grupo('Lo que se decide es lo que se ve, también en lluvia y visibilidad (26-09
 grupo('Lo que viene hoy: en rojo si lo hay, NADA si no, y SOLO de hoy (26-09-2026)');
 {
   eval(sacar('function loQueVieneHoy('));
+  const mmTxt = typeof globalThis.mmTxt === 'function' ? globalThis.mmTxt : v => String(v).replace('.', ',');
   eval(sacar('function avisoDeHoy('));
   /* ── EL RELOJ ENTRA POR LA PUERTA ─────────────────────────────────
      Antes estas pruebas colgaban del reloj de verdad y montaban «doce
@@ -846,6 +848,9 @@ grupo('Lo que viene hoy: en rojo si lo hay, NADA si no, y SOLO de hoy (26-09-202
   const MAN = n => new Date(2026, 8, 27, n, 0, 0, 0);      // mañana, a la hora n
   const et = n => String(n).padStart(2, '0') + ':00';
   globalThis.esc = x => String(x);
+  globalThis.nombreDeModelo = om => ({ meteofrance_arome_france_hd: 'AROME HD', ecmwf_ifs025: 'ECMWF' }[om] || om);
+  globalThis.duenoLluvia = () => 'meteofrance_arome_france_hd';
+  globalThis.quienDaElCielo = () => 'ECMWF';
   globalThis.wtxt = (v, u) => `${Math.round(v)}${u ? ' km/h' : ''}`;
   globalThis.nivelRacha = v => !has(v) ? 'nd' : v >= 90 ? 'no' : v >= 70 ? 'warn' : 'go';
   /* La ventana del parte ya NO manda aquí: si alguien la vuelve a usar,
@@ -1685,6 +1690,9 @@ eval(sacar('function pintarSelloParte() {'));
 eval(sacar('function cuantosLoVen(d) {'));
 eval(sacar('function aguaCeldaLejos(f, ahora = Date.now()) {'));
 eval(sacarConst('listar')); eval(sacarConst('MODELOS_TORMENTA'));   // la nota del parte lista los modelos sin tapa (25-09-2026)
+/* Las dos piezas de la lluvia de su dueño (03-10-2026) que usan el parte y la tarjeta. */
+eval(sacar('function palabraDeLaVentana('));
+eval(sacar('function otrosVenTxt('));
 eval(sacar('function renderParte() {'));
 
 const P = (n, lat, lon) => ({ name: n, lat, lon });
@@ -3991,13 +3999,17 @@ ok('y se marca como que es ahora, no como algo de luego',
    sea, y se comprueba con esas mismas horas. */
 const H6 = (h + 6) % 24, H7 = (h + 7) % 24;
 S.lluviaTorres = [{ k: 'luego', llueve: true, ini: H0(H6), fin: H0(H7), pico: 3.0,
-                    hPico: H0(H6), nHoras: 2, sueltas: false, soloSirimiri: false }];
+                    hPico: H0(H6), nHoras: 2, sueltas: false, soloSirimiri: false, fuerte: true }];
 const luego = soloTexto(lineaAguaTorre('luego'));
 ok('si es para luego se dice desde qué hora hasta cuál',
    new RegExp(`de ${String(H6).padStart(2,'0')}:00 a ${String((h+8)%24).padStart(2,'0')}:00`).test(luego),
    luego);
 ok('y con cuánta agua, en palabras y no en milímetros pelados',
    /Llueve bien/.test(luego), luego);
+/* 03-10-2026: «Llueve bien» solo si otro modelo acompaña al dueño. */
+S.lluviaTorres = [{ ...S.lluviaTorres[0], fuerte: false }];
+ok('   y si el dueño lo da él solo (nadie lo acompaña con más de 1 mm/h), «Puede llover bien», no «Llueve bien»',
+   /Puede llover bien/.test(soloTexto(lineaAguaTorre('luego'))), soloTexto(lineaAguaTorre('luego')));
 
 /* HORAS SUELTAS: tres repartidas no son once seguidas. Ya me lo corrigió. */
 S.lluviaTorres = [{ k: 'sueltas', llueve: true, ini: H0(9), fin: H0(20), pico: 0.4,
@@ -4016,19 +4028,25 @@ ok('tres horas repartidas se dicen SUELTAS, no «de 09:00 a 21:00»',
   const hEnCurso = H0(h);
   const mdAntes = typeof modeloDato === 'function' ? modeloDato : undefined;
   modeloDato = () => ({ name: 'AROME HD' });
+  /* 03-10-2026: la ventana es del DUEÑO. «Está lloviendo» solo si el dueño
+     moja en ESTA hora; si solo la ve otro, NO se dice «Está lloviendo»
+     (salía «Está lloviendo (lo ve ECMWF)» con AROME en 0,0 y la estación
+     midiendo 0,0): va en «otros», con su nombre. */
+  const hs = (a, b) => { const r = []; for (let t = a; t <= b; t += 3600e3) r.push(new Date(t)); return r; };
   const base = { k: 've', llueve: true, ini: H0(h - 1), fin: H0(h + 2), pico: 1.5,
                  hPico: H0(h + 2), nHoras: 4, sueltas: false, soloSirimiri: false };
-  S.lluviaTorres = [{ ...base, veCada: { ICON: [H0(h - 1), hEnCurso, H0(h + 1)], 'AROME HD': [H0(h + 2)] } }];
+  S.lluviaTorres = [{ ...base, horasAgua: [new Date(H0(h + 2))], ini: H0(h + 2), fin: H0(h + 2), nHoras: 1,
+                      otros: [{ nom: 'ICON', ini: H0(h - 1), fin: H0(h + 1), pico: 1.2, hPico: hEnCurso, n: 3 }] }];
   const otro = soloTexto(lineaAguaTorre('ve'));
-  ok('si el agua de ESTA hora la ve otro modelo y no el cargado, se dice: «Está lloviendo (lo ve ICON)»',
-     /Está lloviendo \(lo ve ICON\)/.test(otro), otro);
-  S.lluviaTorres = [{ ...base, veCada: { ICON: [hEnCurso], 'AROME HD': [H0(h - 1), hEnCurso, H0(h + 2)] } }];
+  ok('si el agua de ESTA hora solo la ve otro modelo, NO se dice «Está lloviendo»: se nombra al otro',
+     !/Está lloviendo/.test(otro) && /otros: ICON/.test(otro), otro);
+  S.lluviaTorres = [{ ...base, horasAgua: hs(H0(h - 1), H0(h + 2)) }];
   const mio = soloTexto(lineaAguaTorre('ve'));
   ok('y si la ve tu modelo, «Está lloviendo» a secas',
      /Está lloviendo/.test(mio) && !/Está lloviendo \(/.test(mio), mio);
-  S.lluviaTorres = [{ ...base, veCada: { ICON: [H0(h - 1), H0(h + 1)], 'AROME HD': [H0(h + 2)] } }];
+  S.lluviaTorres = [{ ...base, horasAgua: [new Date(H0(h - 1)), new Date(H0(h + 1)), new Date(H0(h + 2))] }];
   const hueco = soloTexto(lineaAguaTorre('ve'));
-  ok('y si NINGÚN modelo ve agua en esta hora (hueco dentro de la ventana), no se dice «Está lloviendo»',
+  ok('y si tu modelo no ve agua en esta hora (hueco dentro de la ventana), no se dice «Está lloviendo»',
      !/Está lloviendo/.test(hueco), hueco);
   modeloDato = mdAntes;
 }
@@ -4064,8 +4082,10 @@ S.lluviaTorres = [{ k: 'siri', llueve: true, ini: H0(7), fin: H0(9), pico: 0.1,
   const guarda = S.lluviaTorres;
   const ahoraH = new Date().getHours();
   /* Cayendo YA (empezó hace dos horas) y con el pico por delante. */
+  const hsB = (a, b) => { const r = []; for (let t = a; t <= b; t += 3600e3) r.push(new Date(t)); return r; };
   S.lluviaTorres = [{ k: 'cae', llueve: true, ini: H0b(ahoraH - 2), fin: H0b(ahoraH + 3),
-                      pico: 8.8, hPico: H0b(ahoraH + 2), nHoras: 6, sueltas: false, soloSirimiri: false }];
+                      pico: 8.8, hPico: H0b(ahoraH + 2), nHoras: 6, sueltas: false, soloSirimiri: false,
+                      fuerte: true, horasAgua: hsB(H0b(ahoraH - 2), H0b(ahoraH + 3)) }];
   const cae = soloTexto(lineaAguaTorre('cae'));
   ok('si cae YA y lo gordo viene después, se dice «Está lloviendo», no la palabra del pico',
      /^Está lloviendo/.test(cae) && /lo más fuerte/.test(cae), cae);
@@ -5513,8 +5533,8 @@ ok('el marcador dice «1 vez» y «3 veces», no «1 veces» (repaso del 03-10-2
      mojaEsaHora(0, 53).cuenta && mojaEsaHora(0, 53).sirimiri && mojaEsaHora(0.1, 51).sirimiri
      && !mojaEsaHora(0, 3).cuenta && mojaEsaHora(0.3, 3).cuenta && !mojaEsaHora(0.3, 3).sirimiri
      && !mojaEsaHora(0.5, 53).sirimiri && !mojaEsaHora(0.01, undefined).cuenta);
-  ok('   y el parte la usa',
-     /const moja = mojaEsaHora\(mm, c\);\n\s*if \(!moja\.cuenta\) continue;/.test(src) && /if \(moja\.sirimiri\) conSirimiri\.add\(marca\);/.test(src));
+  ok('   y el parte la usa (para saber quién ve agua en cada hora)',
+     /if \(mojaEsaHora\(v, H\[`weather_code_\$\{m\.om\}`\]\?\.\[i\]\)\.cuenta\)/.test(src));
   globalThis.S = S0; globalThis.nombreDeModelo = nm0; globalThis.duenoLluvia = dl0; globalThis.modeloDato = md0;
 }
 
@@ -11645,6 +11665,95 @@ grupo('El marcador no se manda dos veces desde el mismo aparato en la misma hora
     apuntarEnElMarcador = antesFn;
     S.parteRaw = null; S.medidoTorres = null;
   } catch (e) { ok('apuntarTorresEnMarcador se puede arrancar en el banco', false, String(e.message)); }
+}
+
+grupo('La lluvia es de su DUEÑO y lo de los demás va con su nombre (03-10-2026, sus capturas de las 15:10)');
+{
+  /* Suyo: «las averías o fallos, córtalos de raíz y pon para que no pase
+     más» · «automatiza esto, no me vale reparar hoy y mañana mal otra vez».
+     Aquí no se prueba el caso: se prueba LA REGLA, en todas las
+     combinaciones, sobre la única función de la que leen el parte, la
+     línea roja, la etiqueta y la tarjeta (`lluviaDeUnSitio`). */
+  eval(sacarConst('AGUA_ACUERDO')); eval(sacarConst('RELLENO_AGUA')); eval(sacarConst('CIELO_PRESTADO'));
+  eval(sacarConst('MODELOS_TORMENTA'));
+  eval(sacar('function mojaEsaHora('));
+  eval(sacar('function lluviaDeUnSitio('));
+  const AR = 'meteofrance_arome_france_hd', EC = 'ecmwf_ifs025', IC = 'icon_seamless', GF = 'gfs_seamless';
+  const nm0 = globalThis.nombreDeModelo, dl0 = globalThis.duenoLluvia;
+  globalThis.nombreDeModelo = om => ({ [AR]: 'AROME HD', [EC]: 'ECMWF', [IC]: 'ICON', [GF]: 'GFS' }[om] || om);
+  globalThis.duenoLluvia = () => AR;
+  const THR = { rainWarn: 0.2, rainNo: 2 };
+  const T0 = new Date(2026, 9, 3, 15, 0, 0, 0).getTime();
+  const serie = (n, f) => Array.from({ length: n }, (_, i) => f(i));
+  const montar = (n, por, cod = {}) => {
+    const H = { time: serie(n, i => { const d = new Date(T0 + i * 3600e3); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:00`; }) };
+    for (const [om, v] of Object.entries(por)) H[`precipitation_${om}`] = v;
+    for (const [om, v] of Object.entries(cod)) H[`weather_code_${om}`] = v;
+    return H;
+  };
+
+  /* ── 1 · EL CASO: Bermeo, sábado 3, de 15:00 a 03:00 (lo medido por /om a
+     las 15:20). Ventana del parte: lo que queda de hoy (hasta 23:59). ── */
+  {
+    const H = montar(13, {
+      [AR]: [0, 0, 0, 0, 0, 0, 0, 0.3, 4.2, 1.5, 0.7, 0, 1.6],
+      [EC]: [2.3, 2.3, 2.3, 0.3, 0.3, 0.3, 1.1, 1.1, 1.1, 0.4, 0.3, 0.2, 0.2],
+      [GF]: [0, 0, 0, 1.2, 2.5, 2.7, 1.0, 0.4, 0.6, 1.0, 0, 0, 0],
+      [IC]: [0, 0, 0, 0, 0.1, 0.2, 0.9, 3.8, 1.4, 0, 0, 0, 0],
+    }, { [EC]: [61, 61, 61, 55, 55, 55, 55, 55, 55, 53, 51, 51, 51] });
+    const fin = new Date(2026, 9, 3, 23, 59, 59, 999).getTime();
+    const L = lluviaDeUnSitio(H, 'bermeo', T0, fin, THR, AR);
+    const hh = d => String(new Date(d).getHours()).padStart(2, '0');
+    ok('Bermeo, sáb 3: la ventana de AROME HD empieza a las 18 con el sirimiri de ECMWF (0,3 mm) y no a las 15 con su lluvia de 2,3',
+       L.llueve && hh(L.ini) === '18' && L.sirimiriDe === 'ECMWF', `${hh(L.ini)} · ${L.sirimiriDe}`);
+    ok('   y «Llueve bien» va solo a las 23:00 (AROME 4,2 y ECMWF 1,1 la acompaña), no «de 15:00 a 23:00»',
+       L.fuerte && L.horasFuerza.length === 1 && hh(L.horasFuerza[0]) === '23' && L.quien === 'AROME HD',
+       L.horasFuerza.map(hh).join(','));
+    /* 00 y 01 AROME (1,5 y 0,7), 02 sirimiri de ECMWF (0,2 con código 51), 03 AROME 1,6. */
+    ok('   y NO escampa a las 00:00: sigue pasada medianoche hasta las 03:00 (AROME 1,5 · 0,7 · sirimiri de ECMWF · 1,6)',
+       L.sigueHasta && hh(L.sigueHasta) === '03', String(L.sigueHasta));
+    ok('   y la lluvia de 2,3 de ECMWF de las 15 a las 17 no se calla: va en «otros», con su nombre y su número',
+       L.otros.some(o => o.nom === 'ECMWF' && hh(o.ini) === '15' && o.pico === 2.3), JSON.stringify(L.otros.map(o => [o.nom, hh(o.ini), o.pico])));
+  }
+
+  /* ── 2 · LA REGLA, en miles de combinaciones de 6 horas ── */
+  {
+    const vals = [0, 0.04, 0.1, 0.3, 0.9, 1.1, 2, 2.5, 6];
+    const cods = [undefined, 3, 51, 55, 61, 80];
+    let malos = [], nBien = 0, nSecoConOtros = 0, nSiri = 0;
+    /* Azar con semilla: el mismo reparto cada vez, y con la mitad de las
+       horas secas para el dueño (si no, el caso seco no se prueba). */
+    let semilla = 20261003;
+    const azar = () => (semilla = (semilla * 1103515245 + 12345) % 2147483648) / 2147483648;
+    const elige = (lista, pSeco) => azar() < pSeco ? 0 : lista[Math.floor(azar() * lista.length)];
+    for (let k = 0; k < 4000; k++) {
+      const pSeco = [0.95, 0.6, 0.3][k % 3];
+      const ar = serie(6, () => elige(vals, pSeco)), ec = serie(6, () => elige(vals, 0.4)),
+            gf = serie(6, () => elige(vals, 0.5)), cE = serie(6, () => cods[Math.floor(azar() * cods.length)]);
+      const H = montar(6, { [AR]: ar, [EC]: ec, [GF]: gf, [IC]: serie(6, () => 0) }, { [EC]: cE });
+      const L = lluviaDeUnSitio(H, 'x', T0, T0 + 5 * 3600e3, THR, AR);
+      const idx = d => Math.round((+d - T0) / 3600e3);
+      const llov = c => c >= 51 && c <= 57;
+      for (const d of (L.horasAgua || [])) {
+        const i = idx(d);
+        const siri = ar[i] < 0.2 && llov(cE[i]) && ec[i] <= 1;
+        if (!(ar[i] >= 0.05 || siri)) { malos.push(`hora ${i} en la ventana con AROME ${ar[i]} y sin sirimiri (ECMWF ${ec[i]}, código ${cE[i]})`); break; }
+        if (ar[i] < 0.05 && llov(cE[i]) && ec[i] > 1) { malos.push(`sirimiri con ECMWF ${ec[i]} > 1`); break; }
+      }
+      if (L.fuerte) {
+        nBien++;
+        for (const d of L.horasFuerza) { const i = idx(d); if (!(ar[i] >= 2 && (ec[i] > 1 || gf[i] > 1))) { malos.push(`«Llueve bien» a la hora ${i} con AROME ${ar[i]}, ECMWF ${ec[i]}, GFS ${gf[i]}`); break; } }
+      }
+      const algunoOtro = ec.some(v => v >= 0.2) || gf.some(v => v >= 0.2);
+      if (!L.llueve && algunoOtro) { nSecoConOtros++; if (!L.otros?.length) malos.push('AROME seca, otro ve agua y no se dice'); }
+      if (L.soloSirimiri) nSiri++;
+      if (malos.length) break;
+    }
+    ok('la regla y no el caso: en 4.000 combinaciones, ninguna hora de la ventana sin agua del dueño, ningún sirimiri con más de 1 mm del que presta, «Llueve bien» solo acompañado y ningún seco que calle al otro',
+       malos.length === 0 && nBien > 50 && nSecoConOtros > 50 && nSiri > 20,
+       malos[0] || `bien ${nBien} · seco con otros ${nSecoConOtros} · sirimiri ${nSiri}`);
+  }
+  globalThis.nombreDeModelo = nm0; globalThis.duenoLluvia = dl0;
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');

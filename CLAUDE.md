@@ -1,3 +1,19 @@
+# ANTES DE NADA: EL GASTO DE CLAUDE (03-10-2026)
+
+Aitor, desde el chat del Centro Operativo: «para el centro operativo no quiero
+quedarme sin créditos nunca» · «prevalece sobre las otras apps» · «con el Pro y
+sin gastar créditos tiene que ser más que suficiente, no voy a gastar más
+dinero» · «de vez en cuando alguna modificación y ya» · «app del tiempo lo
+mismo» · y sobre el reparto del gasto entre apps: «mandas tú sobre ellas».
+
+Así que en esta app:
+- **Solo lo que él pida y los fallos.** Nada de mejoras en cadena ni revisiones
+  grandes por iniciativa propia; nada de agentes.
+- **Nunca proponer encender el uso extra de pago.**
+- Antes de trabajo largo, mira el consumo (mcp__ccd_session_mgmt__get_usage).
+  Si el semanal pasa del 80 %, haz solo lo urgente y díselo: el margen que
+  queda es para el Centro Operativo.
+
 # PARA QUÉ EXISTE ESTA APP: EL POSTE DE LOS FUSIBLES
 
 **Suyo, 01-09-2026, explicando por fin la cadena entera** — y es el trabajo

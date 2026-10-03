@@ -86,6 +86,14 @@ echo "  · con el almacén caído, ninguna función miente"
 node prueba-almacen-caido.mjs || exit 1
 node prueba-vigilante-reloj.mjs || exit 1
 
+# ── LA LLUVIA DE SU DUEÑO, CON EL TIEMPO DE HOY (03-10-2026) ────────────
+# Suyo: «automatiza esto, no me vale reparar hoy y mañana mal otra vez».
+# Coge el pronóstico de ese momento en sus sitios y lo pasa por la misma
+# función que pinta las pantallas. Si una frase de hoy mezcla modelos, no
+# se publica. Sin red lo dice y sigue.
+echo "  · la lluvia de su dueño, con el tiempo de hoy en sus sitios"
+node prueba-lluvia-en-vivo.mjs || exit 1
+
 # ── EL MOTOR DE RECAMBIO, ARRANCADO ──────────────────────────────────
 # Puesto el 03-09-2026, el día que Vercel dejó su Blob fuera del plan
 # gratuito y él dijo «no pago nada» y «déjalo montado y listo, que no

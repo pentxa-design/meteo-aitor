@@ -490,18 +490,26 @@ async function unaHora(hh) {
   if (/\.(dcard|hcard)__g[^{]*\{[^}]*var\(--c\)/.test(css))
     falla('styles.css: la chapa de racha coge var(--c), que es el color del día/hora');
 
-  /* 5. Mis torres: el agua que ve OTRO modelo lleva su nombre, y sus horas son las suyas. */
+  /* 5. Mis torres: el agua que ve OTRO modelo lleva su nombre, y sus horas son las suyas.
+        Desde el 03-10-2026 la lluvia es de su DUEÑO: con AROME seco y solo
+        ICON mojando, la tarjeta NO dice «llueve» ni «escampa» (eso sería
+        colgarle a su modelo lo de otro): dice que su modelo la ve seca y
+        que la ve ICON, con SUS horas, sin juntarlas si van sueltas. */
   const dueno = A.modeloDato()?.name;
-  const Ls = (A.S.lluviaTorres || []).filter(L => L && L.llueve);
+  const Ls = (A.S.lluviaTorres || []).filter(L => L && (L.llueve || L.otros?.length));
   if (Ls.length !== SITIOS.length) falla(`Mis torres: ${Ls.length} de ${SITIOS.length} tarjetas ven el agua de ICON (03, 04, 21 y 22 h)`);
-  const HORAS_TXT = { 2: [/03:00/, /22:00/], 7: [/21:00/, /23:00/], 13: [/21:00/, /23:00/], 20: [/escampa a las 23:00/], 23: [/03:00/, /22:00/] };
+  const HORAS_TXT = { 2: [/ICON a las 03:00, 04:00, 21:00 y 22:00/], 7: [/ICON de 21:00 a 23:00/], 13: [/ICON de 21:00 a 23:00/],
+                      20: [/ICON de 21:00 a 23:00/], 23: [/ICON a las 03:00, 04:00, 21:00 y 22:00/] };
   for (const L of Ls) {
     const t = doc.querySelector(`.tor[data-ir="${L.k}"] .tor__agua`);
     const tx = (t?.textContent || '').replace(/\s+/g, ' ').trim();
     if (!t) { falla(`Mis torres: ${L.k} sin línea de agua`); continue; }
-    if (L.quien !== 'ICON') falla(`Mis torres: ${L.k} no sabe quién ve el agua (quien=${L.quien}); la trampa moja solo con ICON`);
-    if (dueno !== 'ICON' && !tx.includes('lo ve ICON')) falla(`Mis torres: «${tx.slice(0, 70)}» sin decir que lo ve ICON (el cargado es ${dueno})`);
-    for (const rx of HORAS_TXT[hh] || []) if (!rx.test(tx)) falla(`Mis torres: «${tx.slice(0, 80)}» y el agua de ICON va ${rx}`);
+    if (dueno !== 'ICON') {
+      if (L.llueve) falla(`Mis torres: ${L.k} da por mojada la ventana de su modelo (${dueno}) con el agua de ICON`);
+      if (!/la ve seca/.test(tx) || !tx.includes('ICON')) falla(`Mis torres: «${tx.slice(0, 90)}» sin decir que ${dueno} la ve seca y que la ve ICON`);
+      if (/escampa|Está lloviendo/.test(tx)) falla(`Mis torres: «${tx.slice(0, 90)}» dice escampa/está lloviendo con el agua de otro modelo`);
+    }
+    for (const rx of HORAS_TXT[hh] || []) if (!rx.test(tx)) falla(`Mis torres: «${tx.slice(0, 90)}» y el agua de ICON va ${rx}`);
   }
 
   /* 6. Mis estaciones: cabeceras resueltas y con nombre, pie con las dos redes,
