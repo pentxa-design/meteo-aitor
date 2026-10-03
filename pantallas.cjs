@@ -516,6 +516,10 @@ async function unaHora(hh) {
         la pista con sus 72 h de verdad, y ninguna cifra en rojo diciendo «aguanta». */
   const torres = txt(doc, '#torres');
   if (/midiendo…/.test(torres)) falla('Mis estaciones: sigue «midiendo…» con Euskalmet y AEMET ya contestados');
+  /* §67 9 (03-10-2026): el rótulo describe, no autoriza (orden suya del 28-08). */
+  if (/\bapta\b/i.test(torres)) falla(`Mis estaciones: dice «${torres.match(/[^.·]{0,40}\bapta\b[^.·]{0,40}/i)[0].trim()}» (describe, no autoriza)`);
+  { const wh = txt(doc, '#windowHint') || '';
+    if (/\bapta\b/i.test(wh)) falla(`Torre: la ventana de trabajo dice «${wh.trim()}» (describe, no autoriza)`); }
   const cabeceras = [...doc.querySelectorAll('#torres th')].map(t => t.textContent.replace(/\s+/g, ' ').trim()).filter(t => t.startsWith('ESTACIÓN'));
   if (cabeceras.length !== SITIOS.length) falla(`Mis estaciones: ${cabeceras.length} cabeceras ESTACIÓN para ${SITIOS.length} sitios`);
   if (hh !== HORA_SIN_EUSKALMET && !/Almike/.test(cabeceras[0] || '')) falla(`Mis estaciones: al primer sitio le toca Almike y la cabecera dice «${cabeceras[0] || ''}»`);

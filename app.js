@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-2157';
+const BUILD = '2026.10.03-2209';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -5426,10 +5426,27 @@ function renderElev() {
 }
 
 function renderTimeline(hrs) {
+  /* ── LA VENTANA DE TRABAJO, SOLO EN SUS SITIOS (03-10-2026, §67 9) ──
+     Lo decidió él el 01-09 (ver `renderTower`): el veredicto —semáforo,
+     listones Y VENTANA DE TRABAJO— sale en sus emplazamientos guardados.
+     El semáforo se calló en los demás; esta barra se quedó hablando: en
+     Bilbao, que no es suyo, decía «próxima ventana apta: mañana domingo de
+     03:00 a 05:00». No se deja en blanco: se dice por qué no está. */
+  const suyo = !!(S.place && (S.saved || []).some(p => key(p) === key(S.place)));
+  if (!suyo) {
+    $('#tl').innerHTML = '';
+    $('#tlDetail').innerHTML = '';
+    $('#windowHint').textContent = '· no es uno de tus sitios: la ventana de trabajo sale en los tuyos (guárdalo con el ♥)';
+    return;
+  }
   const maxW = Math.max(...hrs.map(h => h.gust ?? h.wind ?? 0), listonRafaga().no, 10);
   // Una sola llamada por pintado: recorre 48 h x 5 modelos.
   const dud = horasEnDiscrepancia();
-  const enDuda = h => dud.set.has(new Date(h.date).setMinutes(0, 0, 0));
+  /* Y LA LLUVIA DE LOS DEMÁS (03-10-2026, §67 9): el color de la lluvia es
+     de su dueño, pero si otro modelo da a esa hora su listón de «llueve
+     bien», la hora no se pinta limpia ni la ventana la atraviesa. */
+  const agua = horasLluviaEnDuda(hrs);
+  const enDuda = h => { const t = new Date(h.date).setMinutes(0, 0, 0); return dud.set.has(t) || agua.mapa.has(t); };
   $('#tl').innerHTML = hrs.map((h, i) => {
     const val = h.gust ?? h.wind;
     const pct = has(val) ? clamp(val / maxW * 100, 4, 100) : 100;
@@ -5444,12 +5461,15 @@ function renderTimeline(hrs) {
     </div>`;
   }).join('');
 
-  // Próxima ventana apta continua
-  // La ventana apta NO atraviesa una hora en discrepancia: decirle «apta
-  // hasta las 03:00» pasando por encima de dos horas que otros modelos
-  // dan como tormenta es afirmar lo que no se sabe.
+  // Próximo tramo sin nada por encima de sus umbrales, seguido.
+  // NO atraviesa una hora en discrepancia: decirle «hasta las 03:00»
+  // pasando por encima de dos horas que otros modelos dan como tormenta
+  // —o como lluvia de verdad— es afirmar lo que no se sabe.
+  /* Y NO DICE «APTA» (03-10-2026, §67 9): orden suya del 28-08, «el
+     rótulo ya no autoriza: describe». Los colores ya decían SIN NADA /
+     OJO / FUERTE; esta línea se había quedado con el «apta». */
   const start = hrs.findIndex(h => h.st === 'go' && !enDuda(h));
-  let hint = 'Sin ninguna hora apta en las próximas 48 h con estos umbrales';
+  let hint = 'ninguna hora sin nada por encima de tus umbrales en las próximas 48 h';
   if (start >= 0) {
     let end = start;
     while (end + 1 < hrs.length && hrs[end + 1].st === 'go' && !enDuda(hrs[end + 1])) end++;
@@ -5470,12 +5490,12 @@ function renderTimeline(hrs) {
     const conDe = d => { const n = nombreDia(d); return /^el /.test(n) ? `del ${n.slice(3)}` : `de ${n}`; };
 
     hint = start === 0
-      ? `apta ahora y hasta las ${f(b)}${mismoDia ? '' : ` ${conDe(b)}`}`
-        + (dud.sabido && end + 1 < hrs.length && enDuda(hrs[end + 1])
+      ? `sin nada por encima de tus umbrales ahora y hasta las ${f(b)}${mismoDia ? '' : ` ${conDe(b)}`}`
+        + (end + 1 < hrs.length && enDuda(hrs[end + 1])
             ? ', que es cuando los modelos dejan de coincidir' : '')
       : mismoDia
-        ? `próxima ventana apta: ${nombreDia(a)} de ${f(a)} a ${f(b)}`
-        : `próxima ventana apta: ${conDe(a)} a las ${f(a)} `
+        ? `próximo tramo sin nada: ${nombreDia(a)} de ${f(a)} a ${f(b)}`
+        : `próximo tramo sin nada: ${conDe(a)} a las ${f(a)} `
           + `hasta ${nombreDia(b)} a las ${f(b)}`;
   }
   $('#windowHint').textContent = `· ${hint}`;
@@ -5490,7 +5510,10 @@ function renderTlDetail(h) {
      lugar, antes que los motivos: si el veredicto es APTO, esa línea es
      precisamente la que lo pone en cuarentena. */
   const dud = horasEnDiscrepancia();
-  const enDuda = dud.set.has(new Date(h.date).setMinutes(0, 0, 0));
+  const t = new Date(h.date).setMinutes(0, 0, 0);
+  const enDuda = dud.set.has(t);
+  /* La lluvia, con nombre y número de los dos (03-10-2026, §67 9). */
+  const agua = horasLluviaEnDuda([h]).mapa.get(t);
 
   $('#tlDetail').innerHTML =
     `<h3 style="color:${VC[h.st]}">${VT[h.st]} · ${esc(when)}</h3>` +
@@ -5498,6 +5521,11 @@ function renderTlDetail(h) {
       ? `<div class="rz rz--warn"><i></i><span>Los modelos no coinciden en esta hora:
          otro da tormenta o mucha más energía que el que estás mirando. Míralo arriba,
          cambia de modelo, y no des este color por bueno sin comprobarlo.</span></div>`
+      : '') +
+    (agua
+      ? `<div class="rz rz--warn"><i></i><span>${esc(agua.quien)} da ${mmTxt(agua.mm)} mm/h
+         a esta hora, y la lluvia que manda (${esc(agua.dueno)}) ${mmTxt(agua.mio)}. El color
+         sale de ${esc(agua.dueno)}.</span></div>`
       : '') +
     h.reasons.map(r => `<div class="rz rz--${r.s}"><i></i><span>${esc(r.txt)}</span></div>`).join('');
 }
@@ -11110,16 +11138,19 @@ function renderTorres() {
       return `<i data-s="${x.st}" title="${hh}:00 · ${VT[x.st]}">${hh}</i>`;
     }).join('');
 
-    // Primer momento en que deja de ser apta.
-    // SIEMPRE con el día: "no apta desde las 05:00" sin decir si es hoy o
+    // Primer momento en que algo pasa de sus umbrales.
+    // SIEMPRE con el día: "desde las 05:00" sin decir si es hoy o
     // mañana se lee mal, y aquí leer mal es mandar a alguien a la torre.
+    /* Y SIN «NO APTA» (03-10-2026, §67 9): orden suya del 28-08, «el
+       rótulo ya no autoriza: describe». La leyenda dice «Algo por encima»
+       y aquí seguía «No apta hoy desde las 22:00». */
     const iMal = t.horas.findIndex(x => x.st === 'no');
     let aviso = '';
-    if (iMal === 0) aviso = 'No apta ahora';
+    if (iMal === 0) aviso = 'Algo por encima de tus umbrales ahora';
     else if (iMal > 0) {
       const d = t.horas[iMal].date;
       const cuando = nombreDeDia(d);
-      aviso = `No apta ${cuando} desde las ${String(d.getHours()).padStart(2,'0')}:00`;
+      aviso = `Algo por encima de tus umbrales ${cuando} desde las ${String(d.getHours()).padStart(2,'0')}:00`;
     }
 
     const motivo = h.reasons.find(r => r.s === h.st)?.txt ?? h.reasons[0]?.txt ?? '';
@@ -11867,6 +11898,47 @@ function horasEnDiscrepancia() {
     });
   }
   return { set, sabido };
+}
+
+/* ── LA LLUVIA DE LOS DEMÁS, HORA A HORA, PARA LA VENTANA ─────────────
+   TRASPASO §67 9, 03-10-2026. `assess()` pinta la lluvia de su DUEÑO
+   (AROME HD; regla suya de ese día) y está bien que sea así. Pero la
+   ventana de trabajo decía «próxima ventana apta: mañana domingo de 03:00
+   a 05:00» con GFS dando 2,8 mm/h a esas horas, y sin una palabra.
+
+   Mismo trato que la tormenta en `horasEnDiscrepancia()`: el color NO se
+   cambia (no sabemos que GFS tenga razón), se le quita la certeza. La
+   hora va rayada, la ventana no la atraviesa y al pinchar se dice quién
+   da cuánto.
+
+   El listón es el SUYO de «llueve bien» (`rainNo`, 2 mm/h) y solo en las
+   horas que su dueño ve secas (por debajo de `rainWarn`). MEDIDO antes de
+   ponerlo, sus 20 sitios y 48 h del 03-10-2026 (día de tromba): 43 de 869
+   horas secas, el 4,9 %, de 0 a 4 por sitio. Con «> 1 mm/h» salían 91,
+   el 10,5 %: una marca que sale tanto deja de marcar.
+
+   Sin la comparativa del sitio no se sabe, y no se marca nada (`sabido`). */
+function horasLluviaEnDuda(hrs) {
+  const mapa = new Map();
+  const C = deEsteSitio(S.comparativa)?.hourly;
+  if (!C?.time) return { mapa, sabido: false };
+  const rw = S.thr?.rainWarn ?? 0.2, rn = S.thr?.rainNo ?? 2;
+  const dueno = duenoLluvia();
+  const otros = MODELOS_TORMENTA.filter(m => m.om !== dueno);
+  const idx = new Map(C.time.map((x, i) => [new Date(x).setMinutes(0, 0, 0), i]));
+  for (const h of hrs || []) {
+    if (!h?.date || !has(h.prec) || h.prec >= rw) continue;
+    const t = new Date(h.date).setMinutes(0, 0, 0);
+    const i = idx.get(t);
+    if (i === undefined) continue;
+    let peor = null;
+    for (const m of otros) {
+      const v = C[`precipitation_${m.om}`]?.[i];
+      if (has(v) && v >= rn && (!peor || v > peor.mm)) peor = { quien: m.nom, mm: v };
+    }
+    if (peor) mapa.set(t, { ...peor, mio: h.prec, dueno: nombreDeModelo(dueno) });
+  }
+  return { mapa, sabido: true };
 }
 
 /* ═══════════════════════════════════════════════════════════════════

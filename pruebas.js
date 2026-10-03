@@ -1859,9 +1859,15 @@ grupo('La ventana de trabajo dice el día cuando cruza la medianoche');
 globalThis.VT = { go:'APTO', warn:'PRECAUCIÓN', no:'NO APTO', nd:'SIN DATO' };
 globalThis.clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 globalThis.horasEnDiscrepancia = () => ({ set:new Set(), sabido:true });
+globalThis.horasLluviaEnDuda = () => ({ mapa:new Map(), sabido:true });
 globalThis.renderTlDetail = () => {};
 S.thr = { gustNo: 70 };
 S.sel = 0;
+/* La ventana sale solo en sus sitios (03-10-2026, §67 9): para estas
+   pruebas, el sitio abierto es uno de los suyos. */
+const SITIO_TL = { name:'BI BERMEO', lat:43.4209, lon:-2.7215 };
+const placeAntesTL = S.place, savedAntesTL = S.saved;
+S.place = SITIO_TL; S.saved = [SITIO_TL];
 eval(sacar('function renderTimeline(hrs) {'));
 
 const HH = (dias, h) => new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()+dias, h);
@@ -1883,6 +1889,70 @@ renderTimeline([hora(HH(0,14),'no'), hora(HH(0,15),'go'),
 const h2 = pintado['#windowHint'] || '';
 ok('dentro del mismo día se dice una sola vez',
    (h2.match(/hoy/g)||[]).length <= 1, h2);
+
+/* ── §67 9 (03-10-2026): LA LLUVIA DE LOS DEMÁS CORTA LA VENTANA ─────
+   En Bilbao decía «próxima ventana apta: mañana domingo de 03:00 a 05:00»
+   con GFS dando 2,8 mm/h a esas horas. El color es del dueño de la lluvia;
+   la ventana no puede atravesar la hora en que otro da su «llueve bien». */
+grupo('La ventana de trabajo: lluvia de otro modelo, «apta» y sitios que no son suyos');
+const tTL = [HH(0,14), HH(0,15), HH(0,16), HH(0,17)];
+globalThis.horasLluviaEnDuda = () => ({ mapa:new Map([[tTL[2].getTime(), { quien:'GFS', mm:2.8, mio:0, dueno:'AROME HD' }]]), sabido:true });
+renderTimeline(tTL.map(d => hora(d, 'go')));
+const h3 = pintado['#windowHint'] || '', tl3 = pintado['#tl'] || '';
+ok('la ventana se corta en la hora en que GFS da 2,8 mm/h (no llega a las 17:00)',
+   /hasta las 15:00/.test(h3) && !/17:00/.test(h3), h3);
+ok('y dice que es porque los modelos dejan de coincidir', /dejan de coincidir/.test(h3), h3);
+ok('esa hora va rayada en la barra', (tl3.match(/tlh--duda/g) || []).length === 1, tl3.slice(0, 200));
+globalThis.horasLluviaEnDuda = () => ({ mapa:new Map(), sabido:true });
+renderTimeline(tTL.map(d => hora(d, 'go')));
+const h4 = pintado['#windowHint'] || '';
+ok('sin lluvia de otro, la misma ventana llega a las 17:00', /hasta las 17:00/.test(h4), h4);
+ok('la línea de la ventana no dice «apta» (describe, no autoriza: orden suya del 28-08)',
+   ![h1, h2, h3, h4].some(x => /apta/i.test(x)), [h1, h2, h3, h4].join(' | '));
+S.saved = [];
+renderTimeline(tTL.map(d => hora(d, 'go')));
+const h5 = pintado['#windowHint'] || '';
+ok('en un sitio que no es suyo no hay ventana de trabajo, y se dice por qué',
+   /no es uno de tus sitios/.test(h5) && !/sin nada|tramo/.test(h5) && (pintado['#tl'] || '') === '', h5);
+S.place = placeAntesTL; S.saved = savedAntesTL;
+globalThis.horasLluviaEnDuda = () => ({ mapa:new Map(), sabido:true });
+/* La rama «ahora» de Mis torres no sale en pantallas.cjs (ninguna hora
+   falsa es FUERTE en la primera): por eso, además, el texto. */
+ok('ningún rótulo escrito dice «No apta» / «apta ahora» / «ventana apta»',
+   !/['`](No apta|apta ahora|próxima ventana apta|Sin ninguna hora apta)/.test(src));
+
+grupo('Qué horas tienen la lluvia en desacuerdo (horasLluviaEnDuda, la de verdad)');
+{
+  const MT = [{ om:'ecmwf_ifs025', nom:'ECMWF' }, { om:'icon_seamless', nom:'ICON' },
+              { om:'gfs_seamless', nom:'GFS' }, { om:'meteofrance_arome_france_hd', nom:'AROME HD' },
+              { om:'ecmwf_ifs', nom:'ECMWF 9 km' }];
+  const fn = new Function('S', 'has', 'deEsteSitio', 'duenoLluvia', 'MODELOS_TORMENTA', 'nombreDeModelo',
+    sacar('function horasLluviaEnDuda(hrs) {') + '\nreturn horasLluviaEnDuda;')(
+      S, globalThis.has, globalThis.deEsteSitio, () => 'meteofrance_arome_france_hd', MT,
+      om => ({ meteofrance_arome_france_hd:'AROME HD' }[om] || om));
+  const P = { name:'BI BERMEO', lat:43.4209, lon:-2.7215 };
+  const antesP = S.place, antesC = S.comparativa, antesT = S.thr;
+  S.place = P; S.thr = { rainWarn:0.2, rainNo:2 };
+  const T = [HH(1,3), HH(1,4), HH(1,5), HH(1,6)];
+  const iso = d => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  S.comparativa = { _sitio: globalThis.key(P), hourly: { time: T.map(iso),
+    precipitation_gfs_seamless:   [2.8, 1.5, 0.0, 3.0],
+    precipitation_icon_seamless:  [0.0, 0.0, 0.0, 0.0],
+    precipitation_meteofrance_arome_france_hd: [9, 9, 9, 9],   // el dueño NO cuenta como «otro»
+  } };
+  const hrs = [{ date:T[0], prec:0 }, { date:T[1], prec:0 }, { date:T[2], prec:0 }, { date:T[3], prec:0.5 }];
+  const R = fn(hrs);
+  ok('sabe que lo ha mirado', R.sabido === true);
+  ok('GFS 2,8 con el dueño seco: hora en duda, con nombre y número',
+     R.mapa.get(T[0].getTime())?.quien === 'GFS' && R.mapa.get(T[0].getTime())?.mm === 2.8, JSON.stringify([...R.mapa]));
+  ok('GFS 1,5 (por debajo de su «llueve bien» de 2) no la marca', !R.mapa.has(T[1].getTime()));
+  ok('el propio dueño con 9 mm en la comparativa no se cuenta como otro', !R.mapa.has(T[2].getTime()));
+  ok('si el dueño ya ve agua (0,5) la hora ya no es limpia: no se marca aparte', !R.mapa.has(T[3].getTime()));
+  S.comparativa = { ...S.comparativa, _sitio: '0.000,0.000' };
+  const R2 = fn(hrs);
+  ok('con la comparativa de OTRO sitio no se sabe y no se marca nada', R2.sabido === false && R2.mapa.size === 0);
+  S.place = antesP; S.comparativa = antesC; S.thr = antesT;
+}
 
 /* ── EL ORDEN DE LAS TORRES NO DEPENDE DEL TIEMPO ────────────────────
    Él, 26-08-2026: «¿por qué cuando cambio de día no salen las estaciones
