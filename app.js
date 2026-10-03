@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-2331';
+const BUILD = '2026.10.03-2344';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -14670,8 +14670,10 @@ function renderNow() {
   /* ── CUÁNDO EMPIEZA A LLOVER, no solo cuánto cae ahora ───────────────
      «0,0 mm» con nubarrones encima no le dice nada. Lo que sirve es la
      hora. Se mira en las próximas 24 h, que es lo que dura una salida. */
+  /* Desde la hora EN CURSO (03-10-2026): empezaba en la siguiente y con
+     13,6 mm/h cayendo decía «Próxima lluvia 00:00». */
   const proxima = (() => {
-    for (let i = 1; i < Math.min(25, hrs.length); i++)
+    for (let i = 0; i < Math.min(25, hrs.length); i++)
       if (has(hrs[i].prec) && hrs[i].prec >= (S.thr?.rainWarn ?? 0.2)) return hrs[i];
     return null;
   })();
@@ -14954,6 +14956,9 @@ function renderNow() {
            con la lluvia cayendo. La hora es la del dueño, firmada; si otro
            la ve antes, se dice quién y a qué hora. */
         const dueno = nombreDeModelo(duenoLluvia());
+        if (proxima === hrs[0])
+          return dt('Próxima lluvia', `está lloviendo<small> según ${esc(dueno)}</small>`,
+            `${mmTxt(proxima.prec)} mm esta hora · ${mmTxt(agua24)} mm en 24 h`, 'warn');
         const otra = lluviaQueVieneYNoVesTu();
         const antes = (otra?.lista || []).filter(x => x.hora < proxima.date);
         return dt('Próxima lluvia',

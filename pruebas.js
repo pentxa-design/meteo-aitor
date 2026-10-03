@@ -1922,6 +1922,11 @@ grupo('Centro Operativo y agenda: un fallo al releer AEMET no borra el veto que 
      sal.a === true && sal.b === true && /Han caído rayos encima/.test(sal.t) && /No he podido volver a leer AEMET/.test(sal.t), JSON.stringify(sal));
 }
 
+grupo('«Próxima lluvia» con la lluvia cayendo dice que ya llueve (03-10-2026, Bermeo 13,6 mm/h)');
+ok('la búsqueda empieza en la hora EN CURSO y, si llueve ya, dice «está lloviendo» y no la hora siguiente',
+   /const proxima = \(\(\) => \{\n    for \(let i = 0; i < Math\.min\(25, hrs\.length\); i\+\+\)/.test(src)
+   && /if \(proxima === hrs\[0\]\)\n\s*return dt\('Próxima lluvia', `está lloviendo/.test(src));
+
 grupo('Las reglas del tiempo viven en UN fichero, el mismo para las tres webs (03-10-2026, 22:15)');
 {
   /* «estar mal en las 3 apps, eso no puede ser» · «raíz». Si app.js declara
