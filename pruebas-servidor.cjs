@@ -304,7 +304,9 @@ const numVig = n => Number(vig.match(new RegExp('const ' + n + ' = ([0-9.]+);'))
    vigilante en 70 y nadie lo vio. Los números del vigilante se LEEN de
    app.js, no se repiten. */
 {
-  const A = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  /* Los listones del rayo viven en reglas-tiempo.js desde el 03-10-2026 (la
+     copia única de las tres webs): se leen de ahí y de app.js. */
+  const A = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8') + '\n' + fs.readFileSync(path.join(__dirname, 'reglas-tiempo.js'), 'utf8');
   const nApp = re => Number((A.match(re) || [])[1]);
   ok('RACHA_TOPE del vigilante es el ámbar de SU perfil de caseta y poste (rafagaAviso), leído de app.js',
      numVig('RACHA_TOPE') === nApp(/rafagaAviso: (\d+), rafagaBestia: \d+,/), `${numVig('RACHA_TOPE')} frente a ${nApp(/rafagaAviso: (\d+), rafagaBestia: \d+,/)}`);
