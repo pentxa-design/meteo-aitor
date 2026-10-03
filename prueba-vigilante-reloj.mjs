@@ -726,17 +726,21 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   ok('el ranking ordena por acierto EQUILIBRADO (la media de lo que acierta de seco, poco y bien): ICON 80 %, GFS 60 %, AROME HD 51 %',
      rk.map(r => r.nombre).join() === 'ICON,GFS,AROME HD' && Math.round(rk[0].acierto * 100) === 80 && Math.round(rk[2].acierto * 100) === 51,
      JSON.stringify(rk.map(r => [r.nombre, r.acierto])));
+  /* 03-10-2026: el dueño se aprende POR LITROS en las horas de lluvia (suyo:
+     «quien acertó hoy y los litros sobre todo, ese manda»), no por acierto
+     equilibrado. `litros(n, mae)` mete n horas de lluvia con ese error medio. */
+  const conLitros = (v, quien, n, mae) => { v.stats.matriz.eus[quien].lluvia = { n, ae: n * mae, se: 0 }; return v; };
   const dX = duenoAprendido(registro({ 'AROME HD': POCO, ICON: POCO }), 'AROME HD', '2026-10-02T10:00:00Z');
-  ok('con pocos casos NO cambia el dueño y dice que faltan: «faltan casos para aprender»',
-     dX.nombre === 'AROME HD' && dX.cambio === false && /faltan casos para aprender/.test(dX.porque), dX.porque);
-  const vC = registro({ 'AROME HD': FLOJO, ICON: BUENO, GFS: MEDIO });
+  ok('con pocas horas de lluvia medida NO cambia el dueño y dice que faltan',
+     dX.nombre === 'AROME HD' && dX.cambio === false && /faltan horas de lluvia medida/.test(dX.porque), dX.porque);
+  const vC = conLitros(conLitros(registro({ 'AROME HD': FLOJO, ICON: BUENO }), 'AROME HD', 40, 3), 'ICON', 40, 1.5);
   const dC = duenoAprendido(vC, 'AROME HD', '2026-10-02T10:00:00Z');
-  ok('con casos de sobra y ICON acertando 80 % contra 51 %, el dueño de la lluvia pasa a ICON, y queda anotado desde cuándo y de quién venía',
-     dC.nombre === 'ICON' && dC.cambio === true && vC.dueno?.nombre === 'ICON' && vC.dueno.antes === 'AROME HD' && /ICON acierta 80 %/.test(dC.porque), JSON.stringify(vC.dueno));
-  const vH = registro({ 'AROME HD': MEDIO, ICON: [[40, 5, 5], [4, 16, 10], [4, 10, 16]] });   // .60 contra .62: dentro del margen
+  ok('con 40 horas de lluvia, ICON falla 1,5 mm/h y AROME HD 3: el registro aprendería ICON, y queda anotado de quién venía',
+     dC.nombre === 'ICON' && dC.cambio === true && vC.dueno?.nombre === 'ICON' && vC.dueno.antes === 'AROME HD' && /aprendería ICON/.test(dC.porque), dC.porque);
+  const vH = conLitros(conLitros(registro({ 'AROME HD': MEDIO, ICON: BUENO }), 'AROME HD', 40, 2), 'ICON', 40, 1.8);
   const dH = duenoAprendido(vH, 'AROME HD', '2026-10-02T10:00:00Z');
-  ok('y con una diferencia pequeña (62 % contra 60 %) NO cambia: hace falta un margen de 5 puntos; una tarde no cambia el dueño',
-     dH.nombre === 'AROME HD' && dH.cambio === false && /no los 5 puntos de margen/.test(dH.porque), dH.porque);
+  ok('y con una diferencia pequeña (1,8 contra 2 mm/h) NO cambia: hace falta fallar un 20 % menos; una tarde no cambia el dueño',
+     dH.nombre === 'AROME HD' && dH.cambio === false && /no un 20 % menos/.test(dH.porque), dH.porque);
 
   /* Y en una pasada de verdad, aunque el registro diga que ICON es el bueno,
      MANDA AROME HD (03-10-2026, suyo: «quien acertó hoy y los litros sobre
@@ -749,8 +753,9 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      !LD.reventó && !(LD.b.avisados || []).some(a => /llueve bien/.test(a.cuerpo || ''))
      && LD.estado?.dueno?.nombre === 'AROME HD' && LD.estado?.dueno?.loAprendido === 'ICON', JSON.stringify(LD.estado?.dueno) + ' ' + (ld?.cuerpo || ''));
   const RK = await pasada({ hora: '14:30', conservar: true, metodo: 'GET', query: { verificar: '1' } });
-  ok('?verificar=1 enseña el ranking, el dueño actual y por qué',
-     /Dueño de la lluvia: ICON/.test(RK.b.texto || '') && RK.b.ranking?.eus?.[0]?.nombre === 'ICON', (RK.b.texto || '').slice(0, 200));
+  ok('?verificar=1 dice que MANDA AROME HD (decisión suya) y aparte lo que aprendería el registro, con el ranking',
+     /Manda en la lluvia: AROME HD/.test(RK.b.texto || '') && /aprendería el registro por litros/.test(RK.b.texto || '')
+     && RK.b.manda === 'AROME HD' && RK.b.ranking?.eus?.[0]?.nombre === 'ICON', (RK.b.texto || '').slice(0, 260));
 
   /* Y si el propio almacén falla al leer el registro, la pasada y sus avisos siguen. */
   {
