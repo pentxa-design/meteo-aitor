@@ -518,8 +518,9 @@ ok('el archivo tiene tope, que tampoco puede crecer sin fin',
 console.log('\n  Los emplazamientos críticos');
 ok('MATIENA sigue siendo crítico', /'MATIENA'[\s\S]{0,90}critico: true/.test(vig));
 ok('y SANTAMAÑA también, desde el 29-08', /'SANTAMAÑA'[\s\S]{0,90}critico: true/.test(vig));
+ok('y DEUSTOII también, desde el 03-10 (suyo: «es crítico»)', /'DEUSTOII'[\s\S]{0,90}critico: true/.test(vig));
 ok('y no se ha marcado ningún otro sin querer',
-   (vig.match(/critico: true/g) || []).length === 2,
+   (vig.match(/critico: true/g) || []).length === 3,
    String((vig.match(/critico: true/g) || []).length));
 
 /* ── QUE NO SE QUEDE NINGUNO SIN VIGILAR ─────────────────────────
@@ -528,7 +529,7 @@ ok('y no se ha marcado ningún otro sin querer',
    suyos sin que nadie los mirara, y en la app iguales que el resto. */
 console.log('\n  Todos sus emplazamientos, vigilados');
 const cuantos = (vig.match(/^  \{ n: '/gm) || []).length;
-ok('el vigilante mira los 19, no los 14 de antes', cuantos === 19, String(cuantos));
+ok('la red del vigilante lleva los 20, no los 14 de antes (DEUSTOII desde el 03-10)', cuantos === 20, String(cuantos));
 for (const n of ['GALDAMES','ZEBERIO','LEMONA','PUNTA GALEA','AMURRIO','SANTAMAÑA'])
   ok(`${n} está en la lista`, vig.includes(`n: '${n}'`));
 /* GALDAMES lleva las coordenadas de SU MAPA, no las de la planta: están

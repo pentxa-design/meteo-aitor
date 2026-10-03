@@ -106,7 +106,9 @@ function red(esc, fijo, llamadas) {
      vigilante reconoce los críticos por estar a menos de 300 m de los
      suyos, no por un campo de la lista. */
   const SITIOS_ESC = SITIOS.map((x, k) => (esc.criticos || []).includes(k)
-    ? { name: 'BI MATIENA', lat: 43.159627, lon: -2.626779 } : x);
+    ? { name: 'BI MATIENA', lat: 43.159627, lon: -2.626779 }
+    : (esc.enDeusto || []).includes(k)
+      ? { name: 'BI DEUSTOII · ES-TIMS-46853', lat: 43.271656, lon: -2.948538, admin1: 'Vantage · Bilbao' } : x);
   const hoy0 = new RealDate(fijo); hoy0.setHours(0, 0, 0, 0);
   const iso = d => `${clave(d)}T${p2(d.getHours())}:00`;
   const R = (o, okk = true, status = 200) =>
@@ -307,6 +309,14 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const cp0 = cuerpoDe(P0.b, /parte de hoy/i);
   ok('07:30 · un día limpio lo dice con SUS listones (0,3 mm/h y 70 km/h), no con números a mano',
      /sin agua de 0,3 mm\/h para arriba y sin rachas de 70\./.test(cp0), cp0 || resumen(P0));
+
+  /* DEUSTO II ES CRÍTICO (suyo, 03-10-2026): si no se puede mirar, suena
+     aunque sea ella sola y el día esté en verde. */
+  const DZ = await pasada({ hora: '17:10', antes: tranquilo('17:10', 125), esc: { enDeusto: [3], caidos: [3] } });
+  const tdz = titulos(DZ.b).find(t => /No he podido mirar/.test(t)) || '';
+  const cdz = cuerpoDe(DZ.b, /No he podido mirar/);
+  ok('17:10 · DEUSTO II sin mirar, ella sola y en verde: suena «no he podido mirar», porque es crítica',
+     !DZ.reventó && /No he podido mirar 1/.test(tdz) && /no pueden faltar/.test(cdz), `${tdz} | ${cdz || resumen(DZ)}`);
 
   /* CON 1 A 3 SITIOS SIN MIRAR, EL PARTE NO DICE «SIN NADA» DE TODOS
      (03-10-2026, TRASPASO §67 7). El aviso «no he podido mirar» solo suena

@@ -269,6 +269,11 @@ const SITIOS = [
   { n: 'LEMONA',        lat: 43.2169,   lon: -2.773    },
   { n: 'PUNTA GALEA',   lat: 43.3725,   lon: -3.0214   },
   { n: 'AMURRIO',       lat: 43.0888,   lon: -2.999    },
+  /* CRÍTICO. Suyo, 03-10-2026, con trombas e inundaciones en Bilbao y sin
+     un solo aviso: *«es crítico»*. BI DEUSTOII (ES-TIMS-46853, Vantage,
+     Lehendakari Aguirre 29). Coordenadas de su planta (`data/estaciones.json`),
+     las mismas con las que está guardada en Mis estaciones. */
+  { n: 'DEUSTOII',      lat: 43.271656, lon: -2.948538, critico: true },
 ];
 
 const hh = h => String(h).padStart(2, '0') + 'h';
