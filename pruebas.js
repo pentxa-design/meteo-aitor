@@ -1917,6 +1917,25 @@ grupo('Las reglas del tiempo viven en UN fichero, el mismo para las tres webs (0
      r.code === 65 && R.wmoText(r.code) === 'Lluvia fuerte', JSON.stringify(r));
 }
 
+grupo('«¿Coinciden los modelos?» usa la regla del rayo de todos: código o su pareja, sin el Automático (03-10-2026)');
+{
+  /* Bilbao, sábado 3 a las 22:00: ICON daba código 95 y la tabla decía en
+     verde «Ninguno de los que saben ve tormenta — Automático, ICON y GFS
+     publican la tapa», con la franja de al lado diciendo «lo ve ICON». */
+  const tabla = new Function('has', 'listar', 'nCape', 'esc', 'clamp', 'COBERTURA', 'nombreDeModelo', 'CAPE_COMBINACION', 'TAPA_ROMPE', 'ReglasTiempo',
+    sacar('function tablaTormenta(H, i, hora) {') + '\nreturn tablaTormenta;')(
+      globalThis.has, xs => xs.join(', '), v => String(Math.round(v)), x => String(x), (v, a, b) => Math.max(a, Math.min(b, v)),
+      {}, om => om, 700, 75, globalThis.ReglasTiempo);
+  const H = { cape_ecmwf_ifs: [80], convective_inhibition_ecmwf_ifs: [60], weather_code_ecmwf_ifs: [55],
+              cape_icon_seamless: [110], convective_inhibition_icon_seamless: [52], weather_code_icon_seamless: [95],
+              cape_gfs_seamless: [50], convective_inhibition_gfs_seamless: [100], weather_code_gfs_seamless: [61],
+              cape_best_match: [900], convective_inhibition_best_match: [10] };
+  const t = tabla(H, 0, 'sábado, 22:00').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  ok('Bilbao 22:00, ICON con su código de tormenta: la tabla NO dice «ninguno ve tormenta» y nombra a ICON',
+     !/Ninguno de los que saben ve tormenta/.test(t) && /ICON/.test(t) && /ven tormenta|ve tormenta|código de tormenta/.test(t), t.slice(0, 220));
+  ok('   y el Automático (una mezcla) no entra, aunque su pareja «rompa»', !/best_match|Automático/.test(t), t.slice(0, 220));
+}
+
 grupo('El rayo MEDIDO veta las horas, no solo la caja de arriba (03-10-2026, 22:20)');
 {
   /* BI BERMEO con 26 descargas a menos de 15 km: la ficha decía FUERTE y la
@@ -6666,6 +6685,19 @@ grupo('«Me pasan a las 2 de la mañana: Arbaiza» — el viaje entra en la resp
        i >= 0 && /codigoQueSeVe\(h, h\.code\)/.test(src.slice(i, i + 400)),
        'si no, esa pantalla pinta otro cielo que las demás');
   }
+  /* Y LAS PALABRAS TAMBIÉN (03-10-2026): la fila «Previsión horaria» del
+     riesgo eléctrico escribía `wmoText(c.code)` —el código prestado a pelo— y
+     decía «Llovizna intensa» con 28,7 mm/h debajo de «Lluvia fuerte». Solo se
+     permite el código suelto donde es justo lo que se quiere decir: el de la
+     tormenta y el de la llovizna dentro de la frase del sirimiri. */
+  {
+    const sueltas = [];
+    src.split('\n').forEach((l, i) => {
+      if (/wmoText\(\s*[a-zA-Z]+\.code\s*\)/.test(l) && !/Tormenta prevista|Sirimiri \(/.test(l)) sueltas.push(`${i + 1}: ${l.trim().slice(0, 70)}`);
+    });
+    ok('ninguna PALABRA del cielo sale del código suelto: también pasa por la puerta (Bilbao 22:00, «Llovizna intensa» con 28,7 mm/h)',
+       sueltas.length === 0, sueltas.join(' · '));
+  }
   ok('y la puerta sigue siendo una sola función, no una copia por pantalla',
      (src.match(/function codigoQueSeVe\(/g) || []).length === 1);
 }
@@ -10837,7 +10869,7 @@ grupo('La tarjeta de 10 días dice de quién es cada cifra que no es del modelo 
      'ECMWF HRES la lluvia, ECMWF el día 18 y el %, GFS el UV, nadie la racha');
   ok('y la tarjeta lo pinta: el modelo del día bajo la fecha y el de cada cifra al lado (75 % ECMWF · 0,0 mm)',
      /class="dcard__m"/.test(src) && /class="dcard__de"/.test(src)
-     && /\$\{de\('precipitation_probability_max'\)\}/.test(src) && /\$\{de\('precipitation_sum'\)\}/.test(src) && /\$\{de\('wind_gusts_10m_max'\)\}/.test(src)
+     && /\$\{de\('precipitation_probability_max'\)\}/.test(src) && /const deMm = de\('precipitation_sum'\)\s*\|\|/.test(src) && /\$\{deMm\}/.test(src) && /\$\{de\('wind_gusts_10m_max'\)\}/.test(src)
      && /\.dcard__m\{/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8')),
      'sin esto el 75 % de ECMWF y los 0,0 mm de AROME iban en el mismo renglón como si fueran del mismo');
   const A = { con: [{ om: 'ecmwf_ifs025', nom: 'ECMWF', v: 1.6 }, { om: 'icon_seamless', nom: 'ICON', v: 0 }, { om: 'gfs_seamless', nom: 'GFS', v: 0.4 }] };
@@ -11035,7 +11067,7 @@ grupo('El chip de Horas dice cuánta agua ve el otro modelo (15-09-2026, 23:53)'
   /* 16-09-2026 00:10: «si alguno ve lluvia, CAPE, etc., que lo pongáis, y si se puede cuánto». */
   const cLl = sacar('function lluviaQueVenOtrosHora('), cRa = sacar('function rachaQueNoVesTuHora('), cCh = sacar('function chipsOtrosHora(');
   ok('cada hora dice qué otros modelos ven lluvia y cuánta (≥ 0,1 mm y más que el dueño), sin repetir al que presta el código',
-     /const dueno = nombreDeModelo\(duenoLluvia\(\)\);/.test(cLl) && /if \(m\.name === dueno \|\| m\.name === yaDicho\) continue;/.test(cLl)
+     /const dueno = nombreDeModelo\(duenoLluvia\(\)\);/.test(cLl) && /if \(m\.nom === dueno \|\| m\.nom === yaDicho\) continue;/.test(cLl) && /ReglasTiempo\.otrosDelAgua\(duenoLluvia\(\)\)/.test(cLl)
      && /v >= 0\.1 && v > mia/.test(cLl) && /const hc = horaEnComparativa\(h\);/.test(cLl));
   {
     /* Y si el que «ve tormenta» es EL TUYO, que se diga: los tres sitios
@@ -11423,7 +11455,7 @@ grupo('QUE NO VUELVA A PASAR · las tres guardias de clase (20-09-2026)');
        sueltos.length === 0,
        sueltos.length ? sueltos.slice(0, 3).join(' ‖ ') : 'ninguno escrito a mano');
   }
-  const huerfanas = Object.keys(EXCUSAS).filter(x => !A_.includes(x) && !V_.includes(x));
+  const huerfanas = Object.keys(EXCUSAS).filter(x => !A_.includes(x) && !V_.includes(x) && !reglasSrc.includes(x));   // los listones viven en reglas-tiempo.js desde el 03-10
   ok('y no queda ninguna excusa huérfana en la lista',
      huerfanas.length === 0, huerfanas.join(' · '));
 

@@ -1368,10 +1368,13 @@ function lluviaQueVenOtrosHora(h) {
   const yaDicho = aguaPrestada(h) !== null ? h.cieloDe : null;   // ese ya lleva su número en el chip del código
   const mia = has(h.prec) ? h.prec : 0;
   const otros = [];
-  for (const m of COMPARAR) {
-    if (m.name === dueno || m.name === yaDicho) continue;
+  /* Los «otros» son los de la lluvia del día (reglas-tiempo.js), no los de la
+     comparativa: con esa lista salía «⚠ Automático ve 0,4 mm», y el
+     Automático es una mezcla, no otro modelo (03-10-2026). */
+  for (const m of ReglasTiempo.otrosDelAgua(duenoLluvia())) {
+    if (m.nom === dueno || m.nom === yaDicho) continue;
     const v = hc.C[`precipitation_${m.om}`]?.[hc.i];
-    if (has(v) && v >= 0.1 && v > mia) otros.push({ quien: m.name, mm: v });
+    if (has(v) && v >= 0.1 && v > mia) otros.push({ quien: m.nom, mm: v });
   }
   otros.sort((x, y) => y.mm - x.mm);
   return otros;
@@ -2309,7 +2312,7 @@ function tormentaQueNoVesTu(h, place = null) {
   /* Sin el «Automático» y con ECMWF 9 km (03-10-2026): el Automático pega el
      CAPE de Météo-France con la tapa de ECMWF 9 km, una pareja que no
      pronostica nadie. Ver CON_TAPA. */
-  const MODELOS_RAYO = [...COMPARAR.filter(m => m.om !== 'best_match'), { om: ECMWF_9KM, name: 'ECMWF 9 km' }];
+  const MODELOS_RAYO = ReglasTiempo.MODELOS_RAYO.map(m => ({ om: m.om, name: m.nom }));   // los de la regla única
   for (const m of MODELOS_RAYO) {
     const cape = C[`cape_${m.om}`]?.[i], cin = C[`convective_inhibition_${m.om}`]?.[i];
     if (!has(cape) || !has(cin)) continue;
@@ -2368,7 +2371,7 @@ function quienVeRayo(h, place = null) {
     .toISOString().slice(0, 13);
   const i = C.time.findIndex(t => t.slice(0, 13) === iso);
   if (i < 0) return ven;
-  const MODELOS_RAYO = [...COMPARAR.filter(m => m.om !== 'best_match'), { om: ECMWF_9KM, name: 'ECMWF 9 km' }];
+  const MODELOS_RAYO = ReglasTiempo.MODELOS_RAYO.map(m => ({ om: m.om, name: m.nom }));   // los de la regla única
   for (const m of MODELOS_RAYO) {
     if (m.om === mio) continue;   // el tuyo ya va arriba, con lo que enseña la pantalla
     const cape = C[`cape_${m.om}`]?.[i], cin = C[`convective_inhibition_${m.om}`]?.[i];
@@ -5643,8 +5646,13 @@ function renderStorm(c) {
   const cotaAqui = cfgDe(S.place)?.cota;
   const tonoFrz  = !has(c.frz) ? ''
                  : (has(cotaAqui) && c.frz <= cotaAqui + 200) ? 'no' : 'dato';
-  const tonoCod  = !has(c.code) ? '' : isStormCode(c.code) ? 'no'
-                 : c.code >= HAY_AGUA ? 'warn' : 'go';
+  /* LO QUE SE VE, NO EL CÓDIGO A PELO (03-10-2026). Esta fila escribía
+     el texto del código prestado de ECMWF, tal cual. Bilbao, 22:00,
+     28,7 mm/h de AROME HD: arriba «Lluvia fuerte» y aquí «Llovizna intensa».
+     La guardia de la puerta única miraba los dibujos y no las palabras. */
+  const codVisto = has(c.code) || has(c.prec) ? codigoQueSeVe(c, c.code) : null;
+  const tonoCod  = !has(codVisto) ? '' : isStormCode(codVisto) ? 'no'
+                 : codVisto >= HAY_AGUA ? 'warn' : 'go';
 
   const capeTxt = !has(c.cape) ? nd
     : c.cape >= (S.thr?.capeNo ?? 1000) ? 'alta'
@@ -5688,7 +5696,8 @@ function renderStorm(c) {
         cinTxt === nd ? '' : cinTxt, tonoCin) +
     row('Isocero', 'Altura de la cota de 0 °C', show(c.frz, 'm'),
         has(cotaAqui) ? `el suelo aquí, a ${Math.round(cotaAqui)} m` : '', tonoFrz) +
-    row('Previsión horaria', 'Código de tiempo del modelo', wmoText(c.code) ?? nd, '', tonoCod) +
+    row('Previsión horaria', c.codigoAjeno && c.cieloDe ? `el cielo de ${c.cieloDe}, el agua de ${modeloDato().name}` : 'Cielo y agua del modelo',
+        textoVisto(codVisto, c.day ?? 1) ?? nd, '', tonoCod) +
     prestados +
     /* ── LA CHAPA SE FUE A LA GUÍA (02-09-2026) ─────────────────────
        Aquí había cuatro párrafos: cómo se leen el CAPE y la tapa juntos,
@@ -7007,22 +7016,27 @@ function renderComparativa() {
    callado se lee como un no, y ese es el error que más veces ha estado a
    punto de colarse en esta app. Aquí sale escrito.                    */
 function tablaTormenta(H, i, hora) {
-  const filas = COMPARAR.map(m => ({
-    name: m.name, res: m.res,
-    cape: H[`cape_${m.om}`]?.[i],
-    cin: H[`convective_inhibition_${m.om}`]?.[i],
-  })).filter(f => has(f.cape));
+  /* LOS DEL RAYO Y LA REGLA DEL RAYO, de reglas-tiempo.js (03-10-2026): ECMWF
+     9 km, ICON y GFS, con su código de tormenta o su propia pareja. Antes esta
+     tabla usaba los de la comparativa (con el Automático, sin ECMWF 9 km) y no
+     miraba el código: Bilbao 22:00, «Ninguno de los que saben ve tormenta»
+     con ICON dando 95 y la franja de al lado diciendo «lo ve ICON». */
+  const filas = ReglasTiempo.MODELOS_RAYO.map(m => {
+    const f = { name: m.nom, res: m.res, cape: H[`cape_${m.om}`]?.[i],
+                cin: H[`convective_inhibition_${m.om}`]?.[i], code: H[`weather_code_${m.om}`]?.[i] };
+    return { ...f, ...ReglasTiempo.rayoDelModelo(f) };
+  }).filter(f => has(f.cape) || f.porCodigo);
 
   if (!filas.length) return '';
 
-  const sabe = f => has(f.cin);
-  const salta = f => sabe(f) && f.cape >= CAPE_COMBINACION && f.cin < TAPA_ROMPE;
-  const alFilo = f => sabe(f) && f.cape >= CAPE_COMBINACION && !salta(f);
+  const sabe = f => has(f.cin) || f.porCodigo;
+  const salta = f => f.salta;
+  const alFilo = f => sabe(f) && has(f.cape) && f.cape >= CAPE_COMBINACION && !salta(f);
 
   const losQueSaben = filas.filter(sabe);
   const losQueSaltan = filas.filter(salta);
   const mudos = filas.filter(f => !sabe(f));
-  const tope = Math.max(...filas.map(f => f.cape), CAPE_COMBINACION);
+  const tope = Math.max(...filas.map(f => f.cape).filter(has), CAPE_COMBINACION);
 
   let cab;
   if (!losQueSaben.length) {
@@ -7066,9 +7080,11 @@ function tablaTormenta(H, i, hora) {
     </div>
     <div class="cmp__h">Tormenta · CAPE con su tapa · ${esc(hora)}</div>
     ${filas.map(f => {
-      const pc = clamp(f.cape / tope * 100, f.cape > 0 ? 4 : 0, 100);
+      const pc = has(f.cape) ? clamp(f.cape / tope * 100, f.cape > 0 ? 4 : 0, 100) : 0;
       const st = salta(f) ? 'no' : alFilo(f) ? 'warn' : sabe(f) ? 'go' : 'nd';
-      const tapa = sabe(f)
+      const tapa = f.porCodigo
+        ? `<em class="cmp__tap">su código de tormenta${has(f.cin) ? ` · tapa ${nCape(f.cin)}` : ''}</em>`
+        : sabe(f)
         ? `<em class="cmp__tap">tapa ${nCape(f.cin)}${salta(f) ? ' · ABIERTA' : ''}</em>`
         : `<em class="cmp__tap cmp__tap--no">no publica la tapa</em>`;
       return `<div class="cmp__f" data-s="${st}">
@@ -11564,14 +11580,14 @@ const CAMS = [
    en CLAUDE.md. Vive aquí arriba porque lo usan dos sitios: la regla de
    `assess()` y el aviso de discrepancia entre modelos. Un umbral
    duplicado se separa solo con el tiempo. */
-const CAPE_COMBINACION = 700;
+const CAPE_COMBINACION = ReglasTiempo.CAPE_COMBINACION;   // la regla, en reglas-tiempo.js
 /* ── Y EL OTRO MEDIO LISTÓN DE LA TORMENTA ────────────────────────────
    La tapa por debajo de la cual la burbuja rompe. Vivía escrito a pelo
    —un 75 suelto— en ocho sitios distintos, y el CAPE ya se recalibró una
    vez (de 800 a 700): el día que se recalibre esto, los sitios que se
    queden con el número viejo harán que la app se contradiga sola.
    Puesto el 20-09-2026, con la guardia de «un solo sitio por regla». */
-const TAPA_ROMPE = 75;
+const TAPA_ROMPE = ReglasTiempo.TAPA_ROMPE;
 
 /* Los miles con punto, a mano. `toLocaleString` da un espacio fino que
    en el móvil se lee como si fueran dos números: «2 700» parecía 2 y 700.
@@ -15559,6 +15575,11 @@ function renderDays() {
       const o = origenDelDato(fc, campo, t);
       return o && o !== modeloDia ? ` <small class="dcard__de">${esc(nombreDeModelo(o))}</small>` : '';
     };
+    /* Y SI EN LA MISMA LÍNEA HAY DOS MODELOS, LOS DOS CON NOMBRE (03-10-2026):
+       «💧 100 % ECMWF · 72,0 mm» se leía con los 72 mm de ECMWF, y eran de
+       AROME HD (el del día, que por ser el del día no llevaba nombre). */
+    const deMm = de('precipitation_sum')
+      || (de('precipitation_probability_max') && modeloDia ? ` <small class="dcard__de">${esc(nombreDeModelo(modeloDia))}</small>` : '');
     const tormenta = isStormCode(D.weather_code[i]);
     /* ── EL COLOR SALE DE LAS TRES COSAS, NO SOLO DE LA RACHA ─────────
        Encontrado en el repaso del domingo, y es el fallo de siempre: esta
@@ -15581,7 +15602,7 @@ function renderDays() {
       <div class="dcard__i">${iconosDelDia(t)}</div>
       <div class="dcard__t"><b>${has(mx)?mx.toFixed(0)+'°':'—'}</b>
         <span>${has(mn)?mn.toFixed(0)+'°':'—'}</span></div>
-      <div class="dcard__r">💧 ${has(pop)?pop+'%':'—'}${de('precipitation_probability_max')} · ${has(mm)?mmTxt(mm)+' mm':'sin dato'}${de('precipitation_sum')}</div>
+      <div class="dcard__r">💧 ${has(pop)?pop+'%':'—'}${de('precipitation_probability_max')} · ${has(mm)?mmTxt(mm)+' mm':'sin dato'}${deMm}</div>
       <div class="dcard__g" data-s="${nRacha}">Racha ${has(racha) ? wtxt(racha, true) : '—'}${rachaCuando}${de('wind_gusts_10m_max')}</div>
       ${(() => {
         /* ── Y SI OTRO MODELO TE CRUZA EL LISTÓN, SE DICE ─────────────

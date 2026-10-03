@@ -668,6 +668,36 @@ const ReglasTiempo = (() => {
     return { nivel: 'go', texto: `Rayos medidos por AEMET: ninguno a menos de ${RAYO_RADIO} km en las últimas ${v.horas ?? 3} h.` + hasta };
   }
 
+  /* ── EL RAYO DE UN MODELO EN UNA HORA: LA REGLA (03-10-2026) ────────
+     Código de tormenta (95/96/99) o su PROPIA pareja CAPE ≥ 700 con la tapa
+     por debajo de 75 (calibrado sobre 960-2.904 horas reales, CLAUDE.md, «La
+     tapa entra en la decisión»), con ECMWF 9 km, ICON y GFS —el Automático
+     no: es una mezcla; medido contra AEMET el 03-10, 82 % frente a 73 %—.
+     «¿Coinciden los modelos?» llevaba su propia versión sin códigos y con el
+     Automático, y decía «ninguno ve tormenta» con ICON dando 95. */
+  const CAPE_COMBINACION = 700;
+  const TAPA_ROMPE = 75;
+  /* Los cinco con nombre (no el Automático). El código de tormenta cuenta de
+     cualquiera; la pareja, solo del que publica su propia tapa (ECMWF 25 km y
+     AROME HD no la publican: con ellos solo cuenta su código, y AROME tampoco
+     publica código). Es lo que ya hacían el parte y las franjas de la app; el
+     Centro Operativo y la tabla de «¿Coinciden?» se quedaban sin el código de
+     ECMWF 25 km (03-10-2026). */
+  const MODELOS_RAYO = Object.freeze([
+    { om: ECMWF_9KM, nom: 'ECMWF 9 km', res: '9 km' },
+    { om: 'icon_seamless', nom: 'ICON', res: '7-13 km' },
+    { om: 'gfs_seamless', nom: 'GFS', res: '13-25 km' },
+    { om: 'ecmwf_ifs025', nom: 'ECMWF', res: '25 km' },
+    { om: 'meteofrance_arome_france_hd', nom: 'AROME HD', res: '1,3 km' },
+  ]);
+  /** Los «otros» del agua: los cinco con nombre menos el dueño. */
+  const otrosDelAgua = (duenoOm = DUENO_AGUA) => MODELOS_TORMENTA.filter(m => m.om !== duenoOm && m.om !== 'best_match');
+  function rayoDelModelo({ cape, cin, code } = {}) {
+    const porCodigo = isStormCode(code);
+    const porPareja = has(cape) && has(cin) && cape >= CAPE_COMBINACION && cin < TAPA_ROMPE;
+    return { salta: porCodigo || porPareja, porCodigo, porPareja };
+  }
+
   return Object.freeze({
     has, LISTON, DUENO_AGUA, AGUA_ACUERDO, RELLENO_AGUA, CIELO_PRESTADO, ECMWF_9KM,
     MODELOS_TORMENTA, NOMBRES, nombreDe, mojaEsaHora, lluviaDeUnSitio,
@@ -675,5 +705,6 @@ const ReglasTiempo = (() => {
     palabraLluvia, palabraDeLaVentana, comoLlueve, iconoDeAgua, codigoConAgua, codigoDeVarias, tramosDeCodigos,
     RAYO_ENCIMA, RAYO_CERCA, RAYO_RADIO, RAYO_VIGENTE, kmEntre, loQueAunCuenta, lectorDeRayos,
     rayosConCache, vetaRayo, textoRayos,
+    CAPE_COMBINACION, TAPA_ROMPE, MODELOS_RAYO, rayoDelModelo, otrosDelAgua,
   });
 })();
