@@ -11786,6 +11786,78 @@ grupo('El parte cuenta el CÓDIGO de tormenta, no solo la pareja CAPE+tapa (03-1
   ok('   y sin código ni pareja, no se inventa el rayo', sinCodigo && sinCodigo.salta === false, JSON.stringify(sinCodigo));
 }
 
+grupo('Cambiar de sitio rápido: la respuesta tardía del anterior no pisa al nuevo (03-10-2026)');
+{
+  /* Reproducido por la auditoría con el go() real: BERMEO y enseguida OIZ,
+     Bermeo tardando más → «cabecera=OIZ datos=BERMEO». Aquí se arranca el
+     go() de verdad con las cargas de mentira y los mismos tiempos. */
+  const goSrc = sacar('async function go(place');
+  const el = () => ({ className: '', textContent: '', classList: { add() {}, remove() {} } });
+  const mk = () => {
+    const ctx = {
+      S: { hgt: 10 }, LS: { set() {} }, Maps: { irA() {} }, $: () => el(), has: v => v != null,
+      pintado: [],
+      loadAll: p => new Promise(r => setTimeout(() => r({ fc: { quien: p.name } }), p.name === 'BERMEO' ? 120 : 30)),
+      buildHours: fc => [{ de: fc.quien }],
+      cargarComparativa: async () => {}, cargarDiariaMulti() {}, guardarCopia() {}, avisoCopia() {},
+      paint() { ctx.pintado.push(`${ctx.S.place.name}/${ctx.S.data.fc.quien}`); },
+      cargarRayosAemet: async () => {}, cargarRayosSatelite: async () => {}, cargarDiscrepancia: async () => {},
+      toast() {}, leerCopia() { return null; }, avisoSinDatos() {}, syncFav() {},
+    };
+    ctx.go = new Function(...Object.keys(ctx), goSrc + '\nreturn go;')(...Object.values(ctx));
+    return ctx;
+  };
+  /* El hermano síncrono, para el registro de reglas: que el turno exista. */
+  ok('go() lleva turno: una carga que vuelve tarde mira si sigue siendo la de pantalla antes de escribir',
+     /const turno = S\.turnoGo = \(S\.turnoGo \|\| 0\) \+ 1;/.test(goSrc) && /if \(!vigente\(\)\) return;\s*\/\/ ya se pidió otro sitio/.test(goSrc));
+  (globalThis.__pendientes ??= []).push((async () => {
+    const c = mk();
+    const A = { name: 'BERMEO', lat: 43.413, lon: -2.718 }, B = { name: 'OIZ', lat: 43.227, lon: -2.592 };
+    const pa = c.go(A); await new Promise(r => setTimeout(r, 10)); const pb = c.go(B);
+    await Promise.all([pa, pb]);
+    ok('BERMEO y enseguida OIZ (Bermeo tarda más): al final la cabecera y los datos son de OIZ, y nunca se pinta Oiz con lo de Bermeo',
+       c.S.place.name === 'OIZ' && c.S.data.fc.quien === 'OIZ' && !c.pintado.includes('OIZ/BERMEO'),
+       `place=${c.S.place.name} datos=${c.S.data.fc.quien} pintados=${c.pintado.join(',')}`);
+  })());
+}
+
+grupo('Mis estaciones: cada tarjeta con SUS datos aunque la lista cambie mientras se carga (03-10-2026)');
+{
+  /* Reproducido por la auditoría con el cargarTorres() real: sale con
+     [OIZ, BERMEO]; mientras espera, la lista del servidor llega como
+     [BERMEO, OIZ] y se lanza otra carga; la primera contesta la última.
+     Salía «tarjeta BERMEO → datos de Oiz». */
+  const fn = sacar('async function cargarTorres()');
+  const keyT = p => `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`;
+  let llamada = 0;
+  const ctx = {
+    S: { saved: [] }, $: () => ({ innerHTML: '', textContent: '' }), key: keyT,
+    cotasDeTodos: async () => 0, API: { fc: 'x' }, CURRENT: '', HOURLY: '', model: () => ({ om: 'm' }),
+    jget: async (u, q) => { const n = ++llamada; const lats = q.latitude.split(',');
+      await new Promise(r => setTimeout(r, n === 1 ? 120 : 20));
+      return lats.map(la => ({ hourly: { de: la } })); },
+    completarTorres: async () => {}, cfgDe: () => ({}), ALTURA_CASETA: 3,
+    buildHours: fc => [{ datosDeLat: fc.hourly.de }], comoEstaLaPista: () => null,
+    renderParte() {}, renderTorres() {}, medidasDeTodos: async () => {}, discrepaTorres: async () => {},
+    apuntarTorresEnMarcador() {}, leerCopia() {}, esc: x => x, toast() {}, avisoCopia() {},
+  };
+  const cargarTorresR = new Function(...Object.keys(ctx), fn + '\nreturn cargarTorres;')(...Object.values(ctx));
+  ok('cargarTorres copia la lista ANTES de esperar y empareja con esa copia, no con la de después',
+     /const sitios = S\.saved\.slice\(\);/.test(fn) && /S\.torres = sitios\.map\(\(p, i\) =>/.test(fn));
+  (globalThis.__pendientes ??= []).push((async () => {
+    const OIZ = { name: 'OIZ', lat: 43.227, lon: -2.592 }, BERMEO = { name: 'BERMEO', lat: 43.413, lon: -2.718 };
+    ctx.S.saved = [OIZ, BERMEO];
+    const p1 = cargarTorresR();
+    await new Promise(r => setTimeout(r, 10));
+    ctx.S.saved = [BERMEO, OIZ];
+    const p2 = cargarTorresR();
+    await Promise.all([p1, p2]);
+    const mal = (ctx.S.torres || []).filter(t => Number(t.horas?.[0]?.datosDeLat).toFixed(3) !== t.place.lat.toFixed(3));
+    ok('la lista cambia de orden mientras se carga: ninguna tarjeta sale con los datos de otro sitio',
+       ctx.S.torres?.length === 2 && !mal.length, mal.map(t => `${t.place.name} → lat ${t.horas[0].datosDeLat}`).join(' · '));
+  })());
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');

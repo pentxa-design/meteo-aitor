@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-1547';
+const BUILD = '2026.10.03-1553';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -6449,10 +6449,11 @@ async function cargarDiariaMulti(place) {
        racha que no ves y el del desacuerdo— podían estar contando lo de
        OTRO emplazamiento sin que nadie pudiera notarlo. */
     diasDeSusHoras(d);
-    S.diariaMulti = d?.daily?.time?.length
-      ? Object.assign(d.daily, { clave: `${place.lat.toFixed(3)},${place.lon.toFixed(3)}` })
-      : null;
-  } catch { S.diariaMulti = null; }
+    if (!S.place || key(S.place) === key(place))
+      S.diariaMulti = d?.daily?.time?.length
+        ? Object.assign(d.daily, { clave: `${place.lat.toFixed(3)},${place.lon.toFixed(3)}` })
+        : null;
+  } catch { if (!S.place || key(S.place) === key(place)) S.diariaMulti = null; }
   /* Y SE REPINTA. Llega DESPUÉS del primer pintado, así que sin esta
      línea el aviso no saldría nunca — la trampa de siempre en esta app:
      la función bien escrita y nadie que la use. */
@@ -6670,8 +6671,11 @@ async function cargarComparativa(place) {
        equivocado. Se sella con la clave del sitio y quien la use tendrá
        que demostrar que es la suya. */
     d._sitio = key(place);
-    S.comparativa = d;
-  } catch { S.comparativa = null; }
+    /* Solo si sigue siendo el sitio de pantalla: una respuesta tardía del
+       anterior no pisa la del nuevo, y su FALLO tampoco la borra (03-10:
+       «comparativa de Oiz = true → false» con un fallo tardío de Bermeo). */
+    if (!S.place || key(S.place) === key(place)) S.comparativa = d;
+  } catch { if (!S.place || key(S.place) === key(place)) S.comparativa = null; }
   renderComparativa();
 
   /* Y SE REPINTA LO QUE DEPENDE DE ESTO.
@@ -8195,10 +8199,20 @@ async function cargarTorres() {
   }
   el.innerHTML = `<p class="note">Consultando ${S.saved.length} emplazamiento${S.saved.length>1?'s':''}…</p>`;
 
+  /* LA LISTA SE COPIA ANTES DE ESPERAR (03-10-2026). Se leía `S.saved`
+     DESPUÉS del await (hasta 20 s) y se emparejaba por posición: si en ese
+     rato llegaba la lista del servidor en otro orden (al abrir desde un
+     aviso, `sincronizarTorres` arranca a la vez) o él quitaba un ♥, la
+     tarjeta de BERMEO salía con los datos de OIZ. Ahora cada respuesta va
+     con el sitio con el que se pidió. */
+  const sitios = S.saved.slice();
+  /* Y con turno, como `go()`: si mientras tanto se lanzó otra carga (la
+     lista del servidor llegó en otro orden), la vieja no pisa a la nueva. */
+  const turno = S.turnoTorres = (S.turnoTorres || 0) + 1;
   try {
     const d = await jget(API.fc, {
-      latitude:  S.saved.map(p => p.lat.toFixed(4)).join(','),
-      longitude: S.saved.map(p => p.lon.toFixed(4)).join(','),
+      latitude:  sitios.map(p => p.lat.toFixed(4)).join(','),
+      longitude: sitios.map(p => p.lon.toFixed(4)).join(','),
       /* ── Y LA OBSERVACIÓN DE AHORA, LA MISMA QUE EL SITIO ABIERTO ────
          Su pantallazo del 25-09-2026 a las 21:40-21:41, Bermeo, la misma
          hora en las dos pantallas:
@@ -8238,8 +8252,10 @@ async function cargarTorres() {
     }, { timeout: 20000 });
 
     const arr = Array.isArray(d) ? d : [d];
-    await completarTorres(S.saved, arr);
-    S.torres = S.saved.map((p, i) => {
+    if (turno !== S.turnoTorres) return;
+    await completarTorres(sitios, arr);
+    if (turno !== S.turnoTorres) return;
+    S.torres = sitios.map((p, i) => {
       const fc = arr[i];
       if (!fc?.hourly) return { place: p, horas: null };
       const cfg = cfgDe(p);
@@ -8253,10 +8269,10 @@ async function cargarTorres() {
        Va después y sin bloquear: el tablero se pinta ya con el
        pronóstico, y cuando lleguen los aparatos se repinta. Si Euskalmet
        falla o tarda, la pantalla no se entera. */
-    const medidas = medidasDeTodos(S.saved).then(() => { renderParte(); renderTorres(); }).catch(() => {});
+    const medidas = medidasDeTodos(sitios).then(() => { renderParte(); renderTorres(); }).catch(() => {});
     // Y el aviso de que otro modelo ve tormenta donde el tuyo no. Va
     // después y sin bloquear: el tablero se pinta ya, y esto lo repinta.
-    const discrepa = discrepaTorres(S.saved).then(() => { /* El parte PRIMERO: `renderTorres` lee `S.parteFilas` para meterlo
+    const discrepa = discrepaTorres(sitios).then(() => { /* El parte PRIMERO: `renderTorres` lee `S.parteFilas` para meterlo
        dentro de cada tarjeta. Al revés pintaba el del render anterior. */
     renderParte(); renderTorres(); }).catch(() => {});
 
@@ -9108,7 +9124,7 @@ async function discrepaTorres(sitios) {
     }
     if (!avisos.length) return null;
     avisos.sort((a, b) => (b.tor - a.tor) || (b.capeMax - a.capeMax));
-    return { yoLaVeo, yoPuedoVerla, avisos };
+    return { k: key(p), yoLaVeo, yoPuedoVerla, avisos };
   });
 }
 
@@ -10914,7 +10930,9 @@ function renderTorres() {
   if (!el || !S.torres) return;
 
   // La discrepancia va pegada al emplazamiento por su posición en S.saved
-  const disc = i => S.torresDiscrepa?.[S.saved.findIndex(p => key(p) === key(S.torres[i].place))] ?? null;
+  /* Por CLAVE, no por posición: la lista puede haber cambiado de orden
+     desde que se pidió (03-10-2026). */
+  const disc = i => S.torresDiscrepa?.find(x => x?.k === key(S.torres[i].place)) ?? null;
   const dPorSitio = new Map(S.torres.map((t, i) => [key(t.place), disc(i)]));
 
   const orden = [...S.torres].sort((a, b) => deCasaAFuera(a.place, b.place));
@@ -12365,8 +12383,13 @@ async function cargarRayosAemet({ forzar = false } = {}) {
     let anoche = null;
     try { anoche = await Rayos.sobreTorres(torres, { horas: 12 }); }
     catch { anoche = null; }                    // lo de las torres es extra: si falla, no arrastra
+    /* Si mientras tanto se abrió otro sitio, esto no se guarda: con la
+       clave vieja la ficha del nuevo se quedaba en «Mirando…» y SIN VETO
+       de rayo hasta recargar (03-10-2026). */
+    if (S.place && key(S.place) !== clave) return;
     S.rayos = { clave, t: Date.now(), d: r, anoche, error: null };
   } catch (e) {
+    if (S.place && key(S.place) !== clave) return;
     S.rayos = { clave, t: Date.now(), d: null, anoche: null, error: String(e.message || e) };
   }
   pintarRayosAemet();
@@ -12439,8 +12462,10 @@ async function cargarRayosSatelite({ forzar = false } = {}) {
       } catch { return { t, error: true }; }
       finally { clearTimeout(reloj); }
     }));
+    if (S.place && key(S.place) !== clave) return;
     S.rayosSat = { clave, t: Date.now(), filas, pasoMin: c.pasoMin, fuente: c.fuente, error: null };
   } catch (e) {
+    if (S.place && key(S.place) !== clave) return;
     S.rayosSat = { clave, t: Date.now(), filas: null, error: String(e.message || e) };
   }
   pintarRayosSatelite();
@@ -17410,6 +17435,15 @@ function seguirSiEsMiUbicacion() {
 }
 
 async function go(place, { silent = false } = {}) {
+  /* ── EL TURNO (03-10-2026) ──────────────────────────────────────────
+     Auditoría de ese día, reproducido con el go() real: tocar BERMEO y
+     enseguida OIZ, con Bermeo tardando más, dejaba «cabecera=OIZ
+     datos=BERMEO»: el semáforo de Oiz con la previsión de Bermeo. Pasa
+     también solo, al volver a la app (visibilitychange) con el GPS
+     pidiendo otro sitio a la vez. Cada llamada coge su turno; si al
+     volver de esperar ya hay otra más nueva, ésta no escribe nada. */
+  const turno = S.turnoGo = (S.turnoGo || 0) + 1;
+  const vigente = () => turno === S.turnoGo;
   S.place = place;
   LS.set('place', place);
   // Si el mapa de modelos está abierto, que salte al nuevo sitio (no se
@@ -17424,6 +17458,7 @@ async function go(place, { silent = false } = {}) {
   $('#reloadSvg').classList.add('spin');
   try {
     const data = await loadAll(place);
+    if (!vigente()) return;                    // ya se pidió otro sitio: esto no es de pantalla
     data.hours = buildHours(data.fc, S.hgt);
     S.data = data;
     /* ── LA VOTACIÓN ANTES DE PINTAR (09-09-2026) ────────────────────
@@ -17437,6 +17472,7 @@ async function go(place, { silent = false } = {}) {
        tarda más, se pinta con lo que hay y la votación repinta al llegar,
        como antes. */
     await Promise.race([cargarComparativa(place).catch(() => {}), new Promise(r => setTimeout(r, 7000))]);
+    if (!vigente()) return;
     /* Y la comparación a diez días, para la pestaña «10 días». Va aquí
        al lado porque comparte el mismo disparador: sitio nuevo, datos
        nuevos. No se espera a ella —llega cuando llega y repinta sola—,
@@ -17454,6 +17490,7 @@ async function go(place, { silent = false } = {}) {
     cargarDiscrepancia(place).catch(() => {});
     if (!silent) toast(`Datos actualizados · ${new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`);
   } catch (e) {
+    if (!vigente()) return;                    // el fallo de un sitio que ya no está en pantalla no pinta nada
     const cuota = /429/.test(e.message);
     const copia = leerCopia(place);
     if (copia) {
@@ -17470,8 +17507,7 @@ async function go(place, { silent = false } = {}) {
       toast(cuota ? 'Límite diario de la API agotado desde esta conexión' : 'Sin datos: ' + e.message, 5200);
     }
   } finally {
-    $('#reloadSvg').classList.remove('spin');
-    syncFav();
+    if (vigente()) { $('#reloadSvg').classList.remove('spin'); syncFav(); }
   }
 }
 
