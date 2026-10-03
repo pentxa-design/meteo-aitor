@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-2242';
+const BUILD = '2026.10.03-2259';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -4652,7 +4652,7 @@ function rayoMedidoVeta(place, ahora = Date.now()) {
   if (R?.d?.ultima) {
     const u = R.d.ultima;
     f = u.encima > 0 ? { encima: u.encima, hasta: u.hasta, km: u.masCerca?.km ?? null } : null;
-  } else if (S.rayosTorres?.d && ahora - S.rayosTorres.t < 20 * 60e3) {
+  } else if (S.rayosTorres?.d && ahora - S.rayosTorres.t < RAYOS_TORRES_CADA + 5 * 60e3) {
     /* Los guardados van aparte del sitio abierto: cada torre lleva su clave. */
     const t = (S.rayosTorres.d.tocadas || []).find(x => key(x.t) === key(place));
     const vig = (t?.marcosEncima || []).filter(m => ahora - new Date(m.hasta).getTime() <= RAYO_VIGENTE);
@@ -12131,11 +12131,11 @@ function pintarDiscrepancia() {
    entre relámpago y trueno); aquí se usan 15 porque la posición que da
    una imagen de 0,35 km por píxel no es un punto exacto y porque el
    error tiene que caer del lado seguro. */
-const RAYO_ENCIMA = 15;
+const RAYO_ENCIMA = ReglasTiempo.RAYO_ENCIMA;
 /** Hasta aquí la tormenta es de la zona: se ve, se oye y puede venir. */
-const RAYO_CERCA  = 30;
+const RAYO_CERCA  = ReglasTiempo.RAYO_CERCA;
 /** Caja que se recorta de la imagen para mirar alrededor de un punto. */
-const RAYO_RADIO  = 60;
+const RAYO_RADIO  = ReglasTiempo.RAYO_RADIO;
 
 /* ── EL VETO NO LO MANDA EL ÚLTIMO MARCO: LO MANDA TODO LO QUE AÚN ESTÁ
    VIGENTE (21-09-2026) ───────────────────────────────────────────────
@@ -12167,230 +12167,12 @@ const RAYO_RADIO  = 60;
    que la prueba se construía el resultado a mano y nunca llegaba a mover el
    cálculo de verdad. */
 function loQueAunCuenta(filas, ahora = Date.now()) {
-  const conAlgo = (filas || []).filter(f => f && f.n);
-  const vigentes = conAlgo.filter(f =>
-    f.hasta && ahora - new Date(f.hasta).getTime() <= RAYO_VIGENTE);
-  if (!vigentes.length) return conAlgo[conAlgo.length - 1] || null;
-  if (vigentes.length === 1) return vigentes[0];
-  return {
-    desde: vigentes[0].desde, hasta: vigentes[vigentes.length - 1].hasta,
-    n:      vigentes.reduce((a, f) => a + f.n, 0),
-    encima: vigentes.reduce((a, f) => a + f.encima, 0),
-    cerca:  vigentes.reduce((a, f) => a + f.cerca, 0),
-    pos:    vigentes.reduce((a, f) => a + f.pos, 0),
-    masCerca: vigentes.reduce((m, f) =>
-      f.masCerca && (!m || f.masCerca.km < m.km) ? f.masCerca : m, null),
-  };
+  return ReglasTiempo.loQueAunCuenta(filas, ahora);   // la regla, en reglas-tiempo.js
 }
 
-const Rayos = {
-  cat: null,          // catálogo de AEMET (qué horas hay publicadas)
-  catT: 0,            // cuándo se pidió
-  marcos: new Map(),  // 'fichero|caja' -> descargas ya leídas
-
-  /** El catálogo, con cinco minutos de memoria. */
-  async catalogo() {
-    if (this.cat && Date.now() - this.catT < 5 * 60e3) return this.cat;
-    const r = await fetch('/rayos', { cache: 'no-store' });   // el catálogo del veto, nunca de la caché del navegador
-    const d = await r.json().catch(() => null);
-    if (!r.ok || !d || d.error) {
-      throw new Error(d?.reason || `AEMET no ha dado el catálogo de rayos (${r.status})`);
-    }
-    this.cat = d; this.catT = Date.now();
-    return d;
-  },
-
-  /** ¿Península o Canarias? Se decide con los límites que da AEMET. */
-  ambito(cat, place) {
-    for (const k of ['PB', 'CN']) {
-      const b = cat.ambitos?.[k]?.bounds;
-      if (b && place.lon >= b.lon0 && place.lon <= b.lon1
-            && place.lat >= b.lat0 && place.lat <= b.lat1
-            && cat.ambitos[k].marcos?.length) return k;
-    }
-    return null;
-  },
-
-  /** Caja en grados alrededor de uno o varios puntos, con margen en km. */
-  caja(puntos, km) {
-    const lats = puntos.map(p => p.lat), lons = puntos.map(p => p.lon);
-    const dLat = km / 111.32;
-    const cos = Math.cos((Math.max(...lats) + Math.min(...lats)) / 2 * Math.PI / 180);
-    const dLon = km / (111.32 * Math.max(0.2, cos));
-    return {
-      lat0: Math.min(...lats) - dLat, lat1: Math.max(...lats) + dLat,
-      lon0: Math.min(...lons) - dLon, lon1: Math.max(...lons) + dLon,
-    };
-  },
-
-  /* ── Leer una hora ───────────────────────────────────────────────────
-     Devuelve las descargas de ese mapa que caen dentro de la caja, cada
-     una con su posición y su polaridad. Los píxeles pegados se juntan en
-     una sola descarga: el símbolo que dibuja AEMET ocupa unos 2x2. */
-  async leer(amb, marco, caja, cat) {
-    const clave = `${marco.f}|${caja.lat0.toFixed(2)},${caja.lon0.toFixed(2)},`
-                + `${caja.lat1.toFixed(2)},${caja.lon1.toFixed(2)}`;
-    if (this.marcos.has(clave)) return this.marcos.get(clave);
-
-    const B = cat.ambitos[amb].bounds;
-    const my = la => Math.log(Math.tan(Math.PI / 4 + la * Math.PI / 360));
-    const y0 = my(B.lat0), y1 = my(B.lat1);
-
-    const r = await fetch(`/rayos?f=${encodeURIComponent(marco.f)}`);
-    if (!r.ok) throw new Error(`AEMET no ha dado el mapa de las ${horaHM(marco.desde)} (${r.status})`);
-    const blob = await r.blob();
-
-    // El tamaño real de la imagen se lee de la propia imagen: si AEMET
-    // cambia la resolución, esto sigue cuadrando solo.
-    const entera = await createImageBitmap(blob);
-    const W = entera.width, H = entera.height;
-    const aX = lon => (lon - B.lon0) / (B.lon1 - B.lon0) * W;
-    const aY = lat => (y1 - my(lat)) / (y1 - y0) * H;
-
-    const sx = clamp(Math.floor(aX(caja.lon0)), 0, W - 1);
-    const ex = clamp(Math.ceil(aX(caja.lon1)),  1, W);
-    const sy = clamp(Math.floor(aY(caja.lat1)), 0, H - 1);
-    const ey = clamp(Math.ceil(aY(caja.lat0)),  1, H);
-    const sw = Math.max(1, ex - sx), sh = Math.max(1, ey - sy);
-
-    const trozo = await createImageBitmap(blob, sx, sy, sw, sh);
-    entera.close?.();
-    const c = document.createElement('canvas');
-    c.width = sw; c.height = sh;
-    const cx = c.getContext('2d', { willReadFrequently: true });
-    cx.drawImage(trozo, 0, 0);
-    trozo.close?.();
-    const px = cx.getImageData(0, 0, sw, sh).data;
-
-    // Manchas pegadas = una descarga. Recorrido plano, sin recursión.
-    const visto = new Uint8Array(sw * sh);
-    const descargas = [];
-    const pila = [];
-    for (let i0 = 0; i0 < sw * sh; i0++) {
-      if (visto[i0] || px[i0 * 4 + 3] <= 50) continue;
-      pila.length = 0; pila.push(i0); visto[i0] = 1;
-      let n = 0, sX = 0, sY = 0, rojo = 0, azul = 0;
-      while (pila.length) {
-        const i = pila.pop();
-        const x = i % sw, y = (i - x) / sw;
-        n++; sX += x; sY += y;
-        // AEMET dibuja las negativas en azul y las positivas en rojo.
-        // Se compara canal contra canal en vez de buscar un color exacto,
-        // que cambia con la resolución y con el antialias.
-        if (px[i * 4] > px[i * 4 + 2]) rojo++; else azul++;
-        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-          const xx = x + dx, yy = y + dy;
-          if (xx < 0 || yy < 0 || xx >= sw || yy >= sh) continue;
-          const j = yy * sw + xx;
-          if (!visto[j] && px[j * 4 + 3] > 50) { visto[j] = 1; pila.push(j); }
-        }
-      }
-      const gx = sx + sX / n + 0.5, gy = sy + sY / n + 0.5;
-      descargas.push({
-        lon: B.lon0 + gx / W * (B.lon1 - B.lon0),
-        lat: (2 * Math.atan(Math.exp(y1 - gy / H * (y1 - y0))) - Math.PI / 2) * 180 / Math.PI,
-        pos: rojo > azul,
-      });
-    }
-
-    this.marcos.set(clave, descargas);
-    return descargas;
-  },
-
-  /* ── Qué ha caído alrededor de un punto ──────────────────────────── */
-  async cerca(place, { horas = 6, radio = RAYO_RADIO } = {}) {
-    const cat = await this.catalogo();
-    const amb = this.ambito(cat, place);
-    if (!amb) return { fuera: true, fuente: cat.fuente };
-
-    const todos = cat.ambitos[amb].marcos;
-    const marcos = todos.slice(-horas);
-    const caja = this.caja([place], radio);
-
-    const filas = [];
-    for (const m of marcos) {
-      const d = await this.leer(amb, m, caja, cat);
-      const conD = d.map(x => ({ ...x, km: kmEntre(place, x) }))
-                    .filter(x => x.km <= radio)
-                    .sort((a, b) => a.km - b.km);
-      filas.push({
-        desde: m.desde, hasta: m.hasta,
-        n: conD.length,
-        encima: conD.filter(x => x.km <= RAYO_ENCIMA).length,
-        cerca:  conD.filter(x => x.km <= RAYO_CERCA).length,
-        pos:    conD.filter(x => x.pos).length,
-        masCerca: conD[0] || null,
-      });
-    }
-
-    const ultima = loQueAunCuenta(filas);
-    return {
-      fuente: cat.fuente, licencia: cat.licencia, pagina: cat.pagina,
-      radio, filas, ultima,
-      /* Cuántas horas se han MIRADO de verdad. Aquí iba el largo del
-         catálogo ENTERO de AEMET (24 marcos), y se escribía en pantalla
-         como «sin descargas en las últimas 24 h» habiendo leído 6:
-         dieciocho horas que nadie había mirado, afirmadas limpias
-         (21-09-2026). */
-      horasMiradas: marcos.length,
-      total: filas.reduce((a, f) => a + f.n, 0),
-      // Hasta cuándo llega lo publicado. Con esto se dice el retraso real
-      // en pantalla en vez de poner un número inventado.
-      hasta: todos[todos.length - 1]?.hasta || null,
-    };
-  },
-
-  /* ── Por dónde pasó la tormenta ───────────────────────────────────
-     La pregunta de Aitor no es «¿qué tiempo hace aquí?», es «¿a cuál de
-     mis sitios mando gente?». Y detrás de una noche de rayos vienen las
-     averías de suministro: el rayo tumba la red, la compañía no repone y
-     hay que subir un grupo electrógeno por la pista.
-
-     Se leen las horas de una sola vez para TODOS los emplazamientos
-     guardados, recortando una caja que los cubra a todos: una lectura
-     por hora, no una por torre. */
-  async sobreTorres(torres, { horas = 12, radio = RAYO_CERCA } = {}) {
-    if (!torres?.length) return null;
-    const cat = await this.catalogo();
-    const amb = this.ambito(cat, torres[0]);
-    if (!amb) return null;
-
-    const marcos = cat.ambitos[amb].marcos.slice(-horas);
-    const caja = this.caja(torres, radio + 5);
-    /* `marcosEncima`: cada hora con descargas a menos de RAYO_ENCIMA de esa
-       torre, con su `hasta`. Hace falta para el VETO de cada una en Mis
-       estaciones y Avisos, no solo en la ficha abierta (03-10-2026). */
-    const porTorre = torres.map(t => ({ t, n: 0, encima: 0, masCerca: null, cuando: null, marcosEncima: [] }));
-
-    for (const m of marcos) {
-      const d = await this.leer(amb, m, caja, cat);
-      if (!d.length) continue;
-      for (const fila of porTorre) {
-        for (const x of d) {
-          const km = kmEntre(fila.t, x);
-          if (km > radio) continue;
-          fila.n++;
-          if (km <= RAYO_ENCIMA) {
-            fila.encima++;
-            const ult = fila.marcosEncima[fila.marcosEncima.length - 1];
-            if (ult?.hasta === m.hasta) { ult.n++; ult.km = Math.min(ult.km, km); }
-            else fila.marcosEncima.push({ desde: m.desde, hasta: m.hasta, n: 1, km });
-          }
-          if (!fila.masCerca || km < fila.masCerca.km) fila.masCerca = { ...x, km };
-          fila.cuando = m;                       // la última hora con descargas
-        }
-      }
-    }
-
-    return {
-      desde: marcos[0]?.desde || null,
-      hasta: marcos[marcos.length - 1]?.hasta || null,
-      radio,
-      tocadas: porTorre.filter(f => f.n).sort((a, b) => b.n - a.n),
-      total: porTorre.reduce((a, f) => a + f.n, 0),
-    };
-  },
-};
+/* El lector de rayos vive en reglas-tiempo.js (03-10-2026): el mismo para la
+   app, el Centro Operativo y la agenda. */
+const Rayos = ReglasTiempo.lectorDeRayos({ base: '' });
 
 /** Hora corta de un instante ISO, en la hora del sitio. */
 function horaHM(iso) {
@@ -12472,6 +12254,11 @@ function pintarRayosVivo() {
 
 /* Lo medido por AEMET. Se pide una vez por emplazamiento y se guarda en
    S.rayos, porque también lo usa la ficha de Torre. */
+const RAYOS_TORRES_CADA = 30 * 60e3;   // el paso por sus estaciones: como mucho cada media hora (03-10-2026)
+/** ¿Vale lo leído del paso por sus estaciones, o toca volver a leer? */
+function rayosTorresSirven(rt, n, ahora = Date.now()) {
+  return !!(rt?.d && rt.n === n && ahora - rt.t < RAYOS_TORRES_CADA);
+}
 async function cargarRayosAemet({ forzar = false } = {}) {
   const dst = $('#rayosAemet');
   if (!dst || !S.place) return;
@@ -12488,15 +12275,22 @@ async function cargarRayosAemet({ forzar = false } = {}) {
        existe si él ha entrado en la pestaña «Mis torres» en esta sesión,
        y este bloque tiene que salir igual entrando directo a Rayos. */
     const torres = (S.saved || []).filter(p => has(p?.lat) && has(p?.lon));
-    let anoche = null;
-    try { anoche = await Rayos.sobreTorres(torres, { horas: 12 }); }
-    catch { anoche = null; }                    // lo de las torres es extra: si falla, no arrastra
+    /* EL PASO POR SUS ESTACIONES, COMO MUCHO CADA MEDIA HORA (suyo, 03-10-2026:
+       «y el paso por las estaciones lo mismo» · «así no andamos pillados»).
+       AEMET publica una imagen por hora: leerlo más a menudo es gastar. */
+    let anoche = null, tAnoche = Date.now();
+    const vale = rayosTorresSirven(S.rayosTorres, torres.length);
+    if (vale) { anoche = S.rayosTorres.d; tAnoche = S.rayosTorres.t; }
+    else {
+      try { anoche = await Rayos.sobreTorres(torres, { horas: 12 }); }
+      catch { anoche = null; }                  // lo de las torres es extra: si falla, no arrastra
+    }
     /* Si mientras tanto se abrió otro sitio, esto no se guarda: con la
        clave vieja la ficha del nuevo se quedaba en «Mirando…» y SIN VETO
        de rayo hasta recargar (03-10-2026). */
     if (S.place && key(S.place) !== clave) return;
     S.rayos = { clave, t: Date.now(), d: r, anoche, error: null };
-    S.rayosTorres = anoche ? { t: Date.now(), d: anoche } : null;   // las de TODOS los guardados, para el veto de cada uno
+    S.rayosTorres = anoche ? { t: tAnoche, d: anoche, n: torres.length } : null;   // las de TODOS los guardados, para el veto de cada uno
   } catch (e) {
     if (S.place && key(S.place) !== clave) return;
     S.rayos = { clave, t: Date.now(), d: null, anoche: null, error: String(e.message || e) };
@@ -12828,7 +12622,7 @@ function pintarRayosAemet() {
    minutos porque el mapa viene por horas cerradas y con retraso: dentro
    de esa hora no se sabe el minuto. Pasado ese rato la descarga sigue
    contándose y diciéndose, pero como historia, no como veto. */
-const RAYO_VIGENTE = 90 * 60e3;
+const RAYO_VIGENTE = ReglasTiempo.RAYO_VIGENTE;
 /** Y hasta aquí se sigue avisando de que hay tormenta por la zona. */
 const RAYO_RECIENTE = 3 * 3600e3;
 
@@ -13410,11 +13204,7 @@ function avisoNoEsTuSitio() {
 }
 
 function kmEntre(a, b) {
-  const R = 6371, r = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
-  const la1 = a.lat * r, la2 = b.lat * r;
-  const h = Math.sin(dLat/2)**2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLon/2)**2;
-  return 2 * R * Math.asin(Math.sqrt(h));
+  return ReglasTiempo.kmEntre(a, b);   // en reglas-tiempo.js
 }
 
 /** Rumbo (0-360, desde el norte) de a hacia b. Para decir «a 13 km al norte». */

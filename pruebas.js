@@ -1924,10 +1924,10 @@ grupo('El rayo MEDIDO veta las horas, no solo la caja de arriba (03-10-2026, 22:
      verde. Durango, con 54, la franja «Sin riesgo eléctrico». Se pasan por
      las funciones DE VERDAD. */
   const S0 = { place: S.place, rayos: S.rayos, rayosTorres: S.rayosTorres };
-  const fn = new Function('S', 'deEsteSitio', 'key', 'has', 'kmTxt', 'RAYO_ENCIMA', 'RAYO_VIGENTE',
+  const fn = new Function('S', 'deEsteSitio', 'key', 'has', 'kmTxt', 'RAYO_ENCIMA', 'RAYO_VIGENTE', 'RAYOS_TORRES_CADA',
     sacar('function rayoMedidoVeta(') + '\n' + sacar('function vetarPorRayo(') + '\nreturn { rayoMedidoVeta, vetarPorRayo };');
   const { vetarPorRayo: vetar, rayoMedidoVeta: rmv } = fn(S, globalThis.deEsteSitio, globalThis.key, globalThis.has,
-    v => String(v).replace('.', ','), 15, 90 * 60e3);
+    v => String(v).replace('.', ','), 15, 90 * 60e3, 30 * 60e3);
   const ahora = Date.now();
   const enPunto = t => { const d = new Date(t); d.setMinutes(0, 0, 0); return d; };
   const horas = () => [0, 1, 3].map(k => ({ date: enPunto(ahora + k * 3600e3), st: k ? 'go' : 'warn',
@@ -1960,6 +1960,16 @@ grupo('El rayo MEDIDO veta las horas, no solo la caja de arriba (03-10-2026, 22:
      && /if \(S\.data\?\.hours\) \{ vetarPorRayo\(S\.data\.hours, S\.place\);/.test(src)
      && /for \(const t of S\.torres\) vetarPorRayo\(t\.horas, t\.place\);/.test(src));
   S.place = S0.place; S.rayos = S0.rayos; S.rayosTorres = S0.rayosTorres;
+  /* El paso por sus estaciones, como mucho cada media hora (suyo: «así no
+     andamos pillados»): lo de hace 20 min vale; lo de hace 31, se relee; y si
+     ha guardado o quitado un sitio, también. */
+  const sirven = new Function('RAYOS_TORRES_CADA', sacar('function rayosTorresSirven(') + '\nreturn rayosTorresSirven;')(30 * 60e3);
+  const ah = Date.now();
+  ok('el paso de los rayos por sus estaciones se relee como mucho cada media hora',
+     sirven({ d: {}, n: 21, t: ah - 20 * 60e3 }, 21, ah) === true
+     && sirven({ d: {}, n: 21, t: ah - 31 * 60e3 }, 21, ah) === false
+     && sirven({ d: {}, n: 20, t: ah - 5 * 60e3 }, 21, ah) === false
+     && sirven(null, 21, ah) === false);
 }
 
 grupo('La ventana de trabajo: lluvia de otro modelo, «apta» y sitios que no son suyos');
@@ -9374,10 +9384,12 @@ grupo('Los tres del mapa: el clic del viento, el cartel pegado y el «Ahora» (2
      ══════════════════════════════════════════════════════════════════ */
   grupo('«en las últimas N h» son las horas MIRADAS, no el catálogo entero (21-09-2026)');
 
+  /* Desde el 03-10-2026 el lector vive en reglas-tiempo.js (el mismo para la
+     app, el Centro Operativo y la agenda): se arranca ESE, con el catálogo, el
+     ámbito y la lectura de AEMET de mentira, y su `caja` y su `cerca` reales. */
   const guion = `
-    const RAYO_RADIO = 60, RAYO_ENCIMA = 15, RAYO_CERCA = 30, RAYO_VIGENTE = ${V};
-    ${sacar('function kmEntre(a, b) {')}
-    ${sacar('function loQueAunCuenta(filas, ahora = Date.now()) {')}
+    const vm = require('vm'), fs = require('fs');
+    vm.runInThisContext(fs.readFileSync(${JSON.stringify(require('path').join(__dirname, 'reglas-tiempo.js'))}, 'utf8') + ';globalThis.ReglasTiempo = ReglasTiempo;');
     const t0 = Date.now(), leidas = [], DESC = {};
     const CAT = { fuente: 'AEMET', licencia: '(c)', pagina: 'p',
                   ambitos: { PB: { bounds: { lat0: 35, lat1: 44, lon0: -10, lon1: 5 }, marcos: [] } } };
@@ -9388,13 +9400,10 @@ grupo('Los tres del mapa: el clic del viento, el cartel pegado y el «Ahora» (2
     DESC['mapa22.png'] = Array.from({ length: 25 }, (_, i) =>
       ({ lat: 43.027, lon: -2.5 + i * 1e-4, pos: i < 3 }));      // ~3 km: encima
     DESC['mapa23.png'] = [{ lat: 43.46764, lon: -2.5, pos: false }];  // ~52 km: ni cerca
-    const R = {
-      ${sacar('  caja(puntos, km) {', '\n  },')}
-      ${sacar('  async cerca(place, { horas = 6, radio = RAYO_RADIO } = {}) {', '\n  },')}
-      async catalogo() { return CAT; },
-      ambito() { return 'PB'; },
-      async leer(amb, m) { leidas.push(m.f); return DESC[m.f] || []; },
-    };
+    const R = ReglasTiempo.lectorDeRayos({ base: 'https://de-mentira' });
+    R.catalogo = async () => CAT;
+    R.ambito = () => 'PB';
+    R.leer = async (amb, m) => { leidas.push(m.f); return DESC[m.f] || []; };
     R.cerca({ lat: 43, lon: -2.5 })
      .then(d => console.log(JSON.stringify({ d, leidas })))
      .catch(e => console.log(JSON.stringify({ error: String(e && e.message || e) })));`;
