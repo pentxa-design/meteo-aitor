@@ -142,7 +142,16 @@ function red(esc, fijo, llamadas) {
         return { lat: la, lon: lo, estaciones: filas.length ? [{ nombre: `EST${k}`, km: 3, historia: filas }] : [] };
       }) });
     }
-    if (s.includes('/api/euskalmet')) return R({ ok: true, puntos: [] });
+    /* `esc.eusk: { k, lluvia, lluviaMin, km, hace }`: la estación junto al punto k
+       (en el orden en que los pide el vigilante) mide eso (03-10-2026, la «A»). */
+    if (s.includes('/api/euskalmet')) {
+      const pts = (q.get('puntos') || '').split('|').filter(Boolean);
+      return R({ ok: true, puntos: pts.map((pt, k) => {
+        const [la, lo] = pt.split(',').map(Number), m = (esc.eusk || []).find(x => x.k === k);
+        return m ? { id: `E${k}`, nombre: `Estación ${k}`, km: m.km ?? 1.1, lat: la, lon: lo, lluvia: m.lluvia, lluviaMin: m.lluviaMin ?? 30,
+                     medidoEn: m.medidoEn ?? '2026-10-03T19:00:00.000Z', haceMinutos: m.hace ?? 10 } : null;
+      }) });
+    }
     if (s.includes('/api/marcador')) return R({ ok: true });
     if (s.includes('/om')) {
       const lats = (q.get('latitude') || '').split(','), lons = (q.get('longitude') || '').split(',');
@@ -838,6 +847,25 @@ ok('«celda de al lado» va sin paréntesis propio: dentro de «(2 mm/h, ICON �
   const P = await pasada({ hora: '14:00', antes: tranquilo('14:00', 10, { dueno: { nombre: 'ICON', aprendido: true } }), metodo: 'GET', query: { pulso: '1' } });
   ok('y el pulso se lo cuenta a la app tal cual, para que Avisos lo enseñe',
      !P.reventó && P.b.dueno?.nombre === 'ICON' && P.b.dueno?.aprendido === true, JSON.stringify(P.b));
+}
+
+/* ── LA «A»: LA LLUVIA MEDIDA CERCA DE SUS SITIOS AVISA (03-10-2026) ──── */
+{
+  const tromba = await pasada({ hora: '21:15', antes: tranquilo('21:15', 200, { marcadorHora: null }), esc: { criticos: [4], eusk: [{ k: 0, lluvia: 10, lluviaMin: 30 }] } });
+  const a = (tromba.b.avisados || []).find(x => x.tag === 'medida');
+  ok('Bermeo 03-10 21:15: la estación a 1,1 km mide 10 mm en 30 min (20 mm/h) → «🌧 TROMBA MEDIDA», vibra y dice dónde y cuánto',
+     !tromba.reventó && a && a.importante === true && a.titulo === '🌧 TROMBA MEDIDA' && /medido en Estación 0 \(1,1 km\) 10 mm en 30 min, 20 mm\/h/.test(a.cuerpo),
+     JSON.stringify(a || tromba.b.avisados));
+  ok('   y los críticos van primero (con 21 sitios, Deusto II se quedaba fuera de los 20 que coge Euskalmet)',
+     a && /\(crítico\)/.test(a.cuerpo), a?.cuerpo);
+  ok('   y lo apunta para no repetirlo', (tromba.estado?.medidasAvisadas || []).length === 1, JSON.stringify(tromba.estado?.medidasAvisadas));
+  const otra = await pasada({ hora: '21:45', antes: { ...tromba.estado, cuando: hace('21:45', 200), marcadorHora: null }, esc: { eusk: [{ k: 0, lluvia: 10, lluviaMin: 30 }] } });
+  ok('   y la misma medida no se avisa dos veces', !(otra.b.avisados || []).some(x => x.tag === 'medida'), JSON.stringify(otra.b.avisados || otra.b.nota));
+  const floja = await pasada({ hora: '21:15', antes: tranquilo('21:15', 200, { marcadorHora: null }), esc: { eusk: [{ k: 0, lluvia: 1.5, lluviaMin: 30 }] } });
+  const af = (floja.b.avisados || []).find(x => x.tag === 'medida');
+  ok('   3 mm/h medidos avisan como «🌧 LLUEVE YA», sin vibrar', af && af.importante === false && af.titulo === '🌧 LLUEVE YA', JSON.stringify(af));
+  const lejos = await pasada({ hora: '21:15', antes: tranquilo('21:15', 200, { marcadorHora: null }), esc: { eusk: [{ k: 0, lluvia: 10, lluviaMin: 30, km: 9 }] } });
+  ok('   una estación a 9 km no cuenta como «cerca»', !(lejos.b.avisados || []).some(x => x.tag === 'medida'));
 }
 
 /* ── EL PULSO, 60 s DE CDN ─────────────────────────────────────────── */

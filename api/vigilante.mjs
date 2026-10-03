@@ -922,13 +922,49 @@ const horaLocal = iso => {
   return `${p.year}-${p.month}-${p.day}T${p.hour}`;
 };
 
-async function apuntarEnElMarcador(sitios) {
-  /* Las estaciones cerca de sus emplazamientos, de una vez. */
-  const puntos = sitios.slice(0, 20).map(s => `${s.lat},${s.lon}`).join('|');
+/* ── LO MEDIDO EN EUSKALMET, UNA VEZ POR HORA (03-10-2026) ──────────────
+   La misma llamada que ya hacía el marcador, adelantada al principio de la
+   pasada para que sirva también para AVISAR. Los críticos primero: la API
+   coge 20 puntos y con 21 sitios Deusto II, el crítico, se quedaba fuera.
+   Devuelve una estación por sitio, en el orden de `orden`. */
+async function leerEuskalmet(sitios) {
+  const orden = [...sitios].sort((a, b) => (b.critico ? 1 : 0) - (a.critico ? 1 : 0)).slice(0, 20);
+  const puntos = orden.map(s => `${s.lat},${s.lon}`).join('|');
   const rEst = await fetch(`${APP}/api/euskalmet?puntos=${encodeURIComponent(puntos)}&radio=15`,
                            { signal: AbortSignal.timeout(12000) });
   if (!rEst.ok) throw new Error(`estaciones ${rEst.status}`);
   const est = (await rEst.json()).puntos || [];
+  return { orden, est };
+}
+
+/* ── LA LLUVIA MEDIDA CERCA DE SUS SITIOS (03-10-2026, la «A») ───────────
+   Esa noche: trombas en Bilbao (calles inundadas en Deusto) y en Bermeo de
+   21:00 a 21:30, y AROME iba tarde. Suyo: «hay algunos sitios que cayó
+   agua y no avisó nadie». Lo medido no depende de elegir modelo: si la
+   estación más cercana (≤ 5 km) mide lluvia de verdad en su último dato
+   (< 75 min), se avisa con su nombre y sus milímetros; vibra desde la tromba
+   (AGUA_TROMBA, 15 mm/h, «lluvia fuerte» de AEMET). Euskalmet da `lluvia`
+   en `lluviaMin` minutos: el ritmo es lluvia × 60 / lluviaMin. */
+const MEDIDA_KM = 5, MEDIDA_FRESCA = 75, MEDIDA_MIN_VENTANA = 20;
+function lluviaMedidaCerca(leido) {
+  const out = [];
+  (leido?.orden || []).forEach((s, k) => {
+    const e = leido.est[k];
+    if (!e || !Number.isFinite(e.lluvia) || !Number.isFinite(e.lluviaMin) || e.lluviaMin < MEDIDA_MIN_VENTANA) return;
+    if (!Number.isFinite(e.km) || e.km > MEDIDA_KM) return;
+    if (!Number.isFinite(e.haceMinutos) || e.haceMinutos > MEDIDA_FRESCA) return;
+    const ritmo = e.lluvia * 60 / e.lluviaMin;
+    if (ritmo < AGUA_FUERTE || e.lluvia < 1) return;
+    out.push({ n: s.n, lat: s.lat, lon: s.lon, critico: !!s.critico, est: e.nombre, km: e.km, mm: e.lluvia,
+               min: e.lluviaMin, ritmo, hace: e.haceMinutos, firma: `${e.id}@${e.medidoEn}` });
+  });
+  return out.sort((a, b) => b.ritmo - a.ritmo);
+}
+
+async function apuntarEnElMarcador(sitios, leido = null) {
+  /* Las estaciones cerca de sus emplazamientos, de una vez (o lo ya leído
+     al principio de la pasada: no se pide dos veces). */
+  const est = (leido || await leerEuskalmet(sitios)).est;
 
   /* Una muestra por ESTACIÓN, no por emplazamiento: varios sitios suyos
      comparten la estación más cercana y contarla varias veces inflaría
@@ -1851,6 +1887,26 @@ export default async function handler(req, res) {
   const AVISAR_CAMBIOS = false;   // apagado el 28-09-2026 por él: «si cambia o no cambia no me interesa»
 
   const avisos = [];
+
+  /* LA A: lo medido, cuando toca la lectura de la hora (sin llamadas nuevas). */
+  let leidoEusk = null, medidaFallo = null;
+  if (antes?.marcadorHora !== horaMarcadorAhora) {
+    try { leidoEusk = await leerEuskalmet(sitios); } catch (e) { medidaFallo = String(e?.message || e).slice(0, 80); }
+  }
+  const yaMedidas = new Set(antes?.medidasAvisadas || []);
+  const medidasNuevas = lluviaMedidaCerca(leidoEusk).filter(m => !yaMedidas.has(m.firma));
+  if (medidasNuevas.length) {
+    const tromba = medidasNuevas.some(m => m.ritmo >= AGUA_TROMBA);
+    const f1 = v => (Math.round(v * 10) / 10).toString().replace('.', ',');
+    avisos.push({
+      titulo: tromba ? '🌧 TROMBA MEDIDA' : '🌧 LLUEVE YA',
+      url: `./?sitio=${medidasNuevas[0].lat},${medidasNuevas[0].lon}`,
+      cuerpo: medidasNuevas.slice(0, 6).map(m => `${m.n}${m.critico ? ' (crítico)' : ''}: medido en ${m.est} (${f1(m.km)} km) `
+              + `${f1(m.mm)} mm en ${m.min} min, ${f1(m.ritmo)} mm/h, hace ${m.hace} min`).join('. ')
+              + '. Medido por Euskalmet, no previsto.',
+      tag: 'medida', importante: tromba,
+    });
+  }
   if (proximas.length && !yaAvisado) {
     const orden = [...proximas].sort((a, b) => (b.d.critico ? 1 : 0) - (a.d.critico ? 1 : 0));
     const crit = orden[0].d.critico;
@@ -2358,6 +2414,9 @@ export default async function handler(req, res) {
       parteResumen: resumenHoy,
       parteIntentoEn: (tocaParte || tocaParte2) ? new Date().toISOString() : (antes?.parteIntentoEn ?? null),
       marcadorHora: horaMarcadorAhora,
+      /* Lo medido ya avisado, para no repetirlo (las 60 últimas firmas). */
+      medidasAvisadas: (!soloMirar && medidasNuevas.length
+        ? [...(antes?.medidasAvisadas || []), ...medidasNuevas.map(m => m.firma)] : (antes?.medidasAvisadas || [])).slice(-60),
     };
 
     const sinHora = e => { const { cuando, ...r } = e || {}; return JSON.stringify(r); };
@@ -2418,7 +2477,7 @@ export default async function handler(req, res) {
   let marcador = null;
   if (antes?.marcadorHora === horaMarcadorAhora) marcador = { saltado: 'misma hora que la última vez' };
   else {
-    try { marcador = await apuntarEnElMarcador(sitios); }
+    try { marcador = await apuntarEnElMarcador(sitios, leidoEusk); }
     catch (e) { marcador = { error: String(e?.message || e).slice(0, 80) }; }
   }
 
