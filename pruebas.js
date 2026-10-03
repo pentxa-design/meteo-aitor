@@ -12033,6 +12033,10 @@ ok('la cifra de lluvia se pone roja con la regla de comoLlueve (sirimiri solo si
    && !/h\.prec >= \(S\.thr\?\.rainWarn \?\? 0\.2\) \|\| esLlovizna\(h\.codeLluvia \?\? h\.code\)\)\) \? 'rojo'/.test(src));
 ok('y la probabilidad dice de qué modelo es cuando la presta otro', /` · \$\{h\.pop\}% prob\.\$\{popDe\}`/.test(src));
 
+grupo('La app abierta se refresca sola (03-10-2026)');
+ok('con la pantalla a la vista y los datos de más de 20 min, se vuelven a pedir cada minuto, no solo al volver a la app',
+   /setInterval\(\(\) => \{\s*if \(!document\.hidden && S\.data && Date\.now\(\) - S\.data\.at > 20 \* 60e3 && S\.place\) go\(S\.place, \{ silent: true \}\);\s*\}, 60e3\);/.test(src));
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');

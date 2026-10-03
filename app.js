@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-2153';
+const BUILD = '2026.10.03-2157';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -19087,6 +19087,15 @@ function bind() {
     if (!document.hidden) seguirSiEsMiUbicacion();   // sacar el móvil del bolsillo en otro sitio
     if (!document.hidden) mirarPulso();
   });
+  /* ── Y CON LA APP DELANTE, TAMBIÉN (03-10-2026) ──────────────────────
+     Solo se refrescaba al VOLVER a ella. Esa noche, con trombas en Bilbao y
+     la app abierta en el Mac, veía la previsión de antes de las 20:36 hasta
+     que recargó a mano. Cada minuto se mira: si la pantalla está a la vista
+     y los datos tienen más de 20 min, se piden de nuevo (lo mismo que al
+     volver, ni una petición de más). */
+  setInterval(() => {
+    if (!document.hidden && S.data && Date.now() - S.data.at > 20 * 60e3 && S.place) go(S.place, { silent: true });
+  }, 60e3);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
