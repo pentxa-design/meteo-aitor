@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-1759';
+const BUILD = '2026.10.03-1908';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -9051,7 +9051,7 @@ function lluviaDeUnSitio(H, k, desde, finVentana, thr = S.thr, duenoOm = duenoLl
   return { k, llueve: true, dueno, ini, fin, pico, hPico: hPico ? new Date(hPico) : null,
            quien: [...deQuien].join(' y '), picoAbarca: true,
            horasAgua: horas.map(t => new Date(t)), nHoras: horas.length, sueltas: tramo > horas.length,
-           soloSirimiri: siri.length === horas.length, sirimiriDe,
+           soloSirimiri: siri.length === horas.length, sirimiriDe, horasSirimiri: siri.map(t => new Date(t)),
            fuerte, horasFuertes: fuertes.map(t => new Date(t)), acompanan: [...acompanan],
            horasFuerza: horasFuerza.map(t => new Date(t)),
            sigueHasta: sigueHasta ? new Date(sigueHasta) : null,
@@ -10774,7 +10774,11 @@ function loQueVieneHoy(k, horas, ahoraMs = Date.now()) {
         + ` y las ${h2(L.fin)} de hoy`
       : L.sigueHasta ? `hoy desde las ${h2(L.ini)}, y sigue pasada medianoche hasta las ${h2(+L.sigueHasta + 3600e3)}`
       : deA(L.ini, +L.fin + 3600e3);
-    const siriDe = L.soloSirimiri && L.sirimiriDe && L.sirimiriDe !== L.quien ? ` (la llovizna la ve ${esc(L.sirimiriDe)})` : '';
+    /* El sirimiri que va dentro de la ventana es del código de OTRO modelo
+       (ECMWF): se nombra, y no se le cuelga a AROME (03-10-2026: «AGUA 5
+       horas sueltas… la ve AROME HD» con tres de ellas de sirimiri de ECMWF). */
+    const siriDe = L.sirimiriDe && L.sirimiriDe !== L.quien && L.horasSirimiri?.length
+      ? (L.soloSirimiri ? ` (la llovizna la ve ${esc(L.sirimiriDe)})` : ` (y el sirimiri, ${esc(L.sirimiriDe)})`) : '';
     if (cuenta) av.push(`${L.soloSirimiri ? 'SIRIMIRI' : 'AGUA'} ${cuando}${deQuien}${siriDe}`);
   } else if (L && !L.llueve && L.otros?.length && esDeHoy(L.otros[0].ini)) {
     /* Su modelo la ve seca y otro no: se dice con el nombre del otro, y que
@@ -10909,7 +10913,11 @@ function lineaAguaTorre(k) {
      el dueño moja en ESTA hora. Que otro modelo vea agua ahora va en la
      línea de «otros», con su nombre — antes salía «Está lloviendo (lo ve
      ECMWF)» con AROME en 0,0 y la estación midiendo 0,0. */
-  const duenoMojaAhora = (L.horasAgua || []).some(t => +t === horaEnCurso);
+  /* Y la hora en curso tiene que ser de AGUA del dueño: si es una hora de
+     sirimiri del código de otro modelo, eso no es «está lloviendo». */
+  const siriAjeno = L.sirimiriDe && L.sirimiriDe !== L.quien;
+  const duenoMojaAhora = (L.horasAgua || []).some(t => +t === horaEnCurso)
+    && !(siriAjeno && (L.horasSirimiri || []).some(t => +t === horaEnCurso));
   const tipo = (lloviendoYa && duenoMojaAhora && picoDespues && !L.soloSirimiri)
     ? 'Está lloviendo' : palabraDeLaVentana(L);
 
@@ -12556,9 +12564,18 @@ function textoRayosSatelite(R, ahora = Date.now()) {
   const reciente = con[con.length - 1];
   const haceR = Math.max(0, Math.round((ahora - (new Date(reciente.t).getTime() + paso)) / 60000));
   const nivel = cerca.km < 15 ? 'no' : 'warn';
-  return `<div class="ray__t" data-s="${nivel}"><b>El satélite ve rayos a ${kmTxt(cerca.km)} km</b>
-      (imagen de las ${horaHM(cerca.t)}), en ${con.length} de ${buenas.length} imágenes de la última media hora.
-      La más reciente con rayo es de las <b>${horaHM(reciente.t)}</b>, hace unos ${haceR} min.</div>` + pie;
+  /* LO QUE MIDE DE VERDAD (03-10-2026, con su tormenta delante). Meteosat
+     no da el punto donde cae el rayo: da la ZONA DE NUBE ILUMINADA por los
+     relámpagos, y un relámpago dentro de la nube se extiende 20-40 km. Ese
+     día decía «rayos a 0,2 km» de Bermeo con Blitzortung y AEMET poniendo
+     los rayos a 25-30 km. La nube eléctrica sí estaba encima, y eso para
+     una torre importa; pero no es «un rayo a 200 metros». Se dice así. */
+  return `<div class="ray__t" data-s="${nivel}"><b>${cerca.km < 15 ? 'Meteosat ve relámpagos en la nube que tienes encima'
+        : `Meteosat ve relámpagos en una nube a ${kmTxt(cerca.km)} km`}</b>
+      (la zona iluminada más cercana, a ${kmTxt(cerca.km)} km, en la imagen de las ${horaHM(cerca.t)}),
+      en ${con.length} de ${buenas.length} imágenes de la última media hora; la más reciente, de las
+      <b>${horaHM(reciente.t)}</b>, hace unos ${haceR} min. <b>Es la nube eléctrica, no el punto donde cae el rayo</b>:
+      para eso, AEMET y Blitzortung.</div>` + pie;
 }
 
 /* ── Y EN LA FICHA DE TORRE, DONDE DECIDE (02-10-2026) ───────────────
@@ -12578,10 +12595,11 @@ function rayoSatTorre(R, ahora = Date.now()) {
   const nivel = cerca.km < 15 ? 'no' : 'warn';
   return { nivel, html: `<b class="acc__k">Rayos vistos por el satélite</b>
     <ul class="acc__l"><li data-s="${nivel}">
-      Meteosat ve rayos a <b>${kmTxt(cerca.km)} km</b> en ${con.length} de
-      ${(R.filas || []).filter(f => !f.error).length} imágenes de la última media hora; la más reciente, de las
+      Meteosat ve relámpagos en la nube ${cerca.km < 15 ? '<b>que tienes encima</b>' : `a <b>${kmTxt(cerca.km)} km</b>`}
+      en ${con.length} de ${(R.filas || []).filter(f => !f.error).length} imágenes de la última media hora; la más reciente, de las
       <b>${horaHM(reciente.t)}</b> (hace unos ${hace} min). ${cerca.km < 15
-        ? '<b>Está encima del emplazamiento.</b> ' : 'Hay tormenta en la zona: puede venir. '}
+        ? '<b>Hay una tormenta eléctrica activa con la nube sobre el emplazamiento.</b> ' : 'Hay tormenta en la zona: puede venir. '}
+      Es la nube iluminada por los relámpagos, no el punto donde caen: dónde caen, AEMET y Blitzortung.
       Llega antes que AEMET; no cambia el semáforo. Si se oye el trueno, ya estás dentro del alcance.
     </li></ul>` };
 }

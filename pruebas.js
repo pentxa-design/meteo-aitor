@@ -5467,7 +5467,7 @@ ok('se dice de quién sale ese dato, no aparece a secas',
   const conRayo = { fuente: 'EUMETSAT', pasoMin: 5, filas: filas.map((f, i) => (i === 3 ? { ...f, km: 4.2, px: 3 } : f)) };
   const sin = { fuente: 'EUMETSAT', pasoMin: 5, filas };
   ok('con un rayo a 4,2 km lo dice en rojo, con su distancia y cuánto hace',
-     /data-s="no"/.test(textoRayosSatelite(conRayo, ahora)) && /ve rayos a 4,2 km/.test(textoRayosSatelite(conRayo, ahora))
+     /data-s="no"/.test(textoRayosSatelite(conRayo, ahora)) && /Meteosat ve relámpagos en la nube que tienes encima/.test(textoRayosSatelite(conRayo, ahora)) && /a 4,2 km/.test(textoRayosSatelite(conRayo, ahora)) && /no el punto donde cae el rayo/.test(textoRayosSatelite(conRayo, ahora))
      && /1 de 6 imágenes/.test(textoRayosSatelite(conRayo, ahora)));
   ok('sin rayos NO se pinta en verde y dice que su silencio no quiere decir que no caigan',
      !/data-s="go"/.test(textoRayosSatelite(sin, ahora)) && /no quiere decir que no caigan/.test(textoRayosSatelite(sin, ahora)),
@@ -5482,7 +5482,7 @@ ok('se dice de quién sale ese dato, no aparece a secas',
      /5 de 6 imágenes no se pudieron leer/.test(textoRayosSatelite({ fuente: 'x', pasoMin: 5, filas: filas.map((f, i) => (i ? { t: f.t, error: true } : f)) }, ahora)));
   eval(sacar('function rayoSatTorre('));
   ok('en la ficha de Torre sale solo cuando VE rayos: a 4,2 km en rojo, con su hora y sin tocar el semáforo',
-     rayoSatTorre(conRayo, ahora)?.nivel === 'no' && /ve rayos a <b>4,2 km<\/b>/.test(rayoSatTorre(conRayo, ahora).html)
+     rayoSatTorre(conRayo, ahora)?.nivel === 'no' && /relámpagos en la nube <b>que tienes encima<\/b>/.test(rayoSatTorre(conRayo, ahora).html) && /no el punto donde caen/.test(rayoSatTorre(conRayo, ahora).html)
      && /no cambia el semáforo/.test(rayoSatTorre(conRayo, ahora).html));
   ok('y si no ve nada, no pudo leer o falló, en Torre no sale: su silencio no es «vía libre»',
      rayoSatTorre(sin, ahora) === null && rayoSatTorre({ error: 'x' }, ahora) === null
@@ -11901,6 +11901,26 @@ grupo('El cambio de hora del 25-10: las horas de Open-Meteo, a la hora de su rel
      tenerife[0].hourly.time[0] === '2026-10-03T15:00', tenerife[0].hourly.time[0]);
   ok('y entra por jget: toda respuesta de Open-Meteo pasa por aquí', /return horasAlReloj\(await r\.json\(\)\);/.test(src));
   if (tzAntes === undefined) delete process.env.TZ; else process.env.TZ = tzAntes;
+}
+
+grupo('El sirimiri de ECMWF dentro de la ventana de AROME no se le cuelga a AROME (03-10-2026, Bermeo 18:59)');
+{
+  /* Su captura: «AGUA 5 horas sueltas entre las 18:00 y las 23:00 · la ve
+     AROME HD» y «Está lloviendo…», con las 18-20 de sirimiri del código de
+     ECMWF y AROME en 0,0 hasta las 22. */
+  const h0 = (() => { const d = new Date(); d.setMinutes(0, 0, 0); return d.getTime(); })();
+  const D = n => new Date(h0 + n * 3600e3);
+  const guarda = S.lluviaTorres;
+  const mdA = typeof modeloDato === 'function' ? modeloDato : undefined;
+  modeloDato = () => ({ name: 'AROME HD' });
+  S.lluviaTorres = [{ k: 'siri', llueve: true, dueno: 'AROME HD', quien: 'AROME HD', ini: D(0), fin: D(3), pico: 3.8, hPico: D(3),
+                      horasAgua: [D(0), D(1), D(3)], horasSirimiri: [D(0), D(1)], sirimiriDe: 'ECMWF', soloSirimiri: false,
+                      fuerte: true, acompanan: ['ICON'], horasFuerza: [D(3)], nHoras: 3, sueltas: true, otros: [] }];
+  const t = soloTexto(lineaAguaTorre('siri'));
+  ok('con sirimiri de ECMWF en esta hora y AROME seco, la tarjeta NO dice «Está lloviendo»', !/Está lloviendo/.test(t), t);
+  modeloDato = mdA; S.lluviaTorres = guarda;
+  ok('y la línea roja nombra al sirimiri con su modelo: «(y el sirimiri, ECMWF)»',
+     /\(y el sirimiri, \$\{esc\(L\.sirimiriDe\)\}\)/.test(src));
 }
 
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
