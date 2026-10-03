@@ -71,3 +71,49 @@ quejaba de que no le avisaba nada.
   8 bytes del 27-09, que no vale.
 - AROME iba tarde en Bilbao: 0–1 mm a las 19–20 h con el agua cayendo, y lo fuerte (16,9 mm)
   lo ponía a las 22. ICON y ECMWF ya daban agua a las 19.
+
+## 5. Añadido a las 21:00: lo que pasó después y lo que le propuse
+
+**Hecho y publicado (2026.10.03-2046, commit ee5fba7):** BI DEUSTOII (ES-TIMS-46853,
+Vantage, Lehendakari Aguirre 29) está en su lista (`/api/torres`, modo juntar, con las
+coordenadas de su planta: 43.271656, −2.948538) y es CRÍTICA (`critico: true` en `SITIOS`).
+Tiene su prueba con reloj falso vista en rojo. Su hija está allí. Ahora son 21 sitios.
+
+**Lo que pasó esta noche (sus palabras):**
+- «calles inundadas en Deusto», trombas en Bilbao.
+- «en Bermeo cayendo tromba de agua ahora mismo» a las 20:55.
+- «hay algunos sitios que cayó agua y no avisó nadie» · «tanto vigilante cada poco… pues
+  ya ves» · «algo estamos haciendo mal».
+
+**Lo medido contra lo previsto:**
+- AROME HD iba tarde todo el rato. En Bilbao y en Bermeo daba 0–1 mm a las 19–20 con el
+  agua cayendo.
+- La pasada de AROME de las 20:36 subió mucho:
+  - Deusto II: 14,8 · 28,7 · 28,4 · 3 l/m² a las 20, 21, 22 y 23 (60,1 mm en la franja de
+    21 a 23).
+  - Bermeo: 3,2 · 18,5 · 16,1 · 6,5 a las 21, 22, 23 y 00.
+- ICON, GFS y ECMWF se quedan en 1–3 l/m² por hora. ICON da código 95 en Bilbao de 19 a 23
+  y en Bermeo a las 22.
+- El vigilante decide la lluvia con ICON (dueño aprendido, desde la pasada de las 20:30),
+  así que no avisa del agua donde AROME da 15–28 l/m².
+- Recordatorio para quien compare cifras: Open-Meteo da `precipitation` como la suma de
+  la HORA ANTERIOR (comprobado con `minutely_15`: 4 × 4,2 = 16,8, frente a 16,9 en la
+  hora). «22:00 = 18,5» quiere decir de 21 a 22.
+
+**Las cuatro propuestas que le hice. «¿A, B, C y D?», sin contestar todavía:**
+- **A.** El vigilante lee en cada pasada la LLUVIA MEDIDA en las estaciones cerca de sus
+  sitios (AEMET y Euskalmet, que ya tiene `/estaciones` y `/api/euskalmet`). Si mide lluvia
+  fuerte en la última hora, avisa vibrando, lo diga o no el modelo. Hoy lo medido solo se
+  apunta para el registro y no avisa.
+- **B.** Igual con los RAYOS MEDIDOS a menos de 15 km (AEMET o Meteosat), vibrando. Hoy el
+  vigilante no lee descargas: solo la app al abrirla.
+- **C.** La lluvia fuerte (≥ 15 l/m² por hora, escala de AEMET, con otro modelo de acuerdo)
+  vibra como el rayo (`importante: true`). Hoy el agua nunca vibra (decisión del 01-10).
+- **D.** Mientras no se vea claro, el dueño de la lluvia del vigilante es AROME HD y no el
+  aprendido. Hoy el aprendido es ICON, y se queda corto con las trombas.
+
+Le pregunté también si lo hago yo con la SSD puesta o lo dejo para el iMac. Si te lo
+encarga a ti: cada una con su prueba vista en rojo, como siempre.
+
+**Otro hueco que salió:** la app abierta no se refresca sola (§67 10). Él veía la
+previsión de antes de las 20:36 hasta que la recargó.
