@@ -1898,6 +1898,25 @@ ok('dentro del mismo día se dice una sola vez',
    En Bilbao decía «próxima ventana apta: mañana domingo de 03:00 a 05:00»
    con GFS dando 2,8 mm/h a esas horas. El color es del dueño de la lluvia;
    la ventana no puede atravesar la hora en que otro da su «llueve bien». */
+grupo('Las reglas del tiempo viven en UN fichero, el mismo para las tres webs (03-10-2026, 22:15)');
+{
+  /* «estar mal en las 3 apps, eso no puede ser» · «raíz». Si app.js declara
+     una función que ya está en reglas-tiempo.js, tiene que ser un envoltorio
+     que la llame: si no, es una segunda copia, la que se separa. */
+  const R = globalThis.ReglasTiempo;
+  const copias = Object.keys(R).filter(k => typeof R[k] === 'function').filter(n => {
+    const i = src.search(new RegExp(`^function ${n}\\(`, 'm'));
+    if (i < 0) return false;
+    const cuerpo = src.slice(i, src.indexOf('\n}\n', i) + 3);
+    return !new RegExp(`ReglasTiempo\\.${n}\\(`).test(cuerpo);
+  });
+  ok('las reglas del tiempo viven en reglas-tiempo.js: app.js no lleva su propia copia de ninguna',
+     copias.length === 0 && Object.keys(R).length >= 15, `copias en app.js: ${copias.join(', ')}`);
+  const r = R.codigoConAgua({ mm: 17.4, codigo: 55, codigoAjeno: true, mmDelQuePresta: 0.9 });
+  ok('22:00 del sábado 3 en Bermeo: 17,4 mm/h de AROME HD con la llovizna de ECMWF se dibuja «Lluvia fuerte»',
+     r.code === 65 && R.wmoText(r.code) === 'Lluvia fuerte', JSON.stringify(r));
+}
+
 grupo('El rayo MEDIDO veta las horas, no solo la caja de arriba (03-10-2026, 22:20)');
 {
   /* BI BERMEO con 26 descargas a menos de 15 km: la ficha decía FUERTE y la
