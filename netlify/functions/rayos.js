@@ -205,9 +205,15 @@ export default async (request) => {
 
     return new Response(JSON.stringify(salida), {
       status: 200,
-      // El catálogo cambia una vez por hora; 5 min de caché no atrasa
-      // nada y evita pedirlo tres veces por recarga.
-      headers: cabeceras(300, { navegador: 120, revalidar: 1800, origen: 'aemet-rayos' }),
+      /* El catálogo dice qué horas de rayos hay publicadas, y de él cuelga el
+         VETO (descarga a < 15 km hace < 90 min). Tenía 5 min de CDN y 30 de
+         «sirve lo viejo mientras revalidas»: medido el 03-10-2026,
+         `x-vercel-cache: STALE, age 391`. Con una sola persona usándolo,
+         cada apertura entre 5 y 35 min después de la anterior recibía el
+         catálogo sin la última hora: hasta 35 min más de retraso sobre los
+         ~70 que ya trae AEMET, justo en el dato que veta. Ahora 2 min, y lo
+         viejo solo 1 min más. */
+      headers: cabeceras(120, { navegador: 60, revalidar: 60, origen: 'aemet-rayos' }),
     });
   } catch (e) {
     return new Response(JSON.stringify({ error: true, reason: String(e.message || e) }), {

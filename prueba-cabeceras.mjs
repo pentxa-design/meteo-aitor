@@ -161,7 +161,7 @@ const CASOS = [
   ['rayos',      '/rayos?f=rayos_PB_LOCL_2026090503%2B0200_1787630468.png', 'png',
                  { ttl: 3600, swr: 7200, nav: 1800, tipo: 'image/png', origen: 'aemet-rayos' }],
   ['rayos',      '/rayos', 'aemetRayos',
-                 { ttl: 300, swr: 1800, nav: 120, tipo: 'application/json; charset=utf-8', origen: 'aemet-rayos' }],
+                 { ttl: 120, swr: 60, nav: 60, tipo: 'application/json; charset=utf-8', origen: 'aemet-rayos' }],
   // Las tormentas solo tenían max-age=900, sin cabecera de CDN y sin
   // charset (medido el 05-09-2026 a las 03:52 UTC en la app publicada:
   // x-vercel-cache HIT con age 257 → el CDN guardaba 900 por el max-age y

@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-1542';
+const BUILD = '2026.10.03-1547';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -8710,6 +8710,31 @@ function calcularParte(sitios, arr) {
         if (!peor || c > peor.cape) { peor = { cape: c, cin: k, d: t }; quien = m; }
       }
     }
+    /* ── Y EL CÓDIGO DE TORMENTA, QUE AQUÍ NO SE MIRABA (03-10-2026) ──────
+       El parte solo buscaba la pareja CAPE+tapa. Ese día ICON daba código
+       de tormenta (95) en siete sitios suyos —Carranza de 15 a 21 h,
+       Zeberio de 15 a 23 h…— y el parte decía «riesgo de rayo en 9 de 20»
+       mientras el vigilante del móvil decía 19 y «¿se llega?» de la misma
+       tarjeta ya los contaba. El código no admite interpretación: cuenta. */
+    let porCodigo = null;
+    const venCodigo = new Set();
+    for (const m of MODELOS_TORMENTA) {
+      const cod = H[`weather_code_${m.om}`];
+      if (!cod) continue;
+      for (let i = 0; i < H.time.length; i++) {
+        const t = new Date(H.time[i]);
+        if (t.getTime() < desde || t.getTime() > finVentana || !isStormCode(cod[i])) continue;
+        venCodigo.add(m.nom);
+        if (!ini || t < ini) ini = t;
+        if (!fin || t > fin) fin = t;
+        if (!porCodigo || t < porCodigo.d) porCodigo = { d: t, nom: m.nom, code: cod[i] };
+      }
+    }
+    const codigoTxt = porCodigo ? { quien: listar([...venCodigo]), hora: porCodigo.d } : null;
+    if (!peor && porCodigo) {
+      return { k, salta: true, porCodigo: true, ini, fin, cape: null, cin: null, hora: porCodigo.d,
+               modelo: codigoTxt.quien, codigo: codigoTxt, nVen: 0, nPodian: podian.size };
+    }
     if (!peor) {
       // No salta. Pero DE QUÉ le falta importa, y es lo que él preguntó.
       /* ── LA PAREJA, DE LA MISMA HORA Y DEL MISMO MODELO ────────────
@@ -8808,7 +8833,7 @@ function calcularParte(sitios, arr) {
     }
     const nom = MODELOS_TORMENTA.find(m => m.om === quien)?.nom ?? quien;
     return { k, salta: true, ini, fin, cape: peor.cape, cin: peor.cin, hora: peor.d, modelo: nom,
-             nVen: venlo.size, nPodian: podian.size };
+             nVen: venlo.size, nPodian: podian.size, codigo: codigoTxt };
   });
 
   /* ── Y LA LLUVIA, que es lo que hay casi todos los días ─────────────
@@ -10418,10 +10443,16 @@ function renderParte() {
   el.innerHTML = avisoSinDato + filas.map(({ p, d, k }) => {
     if (d.salta) {
       const cuando = tramo(d.ini, d.fin);
+      /* Por código de tormenta (sin pareja CAPE+tapa que lo diga): se dice
+         así, con quién lo da y desde qué hora. Si además hay pareja, va la
+         pareja y el código detrás. (03-10-2026) */
+      const lineaCodigo = d.codigo
+        ? `<div class="pt__d"><b>${esc(d.codigo.quien)} da tormenta</b> (su código de tormenta) desde las ${hm(d.codigo.hora)}</div>` : '';
       const cuerpoR = `${lineaLluvia(k)}${lineaRacha(k)}
-          <div class="pt__d"><b>CAPE ${nCape(d.cape)}</b> con la
+          ${d.porCodigo ? '' : `<div class="pt__d"><b>CAPE ${nCape(d.cape)}</b> con la
             <b>tapa en ${nCape(d.cin)}</b>, a las ${hm(d.hora)}
-            <span class="pt__m">· lo ve ${esc(d.modelo)}${cuantosLoVen(d)}</span></div>
+            <span class="pt__m">· lo ve ${esc(d.modelo)}${cuantosLoVen(d)}</span></div>`}
+          ${lineaCodigo}
           ${cuandoSePuede(k)}${lineaCambio(k)}`;
       S.parteFilas.set(key(p), { est: 'no', etq: `RAYO ${esc(cuando)}`, dia: rotuloDelParte,
                                  cuerpo: cuerpoR, comp: comparativa(p) });
@@ -12042,7 +12073,7 @@ const Rayos = {
   /** El catálogo, con cinco minutos de memoria. */
   async catalogo() {
     if (this.cat && Date.now() - this.catT < 5 * 60e3) return this.cat;
-    const r = await fetch('/rayos');
+    const r = await fetch('/rayos', { cache: 'no-store' });   // el catálogo del veto, nunca de la caché del navegador
     const d = await r.json().catch(() => null);
     if (!r.ok || !d || d.error) {
       throw new Error(d?.reason || `AEMET no ha dado el catálogo de rayos (${r.status})`);

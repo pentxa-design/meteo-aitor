@@ -11756,6 +11756,36 @@ grupo('La lluvia es de su DUEÑO y lo de los demás va con su nombre (03-10-2026
   globalThis.nombreDeModelo = nm0; globalThis.duenoLluvia = dl0;
 }
 
+grupo('El parte cuenta el CÓDIGO de tormenta, no solo la pareja CAPE+tapa (03-10-2026)');
+{
+  /* La auditoría del 03-10: ICON daba código 95 en siete sitios suyos y el
+     parte decía «riesgo de rayo en 9 de 20» (el vigilante, 19). Las pruebas
+     del parte montaban `S.parteTorres` a mano: nadie arrancaba el cálculo de
+     verdad. Esta lo arranca, en una caja aparte, con el `calcularParte` real. */
+  const vm = require('vm');
+  const sc = n => src.match(new RegExp(`^const ${n}\\s*= [\\s\\S]*?;[^\\n]*\\n`, 'm'))[0];
+  const ctx = { console, Date, Math, JSON, Map, Set, Number, String, Array, Object };
+  vm.createContext(ctx);
+  vm.runInContext(['has', 'isStormCode', 'listar', 'MODELOS_TORMENTA', 'CON_TAPA', 'CAPE_COMBINACION', 'TAPA_ROMPE',
+                   'AGUA_ACUERDO', 'RELLENO_AGUA', 'CIELO_PRESTADO'].map(sc).join('\n')
+    + ['function calcularParte(', 'function lluviaDeUnSitio(', 'function mojaEsaHora('].map(f => sacar(f)).join('\n')
+    + `\nvar S = { thr: { rainWarn: 0.2, rainNo: 2 } }; function key(p){return p.n}
+       function ventanaParte(){ return globalThis.__v; } function duenoLluvia(){return 'meteofrance_arome_france_hd'}
+       function nombreDeModelo(om){return om}
+       globalThis.__run = (sitios, arr, v) => { globalThis.__v = v; calcularParte(sitios, arr); return S; };`, ctx);
+  const T0 = new Date(2026, 9, 3, 15, 0, 0, 0).getTime(), n = 9;
+  const time = Array.from({ length: n }, (_, i) => { const d = new Date(T0 + i * 3600e3); return `2026-10-03T${String(d.getHours()).padStart(2, '0')}:00`; });
+  const base = { time, cape_icon_seamless: Array(n).fill(200), convective_inhibition_icon_seamless: Array(n).fill(150),
+                 precipitation_meteofrance_arome_france_hd: Array(n).fill(0) };
+  const v = { desde: T0 - 3600e3, hasta: T0 + n * 3600e3, salto: 0 };
+  const conCodigo = ctx.__run([{ n: 'CARRANZA' }], [{ hourly: { ...base, weather_code_icon_seamless: [3, 95, 95, 3, 3, 3, 3, 3, 3] } }], v).parteTorres[0];
+  ok('Carranza 03-10: ICON da código de tormenta (95) sin pareja CAPE+tapa → el parte dice RAYO, de ICON y desde las 16:00',
+     conCodigo?.salta === true && conCodigo.porCodigo && conCodigo.codigo?.quien === 'ICON'
+     && new Date(conCodigo.ini).getHours() === 16, JSON.stringify(conCodigo));
+  const sinCodigo = ctx.__run([{ n: 'CARRANZA' }], [{ hourly: { ...base, weather_code_icon_seamless: Array(n).fill(3) } }], v).parteTorres[0];
+  ok('   y sin código ni pareja, no se inventa el rayo', sinCodigo && sinCodigo.salta === false, JSON.stringify(sinCodigo));
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');
