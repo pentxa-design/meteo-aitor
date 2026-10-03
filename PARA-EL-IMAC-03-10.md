@@ -117,3 +117,23 @@ encarga a ti: cada una con su prueba vista en rojo, como siempre.
 
 **Otro hueco que salió:** la app abierta no se refresca sola (§67 10). Él veía la
 previsión de antes de las 20:36 hasta que la recargó.
+
+## 6. «¿Cambiar la lluvia al modelo que acertó?» (suyo, 21:00)
+
+Lo MEDIDO por Euskalmet (`/api/euskalmet?puntos=…`) a las 20:40, contra los modelos de esa
+hora (Open-Meteo: la hora de las 21:00 es de 20 a 21):
+- **Almike (Bermeo, a 1,1 km):** 3,8 mm en 60 min. Daban, de 20 a 21: AROME HD 3,2 ·
+  GFS 1,7 · EC9km 1,5 · ECMWF 1,1 · ICON 0,9. La cantidad más cercana es la de AROME, pero
+  le llegó tarde: de 19 a 20 daba 0. La tromba que él vio fue a las 20:55, después de esa
+  medida.
+- **Zorrotza (a 2,2 km de Deusto II):** 0,9 mm en 50 min. Todos daban ~1 mm; la pasada nueva
+  de AROME (28,7 de 20 a 21 en Deusto II) todavía no se veía allí a las 20:40.
+- `/estaciones` (AEMET) devolvió las estaciones sin historia de lluvia. Está por mirar.
+
+Conclusión que le di: con dos estaciones y una hora no se puede decir que un modelo
+«acertó». El dueño aprendido (ICON, 56 % de acierto desde el 01-10, frente al 37 % de
+AROME) sale sobre todo de días de lluvia floja. En tormenta, AROME (1,3 km) es el que ve
+las células, aunque con retraso, y los demás las aplanan. Por eso lo que de verdad lo
+arregla es la **A** (avisar con lo medido), que no depende de elegir modelo. Para la **D**,
+le propuse: lluvia floja con el aprendido, lluvia fuerte con AROME HD, o la de cualquier
+modelo que dé ≥ 15 con otro de acuerdo. Lo decide él.
