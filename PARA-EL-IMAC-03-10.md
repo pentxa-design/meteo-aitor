@@ -137,3 +137,30 @@ las células, aunque con retraso, y los demás las aplanan. Por eso lo que de ve
 arregla es la **A** (avisar con lo medido), que no depende de elegir modelo. Para la **D**,
 le propuse: lluvia floja con el aprendido, lluvia fuerte con AROME HD, o la de cualquier
 modelo que dé ≥ 15 con otro de acuerdo. Lo decide él.
+
+## 7. Añadido a las 21:10: HECHO por decisión suya («a tu criterio, pero ojo con el gasto»)
+
+Publicado en **2026.10.03-2109**, con las pruebas vistas en rojo:
+- **D: manda AROME HD en la lluvia del vigilante**, aunque el registro aprenda otro.
+  Suyo: *«quien acertó hoy y los litros sobre todo, ese manda»* · *«así lo quiero»*. El
+  aprendido se sigue calculando y el pulso lo enseña en `dueno.loAprendido`, pero no manda.
+  - La línea vieja del candado («el dueño aprendido dice la lluvia fuerte») queda tachada
+    y apuntada a la prueba nueva.
+  - **TAREA PARA TI:** que el aprendizaje premie a quien acierta los LITROS en horas de
+    lluvia, no el acierto equilibrado que hoy cuenta las horas secas. Hasta que eso esté
+    medido, no le devuelvas el mando al aprendido.
+  - OJO: `?verificar=1` (la pantalla de Avisos) sigue diciendo «Dueño de la lluvia: ICON»
+    porque lee el registro. Hay que alinearlo con lo que de verdad manda.
+- **C: la tromba vibra.** `AGUA_TROMBA = 15` mm/h («lluvia fuerte» de AEMET): el aviso de
+  las 3 h va `importante: true` si hay agua de 15 para arriba. La de 2 a 15 sigue sin vibrar.
+- **A, sin hacer** (te toca). El vigilante ya pide en cada pasada `/api/euskalmet` (línea
+  ~924, para el marcador) y `/estaciones` (~794), así que NO añade llamadas. Euskalmet da
+  `lluvia` + `lluviaMin` + `medidoEn` por estación. Propuesta: lluvia medida fuerte en la
+  última hora a ≤ 5 km de un sitio suyo → aviso que vibra, «medido en X: N mm en M min».
+  `/estaciones` devolvió esa noche las estaciones sin historia de lluvia: está por mirar.
+- **B, NO hecho, por el gasto.** Leer los rayos medidos en el servidor obliga a decodificar
+  las imágenes de AEMET o de Meteosat en cada pasada (CPU de Vercel). Queda para que él lo
+  decida sabiendo lo que cuesta.
+
+**Commits de esta sesión del MacBook, todos sin subir a GitHub:**
+5deddf1, 939ac74, 93a6561, 0c37e74, 34ec376, ee5fba7, 87bf46f, 0c8c142 y el de esta sección.

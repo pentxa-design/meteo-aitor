@@ -146,6 +146,9 @@ const selloTanda = () => `&_=${Math.floor(Date.now() / 600000)}`;
    cada tres horas y **una app que grita se deja de creer**. */
 const AGUA_MIN = 0.3;
 const AGUA_FUERTE = 2.0;
+/* «Llueve fuerte» en la escala de AEMET: desde aquí el agua VIBRA como el rayo
+   (03-10-2026, trombas en Bilbao y Bermeo sin un aviso que se notara). */
+const AGUA_TROMBA = 15;
 /** La palabra de la lluvia por su intensidad, con la escala OFICIAL de AEMET
  *  (mm/h): moderada 2-15 («llueve bien», que es su palabra), fuerte 15-30,
  *  muy fuerte 30-60, torrencial >60. Suyo, 01-10-2026: «agua fuerte no, que
@@ -163,8 +166,9 @@ const palabraAgua = v => (v >= 60 ? 'lluvia torrencial' : v >= 30 ? 'lluvia muy 
    Ahora: «agua fuerte» exige que el pico llegue a 2 mm/h Y que al menos
    DOS modelos pasen de 1 mm/h esa misma hora. Si lo ve uno solo, no es
    aviso (sigue en la app y en el parte, con su modelo). Y el agua sola
-   NUNCA es aviso «importante» (vibración larga): eso es del rayo y de la
-   racha de 70, que es lo que le para. 2 de 4 es una calibración fina
+   no es aviso «importante» (vibración larga): eso es del rayo y de la
+   racha de 70, que es lo que le para. SALVO la de AGUA_TROMBA (15 mm/h,
+   «llueve fuerte» de AEMET) para arriba, desde el 03-10-2026. 2 de 4 es una calibración fina
    —en 24 h solo hubo dos horas con el Automático ≥2—; si se queda corta
    para algo que sí caiga, se baja y se dice. */
 const AGUA_ACUERDO = 1.0;
@@ -1560,11 +1564,19 @@ export default async function handler(req, res) {
 
   /* EL DUEÑO DE LA LLUVIA, APRENDIDO (01-10-2026): se lee el registro antes de
      mirar los sitios. Sin registro o sin datos de sobra, manda AROME HD. */
-  let ledger = null, duenoId = DUENO_AGUA;
+  /* ── MANDA EL QUE ACIERTA LOS LITROS: AROME HD (03-10-2026, decisión suya) ──
+     Esa tarde el aprendido pasó a ICON (acierta más horas, sobre todo secas y
+     flojas) y con las trombas de Bilbao y Bermeo daba 1-3 mm/h donde cayeron
+     15-28: no avisó del agua. AROME HD dio los litros (Bermeo: 3,2 previsto,
+     3,8 medido, y luego 18,5; Deusto II: 28,7 y 28,4). Suyo: «quien acertó hoy
+     y los litros sobre todo, ese manda» · «así lo quiero». Es además el dueño
+     de la app. El aprendido se sigue calculando y enseñando (`duenoAprendidoId`),
+     pero no manda hasta que aprenda por los litros. */
+  let ledger = null, duenoId = DUENO_AGUA, duenoAprendidoId = null;
   try {
     ledger = await cargarRegistro(new Date().toISOString());
     const id = MODELOS_AGUA.find(m => nombreDe(m) === ledger.v.dueno?.nombre);
-    if (id) duenoId = id;
+    if (id) duenoAprendidoId = id;
   } catch { /* sin registro: manda el de siempre */ }
 
   const pedirUno = (s, i) =>
@@ -1811,7 +1823,7 @@ export default async function handler(req, res) {
          bien». QUIÉN lo ve, con su hora: «AROME HD ve que llueve bien a
          las 11h (5 mm/h; también ICON)». */
       const tambien = (p?.ven || []).filter(n => n !== p.quien);
-      f.push({ que: 'agua', clave: `agua:${t.ini}`,
+      f.push({ que: 'agua', clave: `agua:${t.ini}`, v: p?.v,
                txt: p ? `${p.quien} ve ${palabraAgua(p.v)} ${tramoTxt3(t, '')} (${coma(p.v)} mm/h${tambien.length ? `; también ${tambien.join(', ')}` : ''}${p.sinDato ? `; ${p.sinDato} no da dato a esa hora` : ''})`
                       : `llueve bien ${tramoTxt3(t, '')}` });
     }
@@ -1861,7 +1873,10 @@ export default async function handler(req, res) {
       cuerpo: `${crit ? `Crítico: ${orden[0].d.n}. ` : ''}${proximas.length > 1 ? `${sitiosTxt(proximas.length)}. ` : ''}${lista}${proximas.length > 5 ? `. Y ${proximas.length - 5} más` : ''}. Datos de las ${hh(h0)}.`,
       /* Solo el rayo y la racha de 70 son «importantes» (vibración larga y no
          se quita sola). El agua, sola, avisa sin gritar (01-10-2026). */
-      tag: 'tormenta', importante: proximas.some(x => x.f.some(f => f.que === 'rayo' || f.que === 'racha')),
+      /* Y el agua de 15 mm/h para arriba («llueve fuerte», AEMET), desde el
+         03-10-2026: ese día las trombas de Bilbao llegaban sin vibrar. */
+      tag: 'tormenta', importante: proximas.some(x => x.f.some(f => f.que === 'rayo' || f.que === 'racha'
+                                                   || (f.que === 'agua' && f.v >= AGUA_TROMBA))),
     });
   }
   if (AVISAR_CAMBIOS && cambiosQueValen.length) {
@@ -2321,7 +2336,8 @@ export default async function handler(req, res) {
       listaDeRespaldo,
       /* Quién manda en la lluvia de los avisos y si lo ha elegido el acierto
          medido o es el de siempre (02-10-2026): la app lo enseña en Avisos. */
-      dueno: { nombre: nombreDe(duenoId), aprendido: duenoId !== DUENO_AGUA },
+      dueno: { nombre: nombreDe(duenoId), aprendido: duenoId !== DUENO_AGUA,
+               ...(duenoAprendidoId ? { loAprendido: nombreDe(duenoAprendidoId) } : {}) },
       /* La fecha del último parte, para no repetirlo en cada pasada. Si
          no se envió (mudo, o fallo), NO se marca: se reintenta luego. */
       /* Mismo trato para el parte de la mañana: el comentario de arriba

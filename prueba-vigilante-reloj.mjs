@@ -592,6 +592,14 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      !L6.reventó && /BERMEO: riesgo de rayo 16h-17h: ICON ve CAPE 900, tapa 10/.test(l6?.cuerpo || ''), l6?.cuerpo || resumen(L6));
   ok('y el agua sola avisa SIN vibrar (importante: false): la vibración larga es del rayo y la racha de 70',
      l2 && l2.importante === false && /^🌧/.test(l2.titulo), JSON.stringify(l2));
+  /* PERO LA TROMBA VIBRA (03-10-2026): con 15 mm/h para arriba («llueve
+     fuerte», AEMET) el agua sola es importante. Ese día las trombas de Bilbao
+     y Bermeo llegaban, si llegaban, sin vibrar. */
+  const TR = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200),
+    esc: { agua: [{ k: 0, dia: 'hoy', horas: [11], mm: 18, om: AR }, { k: 0, dia: 'hoy', horas: [11], mm: 2, om: 'icon_eu' }] } });
+  const tr = (TR.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
+  ok('10:00 · tromba de 18 mm/h de AROME HD con ICON de acuerdo: el aviso VIBRA (importante) y dice «lluvia fuerte»',
+     !TR.reventó && tr?.importante === true && /AROME HD ve lluvia fuerte a las 11h \(18 mm\/h/.test(tr?.cuerpo || ''), JSON.stringify(tr) || resumen(TR));
   const L3 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200),
                             esc: { agua: [{ k: 0, dia: 'hoy', horas: [11], mm: 3 }], rayo: [{ k: 1, dia: 'hoy', horas: [11] }] } });
   const l3 = (L3.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
@@ -721,13 +729,16 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   ok('y con una diferencia pequeña (62 % contra 60 %) NO cambia: hace falta un margen de 5 puntos; una tarde no cambia el dueño',
      dH.nombre === 'AROME HD' && dH.cambio === false && /no los 5 puntos de margen/.test(dH.porque), dH.porque);
 
-  // Y en una pasada de verdad: el registro dice que ICON es el bueno → la lluvia fuerte la dice ICON.
+  /* Y en una pasada de verdad, aunque el registro diga que ICON es el bueno,
+     MANDA AROME HD (03-10-2026, suyo: «quien acertó hoy y los litros sobre
+     todo, ese manda»; ICON se quedó en 1-3 mm/h con trombas de 15-28). */
   globalThis.__ALMACEN = new Map(); globalThis.__ALMACEN.set('avisos/verificacion.json', JSON.stringify(registro({ 'AROME HD': FLOJO, ICON: BUENO, GFS: MEDIO }, { nombre: 'ICON', desde: '2026-10-02T08:00:00Z', antes: 'AROME HD', acierto: 0.8 })));
   const LD = await pasada({ hora: '10:00', conservar: true, antes: tranquilo('10:00', 200),
     esc: { agua: [{ k: 0, dia: 'hoy', horas: [11], mm: 5, om: 'icon_eu' }, { k: 0, dia: 'hoy', horas: [11], mm: 1.5, om: AR }] } });
   const ld = (LD.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
-  ok('con ICON de dueño: «ICON ve que llueve bien a las 11h (5 mm/h; también AROME HD)» (antes, con AROME de dueño, 1,5 mm no era aviso)',
-     !LD.reventó && /BERMEO: ICON ve que llueve bien a las 11h \(5 mm\/h; también AROME HD\)/.test(ld?.cuerpo || ''), ld?.cuerpo || resumen(LD));
+  ok('con el registro diciendo ICON, manda AROME HD: ICON 5 mm/h y AROME 1,5 NO es «llueve bien», y el pulso dice lo que diría lo aprendido',
+     !LD.reventó && !(LD.b.avisados || []).some(a => /llueve bien/.test(a.cuerpo || ''))
+     && LD.estado?.dueno?.nombre === 'AROME HD' && LD.estado?.dueno?.loAprendido === 'ICON', JSON.stringify(LD.estado?.dueno) + ' ' + (ld?.cuerpo || ''));
   const RK = await pasada({ hora: '14:30', conservar: true, metodo: 'GET', query: { verificar: '1' } });
   ok('?verificar=1 enseña el ranking, el dueño actual y por qué',
      /Dueño de la lluvia: ICON/.test(RK.b.texto || '') && RK.b.ranking?.eus?.[0]?.nombre === 'ICON', (RK.b.texto || '').slice(0, 200));
