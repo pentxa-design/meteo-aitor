@@ -630,7 +630,7 @@ const ReglasTiempo = (() => {
     const k = p => `${(+p.lat).toFixed(3)},${(+p.lon).toFixed(3)}`;
     async function leer(p) {
       const c = mem.get(k(p));
-      if (c && Date.now() - c.t < (c.fallo ? 2 * 60e3 : cada)) return c;
+      if (c && Date.now() - (c.fallo ? (c.tFallo || c.t) : c.t) < (c.fallo ? 2 * 60e3 : cada)) return c;
       if (pidiendo.has(k(p))) return pidiendo.get(k(p));
       const pide = (async () => {
         let v;
@@ -639,7 +639,14 @@ const ReglasTiempo = (() => {
           const u = r.ultima;
           v = { t: Date.now(), fuera: !!r.fuera, hasta: r.hasta || null, horas: r.horasMiradas ?? horas,
                 u: u && u.n ? { n: u.n, encima: u.encima, cerca: u.cerca, hasta: u.hasta, km: u.masCerca?.km ?? null } : null };
-        } catch (e) { v = { t: Date.now(), fallo: String(e?.message || e).slice(0, 80) }; }
+        } catch (e) {
+          /* Un fallo NO borra lo que ya se sabía: con lo último bueno se sigue
+             vetando lo que cayó (sus 90 min cuentan desde la descarga), y se
+             dice que no se ha podido volver a leer. */
+          const antes = mem.get(k(p));
+          const fallo = String(e?.message || e).slice(0, 80);
+          v = antes?.u ? { ...antes, fallo, tFallo: Date.now() } : { t: Date.now(), fallo };
+        }
         mem.set(k(p), v); guardar(); pidiendo.delete(k(p));
         return v;
       })();
@@ -655,13 +662,14 @@ const ReglasTiempo = (() => {
   /** La frase de lo medido, con su nivel: 'no' (veta), 'warn' (por la zona), 'go', 'nd'. */
   function textoRayos(v, ahora = Date.now()) {
     if (!v) return { nivel: 'nd', texto: 'Leyendo los rayos medidos por AEMET…' };
-    if (v.fallo) return { nivel: 'nd', texto: `No he podido leer los rayos de AEMET ahora (${v.fallo}): no es que no haya caído nada, es que no lo sé.` };
+    if (v.fallo && !vetaRayo(v, ahora)) return { nivel: 'nd', texto: `No he podido leer los rayos de AEMET ahora (${v.fallo}): no es que no haya caído nada, es que no lo sé.` };
+    const otraVez = v.fallo ? ` No he podido volver a leer AEMET (${v.fallo}).` : '';
     if (v.fuera) return { nivel: 'nd', texto: 'Este sitio queda fuera del mapa de rayos de AEMET.' };
     const m = v.hasta ? Math.round((ahora - new Date(v.hasta)) / 60000) : null;
     const hasta = v.hasta ? ` Lo medido llega hasta las ${horaRayo(v.hasta)} (hace ${m < 120 ? `${m} min` : `${Math.floor(m / 60)} h`}); lo más reciente aún no está publicado.` : '';
     if (vetaRayo(v, ahora)) return { nivel: 'no', veta: true,
       texto: `Han caído rayos encima: ${v.u.encima} descarga${v.u.encima === 1 ? '' : 's'} a menos de ${RAYO_ENCIMA} km`
-           + (has(v.u.km) ? `, la más cercana a ${kmRayo(v.u.km)} km` : '') + `, medidas por AEMET hasta las ${horaRayo(v.u.hasta)}.` + hasta };
+           + (has(v.u.km) ? `, la más cercana a ${kmRayo(v.u.km)} km` : '') + `, medidas por AEMET hasta las ${horaRayo(v.u.hasta)}.` + hasta + otraVez };
     if (v.u && v.u.cerca > 0) return { nivel: 'warn',
       texto: `Rayos por la zona: ${v.u.cerca} a menos de ${RAYO_CERCA} km` + (has(v.u.km) ? `, la más cercana a ${kmRayo(v.u.km)} km` : '')
            + `, medidos por AEMET hasta las ${horaRayo(v.u.hasta)}.` + hasta };

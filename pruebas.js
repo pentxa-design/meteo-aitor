@@ -1899,6 +1899,29 @@ ok('dentro del mismo día se dice una sola vez',
    En Bilbao decía «próxima ventana apta: mañana domingo de 03:00 a 05:00»
    con GFS dando 2,8 mm/h a esas horas. El color es del dueño de la lluvia;
    la ventana no puede atravesar la hora en que otro da su «llueve bien». */
+grupo('Centro Operativo y agenda: un fallo al releer AEMET no borra el veto que ya se sabía (03-10-2026)');
+{
+  /* Va en un proceso aparte porque la caché es `async` (como la de
+     `Rayos.cerca()` más abajo). Primero una lectura buena con 55 descargas
+     encima de Durango; luego AEMET falla: el veto tiene que seguir. */
+  const guion = `
+    const vm = require('vm'), fs = require('fs');
+    vm.runInThisContext(fs.readFileSync(${JSON.stringify(require('path').join(__dirname, 'reglas-tiempo.js'))}, 'utf8') + ';globalThis.R = ReglasTiempo;');
+    const ahoraT = Date.now(); let falla = false;
+    const lector = { async cerca() {
+      if (falla) throw new Error('AEMET no ha dado el catálogo de rayos (503)');
+      return { hasta: new Date(ahoraT - 20 * 60e3).toISOString(), horasMiradas: 3,
+               ultima: { n: 55, encima: 55, cerca: 55, hasta: new Date(ahoraT - 20 * 60e3).toISOString(), masCerca: { km: 2.3 } } };
+    } };
+    const C = R.rayosConCache({ lector, cada: 0 });
+    const P = { lat: 43.1712, lon: -2.6333 };
+    (async () => { const a = await C.leer(P); falla = true; const b = await C.leer(P);
+      console.log(JSON.stringify({ a: R.vetaRayo(a), b: R.vetaRayo(b), t: R.textoRayos(b).texto })); })();`;
+  const sal = JSON.parse(require('child_process').execFileSync(process.execPath, ['-e', guion], { encoding: 'utf8', timeout: 20000 }));
+  ok('Durango con 55 descargas: si AEMET falla al releer, el veto SIGUE y se dice que no se ha podido volver a leer',
+     sal.a === true && sal.b === true && /Han caído rayos encima/.test(sal.t) && /No he podido volver a leer AEMET/.test(sal.t), JSON.stringify(sal));
+}
+
 grupo('Las reglas del tiempo viven en UN fichero, el mismo para las tres webs (03-10-2026, 22:15)');
 {
   /* «estar mal en las 3 apps, eso no puede ser» · «raíz». Si app.js declara
@@ -1984,6 +2007,16 @@ grupo('El rayo MEDIDO veta las horas, no solo la caja de arriba (03-10-2026, 22:
   const caminos = (src.match(/Object\.assign\(h, assess\(/g) || []).length;
   ok('las horas se evalúan por UN solo camino (evaluarHoras), que lleva el veto del rayo medido',
      caminos === 1 && /function evaluarHoras\(hrs, place\) \{\n  for \(const h of hrs\) Object\.assign\(h, assess\(/.test(src), `caminos: ${caminos}`);
+  S.place = S0.place; S.rayos = S0.rayos; S.rayosTorres = S0.rayosTorres;
+  /* Lo leído hace 50 min sigue vetando lo que cayó hace 30: la lectura no
+     caduca, la descarga sí (03-10-2026). */
+  S.place = { name: 'Bilbao', lat: 43.263, lon: -2.935 };
+  S.rayos = null;
+  S.rayosTorres = { t: Date.now() - 50 * 60e3, d: { tocadas: [{ t: DURANGO, marcosEncima: [{ hasta: new Date(Date.now() - 30 * 60e3).toISOString(), n: 54, km: 2.3 }] }] } };
+  ok('una lectura de hace 50 min sigue vetando la descarga de hace 30: «no lo he vuelto a leer» no es «no hay rayo»',
+     !!rmv(DURANGO), JSON.stringify(rmv(DURANGO)));
+  ok('y un fallo al leer AEMET no borra lo último bueno (el veto se queda, con el error dicho)',
+     /d: antes\?\.d \?\? null, anoche: antes\?\.anoche \?\? null, error:/.test(src));
   S.place = S0.place; S.rayos = S0.rayos; S.rayosTorres = S0.rayosTorres;
   /* El paso por sus estaciones, como mucho cada media hora (suyo: «así no
      andamos pillados»): lo de hace 20 min vale; lo de hace 31, se relee; y si
@@ -12206,6 +12239,11 @@ grupo('El cambio de hora del 25-10: las horas de Open-Meteo, a la hora de su rel
   ok('Tenerife (una hora menos): su 14:00 es tu 15:00, y la lista entera de sitios también se corrige',
      tenerife[0].hourly.time[0] === '2026-10-03T15:00', tenerife[0].hourly.time[0]);
   ok('y entra por jget: toda respuesta de Open-Meteo pasa por aquí', /return horasAlReloj\(await r\.json\(\)\);/.test(src));
+  /* Lo pedido en UTC sale en UTC: el mapa le añade «Z» (03-10-2026, flechas 2 h atrasadas). */
+  const utc = { timezone: 'GMT', utc_offset_seconds: 0, hourly: { time: ['2026-10-03T21:00'] } };
+  horasAlReloj(utc);
+  ok('lo que el mapa pide en UTC no se pasa al reloj del aparato: 21:00 UTC sigue siendo 21:00 (con «Z» detrás)',
+     utc.hourly.time[0] === '2026-10-03T21:00', utc.hourly.time[0]);
   if (tzAntes === undefined) delete process.env.TZ; else process.env.TZ = tzAntes;
 }
 

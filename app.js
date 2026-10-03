@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-2321';
+const BUILD = '2026.10.03-2331';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -2889,6 +2889,11 @@ function horasAlReloj(d) {
   };
   const uno = x => {
     if (!x || typeof x !== 'object' || x._horasAlReloj || !Number.isFinite(x.utc_offset_seconds)) return;
+    /* LO QUE SE PIDE EN UTC SE DEVUELVE EN UTC (03-10-2026). El mapa pide sus
+       series con timezone=UTC y les añade «Z»; convertidas al reloj del aparato
+       se leían dos veces como UTC y las flechas del viento, «Peor 12 h» y el
+       rumbo al pinchar iban 2 horas atrasados en verano. */
+    if (x.timezone === 'GMT' || x.timezone === 'UTC') return;
     const off = x.utc_offset_seconds * 1000;
     for (const k of ['hourly', 'minutely_15']) if (Array.isArray(x[k]?.time)) x[k].time = pasa(x[k].time, off);
     if (typeof x.current?.time === 'string') x.current.time = pasa([x.current.time], off)[0];
@@ -4655,7 +4660,10 @@ function rayoMedidoVeta(place, ahora = Date.now()) {
   if (R?.d?.ultima) {
     const u = R.d.ultima;
     f = u.encima > 0 ? { encima: u.encima, hasta: u.hasta, km: u.masCerca?.km ?? null } : null;
-  } else if (S.rayosTorres?.d && ahora - S.rayosTorres.t < RAYOS_TORRES_CADA + 5 * 60e3) {
+  } else if (S.rayosTorres?.d) {
+    /* Sin caducidad de la LECTURA (03-10-2026): una descarga conocida veta sus
+       90 min desde que cayó, se leyera cuando se leyera. Con «más de 35 min,
+       fuera» los ocho sitios vetados se quedaban en el color del modelo. */
     /* Los guardados van aparte del sitio abierto: cada torre lleva su clave. */
     const t = (S.rayosTorres.d.tocadas || []).find(x => key(x.t) === key(place));
     const vig = (t?.marcosEncima || []).filter(m => ahora - new Date(m.hasta).getTime() <= RAYO_VIGENTE);
@@ -12326,7 +12334,11 @@ async function cargarRayosAemet({ forzar = false } = {}) {
     S.rayosTorres = anoche ? { t: tAnoche, d: anoche, n: torres.length } : null;   // las de TODOS los guardados, para el veto de cada uno
   } catch (e) {
     if (S.place && key(S.place) !== clave) return;
-    S.rayos = { clave, t: Date.now(), d: null, anoche: null, error: String(e.message || e) };
+    /* Un fallo NO borra lo que ya se sabía (03-10-2026): era «no lo sé»
+       convertido en «no hay rayo», y el veto desaparecía justo con mala
+       cobertura en el monte. Se guarda el error y se queda lo último bueno. */
+    const antes = S.rayos?.clave === clave ? S.rayos : null;
+    S.rayos = { clave, t: Date.now(), d: antes?.d ?? null, anoche: antes?.anoche ?? null, error: String(e.message || e) };
   }
   pintarRayosAemet();
   /* Y las HORAS (03-10-2026): de su `st` comen la barra, Mis estaciones,
