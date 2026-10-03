@@ -421,7 +421,9 @@ ok('la racha guarda la HORA de su pico, no solo el pico',
    && /kmh: Math\.round\(r\.kmh\), hPico: r\.hPico/.test(vig));
 ok('y el agua también',
    /if \(v > g\.mm\) \{ g\.mm = v; g\.hPico = h;/.test(vig)
-   && /mm: Math\.round\(g\.mm \* 10\) \/ 10, hPico: g\.hPico/.test(vig));
+   /* 03-10-2026: el pico que se guarda es el del DUEÑO, con su hora (lo
+      ejecuta prueba-vigilante-reloj.mjs: «BERMEO 3 mm/h a las 11h (AROME HD)»). */
+   && /mm: dueno\.mm, hPico: dueno\.h, quien: dueno\.quien/.test(vig));
 ok('el pico se dice con SU hora, no con la primera del día',
    /const picoTxt = \(hPico, ini\)/.test(vig)
    && !/km\/h a las \$\{hh\(peor\.racha\[claveHoy\]\.ini\)\}/.test(vig),
@@ -947,7 +949,8 @@ ok('solo de lo gordo: su tope de racha (por su nombre, no por un número) y la l
       AGUA_FUERTE, y el «no he podido mirar» lee su pico con picoEnHoras.
       Lo EJECUTA prueba-vigilante-reloj.mjs (72/95 salen; 65 y 1,5 no). */
    /if \(v == null \|\| v < RACHA_TOPE\) continue;/.test(vgc)
-   && /const hsFuerte = hs\.filter\(h => g\.porHora\[h\]\?\.dueno >= AGUA_FUERTE && g\.porHora\[h\]\.ven\.size >= AGUA_MODELOS\);/.test(vgc)
+   /* 03-10-2026: el dueño, o ECMWF donde el dueño no da dato (`elDueno`). */
+   && /const hsFuerte = hs\.filter\(h => elDueno\(h\)\.v >= AGUA_FUERTE && g\.porHora\[h\]\.ven\.size >= AGUA_MODELOS\);/.test(vgc)
    && /const pr = picoEnHoras\(r, h0, 23\), pa = picoEnHoras\(ag, h0, 23\);/.test(vgc),
    'avisar de todo sin poder comparar sería darle la lata 25 días');
 ok('y se dice que es un aviso por lo que hay, no por lo que ha cambiado',

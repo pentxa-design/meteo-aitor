@@ -97,6 +97,7 @@ const AYER = clave(new RealDate(RealDate.now() - 86400e3));
      racha:   [{ k, dia, horas, v }]
      ojoCape: [{ k, dia, horas, v }]           CAPE sin tapa abierta
      caidos:  [k]                              ese sitio no contesta (503)
+     sinModelo: [om]                           ese modelo no da dato (null) en ningún sitio ni hora
      lentos:  [k]                              ese sitio tarda más que el tope (TimeoutError)
      medido:  [{ k, horas: { 11: mm } }]       lo que MIDIÓ la estación de AEMET (hora local de hoy)
      estacionesCaidas: true                    /estaciones contesta 503 */
@@ -114,6 +115,7 @@ function red(esc, fijo, llamadas) {
     x.k === k && x.dia === dia && x.horas.includes(hh) && (!x.om || x.om === om));
   const valor = (k, om, campo, d) => {
     const dia = clave(d) === clave(hoy0) ? 'hoy' : 'man', hh = d.getHours();
+    if ((esc.sinModelo || []).includes(om)) return null;
     if (campo === 'cape') { if (hit('rayo', k, om, dia, hh)) return 900; const o = hit('ojoCape', k, om, dia, hh); return o ? o.v : 40; }
     if (campo === 'convective_inhibition') return hit('rayo', k, om, dia, hh) ? 10 : 120;
     if (campo === 'precipitation') { const a = hit('agua', k, om, dia, hh); return a ? a.mm : 0; }
@@ -305,6 +307,44 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const cp0 = cuerpoDe(P0.b, /parte de hoy/i);
   ok('07:30 · un día limpio lo dice con SUS listones (0,3 mm/h y 70 km/h), no con números a mano',
      /sin agua de 0,3 mm\/h para arriba y sin rachas de 70\./.test(cp0), cp0 || resumen(P0));
+
+  /* CON 1 A 3 SITIOS SIN MIRAR, EL PARTE NO DICE «SIN NADA» DE TODOS
+     (03-10-2026, TRASPASO §67 7). El aviso «no he podido mirar» solo suena
+     con un crítico o con 4 o más; el parte callaba los otros. */
+  const PC = await pasada({ hora: '07:30', antes: tranquilo('07:30', 10, { parteDe: AYER, parte2De: AYER }), esc: { caidos: [3] } });
+  const tpc = titulos(PC.b).find(t => /parte de hoy/i.test(t)) || '';
+  const cpc = cuerpoDe(PC.b, /parte de hoy/i);
+  ok('07:30 · con DURANGO sin mirar y los demás limpios, el parte no dice «sin nada» de todos: lo nombra y dice que de él no sabe nada',
+     !PC.reventó && !/sin nada por encima/.test(tpc) && /1 sin mirar/.test(tpc)
+     && /No he podido mirar DURANGO \(.+\): de ese no sé nada/.test(cpc), `${tpc} | ${cpc || resumen(PC)}`);
+  const PD = await pasada({ hora: '07:30', antes: tranquilo('07:30', 10, { parteDe: AYER, parte2De: AYER }),
+    esc: { caidos: [3], agua: [{ k: 0, dia: 'hoy', horas: [11], mm: 3 }] } });
+  const cpd = cuerpoDe(PD.b, /parte de hoy/i);
+  ok('07:30 · con agua en BERMEO y DURANGO sin mirar, el parte da el agua Y nombra a DURANGO',
+     !PD.reventó && /agua en 1 sitio/.test(cpd) && /No he podido mirar DURANGO/.test(cpd), cpd || resumen(PD));
+  const PE = await pasada({ hora: '13:15', antes: tranquilo('13:15', 10, { parte2De: null,
+      parteResumen: { fecha: HOY, rayo: [], agua: ['BERMEO', 'DURANGO'], racha: [] } }),
+    esc: { caidos: [3], agua: [{ k: 0, dia: 'hoy', horas: [16], mm: 3 }] } });
+  const cpe = cuerpoDe(PE.b, /segundo parte/i);
+  ok('13:15 · el segundo parte no dice «sale DURANGO» del agua cuando a DURANGO no se le ha podido mirar: lo dice',
+     !PE.reventó && !/sale DURANGO/.test(cpe) && /No he podido mirar DURANGO/.test(cpe), cpe || resumen(PE));
+
+  /* LA LLUVIA DEL PARTE ES LA DEL DUEÑO (03-10-2026, TRASPASO §67 7): antes
+     las horas eran la UNIÓN de los modelos y contaba «agua» donde AROME HD
+     veía seco porque GFS daba 0,4. Lo de los demás, aparte y con nombre. */
+  const PF = await pasada({ hora: '07:30', antes: tranquilo('07:30', 10, { parteDe: AYER, parte2De: AYER }),
+    esc: { agua: [{ k: 0, dia: 'hoy', horas: [15], mm: 0.4, om: 'gfs_seamless' }] } });
+  const tpf = titulos(PF.b).find(t => /parte de hoy/i.test(t)) || '';
+  const cpf = cuerpoDe(PF.b, /parte de hoy/i);
+  ok('07:30 · GFS ve 0,4 a las 15h y AROME HD seco: el parte no lo cuenta como agua, pero lo dice aparte con su nombre y su hora',
+     !PF.reventó && /sin nada por encima/.test(tpf) && !/agua en 1 sitio/.test(cpf)
+     && /Agua que solo ven otros modelos, en 1 sitio: lo más BERMEO 0,4 mm\/h a las 15h \(GFS\)/.test(cpf), `${tpf} | ${cpf || resumen(PF)}`);
+  const PG = await pasada({ hora: '07:30', antes: tranquilo('07:30', 10, { parteDe: AYER, parte2De: AYER }),
+    esc: { agua: [{ k: 0, dia: 'hoy', horas: [11], mm: 1, om: 'meteofrance_arome_france_hd' },
+                  { k: 0, dia: 'hoy', horas: [15, 16, 17, 18], mm: 0.5, om: 'gfs_seamless' }] } });
+  const cpg = cuerpoDe(PG.b, /parte de hoy/i);
+  ok('07:30 · AROME HD 1 mm/h a las 11h y GFS 0,5 de 15 a 18h: «llueve» son las horas de AROME HD, no de 11h a 18h',
+     !PG.reventó && /lo más fuerte BERMEO 1 mm\/h a las 11h \(AROME HD\), y llueve a las 11h/.test(cpg) && !/18h/.test(cpg), cpg || resumen(PG));
 }
 
 /* ── 17:10 · EL FRENO DE CADENCIA (la suya: 120 de tarde) ──────────── */
@@ -522,6 +562,18 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
     esc: { agua: [{ k: 0, dia: 'hoy', horas: [11], mm: 5, om: 'icon_eu' }, { k: 0, dia: 'hoy', horas: [11], mm: 1.5, om: 'gfs_seamless' }, { k: 0, dia: 'hoy', horas: [11], mm: 0.5, om: AR }] } });
   ok('10:00 · ICON ve 5 mm/h y GFS 1,5 pero AROME HD (el bueno para la lluvia) solo 0,5: NO hay aviso de «llueve bien»',
      !L5.reventó && !(L5.b.avisados || []).some(a => /llueve bien/.test(a.cuerpo || '')), resumen(L5));
+  /* SIN DATO DE AROME HD, DECIDE ECMWF Y SE DICE (03-10-2026, TRASPASO §67 7).
+     Antes no salía ningún aviso de agua: el «llueve bien» pedía el número de
+     AROME, y un hueco no es un número. Un 0 de AROME sí lo es (L5). */
+  const SA1 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200),
+    esc: { sinModelo: [AR], agua: [{ k: 0, dia: 'hoy', horas: [11], mm: 4, om: 'ecmwf_ifs025' }, { k: 0, dia: 'hoy', horas: [11], mm: 1.5, om: 'icon_eu' }] } });
+  const sa1 = (SA1.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
+  ok('10:00 · AROME HD sin dato, ECMWF 4 mm/h e ICON 1,5: SÍ avisa, lo da ECMWF y dice que AROME HD no da dato',
+     !SA1.reventó && /BERMEO: ECMWF ve que llueve bien a las 11h \(4 mm\/h; también ICON; AROME HD no da dato a esa hora\)/.test(sa1?.cuerpo || ''), sa1?.cuerpo || resumen(SA1));
+  const SA2 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200),
+    esc: { sinModelo: [AR], agua: [{ k: 0, dia: 'hoy', horas: [11], mm: 5, om: 'icon_eu' }, { k: 0, dia: 'hoy', horas: [11], mm: 1.5, om: 'gfs_seamless' }, { k: 0, dia: 'hoy', horas: [11], mm: 0.5, om: 'ecmwf_ifs025' }] } });
+  ok('10:00 · AROME HD sin dato y ECMWF (el que manda entonces) solo 0,5: NO hay aviso, aunque ICON vea 5',
+     !SA2.reventó && !(SA2.b.avisados || []).some(a => /llueve bien/.test(a.cuerpo || '')), resumen(SA2));
   /* Y el rayo dice quién ve qué CAPE y a qué hora. */
   const L6 = await pasada({ hora: '14:00', antes: tranquilo('14:00', 200),
     esc: { rayo: [{ k: 0, dia: 'hoy', horas: [16, 17], om: 'icon_eu' }] } });

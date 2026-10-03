@@ -334,7 +334,7 @@ function picoEnHoras(x, desde, hasta) {
   let p = null;
   for (let h = desde; h <= hasta; h++) {
     const e = x?.porHora?.[h];
-    if (e && Number.isFinite(e.v) && (!p || e.v > p.v)) p = { v: e.v, quien: e.quien, ven: e.ven, h };
+    if (e && Number.isFinite(e.v) && (!p || e.v > p.v)) p = { v: e.v, quien: e.quien, ven: e.ven, h, sinDato: e.sinDato };
   }
   return p;
 }
@@ -598,6 +598,14 @@ async function unSitio(s, previo = null, reloj = null) {
      Se queda el modelo que MÁS ve, nunca la media: el 26-08 la media de
      0,4 · 0 · 0 habría dado 0,1 y se habría leído «no llueve». */
   const aguaDia = {};
+  /* SIN DATO DEL DUEÑO, DECIDE ECMWF Y SE DICE (03-10-2026, TRASPASO §67 7).
+     Con AROME HD sin dato a una hora (fuera de su alcance, o caído) el
+     «llueve bien» exigía su número y no salía ningún aviso de agua, por
+     mucho que lloviera en los demás. Es la regla de la app: la lluvia es de
+     AROME HD y, donde no llega, de ECMWF. A esa hora decide ECMWF, con su
+     nombre y diciendo que AROME HD no da dato. Un 0 de AROME sí es dato. */
+  const SUST_AGUA = duenoM === 'ecmwf_ifs025' ? AROME : 'ecmwf_ifs025';
+  const duenoHay = new Set();   // 'día|hora' en que el dueño da número, aunque sea 0
   for (const [H_, deLado] of [[H, false], [C, true]]) {
     if (!H_?.time) continue;
     for (const m of MODELOS_AGUA) {
@@ -605,8 +613,10 @@ async function unSitio(s, previo = null, reloj = null) {
       if (!mm) continue;
       for (let i = 0; i < H_.time.length; i++) {
         const v = mm[i];
-        if (v == null || v < AGUA_MIN) continue;
+        if (v == null) continue;
         const dia = H_.time[i].slice(0, 10), h = Number(H_.time[i].slice(11, 13));
+        if (m === duenoM) duenoHay.add(`${dia}|${h}`);
+        if (v < AGUA_MIN) continue;
         const g = aguaDia[dia] ??= { horas: new Set(), mm: 0, quien: null, porHora: {} };
         g.horas.add(h);
         const quien = nombreDe(m) + (deLado ? ' en la celda de al lado' : '');
@@ -616,9 +626,10 @@ async function unSitio(s, previo = null, reloj = null) {
            (6,7 mm/h)» con 0,5-1,9 mm de 13 a 16 h, porque el «fuerte» y
            los mm eran los del peor momento del DÍA (el Automático a las
            20:00). Lo fuerte se decide hora a hora. */
-        const ph = g.porHora[h] ??= { v: 0, quien: null, ven: new Set(), dueno: 0 };
+        const ph = g.porHora[h] ??= { v: 0, quien: null, ven: new Set(), dueno: 0, sust: 0 };
         if (v > ph.v) { ph.v = v; ph.quien = quien; }
         if (m === duenoM && v > ph.dueno) ph.dueno = v;      // lo que dice el bueno para la lluvia
+        if (m === SUST_AGUA && v > ph.sust) ph.sust = v;     // y el que manda donde el bueno no da dato
         if (v >= AGUA_ACUERDO) ph.ven.add(nombreDe(m));       // cuántos modelos lo ven (el de al lado no cuenta doble)
       }
     }
@@ -659,23 +670,48 @@ async function unSitio(s, previo = null, reloj = null) {
                    porHora: Object.fromEntries(hs.map(h => [h, { v: Math.round(r.porHora[h].v), quien: r.porHora[h].quien }])) };
   }
 
-  const agua = {};
+  const agua = {}, aguaOtros = {};
   for (const [dia, g] of Object.entries(aguaDia)) {
     const hs = [...g.horas].sort((a2, b2) => a2 - b2);
     /* «Fuerte» lo dice el DUEÑO de la lluvia (AROME HD) y otro modelo al
        menos le da la razón (más de 1 mm/h). Que lo vea ICON y no AROME no es
        aviso: «si X es el bueno para la lluvia, siempre ese». */
-    const hsFuerte = hs.filter(h => g.porHora[h]?.dueno >= AGUA_FUERTE && g.porHora[h].ven.size >= AGUA_MODELOS);
+    const elDueno = h => duenoHay.has(`${dia}|${h}`)
+      ? { v: g.porHora[h]?.dueno ?? 0, quien: nombreDe(duenoM) }
+      : { v: g.porHora[h]?.sust ?? 0, quien: nombreDe(SUST_AGUA), sinDato: nombreDe(duenoM) };
+    const hsFuerte = hs.filter(h => elDueno(h).v >= AGUA_FUERTE && g.porHora[h].ven.size >= AGUA_MODELOS);
     let dueno = null;   // el pico del día del dueño, con su hora, para el parte
-    for (const h of hs) { const x = g.porHora[h]?.dueno; if (x > 0.05 && (!dueno || x > dueno.mm)) dueno = { mm: Math.round(x * 10) / 10, h, quien: nombreDe(duenoM) }; }
-    agua[dia] = { ini: hs[0], fin: hs.at(-1), tramos: enTramos(hs),
-                  mm: Math.round(g.mm * 10) / 10, hPico: g.hPico, quien: g.quien,
+    for (const h of hs) {
+      const x = elDueno(h);
+      if (x.v > 0.05 && (!dueno || x.v > dueno.mm))
+        dueno = { mm: Math.round(x.v * 10) / 10, h, quien: x.quien + (x.sinDato ? `, sin dato de ${x.sinDato}` : '') };
+    }
+    /* LAS HORAS DE LA LLUVIA SON LAS DEL DUEÑO (03-10-2026, TRASPASO §67 7).
+       `tramos` era la UNIÓN de los cuatro modelos con el pico del dueño
+       pegado: el parte contaba «agua» en un sitio que AROME HD veía seco
+       porque GFS daba 0,3 a alguna hora, y «llueve de 08h a 20h» eran horas
+       de cualquiera. Como en la app (`lluviaDeUnSitio`): las horas son las
+       del dueño (o de ECMWF donde el dueño no da dato), y las que solo ven
+       los demás van aparte, en `otros`, con su nombre. */
+    const hsDueno = hs.filter(h => elDueno(h).v >= AGUA_MIN);
+    const hsOtros = hs.filter(h => !hsDueno.includes(h));
+    let otros = null;
+    for (const h of hsOtros) {
+      const ph = g.porHora[h];
+      if (!otros) otros = { ini: h, fin: h, tramos: enTramos(hsOtros), mm: 0, hPico: h, quien: null };
+      otros.fin = h;
+      if (ph.v > otros.mm) { otros.mm = Math.round(ph.v * 10) / 10; otros.hPico = h; otros.quien = ph.quien; }
+    }
+    if (!hsDueno.length) { if (otros) aguaOtros[dia] = otros; continue; }
+    agua[dia] = { ini: hsDueno[0], fin: hsDueno.at(-1), tramos: enTramos(hsDueno),
+                  mm: dueno.mm, hPico: dueno.h, quien: dueno.quien, otros,
                   fuerte: hsFuerte.length > 0,
                   // Solo las horas que pasan de AGUA_FUERTE con al menos AGUA_MODELOS de acuerdo.
                   fuertes: enTramos(hsFuerte),
                   dueno,
-                  porHora: Object.fromEntries(hsFuerte.map(h => [h, { v: Math.round(g.porHora[h].dueno * 10) / 10, quien: nombreDe(duenoM),
-                                                                      ven: [...g.porHora[h].ven] }])) };
+                  porHora: Object.fromEntries(hsFuerte.map(h => { const x = elDueno(h);
+                    return [h, { v: Math.round(x.v * 10) / 10, quien: x.quien, ven: [...g.porHora[h].ven],
+                                 ...(x.sinDato ? { sinDato: x.sinDato } : {}) }]; })) };
   }
 
   const dias = {};
@@ -744,7 +780,7 @@ async function unSitio(s, previo = null, reloj = null) {
      horas: es lo que se apunta en el registro (lib/verificacion.mjs) para
      compararlo después con lo medido. Solo las horas con algo de agua. */
   const pv = reloj?.desde ? pvDe(H, reloj.desde) : null;
-  return { n: s.n, lat: s.lat, lon: s.lon, critico: !!s.critico, dias, agua, racha, ojo, horas: H.time, pv };
+  return { n: s.n, lat: s.lat, lon: s.lon, critico: !!s.critico, dias, agua, aguaOtros, racha, ojo, horas: H.time, pv };
 }
 
 /** Lo que MIDIÓ AEMET en las últimas 24 h junto a cada sitio: la estación más
@@ -1771,7 +1807,7 @@ export default async function handler(req, res) {
          las 11h (5 mm/h; también ICON)». */
       const tambien = (p?.ven || []).filter(n => n !== p.quien);
       f.push({ que: 'agua', clave: `agua:${t.ini}`,
-               txt: p ? `${p.quien} ve ${palabraAgua(p.v)} ${tramoTxt3(t, '')} (${coma(p.v)} mm/h${tambien.length ? `; también ${tambien.join(', ')}` : ''})`
+               txt: p ? `${p.quien} ve ${palabraAgua(p.v)} ${tramoTxt3(t, '')} (${coma(p.v)} mm/h${tambien.length ? `; también ${tambien.join(', ')}` : ''}${p.sinDato ? `; ${p.sinDato} no da dato a esa hora` : ''})`
                       : `llueve bien ${tramoTxt3(t, '')}` });
     }
     /* La racha, igual: su número es el de ESAS horas, no el máximo del día. */
@@ -2027,6 +2063,16 @@ export default async function handler(req, res) {
      de las 08 contaba como aviso del día. Solo lo que queda por delante. */
   const quedaHoy = x => x && x.fin >= h0;
   const tocaParte = h0 >= HORA_PARTE && h0 < 12 && antes?.parteDe !== claveHoy;
+  /* LOS QUE NO SE HAN PODIDO MIRAR VAN EN LOS DOS PARTES (03-10-2026,
+     TRASPASO §67 7). El aviso «no he podido mirar» solo suena con un crítico
+     o con 4 o más; con 1 a 3 caídos, el parte decía «sin nada por encima de
+     tus listones» de los veinte, y de esos no se sabía nada; y el segundo
+     parte decía «sale BERMEO» del agua cuando a BERMEO no se le había
+     podido mirar. Callarse un hueco es afirmar que está tranquilo. */
+  const sinMirar = fallos.length
+    ? ` No he podido mirar ${fallos.map(f => f.n).join(', ')} (${motivosTxt(fallos)}): de ${fallos.length === 1 ? 'ese' : 'esos'} no sé nada.`
+    : '';
+  const noMiradosAhora = new Set(fallos.map(f => f.n));
   if (tocaParte) {
     const conRayo = buenos.filter(d => quedaHoy(d.dias[claveHoy]));
     const conAgua = buenos.filter(d => quedaHoy(d.agua?.[claveHoy]));
@@ -2052,14 +2098,25 @@ export default async function handler(req, res) {
         + `, y pasa de ${RACHA_TOPE} ${tramosTxt(peor.racha[claveHoy].tramos, peor.racha[claveHoy].ini, peor.racha[claveHoy].fin)}`);
     }
 
+    /* Lo que solo ven los otros modelos, con su nombre y su hora, aparte de
+       la cuenta (03-10-2026): no es aviso, pero tampoco se calla. */
+    const soloOtros = buenos.filter(d => !quedaHoy(d.agua?.[claveHoy]) && quedaHoy(d.aguaOtros?.[claveHoy]));
+    let otrosTxt = '';
+    if (soloOtros.length) {
+      const po = soloOtros.reduce((a2, b2) => b2.aguaOtros[claveHoy].mm > a2.aguaOtros[claveHoy].mm ? b2 : a2);
+      const o = po.aguaOtros[claveHoy];
+      otrosTxt = ` Agua que solo ven otros modelos, en ${sitiosTxt(soloOtros.length)}: lo más ${po.n} ${coma(o.mm)} mm/h ${picoTxt(o.hPico, o.ini)} (${o.quien}).`;
+    }
     avisos.push({
       titulo: trozos.length
         ? `El parte de hoy · ${conRayo.length + conAgua.length + conRacha.length} avisos`
-        : 'El parte de hoy · sin nada por encima de tus listones',
+        : fallos.length
+          ? `El parte de hoy · nada en los ${buenos.length} que he mirado, ${fallos.length} sin mirar`
+          : 'El parte de hoy · sin nada por encima de tus listones',
       cuerpo: (trozos.length
-        ? trozos.join('. ')
-        : `Los ${buenos.length} emplazamientos, sin rayo, sin agua de ${coma(AGUA_MIN)} mm/h para arriba y sin rachas de ${RACHA_TOPE}.`)
-        + ` Ábrela para el detalle.`,
+        ? trozos.join('. ') + (sinMirar || otrosTxt ? '.' : '')
+        : `Los ${buenos.length} emplazamientos${fallos.length ? ' que he mirado' : ''}, sin rayo, sin agua de ${coma(AGUA_MIN)} mm/h para arriba${otrosTxt ? ` según ${nombreDe(duenoId)}` : ''} y sin rachas de ${RACHA_TOPE}.`)
+        + otrosTxt + sinMirar + ` Ábrela para el detalle.`,
       tag: 'parte', importante: false,
     });
     resumenHoy = { fecha: claveHoy, rayo: conRayo.map(d => d.n), agua: conAgua.map(d => d.n), racha: conRacha.map(d => d.n) };
@@ -2111,7 +2168,7 @@ export default async function handler(req, res) {
         const nombres = x => Array.isArray(x) ? x : [];
         const cmp = (ahora, before, que) => {
           const A = new Set(ahora), B = new Set(before);
-          const entran = ahora.filter(n => !B.has(n)), salen = before.filter(n => !A.has(n));
+          const entran = ahora.filter(n => !B.has(n)), salen = before.filter(n => !A.has(n) && !noMiradosAhora.has(n));
           if (!entran.length && !salen.length) return;
           if (!before.length) dif.push(`${que} que esta mañana no había (${entran.join(', ')})`);
           else if (!ahora.length) dif.push(`${que} se ha quitado`);
@@ -2142,7 +2199,8 @@ export default async function handler(req, res) {
         cuerpo: trozos2.join('. ')
           + (dif.length ? `. Respecto a la mañana: ${dif.join(', ')}.`
                         : antesR ? `. Igual que esta mañana (datos de las ${h0}h).`
-                                 : `. Sin parte de esta mañana con el que comparar (datos de las ${h0}h).`),
+                                 : `. Sin parte de esta mañana con el que comparar (datos de las ${h0}h).`)
+          + sinMirar,
         tag: 'parte2', importante: false,
       });
       resumenHoy = { fecha: claveHoy, rayo: conRayo.map(d => d.n), agua: conAgua.map(d => d.n), racha: conRacha.map(d => d.n) };
