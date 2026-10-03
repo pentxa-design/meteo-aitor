@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-1557';
+const BUILD = '2026.10.03-1759';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -344,9 +344,10 @@ const MODELS = [
      No se BORRA, se esconde: `oculto` lo saca de la pantalla pero el id
      se sigue entendiendo, y a quien lo tuviera guardado se le pasa a
      AROME al arrancar (hacen lo mismo, así que no le cambia un número).
-     El `best_match` del vigilante y del parte del servidor NO se toca:
-     allí no es «su modelo», es una de tres opiniones que se comparan
-     para cazar tormenta.                                              */
+     El `best_match` del vigilante y del parte del servidor se quedó como
+     «una de tres opiniones» hasta el 03-10-2026: ese día se midió que era
+     una mezcla (CAPE de Météo-France con la tapa de ECMWF 9 km) y se cambió
+     por ECMWF 9 km, decisión suya. Ver CON_TAPA.                       */
   { id:'best_match', oculto: true,   om:'best_match',                 windy:'ecmwf', name:'Automático', res:'variable',
     desc:'Open-Meteo elige el mejor modelo disponible para el punto' },
   { id:'ecmwf',                      om:'ecmwf_ifs025',               windy:'ecmwf', name:'ECMWF', res:'25 km',
@@ -2353,10 +2354,14 @@ function tormentaQueNoVesTu(h, place = null) {
   const i = C.time.findIndex(t => t.slice(0, 13) === iso);
   if (i < 0) return null;
   let peor = null;
-  for (const m of COMPARAR) {
+  /* Sin el «Automático» y con ECMWF 9 km (03-10-2026): el Automático pega el
+     CAPE de Météo-France con la tapa de ECMWF 9 km, una pareja que no
+     pronostica nadie. Ver CON_TAPA. */
+  const MODELOS_RAYO = [...COMPARAR.filter(m => m.om !== 'best_match'), { om: ECMWF_9KM, name: 'ECMWF 9 km' }];
+  for (const m of MODELOS_RAYO) {
     const cape = C[`cape_${m.om}`]?.[i], cin = C[`convective_inhibition_${m.om}`]?.[i];
     if (!has(cape) || !has(cin)) continue;
-    const auto = m.om === 'best_match';
+    const auto = false;
     // A igual gasolina, antes un modelo con nombre que el «Automático», que es una mezcla.
     if (cape >= CAPE_COMBINACION && cin < TAPA_ROMPE
         && (!peor || cape > peor.cape || (cape === peor.cape && peor.auto && !auto)))
@@ -6685,7 +6690,8 @@ async function cargarComparativa(place) {
 
                Los cuatro campos, siete modelos, 48 h: **8 KB**. Nada. */
             + 'dew_point_2m,relative_humidity_2m,visibility',
-      models: COMPARAR.map(m => m.om).join(','),
+      /* + ECMWF 9 km, solo para el rayo (03-10-2026): ver CON_TAPA. */
+      models: [...COMPARAR.map(m => m.om), ECMWF_9KM].join(','),
       /* 10 días desde el 17-09-2026 (antes 2): al abrir un día de «10 días»
          hora a hora, él quiere ver también «si alguno ve nube o agua»; con
          dos días, del sábado en adelante no había chips. Son cinco modelos
@@ -11564,12 +11570,25 @@ const nCape = v => Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'
 
 /* ── QUIÉN PUBLICA LA TAPA ────────────────────────────────────────────
    No todos los modelos publican la inhibición (el CIN, la «tapa»), y sin
-   tapa no se puede aplicar la regla del rayo. ECMWF y AROME HD no la dan:
+   tapa no se puede aplicar la regla del rayo. ECMWF 25 km y AROME HD no la dan (ECMWF 9 km sí, ver abajo):
    0 horas de 24, medido. Por eso el parte dice «1 de los 3 que publican la
    tapa» y no «1 de 5», que sería mentir.
    Vive aquí arriba, y no dentro del parte, desde el 20-09-2026: la
-   pantalla que explica por qué no hay dato también necesita contarlos. */
-const CON_TAPA = ['best_match', 'icon_seamless', 'gfs_seamless'];
+   pantalla que explica por qué no hay dato también necesita contarlos.
+
+   ── FUERA EL «AUTOMÁTICO», DENTRO ECMWF 9 km (03-10-2026, decisión suya) ──
+   La auditoría midió que el «Automático» no es un modelo: su tapa es la de
+   ECMWF 9 km (1.920 de 1.920 horas iguales) y su CAPE el de Météo-France.
+   Una pareja que no pronostica nadie, y ese día daba 7 de los 11 RAYO del
+   parte (Bermeo 22 h: «Automático» 1.050/3, ECMWF 9 km 240/3). ECMWF 9 km
+   (`ecmwf_ifs`) publica CAPE, tapa y código, los tres suyos. MEDIDO contra
+   los rayos de AEMET en 24 h (158 puntos del este, la meseta y Euskadi,
+   399 horas-punto con rayo a < 15 km): el conjunto con ECMWF 9 km caza el
+   82 % y se deja 70; con el Automático, 73 % y se dejaba 106. A cambio,
+   un tercio más de avisos sin rayo (1.128 contra 845). Él: «la que
+   recomiendas». Es un solo temporal: el registro lo sigue midiendo. */
+const ECMWF_9KM = 'ecmwf_ifs';
+const CON_TAPA = [ECMWF_9KM, 'icon_seamless', 'gfs_seamless'];
 
 /* ── ¿ESTA LLUVIA MEDIDA CUBRE LA HORA DEL MODELO? ───────────────────
    El `prec` de AEMET es la lluvia de la última hora entera, y con eso sí
@@ -11588,7 +11607,8 @@ const MODELOS_TORMENTA = [
   { om: 'icon_seamless',               nom: 'ICON' },
   { om: 'gfs_seamless',                nom: 'GFS' },
   { om: 'meteofrance_arome_france_hd', nom: 'AROME HD' },
-  { om: 'best_match',                  nom: 'Automático' },
+  /* Antes `best_match` («Automático»): una mezcla. Ver CON_TAPA (03-10-2026). */
+  { om: 'ecmwf_ifs',                   nom: 'ECMWF 9 km' },
 ];
 
 /** Horas por delante que se miran. Dos días: más allá, AROME ya no llega
@@ -15410,6 +15430,7 @@ const NOMBRE_PRESTAMISTA = {
   meteofrance_arpege_europe: 'ARPEGE', meteofrance_arpege_world: 'ARPEGE',
   meteofrance_arome_france: 'AROME', knmi_harmonie_arome_europe: 'HARMONIE',
   gem_seamless: 'GEM', ukmo_seamless: 'UKMO', jma_seamless: 'JMA',
+  ecmwf_ifs: 'ECMWF 9 km',
 };
 function nombreDeModelo(om) {
   return COMPARAR.find(m => m.om === om)?.name

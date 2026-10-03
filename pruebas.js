@@ -113,6 +113,7 @@ eval(sacar('function deCasaAFuera(a, b) {'));
 eval(sacar('function edadMedida(min) {'));
 eval(sacar('function haceTxt(cuando, ahora = Date.now()) {'));
 eval(sacar('function estacionDePortada() {'));
+eval(sacarConst('ECMWF_9KM'));
 eval(sacarConst('CON_TAPA'));
 eval(sacarConst('enCostaVasca'));
 eval(sacarConst('COSTA'));
@@ -5171,6 +5172,8 @@ ok('se dice de quién sale ese dato, no aparece a secas',
   const PERMITIDO = {
     "COMPARAR.map(m => m.om).join(',')":
       'la comparativa: pide los siete A PROPÓSITO para enfrentarlos',
+    "[...COMPARAR.map(m => m.om), ECMWF_9KM].join(',')":
+      'la comparativa más ECMWF 9 km, solo para el rayo (03-10-2026, medido contra AEMET: ver CON_TAPA)',
     "MODELOS_TORMENTA.map(m => m.om).join(',')":
       '«Mis torres»: los cinco a la vez, para el peor de todos',
     'M.om': 'el modelo que él tiene cargado',
@@ -6440,11 +6443,15 @@ grupo('«Me pasan a las 2 de la mañana: Arbaiza» — el viaje entra en la resp
   ok('y al arrancar se le pasa a AROME, que es lo que ya hacía por debajo',
      /if \(S\.model === 'best_match'\) \{ S\.model = 'arome'; LS\.set\('model', 'arome'\); \}/.test(src),
      'no le cambia ningún número: el reparto ya le daba AROME');
-  /* Y el del SERVIDOR no se toca: allí es una de tres opiniones. */
+  /* El del SERVIDOR se quedó como «una de tres opiniones» hasta el
+     03-10-2026. Ese día la auditoría midió que esa opinión era una mezcla
+     (CAPE de Météo-France con la tapa de ECMWF 9 km) y él eligió quitarla
+     («la que recomiendas»): en su lugar ECMWF 9 km, medido contra AEMET.
+     Lo que se guarda ahora es lo contrario: que la mezcla no vuelva. */
   const vig = fs.readFileSync(path.join(__dirname, 'api', 'vigilante.mjs'), 'utf8');
-  ok('el best_match del vigilante sigue en pie, que allí es otra cosa',
-     /const MODELOS = \['best_match'/.test(vig),
-     'en el vigilante son tres opiniones comparadas, no el modelo elegido');
+  ok('el vigilante compara tres opiniones de verdad: ECMWF 9 km, ICON y GFS, sin la mezcla del Automático',
+     /const MODELOS = \['ecmwf_ifs', 'icon_eu', 'gfs_seamless'\];/.test(vig) && !/const MODELOS = \['best_match'/.test(vig),
+     'una mezcla no es una opinión: pega el CAPE de uno con la tapa de otro');
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -11766,7 +11773,7 @@ grupo('El parte cuenta el CÓDIGO de tormenta, no solo la pareja CAPE+tapa (03-1
   const sc = n => src.match(new RegExp(`^const ${n}\\s*= [\\s\\S]*?;[^\\n]*\\n`, 'm'))[0];
   const ctx = { console, Date, Math, JSON, Map, Set, Number, String, Array, Object };
   vm.createContext(ctx);
-  vm.runInContext(['has', 'isStormCode', 'listar', 'MODELOS_TORMENTA', 'CON_TAPA', 'CAPE_COMBINACION', 'TAPA_ROMPE',
+  vm.runInContext(['has', 'isStormCode', 'listar', 'MODELOS_TORMENTA', 'ECMWF_9KM', 'CON_TAPA', 'CAPE_COMBINACION', 'TAPA_ROMPE',
                    'AGUA_ACUERDO', 'RELLENO_AGUA', 'CIELO_PRESTADO'].map(sc).join('\n')
     + ['function calcularParte(', 'function lluviaDeUnSitio(', 'function mojaEsaHora('].map(f => sacar(f)).join('\n')
     + `\nvar S = { thr: { rainWarn: 0.2, rainNo: 2 } }; function key(p){return p.n}
@@ -11784,6 +11791,17 @@ grupo('El parte cuenta el CÓDIGO de tormenta, no solo la pareja CAPE+tapa (03-1
      && new Date(conCodigo.ini).getHours() === 16, JSON.stringify(conCodigo));
   const sinCodigo = ctx.__run([{ n: 'CARRANZA' }], [{ hourly: { ...base, weather_code_icon_seamless: Array(n).fill(3) } }], v).parteTorres[0];
   ok('   y sin código ni pareja, no se inventa el rayo', sinCodigo && sinCodigo.salta === false, JSON.stringify(sinCodigo));
+  /* 03-10-2026, decisión suya («la que recomiendas»): fuera el Automático,
+     dentro ECMWF 9 km. Bermeo 22 h: «Automático» 1.050/3 (CAPE de
+     Météo-France con la tapa de ECMWF 9 km) y ECMWF 9 km 240/3. */
+  const auto = ctx.__run([{ n: 'BERMEO' }], [{ hourly: { ...base, weather_code_icon_seamless: Array(n).fill(3),
+    cape_best_match: Array(n).fill(1050), convective_inhibition_best_match: Array(n).fill(3),
+    cape_ecmwf_ifs: Array(n).fill(240), convective_inhibition_ecmwf_ifs: Array(n).fill(3) } }], v).parteTorres[0];
+  ok('Bermeo 03-10 22 h: la mezcla del «Automático» (1.050/3) ya NO da rayo cuando ECMWF 9 km, dueño de esa tapa, da 240',
+     auto && auto.salta === false, JSON.stringify(auto));
+  const e9 = ctx.__run([{ n: 'BERMEO' }], [{ hourly: { ...base, weather_code_icon_seamless: Array(n).fill(3),
+    cape_ecmwf_ifs: Array(n).fill(900), convective_inhibition_ecmwf_ifs: Array(n).fill(10) } }], v).parteTorres[0];
+  ok('   y ECMWF 9 km con su propia pareja (900/10) sí da rayo, y se nombra', e9?.salta === true && e9.modelo === 'ECMWF 9 km', JSON.stringify(e9));
 }
 
 grupo('Cambiar de sitio rápido: la respuesta tardía del anterior no pisa al nuevo (03-10-2026)');

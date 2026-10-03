@@ -46,6 +46,8 @@ const BLANCA = [
   '_arpege_europe: ',
   '_arome_france: ',
   'gem_seamless: ',
+  /* ECMWF 9 km entra en la misma tabla el 03-10-2026 (el rayo, ver CON_TAPA). */
+  'ecmwf_ifs: ',
   /* Explicaciones fijas: lo que ES cada modelo, no lo que sirve hoy. */
   'el más fino que cubre Euskadi',
   /* Salieron al cerrar el hueco de las plantillas (25-09-2026): son

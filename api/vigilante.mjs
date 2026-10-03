@@ -45,8 +45,16 @@ const APP = 'https://weather-app-ochre-one-76.vercel.app';
    que las dos vías digan lo mismo.
 
    ECMWF y AROME HD siguen fuera, y no por elección: **no publican la
-   tapa**, 0 horas de 24 medidas. Sin tapa no se puede aplicar la regla.  */
-const MODELOS = ['best_match', 'icon_eu', 'gfs_seamless'];
+   tapa**, 0 horas de 24 medidas. Sin tapa no se puede aplicar la regla.
+
+   ── 03-10-2026: FUERA LA MEZCLA, DENTRO ECMWF 9 km (decisión suya) ──────
+   «best_match» pega el CAPE de Météo-France con la tapa de ECMWF 9 km (medido:
+   1.920 de 1.920 horas): una pareja que no pronostica nadie. ECMWF 9 km
+   (`ecmwf_ifs`) SÍ publica CAPE, tapa y código. Medido contra los rayos de
+   AEMET (24 h, 158 puntos, 399 horas-punto con rayo): con él el conjunto
+   caza el 82 % y se deja 70; con la mezcla, 73 % y 106. A cambio, un tercio
+   más de avisos sin rayo. Lo mismo en la app (CON_TAPA). */
+const MODELOS = ['ecmwf_ifs', 'icon_eu', 'gfs_seamless'];
 
 /* ── PARA EL AGUA, TAMBIÉN EL EUROPEO ────────────────────────────────
    Añadido el 30-08-2026, y lo destapó un sirimiri de verdad.
@@ -91,7 +99,7 @@ const MODELOS_PEDIDOS = [...MODELOS, AROME, 'ecmwf_ifs025'];
    lo habría llamado **«Automático»**: el nombre de un modelo encima de
    los números de otro. Es exactamente el fallo del 24-08-2026 en la
    ficha de Torre, que decía AROME HD y enseñaba datos de ECMWF.       */
-const NOMBRE = { best_match: 'La mezcla de Open-Meteo', icon_eu: 'ICON', gfs_seamless: 'GFS', ecmwf_ifs025: 'ECMWF', [AROME]: 'AROME HD' };
+const NOMBRE = { ecmwf_ifs: 'ECMWF 9 km', best_match: 'La mezcla de Open-Meteo', icon_eu: 'ICON', gfs_seamless: 'GFS', ecmwf_ifs025: 'ECMWF', [AROME]: 'AROME HD' };
 const nombreDe = m => NOMBRE[m] || m;
 /* «rayo en 17» se lee como una hora (suyo, 28-09-2026 13:49: «¿rayo en 17
    qué es? confunde»). Con la palabra: «en 17 sitios», «en 1 sitio». */

@@ -1329,6 +1329,11 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
   /* 22-09: y la medianoche no lo corta. Atado al día, a las 23:00 el ojo
      miraba UNA hora, y una línea nocturna armándose para las 02:00 no
      dejaba rastro: verde, y la pasada siguiente a las 01:55. */
+  /* 03-10-2026, decisión suya: el rayo sin la mezcla «best_match» y con
+     ECMWF 9 km (medido contra AEMET: el conjunto caza 82 % frente a 73 %). */
+  ok('el rayo del vigilante usa ECMWF 9 km y no la mezcla del Automático',
+     /const MODELOS = \['ecmwf_ifs', 'icon_eu', 'gfs_seamless'\];/.test(V) && /ecmwf_ifs: 'ECMWF 9 km'/.test(V),
+     'best_match pega el CAPE de Météo-France con la tapa de ECMWF 9 km: una pareja que no pronostica nadie');
   ok('el ojo mira desde esta hora hacia delante, y la medianoche no lo corta',
      /if \(t < reloj\.desde\) continue;/.test(V)
      && !/t\.slice\(0, 10\) !== reloj\.dia/.test(V)
