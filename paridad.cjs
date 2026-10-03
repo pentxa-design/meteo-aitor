@@ -56,7 +56,9 @@ catch {
 
 const aqui = __dirname;
 const html = fs.readFileSync(path.join(aqui, 'index.html'), 'utf8');
-const js = fs.readFileSync(path.join(aqui, 'app.js'), 'utf8');
+/* Las reglas del tiempo van en su propio fichero (03-10-2026): la app lo
+   carga antes que app.js, así que aquí también. */
+const js = fs.readFileSync(path.join(aqui, 'reglas-tiempo.js'), 'utf8') + '\n' + fs.readFileSync(path.join(aqui, 'app.js'), 'utf8');
 
 /* El dueño del cielo se LEE del reparto, no se escribe aquí. Ver la nota
    en `valorTrampa()`: escrito a mano, esta guardia saltaba cada vez que

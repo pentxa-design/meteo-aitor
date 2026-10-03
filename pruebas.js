@@ -31,6 +31,10 @@
 const fs = require('fs');
 const path = require('path');
 const src = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+/* Las reglas del tiempo, en su fichero único (03-10-2026): se cargan antes,
+   como en la app, para que las funciones de app.js que las llaman funcionen. */
+const reglasSrc = fs.readFileSync(path.join(__dirname, 'reglas-tiempo.js'), 'utf8');
+require('vm').runInThisContext(reglasSrc + '\n;globalThis.ReglasTiempo = ReglasTiempo;');
 
 let fallos = 0, pasadas = 0;
 const grupo = t => console.log('\n  ' + t);
@@ -657,7 +661,7 @@ grupo('«La ve X» solo si X ve la ventana entera (27-09-2026, medido)');
      por construcción y `picoAbarca` es siempre cierto. Lo que se fija ahora
      es eso, y que las pantallas lean de esa única función. */
   ok('la ventana es del dueño: el que «la ve», la ve entera por construcción',
-     /quien: \[\.\.\.deQuien\]\.join\(' y '\), picoAbarca: true,/.test(src)
+     /quien: \[\.\.\.deQuien\]\.join\(' y '\), picoAbarca: true,/.test(reglasSrc)
      && /return lluviaDeUnSitio\(H, key\(p\), desde, finVentana\);/.test(src));
 }
 
@@ -1894,6 +1898,51 @@ ok('dentro del mismo día se dice una sola vez',
    En Bilbao decía «próxima ventana apta: mañana domingo de 03:00 a 05:00»
    con GFS dando 2,8 mm/h a esas horas. El color es del dueño de la lluvia;
    la ventana no puede atravesar la hora en que otro da su «llueve bien». */
+grupo('El rayo MEDIDO veta las horas, no solo la caja de arriba (03-10-2026, 22:20)');
+{
+  /* BI BERMEO con 26 descargas a menos de 15 km: la ficha decía FUERTE y la
+     barra «22:00 · OJO», Mis estaciones «1 fuera de umbrales» y Avisos en
+     verde. Durango, con 54, la franja «Sin riesgo eléctrico». Se pasan por
+     las funciones DE VERDAD. */
+  const S0 = { place: S.place, rayos: S.rayos, rayosTorres: S.rayosTorres };
+  const fn = new Function('S', 'deEsteSitio', 'key', 'has', 'kmTxt', 'RAYO_ENCIMA', 'RAYO_VIGENTE',
+    sacar('function rayoMedidoVeta(') + '\n' + sacar('function vetarPorRayo(') + '\nreturn { rayoMedidoVeta, vetarPorRayo };');
+  const { vetarPorRayo: vetar, rayoMedidoVeta: rmv } = fn(S, globalThis.deEsteSitio, globalThis.key, globalThis.has,
+    v => String(v).replace('.', ','), 15, 90 * 60e3);
+  const ahora = Date.now();
+  const enPunto = t => { const d = new Date(t); d.setMinutes(0, 0, 0); return d; };
+  const horas = () => [0, 1, 3].map(k => ({ date: enPunto(ahora + k * 3600e3), st: k ? 'go' : 'warn',
+                                            reasons: [{ s: k ? 'go' : 'warn', txt: 'lo de antes' }] }));
+  const BERMEO = { name: 'BI BERMEO', lat: 43.4209, lon: -2.7215 }, DURANGO = { name: 'BI DURANGO OESTE', lat: 43.1712, lon: -2.6333 };
+  S.place = BERMEO;
+  S.rayos = { clave: globalThis.key(BERMEO), t: ahora, d: { ultima: { encima: 26, hasta: new Date(ahora - 20 * 60e3).toISOString(), masCerca: { km: 1.8 } } } };
+  S.rayosTorres = { t: ahora, d: { tocadas: [{ t: DURANGO, marcosEncima: [{ hasta: new Date(ahora - 30 * 60e3).toISOString(), n: 54, km: 2.3 }] }] } };
+  const hb = vetar(horas(), BERMEO);
+  ok('BI BERMEO con 26 descargas encima: la hora de ahora pasa a FUERTE, con el rayo como primer motivo',
+     hb[0].st === 'no' && hb[0].reasons[0].rayoMedido && /26 descargas a menos de 15 km, la más cercana a 1,8 km/.test(hb[0].reasons[0].txt),
+     JSON.stringify(hb[0]));
+  ok('   y la siguiente también, que cae dentro de los 90 minutos', hb[1].st === 'no');
+  ok('   y la de dentro de 3 horas NO: el veto dura lo que dura', hb[2].st === 'go');
+  const hd = vetar(horas(), DURANGO);
+  ok('Durango, guardado pero sin abrir, con 54 encima: también FUERTE (Mis estaciones y Avisos leen esto)',
+     hd[0].st === 'no' && /54 descargas/.test(hd[0].reasons[0].txt), JSON.stringify(hd[0]));
+  ok('un sitio sin descargas encima no se toca', vetar(horas(), { lat: 42.8, lon: -2.7 })[0].st === 'warn');
+  S.rayos = { ...S.rayos, d: { ultima: { encima: 26, hasta: new Date(ahora - 3 * 3600e3).toISOString(), masCerca: { km: 1.8 } } } };
+  ok('la tormenta de hace 3 horas ya no veta: poner FUERTE por un rayo viejo es el error contrario',
+     vetar(horas(), BERMEO)[0].st === 'warn' && rmv(BERMEO) === null, JSON.stringify(rmv(BERMEO)));
+  S.rayos = { ...S.rayos, d: { ultima: { encima: 26, hasta: new Date(ahora - 20 * 60e3).toISOString(), masCerca: { km: 1.8 } } } };
+  const hv = vetar(horas(), BERMEO);
+  S.rayos = { ...S.rayos, d: { ultima: { encima: 0, hasta: new Date(ahora - 20 * 60e3).toISOString() } } };
+  vetar(hv, BERMEO);
+  ok('y cuando deja de vetar, la hora vuelve a lo que era (se deshace solo, sin dejar el motivo)',
+     hv[0].st === 'warn' && !hv[0].reasons.some(r => r.rayoMedido) && hv[0].reasons.length === 1, JSON.stringify(hv[0]));
+  ok('buildHours veta sus horas al calcularlas, y al llegar los rayos se vetan la ficha y Mis estaciones',
+     /return vetarPorRayo\(out, place \?\? S\.place\);/.test(src)
+     && /if \(S\.data\?\.hours\) \{ vetarPorRayo\(S\.data\.hours, S\.place\);/.test(src)
+     && /for \(const t of S\.torres\) vetarPorRayo\(t\.horas, t\.place\);/.test(src));
+  S.place = S0.place; S.rayos = S0.rayos; S.rayosTorres = S0.rayosTorres;
+}
+
 grupo('La ventana de trabajo: lluvia de otro modelo, «apta» y sitios que no son suyos');
 const tTL = [HH(0,14), HH(0,15), HH(0,16), HH(0,17)];
 globalThis.horasLluviaEnDuda = () => ({ mapa:new Map([[tTL[2].getTime(), { quien:'GFS', mm:2.8, mio:0, dueno:'AROME HD' }]]), sabido:true });
@@ -3262,7 +3311,7 @@ eval(sacarConst('HAY_AGUA'));
 /* Desde el 30-08 cada hora se lee con `codigoQueSeVe()`: cielo del
    dueño del cielo, agua del dueño de la lluvia. */
 if (typeof HAY_AGUA === 'undefined') globalThis.HAY_AGUA = 51;
-eval(sacarConst('ENGELANTE'));
+// ENGELANTE vive en reglas-tiempo.js desde el 03-10-2026
 eval(sacar('function iconoDeAgua('));   // el agua del icono sale de aquí (30-09-2026)
 eval(sacar('function codigoQueSeVe(h, codigoDelCielo, thr = S.thr) {'));
 eval(sacar('function codigoFranja(sel) {'));   // sacada a nivel de módulo el 28-08
@@ -5711,7 +5760,7 @@ ok('el marcador dice «1 vez» y «3 veces», no «1 veces» (repaso del 03-10-2
      && !mojaEsaHora(0, 3).cuenta && mojaEsaHora(0.3, 3).cuenta && !mojaEsaHora(0.3, 3).sirimiri
      && !mojaEsaHora(0.5, 53).sirimiri && !mojaEsaHora(0.01, undefined).cuenta);
   ok('   y el parte la usa (para saber quién ve agua en cada hora)',
-     /if \(mojaEsaHora\(v, H\[`weather_code_\$\{m\.om\}`\]\?\.\[i\]\)\.cuenta\)/.test(src));
+     /if \(mojaEsaHora\(v, H\[`weather_code_\$\{m\.om\}`\]\?\.\[i\]\)\.cuenta\)/.test(reglasSrc));
   globalThis.S = S0; globalThis.nombreDeModelo = nm0; globalThis.duenoLluvia = dl0; globalThis.modeloDato = md0;
 }
 
@@ -7862,7 +7911,7 @@ grupo('La altura de la nube, por el camino de verdad (01-09-2026)');
   }
   for (const f of ['function windAt', 'function nivelesDe', 'function gustAt',
                    'function techoDe', 'function alphaDe', 'function diaDeLaHora', 'function buildHours',
-                   'function loQueMideLaNube']) {
+                   'function loQueMideLaNube', 'function rayoMedidoVeta', 'function vetarPorRayo']) {
     try { eval(sacar(f)); } catch { /* el que no exista, se ignora */ }
   }
 
@@ -11947,6 +11996,7 @@ grupo('El parte cuenta el CÓDIGO de tormenta, no solo la pareja CAPE+tapa (03-1
   const sc = n => src.match(new RegExp(`^const ${n}\\s*= [\\s\\S]*?;[^\\n]*\\n`, 'm'))[0];
   const ctx = { console, Date, Math, JSON, Map, Set, Number, String, Array, Object };
   vm.createContext(ctx);
+  vm.runInContext(reglasSrc, ctx);   // las reglas del tiempo, en su fichero único (03-10-2026)
   vm.runInContext(['has', 'isStormCode', 'listar', 'MODELOS_TORMENTA', 'ECMWF_9KM', 'CON_TAPA', 'CAPE_COMBINACION', 'TAPA_ROMPE',
                    'AGUA_ACUERDO', 'RELLENO_AGUA', 'CIELO_PRESTADO'].map(sc).join('\n')
     + ['function calcularParte(', 'function lluviaDeUnSitio(', 'function mojaEsaHora('].map(f => sacar(f)).join('\n')

@@ -39,6 +39,7 @@ const ctx = {
   duenoLluvia: () => AR,
 };
 vm.createContext(ctx);
+vm.runInContext(fs.readFileSync(new URL('./reglas-tiempo.js', import.meta.url), 'utf8') + '\n;globalThis.ReglasTiempo = ReglasTiempo;', ctx);
 vm.runInContext([sacarConst('AGUA_ACUERDO'), sacarConst('RELLENO_AGUA'), sacarConst('CIELO_PRESTADO'),
   sacarConst('MODELOS_TORMENTA'), sacar('function mojaEsaHora('), sacar('function lluviaDeUnSitio('),
   'globalThis.__f = { lluviaDeUnSitio, AGUA_ACUERDO };'].join('\n'), ctx);

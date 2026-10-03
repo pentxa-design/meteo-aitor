@@ -74,7 +74,9 @@ catch {
    sin tocar los ficheros de verdad (así se vio en rojo el 25-09-2026). */
 const aqui = process.env.PANTALLAS_DIR || __dirname;
 const html = fs.readFileSync(path.join(aqui, 'index.html'), 'utf8');
-const js   = fs.readFileSync(path.join(aqui, 'app.js'), 'utf8');
+/* Las reglas del tiempo van en su propio fichero (03-10-2026): la app lo
+   carga antes que app.js, así que aquí también. */
+const js = fs.readFileSync(path.join(aqui, 'reglas-tiempo.js'), 'utf8') + '\n' + fs.readFileSync(path.join(aqui, 'app.js'), 'utf8');
 const css  = fs.readFileSync(path.join(aqui, 'styles.css'), 'utf8');
 
 const HORAS = (process.env.PANTALLAS_HORAS || '2,7,13,20,23').split(',').map(Number);

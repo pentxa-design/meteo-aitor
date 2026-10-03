@@ -10,9 +10,9 @@
      pantalla con la hora de la descarga.
    ═══════════════════════════════════════════════════════════════════ */
 
-const V     = 'torre-2026.10.03-2209';
+const V     = 'torre-2026.10.03-2242';
 const SHELL = [
-  './', './index.html', './styles.css', './app.js', './maps.js',
+  './', './index.html', './styles.css', './reglas-tiempo.js', './app.js', './maps.js',
   './manifest.webmanifest',
   // Catálogo de emplazamientos: para que el buscador los encuentre sin
   // cobertura, justo donde están. ~300 KB, se baja una vez por versión.

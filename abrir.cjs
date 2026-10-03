@@ -46,7 +46,9 @@ catch {
 
 const aqui = __dirname;
 const html = fs.readFileSync(path.join(aqui, 'index.html'), 'utf8');
-const js = fs.readFileSync(path.join(aqui, 'app.js'), 'utf8');
+/* Las reglas del tiempo van en su propio fichero (03-10-2026): la app lo
+   carga antes que app.js, así que aquí también. */
+const js = fs.readFileSync(path.join(aqui, 'reglas-tiempo.js'), 'utf8') + '\n' + fs.readFileSync(path.join(aqui, 'app.js'), 'utf8');
 
 /* Una respuesta real de `/om`, guardada. Se puede refrescar cuando se
    quiera con el `curl` que hay en el README de `pruebas-datos/`. */

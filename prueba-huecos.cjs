@@ -54,6 +54,8 @@ function sacarConst(nombre) {
 const tiene = firma => src.includes(firma);
 
 /* ── Lo mínimo para que assess() corra fuera del navegador ──────────── */
+/* Las reglas del tiempo, en su fichero único (03-10-2026), como en la app. */
+require('vm').runInThisContext(require('fs').readFileSync(require('path').join(__dirname, 'reglas-tiempo.js'), 'utf8') + '\n;globalThis.ReglasTiempo = ReglasTiempo;');
 globalThis.has = v => v !== null && v !== undefined && !Number.isNaN(v);
 globalThis.esc = v => String(v);
 globalThis.key = p => `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`;

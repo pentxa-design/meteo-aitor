@@ -18,7 +18,7 @@ export PATH="$HOME/.local/node/bin:$PATH"
 # 05-09-2026 (revisión §13): hasta hoy solo tres ficheros. La puerta
 # (middleware.js), el almacén (lib/) y los ocho intermediarios de datos
 # se publicaban sin que nadie los mirase.
-for f in app.js maps.js sw.js middleware.js lib/*.mjs netlify/functions/*.js api/*.js api/*.mjs; do
+for f in reglas-tiempo.js app.js maps.js sw.js middleware.js lib/*.mjs netlify/functions/*.js api/*.js api/*.mjs; do
   node --check "$f" || { echo "✗ $f: error de sintaxis"; exit 1; }
 done
 echo "✓ sintaxis"
@@ -41,7 +41,7 @@ if [ ! -x node_modules/.bin/eslint ]; then
     || { echo "⚠ No se ha podido instalar ESLint (¿sin internet?). Se publica solo con la sintaxis revisada."; exit 0; }
 fi
 
-if node_modules/.bin/eslint app.js maps.js sw.js middleware.js lib/*.mjs netlify/functions/*.js api/*.js api/*.mjs; then
+if node_modules/.bin/eslint reglas-tiempo.js app.js maps.js sw.js middleware.js lib/*.mjs netlify/functions/*.js api/*.js api/*.mjs; then
   echo "✓ sin variables huérfanas ni fallos de ámbito"
 
   # 3) LA SEGUNDA PASADA. Pedida por Aitor el 26-08-2026: «por eso de
@@ -93,6 +93,13 @@ node prueba-vigilante-reloj.mjs || exit 1
 # se publica. Sin red lo dice y sigue.
 echo "  · la lluvia de su dueño, con el tiempo de hoy en sus sitios"
 node prueba-lluvia-en-vivo.mjs || exit 1
+
+# ── LAS TRES WEBS, LAS MISMAS REGLAS DEL TIEMPO (03-10-2026) ─────────
+# Suyo, con las tres abiertas en Bermeo: «estar mal en las 3 apps, eso no
+# puede ser» · «raíz». Las reglas viven en reglas-tiempo.js; el Centro
+# Operativo y la agenda llevan una copia exacta. Si alguna se separa, o si
+# app.js vuelve a escribir su propia versión de una regla, no se publica.
+node reglas-iguales.mjs || exit 1
 
 # ── EL MOTOR DE RECAMBIO, ARRANCADO ──────────────────────────────────
 # Puesto el 03-09-2026, el día que Vercel dejó su Blob fuera del plan

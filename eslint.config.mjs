@@ -28,7 +28,7 @@
 
 import fs from 'node:fs';
 
-const FICHEROS = ['app.js', 'maps.js', 'sw.js'];
+const FICHEROS = ['reglas-tiempo.js', 'app.js', 'maps.js', 'sw.js'];
 
 /** Nombres declarados en el nivel superior de los ficheros del proyecto. */
 function globalesDelProyecto() {
@@ -170,7 +170,7 @@ export default [
     rules: { ...REGLAS_COMUNES, ...SIN_MUERTAS },
   },
   {
-    files: ['app.js', 'maps.js', 'sw.js'],
+    files: ['reglas-tiempo.js', 'app.js', 'maps.js', 'sw.js'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'script',

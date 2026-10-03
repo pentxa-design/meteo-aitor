@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-2209';
+const BUILD = '2026.10.03-2242';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -926,21 +926,9 @@ function dir16(deg) {
 }
 
 /** Códigos WMO → texto. Fuente: tabla WMO 4677 usada por Open-Meteo. */
-const WMO = {
-  0:'Despejado', 1:'Mayormente despejado', 2:'Parcialmente nuboso', 3:'Cubierto',
-  4:'Sol velado',
-  45:'Niebla', 48:'Niebla engelante',
-  51:'Llovizna débil', 53:'Llovizna moderada', 55:'Llovizna intensa',
-  56:'Llovizna engelante débil', 57:'Llovizna engelante intensa',
-  61:'Lluvia débil', 63:'Lluvia moderada', 65:'Lluvia fuerte',
-  66:'Lluvia engelante débil', 67:'Lluvia engelante fuerte',
-  71:'Nieve débil', 73:'Nieve moderada', 75:'Nieve intensa', 77:'Granos de nieve',
-  80:'Chubascos débiles', 81:'Chubascos moderados', 82:'Chubascos torrenciales',
-  85:'Chubascos de nieve débiles', 86:'Chubascos de nieve fuertes',
-  95:'Tormenta', 96:'Tormenta con granizo', 99:'Tormenta fuerte con granizo',
-};
+const WMO = ReglasTiempo.WMO;   // la tabla vive en reglas-tiempo.js, la misma en las tres webs (03-10-2026)
 const wmoText = c => WMO[c] ?? (has(c) ? `Código ${c}` : null);
-const isStormCode = c => c === 95 || c === 96 || c === 99;
+const isStormCode = ReglasTiempo.isStormCode;
 
 /* ── EL SOL VELADO NO ES «CUBIERTO» ──────────────────────────────────
    Puesto el 05-09-2026 desde Calpe, con él en la calle a pleno sol y la
@@ -1260,7 +1248,7 @@ const worst = (a, b) => (RANK[b] > RANK[a] ? b : a);
    Los cortes son los suyos, los que ya tenía puestos para la lluvia
    (0,2 y 2,0 mm/h por defecto, y los puede cambiar en Ajustes). Así no
    hay dos escalas distintas conviviendo.                              */
-const esLlovizna = c => has(c) && c >= 51 && c <= 57;
+const esLlovizna = ReglasTiempo.esLlovizna;
 
 /* ── EL CÓDIGO QUE SE VE: CIELO DE UNO, AGUA DEL OTRO ─────────────────
    Suyo, 30-08-2026 a las 19:40, con los dos aparatos delante: *«¿en la
@@ -1452,35 +1440,14 @@ function chipsOtrosHora(h, parte) {
    siempre, que no es «agua» y el semáforo ya la cuenta. Lo que vean
    otros modelos sigue en su etiqueta. Guardado por una prueba de la
    REGLA sobre todas las combinaciones (pruebas.js). */
-const ENGELANTE = new Set([56, 57, 66, 67]);     // llovizna y lluvia que hielan: el hielo dice más que la cantidad
-function iconoDeAgua(k, c, mm, thr) {
-  const moja = has(mm) && mm >= (thr?.rainWarn ?? 0.2);
-  if (ENGELANTE.has(c)) return k === 'bien' ? 67 : (moja || c >= 66) ? 66 : c;   // si hiela, sigue helando
-  if (has(c) && ((c >= 71 && c <= 77) || c === 85 || c === 86)) return c;        // nieve
-  const chubasco = has(c) && c >= 80 && c <= 82;
-  if (k === 'bien') return chubasco ? 81 : (c === 65 ? 65 : 63);
-  if (k === 'sirimiri') return esLlovizna(c) ? c : 51;
-  /* «Llueve poco» o «Cuatro gotas» */
-  if (moja) return chubasco ? 80 : 61;
-  return has(c) && c >= 61 && c <= 65 ? 61 : 51;
-}
+function iconoDeAgua(k, c, mm, thr) { return ReglasTiempo.iconoDeAgua(k, c, mm, thr); }   // en reglas-tiempo.js
 
 function codigoQueSeVe(h, codigoDelCielo, thr = S.thr) {
-  const cl = h?.codeLluvia;
-  const tormenta = [cl, codigoDelCielo].find(c => has(c) && c >= 95);
-  if (has(tormenta)) return tormenta;
-  if (has(h?.prec)) {
-    const k = comoLlueve(h, thr).k;
-    if (k === 'sirimiri' || k === 'poco' || k === 'bien')
-      return iconoDeAgua(k, [cl, codigoDelCielo].find(c => has(c) && c >= HAY_AGUA), h.prec, thr);
-    /* «Sin lluvia»: ni una gota en el icono. Lo que vea otro modelo va
-       en su etiqueta («⚠ ECMWF ve lluvia»), no en el dibujo. */
-    if (has(codigoDelCielo) && codigoDelCielo >= HAY_AGUA) codigoDelCielo = 3;
-  } else {
-    /* Sin milímetros no hay palabra: manda el código, como siempre. */
-    if (has(cl) && cl >= HAY_AGUA) return cl;
-    if (has(codigoDelCielo) && codigoDelCielo >= HAY_AGUA) return codigoDelCielo;
-  }
+  /* El agua y la tormenta, con la regla única de reglas-tiempo.js (03-10-2026). */
+  const r = ReglasTiempo.codigoConAgua({ mm: h?.prec, codigoPropio: h?.codeLluvia, codigo: h?.code,
+    codigoCielo: codigoDelCielo, codigoAjeno: h?.codigoAjeno, mmDelQuePresta: () => mmDelQuePresta(h) }, thr);
+  if (r.agua) return r.code;
+  codigoDelCielo = r.cieloSeco;
   /* La niebla tampoco se vota: es un dato de visibilidad, no de nubes. */
   if (codigoDelCielo === 45 || codigoDelCielo === 48) return codigoDelCielo;
   /* Cielo seco: primero la mayoría, y si no hay quórum, el dueño con la
@@ -1501,20 +1468,7 @@ function codigoQueSeVe(h, codigoDelCielo, thr = S.thr) {
    es el de `comoLlueve`: mandan los milímetros, y la llovizna solo
    decide por debajo del listón, que es donde los milímetros no saben
    distinguir mojarse de no mojarse. */
-function palabraLluvia(mm, esSirimiri = false, thr = S.thr) {
-  if (!has(mm)) return 'sin dato';
-  const v = mmRedonda(mm);
-  if (v >= mmRedonda(thr?.rainNo ?? 2))   return 'Llueve bien';
-  if (v >= mmRedonda(thr?.rainWarn ?? 0.2)) return 'Llueve poco';
-  if (esSirimiri) return 'Sirimiri';
-  /* «¿Cae ALGO?» se pregunta con el número crudo, y a propósito: 0,04
-     se imprime «0,0 mm» y moja igual. La regla de la casa es de su
-     pantallazo del 26-08 —«0,0 mm» con lluvia cayéndole encima—: los
-     listones se comparan con lo que se ve, pero el «no cae nada» tiene
-     que ser de verdad nada. Así dicen lo mismo esta función y
-     `comoLlueve()`, que es lo que comprueba el banco. */
-  return mm > 0 ? 'Cuatro gotas' : 'Sin lluvia';
-}
+function palabraLluvia(mm, esSirimiri = false, thr = S.thr) { return ReglasTiempo.palabraLluvia(mm, esSirimiri, thr); }   // en reglas-tiempo.js
 
 /* Los milímetros del modelo que presta el código del cielo, a la hora de
    `h` y en la comparativa de SU sitio. null si no se sabe (03-10-2026). */
@@ -1529,30 +1483,9 @@ function mmDelQuePresta(h) {
 }
 
 function comoLlueve(h, thr = S.thr) {
-  if (!has(h.prec)) return { k: 'nd', et: 'sin dato' };
-  /* Con lo que se IMPRIME (26-09-2026): 0,15 mm sale «0,2 mm» en
-     pantalla —que es su listón de aviso— y se juzgaba como 0,15. */
-  if (mmRedonda(h.prec) >= mmRedonda(thr.rainNo))   return { k: 'bien', et: 'Llueve bien' };
-  if (mmRedonda(h.prec) >= mmRedonda(thr.rainWarn)) return { k: 'poco', et: 'Llueve poco' };
-  // Por debajo del umbral: o es sirimiri, o no cae nada. Lo que lo
-  // distingue es el código del modelo, no los milímetros — ver la
-  // sección del sirimiri en CLAUDE.md.
-  /* Y SI EL CÓDIGO ES PRESTADO, CON POCA AGUA DE QUIEN LO PRESTA (03-10-2026,
-     TRASPASO §67 8). AROME no publica cielo: la llovizna sale del código de
-     ECMWF, y es sirimiri solo si ECMWF da ≤ AGUA_ACUERDO a esa hora, la regla
-     de `lluviaDeUnSitio()`. Con más, es lluvia de ECMWF: la dice su chip,
-     con su nombre y su número, y no se le cuelga a AROME como «Sirimiri». */
-  if (esLlovizna(h.codeLluvia ?? h.code)) {
-    const mmP = !has(h.codeLluvia) && h.codigoAjeno ? mmDelQuePresta(h) : null;
-    if (!(has(mmP) && mmP > AGUA_ACUERDO)) return { k: 'sirimiri', et: 'Sirimiri' };
-  }
-  if (h.prec > 0)             return { k: 'poco', et: 'Cuatro gotas' };
-  /* El código de lluvia del MISMO modelo que da los milímetros, con 0,0
-     por redondeo: moja algo (regla del 08-09), y el icono lo pintaba con
-     gotas mientras aquí se decía «Sin lluvia» (30-09-2026). */
-  if (has(h.codeLluvia) && h.codeLluvia >= 61 && h.codeLluvia < 95)
-                              return { k: 'poco', et: 'Cuatro gotas' };
-  return { k: 'no', et: 'Sin lluvia' };
+  /* La regla, en reglas-tiempo.js (03-10-2026): la misma en las tres webs. */
+  return ReglasTiempo.comoLlueve({ mm: h.prec, codigoPropio: h.codeLluvia, codigo: h.code,
+    codigoAjeno: h.codigoAjeno, mmDelQuePresta: () => mmDelQuePresta(h) }, thr);
 }
 
 /* ── ¿ESE CIELO LO VE ALGUIEN MÁS? ──────────────────────────────────
@@ -4692,6 +4625,65 @@ function conAhora(h, C) {
   return h;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   EL RAYO MEDIDO VETA LAS HORAS, NO SOLO LA CAJA DE ARRIBA (03-10-2026)
+   ───────────────────────────────────────────────────────────────────
+   Sábado 3, 22:20, BI BERMEO con 26 descargas a menos de 15 km (la más
+   cercana a 1,8 km): la ficha decía FUERTE «han caído rayos encima», y a
+   la vez la barra de 48 h «22:00 · OJO», Mis estaciones «1 fuera de
+   umbrales» y Avisos, en verde, «Ninguna hora supera tus umbrales». En
+   Durango, con 54, la franja «Sin riesgo eléctrico». Lo encontraron los
+   agentes entrando en la app.
+
+   EL PORQUÉ: el veto lo pintaba `pintarRayosTorre()` encima de la caja del
+   veredicto, y nada más. El estado de cada hora (`st`), del que comen la
+   barra, Mis estaciones, Avisos y «a qué hora se puede», no lo sabía.
+
+   AHORA: `rayoMedidoVeta(sitio)` dice si en ese sitio han caído rayos a
+   menos de RAYO_ENCIMA km en los últimos RAYO_VIGENTE minutos —con el sitio
+   abierto (`S.rayos.d`) o con cualquiera de los guardados (`S.rayos.anoche`)—
+   y `vetarPorRayo()` pone en FUERTE las horas que caen dentro de ese rato,
+   con el motivo delante. Es su único veto: «debo acudir siempre y cuando no
+   caigan rayos». Se deshace solo cuando el rato pasa. */
+function rayoMedidoVeta(place, ahora = Date.now()) {
+  if (!place) return null;
+  let f = null;
+  const R = deEsteSitio(S.rayos, place);
+  if (R?.d?.ultima) {
+    const u = R.d.ultima;
+    f = u.encima > 0 ? { encima: u.encima, hasta: u.hasta, km: u.masCerca?.km ?? null } : null;
+  } else if (S.rayosTorres?.d && ahora - S.rayosTorres.t < 20 * 60e3) {
+    /* Los guardados van aparte del sitio abierto: cada torre lleva su clave. */
+    const t = (S.rayosTorres.d.tocadas || []).find(x => key(x.t) === key(place));
+    const vig = (t?.marcosEncima || []).filter(m => ahora - new Date(m.hasta).getTime() <= RAYO_VIGENTE);
+    f = vig.length ? { encima: vig.reduce((a, m) => a + m.n, 0), hasta: vig[vig.length - 1].hasta,
+                       km: Math.min(...vig.map(m => m.km)) } : null;
+  }
+  if (!f) return null;
+  const fin = new Date(f.hasta).getTime();
+  if (!(ahora - fin <= RAYO_VIGENTE)) return null;
+  return { ...f, hastaVeto: fin + RAYO_VIGENTE };
+}
+function vetarPorRayo(hrs, place, ahora = Date.now()) {
+  if (!hrs?.length) return hrs;
+  const rm = rayoMedidoVeta(place, ahora);
+  for (const h of hrs) {
+    /* Primero se deshace lo de la vez anterior: el veto dura lo que dura. */
+    if (h.stSinRayo) { h.st = h.stSinRayo; h.reasons = (h.reasons || []).filter(r => !r.rayoMedido); delete h.stSinRayo; }
+    if (!rm || !h?.date) continue;
+    const ini = new Date(h.date).getTime();
+    if (!(ini + 3600e3 > ahora && ini < rm.hastaVeto)) continue;
+    h.stSinRayo = h.st;
+    h.st = 'no';
+    const hh = new Date(rm.hasta); const hasta = `${String(hh.getHours()).padStart(2, '0')}:${String(hh.getMinutes()).padStart(2, '0')}`;
+    h.reasons = [{ s: 'no', rayoMedido: true,
+      txt: `Han caído rayos encima: ${rm.encima} descarga${rm.encima === 1 ? '' : 's'} a menos de ${RAYO_ENCIMA} km`
+         + (has(rm.km) ? `, la más cercana a ${kmTxt(rm.km)} km` : '')
+         + `, medidas por AEMET hasta las ${hasta}` }, ...(h.reasons || [])];
+  }
+  return hrs;
+}
+
 function buildHours(fc, height, place = null) {
   const H = fc.hourly, out = [];
   const extra = extrasDe(fc);
@@ -4704,7 +4696,7 @@ function buildHours(fc, height, place = null) {
     out.push(h);
   }
   out.forEach(h => Object.assign(h, assess(h, S.thr, S.perfil, place ?? S.place)));
-  return out;
+  return vetarPorRayo(out, place ?? S.place);
 }
 
 /* Todas las horas de un día (AAAA-MM-DD) del sitio abierto, por el mismo
@@ -9045,124 +9037,19 @@ function calcularParte(sitios, arr) {
    UNA función para todas las pantallas: el parte, la línea roja, la
    etiqueta y la tarjeta leen de aquí. Y la regla está vigilada en
    pruebas.js con todas las combinaciones y con los datos del día. */
-const AGUA_ACUERDO = 1;                   // mm/h: «otro modelo la acompaña» / «poquita agua»
-const RELLENO_AGUA = 'ecmwf_ifs025';      // donde el dueño no llega (más allá de 48 h)
-const CIELO_PRESTADO = 'ecmwf_ifs025';    // de quién sale el código si el dueño no lo publica
+const AGUA_ACUERDO = ReglasTiempo.AGUA_ACUERDO;      // mm/h: «otro modelo la acompaña» / «poquita agua»
+const RELLENO_AGUA = ReglasTiempo.RELLENO_AGUA;      // donde el dueño no llega (más allá de 48 h)
+const CIELO_PRESTADO = ReglasTiempo.CIELO_PRESTADO;  // de quién sale el código si el dueño no lo publica
+/* LA REGLA VIVE EN reglas-tiempo.js (03-10-2026): una sola copia para la
+   app, el Centro Operativo y la agenda. Aquí solo se le dan los listones
+   de él, el dueño de ahora y los nombres de esta app. */
 function lluviaDeUnSitio(H, k, desde, finVentana, thr = S.thr, duenoOm = duenoLluvia()) {
-  const rw = thr?.rainWarn ?? 0.2, rn = thr?.rainNo ?? 2;
-  const nombre = om => (MODELOS_TORMENTA.find(m => m.om === om)?.nom) || nombreDeModelo(om);
-  const otrosM = MODELOS_TORMENTA.filter(m => m.om !== duenoOm && m.om !== 'best_match');
-  const serieDe = om => H[`precipitation_${om}`];
-  const pD = serieDe(duenoOm), pR = serieDe(RELLENO_AGUA);
-  const tiempo = i => new Date(H.time[i]).getTime();
-  const dentro = i => { const t = tiempo(i); return t >= desde && t <= finVentana; };
-  const esLlov = c => has(c) && c >= 51 && c <= 57;
-
-  /* Lo que dice el dueño en la hora i: { mm, om } o null si no hay dato. */
-  const delDueno = i => has(pD?.[i]) ? { mm: pD[i], om: duenoOm }
-                      : has(pR?.[i]) ? { mm: pR[i], om: RELLENO_AGUA } : null;
-  /* ¿Sirimiri en la hora i, y de quién es la llovizna? */
-  const sirimiriEn = (i, own) => {
-    if (own.mm >= rw) return null;
-    const cPropio = H[`weather_code_${own.om}`]?.[i];
-    if (esLlov(cPropio)) return nombre(own.om);
-    if (own.om !== CIELO_PRESTADO) {
-      const c = H[`weather_code_${CIELO_PRESTADO}`]?.[i], mm = serieDe(CIELO_PRESTADO)?.[i];
-      if (esLlov(c) && (!has(mm) || mm <= AGUA_ACUERDO)) return nombre(CIELO_PRESTADO);
-    }
-    return null;
-  };
-
-  const horas = [], siri = [], deQuien = new Set(), fuertes = [], acompanan = new Set(), bienSolo = [], poco = [];
-  let pico = 0, hPico = null, alguno = false, sirimiriDe = null;
-  const otros = new Map();
-  /* `veCada` se queda: dice quién ve agua en CADA hora (la tarjeta lo usa
-     para nombrar al que ve la de ahora). Es información con nombre, no
-     mezcla. */
-  const veCada = new Map();
-  let seco = Infinity, mojado = 0;
-  const totales = new Map();
-  for (let i = 0; i < H.time.length; i++) {
-    if (!dentro(i)) continue;
-    const t = tiempo(i);
-    for (const m of MODELOS_TORMENTA) {
-      const v = serieDe(m.om)?.[i];
-      if (!has(v)) continue;
-      totales.set(m.nom, (totales.get(m.nom) || 0) + v);
-      if (mojaEsaHora(v, H[`weather_code_${m.om}`]?.[i]).cuenta)
-        (veCada.get(m.nom) ?? veCada.set(m.nom, []).get(m.nom)).push(t);
-    }
-    const own = delDueno(i);
-    if (own) {
-      alguno = true;
-      const s = sirimiriEn(i, own);
-      if (own.mm >= 0.05 || s) {
-        horas.push(t); deQuien.add(nombre(own.om));
-        if (s) { siri.push(t); sirimiriDe = sirimiriDe || s; }
-        if (own.mm > pico) { pico = own.mm; hPico = t; }
-      }
-      if (own.mm >= rn) {
-        bienSolo.push(t);
-        const con = otrosM.filter(m => m.om !== own.om && (serieDe(m.om)?.[i] ?? 0) > AGUA_ACUERDO);
-        if (con.length) { fuertes.push(t); con.forEach(m => acompanan.add(m.nom)); }
-      } else if (own.mm >= rw) poco.push(t);
-    }
-    for (const m of otrosM) {
-      if (own && m.om === own.om) continue;
-      const v = serieDe(m.om)?.[i];
-      if (!has(v)) continue;
-      alguno = true;
-      if (v < rw) continue;
-      const o = otros.get(m.nom) || { nom: m.nom, ini: t, fin: t, pico: 0, hPico: null, n: 0, horas: [] };
-      o.fin = t; o.n++; o.horas.push(t); if (v > o.pico) { o.pico = v; o.hPico = t; }
-      otros.set(m.nom, o);
-    }
-  }
-  for (const v of totales.values()) { if (v < seco) seco = v; if (v > mojado) mojado = v; }
-  const listaOtros = [...otros.values()].sort((a, b) => b.pico - a.pico);
-  const dueno = nombre(duenoOm);
-  if (!alguno) return { k, llueve: false, sinDato: true, otros: [], dueno };
-  if (!horas.length) return { k, llueve: false, otros: listaOtros, dueno, veCada: Object.fromEntries(veCada) };
-
-  /* ¿SIGUE MOJANDO PASADO EL CORTE? «Escampa a las 00:00» era el final de
-     la ventana, no el de la lluvia. Se mira hasta 12 h más allá. */
-  let sigueHasta = null;
-  const ultima = horas[horas.length - 1];
-  const iUlt = H.time.findIndex(x => new Date(x).getTime() === ultima);
-  if (iUlt >= 0 && iUlt + 1 < H.time.length && !dentro(iUlt + 1) && tiempo(iUlt + 1) > finVentana) {
-    for (let i = iUlt + 1; i < H.time.length && tiempo(i) <= finVentana + 12 * 3600e3; i++) {
-      const own = delDueno(i);
-      if (!own || !(own.mm >= 0.05 || sirimiriEn(i, own))) break;
-      sigueHasta = tiempo(i);
-    }
-  }
-
-  /* LA FRASE LLEVA LAS HORAS DE SU FUERZA: «Llueve bien a las 23:00», no
-     «Llueve bien de 18:00 a 23:00» porque de 18 a 20 hubo sirimiri. El
-     resto de horas mojadas se dice aparte (`horasAgua`). */
-  const fuerte = fuertes.length > 0;
-  const horasFuerza = fuerte ? fuertes : bienSolo.length ? bienSolo : poco.length ? poco
-    : siri.length === horas.length ? horas : horas.filter(t => !siri.includes(t));
-  const ini = new Date(horas[0]), fin = new Date(ultima);
-  const tramo = Math.round((fin - ini) / 3600e3) + 1;
-  return { k, llueve: true, dueno, ini, fin, pico, hPico: hPico ? new Date(hPico) : null,
-           quien: [...deQuien].join(' y '), picoAbarca: true,
-           horasAgua: horas.map(t => new Date(t)), nHoras: horas.length, sueltas: tramo > horas.length,
-           soloSirimiri: siri.length === horas.length, sirimiriDe, horasSirimiri: siri.map(t => new Date(t)),
-           fuerte, horasFuertes: fuertes.map(t => new Date(t)), acompanan: [...acompanan],
-           horasFuerza: horasFuerza.map(t => new Date(t)),
-           sigueHasta: sigueHasta ? new Date(sigueHasta) : null,
-           otros: listaOtros, veCada: Object.fromEntries(veCada),
-           discrepan: seco > 0 && seco !== Infinity ? (mojado / Math.max(seco, 0.1)) >= 3 : mojado >= 0.5 };
+  return ReglasTiempo.lluviaDeUnSitio(H, k, desde, finVentana, thr, duenoOm, nombreDeModelo);
 }
 
 /* La palabra de la fuerza, con la regla del acuerdo: «Llueve bien» solo si
    otro modelo acompaña al dueño; si lo ve él solo, «Puede llover bien». */
-function palabraDeLaVentana(L) {
-  if (L.soloSirimiri) return 'Sirimiri';
-  if (L.pico >= (S.thr?.rainNo ?? 2) && !L.fuerte) return 'Puede llover bien';
-  return palabraLluvia(L.pico);
-}
+function palabraDeLaVentana(L) { return ReglasTiempo.palabraDeLaVentana(L, S.thr); }   // en reglas-tiempo.js
 /* Lo que ven los demás, en una línea y con sus nombres. */
 function otrosVenTxt(L, max = 3) {
   return (L?.otros || []).slice(0, max).map(o => {
@@ -11711,7 +11598,7 @@ const nCape = v => Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'
    82 % y se deja 70; con el Automático, 73 % y se dejaba 106. A cambio,
    un tercio más de avisos sin rayo (1.128 contra 845). Él: «la que
    recomiendas». Es un solo temporal: el registro lo sigue midiendo. */
-const ECMWF_9KM = 'ecmwf_ifs';
+const ECMWF_9KM = ReglasTiempo.ECMWF_9KM;
 const CON_TAPA = [ECMWF_9KM, 'icon_seamless', 'gfs_seamless'];
 
 /* ── ¿ESTA LLUVIA MEDIDA CUBRE LA HORA DEL MODELO? ───────────────────
@@ -11726,14 +11613,9 @@ function esDeDiezMinutos(x) {
   return has(x?.lluviaMin) && x.lluviaMin < 60;
 }
 
-const MODELOS_TORMENTA = [
-  { om: 'ecmwf_ifs025',                nom: 'ECMWF' },
-  { om: 'icon_seamless',               nom: 'ICON' },
-  { om: 'gfs_seamless',                nom: 'GFS' },
-  { om: 'meteofrance_arome_france_hd', nom: 'AROME HD' },
-  /* Antes `best_match` («Automático»): una mezcla. Ver CON_TAPA (03-10-2026). */
-  { om: 'ecmwf_ifs',                   nom: 'ECMWF 9 km' },
-];
+/* Antes `best_match` («Automático»): una mezcla. Ver CON_TAPA (03-10-2026).
+   La lista vive en reglas-tiempo.js, la misma para las tres webs. */
+const MODELOS_TORMENTA = ReglasTiempo.MODELOS_TORMENTA;
 
 /** Horas por delante que se miran. Dos días: más allá, AROME ya no llega
  *  y comparar modelos con horizontes distintos compara peras con manzanas. */
@@ -12475,7 +12357,10 @@ const Rayos = {
 
     const marcos = cat.ambitos[amb].marcos.slice(-horas);
     const caja = this.caja(torres, radio + 5);
-    const porTorre = torres.map(t => ({ t, n: 0, encima: 0, masCerca: null, cuando: null }));
+    /* `marcosEncima`: cada hora con descargas a menos de RAYO_ENCIMA de esa
+       torre, con su `hasta`. Hace falta para el VETO de cada una en Mis
+       estaciones y Avisos, no solo en la ficha abierta (03-10-2026). */
+    const porTorre = torres.map(t => ({ t, n: 0, encima: 0, masCerca: null, cuando: null, marcosEncima: [] }));
 
     for (const m of marcos) {
       const d = await this.leer(amb, m, caja, cat);
@@ -12485,7 +12370,12 @@ const Rayos = {
           const km = kmEntre(fila.t, x);
           if (km > radio) continue;
           fila.n++;
-          if (km <= RAYO_ENCIMA) fila.encima++;
+          if (km <= RAYO_ENCIMA) {
+            fila.encima++;
+            const ult = fila.marcosEncima[fila.marcosEncima.length - 1];
+            if (ult?.hasta === m.hasta) { ult.n++; ult.km = Math.min(ult.km, km); }
+            else fila.marcosEncima.push({ desde: m.desde, hasta: m.hasta, n: 1, km });
+          }
           if (!fila.masCerca || km < fila.masCerca.km) fila.masCerca = { ...x, km };
           fila.cuando = m;                       // la última hora con descargas
         }
@@ -12606,11 +12496,16 @@ async function cargarRayosAemet({ forzar = false } = {}) {
        de rayo hasta recargar (03-10-2026). */
     if (S.place && key(S.place) !== clave) return;
     S.rayos = { clave, t: Date.now(), d: r, anoche, error: null };
+    S.rayosTorres = anoche ? { t: Date.now(), d: anoche } : null;   // las de TODOS los guardados, para el veto de cada uno
   } catch (e) {
     if (S.place && key(S.place) !== clave) return;
     S.rayos = { clave, t: Date.now(), d: null, anoche: null, error: String(e.message || e) };
   }
   pintarRayosAemet();
+  /* Y las HORAS (03-10-2026): de su `st` comen la barra, Mis estaciones,
+     Avisos y «a qué hora se puede». Se vetan las que ya estaban pintadas. */
+  if (S.data?.hours) { vetarPorRayo(S.data.hours, S.place); seguro('torre', renderTower); seguro('avisos', renderAlerts); }
+  if (S.torres?.length) { for (const t of S.torres) vetarPorRayo(t.horas, t.place); seguro('mis torres', renderTorres); }
   // La ficha de Torre lleva el aviso corto: que se entere del cambio.
   if (S.data) seguro('rayos en torre', pintarRayosTorre);
   if (S.data) seguro('antes de salir', pintarAntesDeSalir);
@@ -13735,7 +13630,7 @@ function pintarCams(fuente) {
        hora de lluvia, y no se diluye.
      · **El cielo, por lo que MÁS SE REPITE** — siete horas de sol y una
        nube no son una mañana cubierta. */
-const HAY_AGUA = 51;          // de aquí para arriba, moja
+const HAY_AGUA = ReglasTiempo.HAY_AGUA;   // de aquí para arriba, moja
 
 /* ═══════════════════════════════════════════════════════════════════
    EL CIELO DE UN DÍA ENTERO SE MIDE, NO SE VOTA
@@ -13788,28 +13683,13 @@ function cieloDelDia(sel) {
   return 3;                                      // cubierto
 }
 
+/* Cada hora con SU código visto (`codigoQueSeVe`: cielo del dueño del
+   cielo, agua del dueño de la lluvia), y la franja con la regla única de
+   reglas-tiempo.js (03-10-2026): el agua manda —el sirimiri también,
+   aunque sea una hora de ocho: «con sirimiri no sube a mástil ni a
+   torre»—; si no, el cielo que más se repite. */
 function codigoFranja(sel) {
-  /* Cada hora con SU código visto: cielo del dueño del cielo, agua del
-     dueño de la lluvia. Ver `codigoQueSeVe()`. */
-  const cs = sel.map(h => codigoQueSeVe(h, h.code)).filter(has);
-  if (!cs.length) return undefined;
-
-  const mojan = cs.filter(c => c >= HAY_AGUA);
-  /* El agua manda, y el sirimiri TAMBIÉN aunque sea una hora de ocho:
-     *«con sirimiri no sube a mástil ni a torre»*. Esa hora es la que
-     decide, y esconderla sería esconder la decisión. Lo intenté diluir
-     el 31-08-2026 —él se quejaba, con razón, de que seis horas de sol
-     salían etiquetadas de llovizna— y el candado lo paró. La respuesta
-     no era callar el agua: era DECIR LAS DOS COSAS, y eso se hace en el
-     rótulo de la franja (`tituloFranja`), no aquí. */
-  if (mojan.length) return mojan.sort((x, y) => y - x)[0];
-
-  /* Solo cielo: la que más manda. En empate gana la más tapada, que
-     para trabajar es la que menos promete. */
-  const cuenta = new Map();
-  for (const c of cs) cuenta.set(c, (cuenta.get(c) ?? 0) + 1);
-  return [...cuenta.entries()]
-    .sort((a, b) => b[1] - a[1] || tapado(b[0]) - tapado(a[0]))[0][0];
+  return ReglasTiempo.codigoDeVarias(sel.map(h => codigoQueSeVe(h, h.code)));
 }
 
 /* ═══ EL RÓTULO DE LA FRANJA DICE LAS DOS COSAS ══════════════════════
@@ -13902,58 +13782,17 @@ function cieloVisto(h) {
    null si no hay al menos 4 horas con dato. El agua nunca se absorbe como
    «parpadeo»: una hora de sirimiri decide (regla del 31-08). */
 function tramosDeCielo(sel) {
-  const hs = (sel || []).map(h => ({ c: codigoQueSeVe(h, h.code), h })).filter(x => has(x.c));
+  const hs = (sel || []).map(h => ({ c: codigoQueSeVe(h, h.code), hora: horaDeTramo(h), ref: h })).filter(x => has(x.c));
+  function horaDeTramo(h) { return (h?.date instanceof Date) ? h.date.getHours() : (h?.t ? Number(String(h.t).slice(11, 13)) : NaN); }
   if (hs.length < 4) return null;
-  const bando = c => (c >= HAY_AGUA ? 3 : c === VELADO ? 1 : c <= 1 ? 0 : 2);
-  const horaNum = h => (h?.date instanceof Date) ? h.date.getHours()
-                     : (h?.t ? Number(String(h.t).slice(11, 13)) : NaN);
-  let tr = [];
-  for (const x of hs) {
-    const b = bando(x.c);
-    if (tr.length && tr[tr.length - 1].b === b) { tr[tr.length - 1].cs.push(x.c); tr[tr.length - 1].hs.push(x.h); }
-    else tr.push({ b, cs: [x.c], hs: [x.h] });
-  }
-  const fundir = () => { for (let k = tr.length - 1; k > 0; k--) if (tr[k].b === tr[k - 1].b) {
-    tr[k - 1].cs = tr[k - 1].cs.concat(tr[k].cs); tr[k - 1].hs = tr[k - 1].hs.concat(tr[k].hs); tr.splice(k, 1); } };
-  // Pegar el tramo i al vecino j: se queda el bando de j
-  const pegar = (i, j) => { const a = Math.min(i, j), b = Math.max(i, j);
-    tr[j] = { b: tr[j].b, cs: tr[a].cs.concat(tr[b].cs), hs: tr[a].hs.concat(tr[b].hs) }; tr.splice(i, 1); fundir(); };
-  /* El agua es intocable en las dos direcciones: ni se absorbe como
-     parpadeo, ni absorbe horas secas (una hora seca pegada a una de
-     llovizna no es llovizna). Cazado en Bermeo, 09-09-2026 00:20. */
-  const seco = k => k >= 0 && k < tr.length && tr[k].b !== 3;
-  // 1) Una hora suelta entre dos tramos secos del mismo bando es un parpadeo del modelo: fuera
-  for (let k = tr.length - 2; k >= 1; k--)
-    if (tr[k].cs.length < 2 && seco(k) && seco(k - 1) && tr[k - 1].b === tr[k + 1].b) pegar(k, k - 1);
-  // 2) Una hora suelta en un extremo se pega al de al lado, si los dos son secos
-  if (tr.length > 1 && tr[0].cs.length < 2 && seco(0) && seco(1)) pegar(0, 1);
-  if (tr.length > 1 && tr[tr.length - 1].cs.length < 2 && seco(tr.length - 1) && seco(tr.length - 2)) pegar(tr.length - 1, tr.length - 2);
-  // 3) Como mucho tres tramos SECOS (el agua no cuenta para el tope): el más corto seco con vecino seco
-  //    (a igual largo, antes el velo) al vecino seco más largo
-  while (tr.filter(t => t.b !== 3).length > 3) {
-    let i = -1;
-    for (let k = 0; k < tr.length; k++) {
-      if (!seco(k) || !(seco(k - 1) || seco(k + 1))) continue;
-      if (i < 0 || tr[k].cs.length < tr[i].cs.length
-          || (tr[k].cs.length === tr[i].cs.length && tr[k].b === 1 && tr[i].b !== 1)) i = k;
-    }
-    if (i < 0) break;
-    const izq = seco(i - 1), der = seco(i + 1);
-    const j = izq && der ? (tr[i - 1].cs.length >= tr[i + 1].cs.length ? i - 1 : i + 1) : izq ? i - 1 : i + 1;
-    pegar(i, j);
-  }
-  const gana = xs => { const c = new Map();
-    for (const x of xs) c.set(x, (c.get(x) ?? 0) + 1);
-    return [...c.entries()].sort((a, b) => b[1] - a[1] || tapado(b[0]) - tapado(a[0]))[0][0]; };
-  return tr.map(t => {
-    const mojan = t.cs.filter(c => c >= HAY_AGUA);
-    const code = mojan.length ? mojan.sort((a, b) => b - a)[0] : gana(t.cs);
-    const desde = horaNum(t.hs[0]), hasta = horaNum(t.hs[t.hs.length - 1]);
-    const medio = t.hs[Math.floor(t.hs.length / 2)];
-    const hm = horaNum(medio);
+  /* La regla de los tramos vive en reglas-tiempo.js (03-10-2026): la misma
+     para la agenda, que metía el agua en un tramo seco. */
+  return ReglasTiempo.tramosDeCodigos(hs).map(t => {
+    const medio = t.refs[Math.floor(t.refs.length / 2)];
+    const hm = horaDeTramo(medio);
     const dia = has(medio?.day) ? medio.day : (hm >= 8 && hm <= 19 ? 1 : 0);
-    return { code, dia, txt: textoVisto(code, dia) ?? '—',
-             hora: `${String(desde).padStart(2, '0')}:00`, desde, hasta, b: t.b, n: t.hs.length };
+    return { code: t.code, dia, txt: textoVisto(t.code, dia) ?? '—',
+             hora: `${String(t.desde).padStart(2, '0')}:00`, desde: t.desde, hasta: t.hasta, b: t.b, n: t.n };
   });
 }
 
@@ -14055,10 +13894,7 @@ function cambioDeCielo(clave, code, dia = 1, bajada = null, forma = null, txtAho
    sirimiri de esta app (CLAUDE.md, 25-08). Hasta el 02-10-2026 el parte de
    Mis torres tiraba esas horas y decía «Sin lluvia» mientras la franja de
    Ahora decía que ECMWF veía llovizna. */
-function mojaEsaHora(mm, c) {
-  const llovizna = has(c) && c >= 51 && c <= 57;
-  return { cuenta: (has(mm) && mm >= 0.05) || llovizna, sirimiri: llovizna && (!has(mm) || mm < 0.2) };
-}
+function mojaEsaHora(mm, c) { return ReglasTiempo.mojaEsaHora(mm, c); }   // la regla, en reglas-tiempo.js
 
 /* ── LA LLOVIZNA DE UNO Y LOS MILÍMETROS DE OTRO (02-10-2026) ──────────
    Suyo, 22:10, con la franja del sábado delante: arriba «Cubierto ·
