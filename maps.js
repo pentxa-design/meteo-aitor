@@ -4544,10 +4544,14 @@ const Maps = {
          números a un milímetro no se leen. */
       if (!esSuyo(i) && suyos.size
           && [i - 1, i + 1].some(j => j >= 0 && j < n && esSuyo(j))) return '';
+      /* DOS LISTONES SUYOS PEGADOS se escriben juntos y una sola vez (04-10-2026:
+         «7001000» en la barra de CAPE del móvil, el 700 y el 1000 a 9 % de
+         distancia). El de la izquierda se calla y el de la derecha lleva los dos. */
+      const pegado = j => j >= 0 && j < n && esSuyo(j) && Math.abs(bp[j] - v) / span < 0.12;
+      if (esSuyo(i) && pegado(i + 1)) return '';
       const val = e.etiquetas ? e.etiquetas[i] : v * e.factor;
-      const txt = Math.abs(val) >= 100 ? val.toFixed(0)
-                : Math.abs(val) >= 10  ? val.toFixed(0)
-                : Math.abs(val) >= 1   ? val.toFixed(1) : val.toFixed(2);
+      const num = x => (x === 0 ? '0' : Math.abs(x) >= 10 ? x.toFixed(0) : Math.abs(x) >= 1 ? x.toFixed(1) : x.toFixed(2)).replace('.', ',');
+      const txt = esSuyo(i) && pegado(i - 1) ? `${num(e.etiquetas ? e.etiquetas[i - 1] : bp[i - 1] * e.factor)}·${num(val)}` : num(val);
       return `<span style="left:${((v - min) / span * 100).toFixed(2)}%">${txt}</span>`;
     }).join('');
 

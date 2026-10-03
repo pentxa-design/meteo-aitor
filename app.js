@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.04-0135';
+const BUILD = '2026.10.04-0143';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -5287,7 +5287,8 @@ function renderTower() {
 function nubesPorCapas(C) {
   const capas = [
     { n: 'bajas',  v: C?.cloud_cover_low,  que: 'las del sirimiri, y las que tapan la torre' },
-    { n: 'medias', v: C?.cloud_cover_mid,  que: 'grises y espesas, pero no llueve de ellas' },
+    /* «pero no llueve de ellas» solo si no está lloviendo (04-10-2026: Bilbao 23:00, 3,7 mm/h). */
+    { n: 'medias', v: C?.cloud_cover_mid,  que: has(C?.precipitation) && C.precipitation >= 0.2 ? 'grises y espesas' : 'grises y espesas, pero no llueve de ellas' },
     { n: 'altas',  v: C?.cloud_cover_high, que: 'finas, dejan pasar el sol' },
   ].filter(x => has(x.v));
   if (!capas.length) return null;
@@ -14374,7 +14375,9 @@ function renderNow() {
        Regla fija del 13-09-2026 (la sesión del portátil, y él la hizo suya):
        para distinguir un cambio del tiempo de un fallo de la app, la franja
        lo dice en una línea: «Ha cambiado a las 22:10: antes despejado». */
-    const cambio = cambioDeCielo(`${String(sel[0]?.t ?? '').slice(0, 10)}·${name}·${S.model}`, code, R?.dia ?? esDeDia(sel),
+    /* CON EL SITIO en la clave (04-10-2026): sin él, en Bilbao salía «Antes
+       decía: lluvia débil…» que era el texto de Bermeo. */
+    const cambio = cambioDeCielo(`${S.place ? key(S.place) : ''}·${String(sel[0]?.t ?? '').slice(0, 10)}·${name}·${S.model}`, code, R?.dia ?? esDeDia(sel),
                                  /* La bajada se identifica por los DATOS (la hora en curso del modelo),
                                     no por el reloj: la copia guardada, la bajada fresca y el voto se
                                     pintan en segundos y son la misma (falsa alarma del 13-09, 23:54). */

@@ -10440,7 +10440,7 @@ grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
   ok('y si lo de antes era otra cosa, la dice entera',
      /^Previsión cambiada a las \d\d:\d\d\. Antes decía: cubierto$/.test(c8 || ''), `salió «${c8}»`);
   ok('la franja pinta esa línea junto al titular',
-     /const cambio = cambioDeCielo\(`\$\{String\(sel\[0\]\?\.t \?\? ''\)\.slice\(0, 10\)\}·\$\{name\}·\$\{S\.model\}`, code, R\?\.dia \?\? esDeDia\(sel\),[\s\S]{0,400}S\.data\?\.fc\?\.current\?\.time \?\? null,\n\s*\{ n: sel\.length, ini: sel\[0\]\?\.t \?\? null, votado: !!deEsteSitio\(S\.comparativa\) \},\n\s*tituloFranja\(sel, code\)\)/.test(src)
+     /const cambio = cambioDeCielo\(`\$\{S\.place \? key\(S\.place\) : ''\}·\$\{String\(sel\[0\]\?\.t \?\? ''\)\.slice\(0, 10\)\}·\$\{name\}·\$\{S\.model\}`, code, R\?\.dia \?\? esDeDia\(sel\),[\s\S]{0,400}S\.data\?\.fc\?\.current\?\.time \?\? null,\n\s*\{ n: sel\.length, ini: sel\[0\]\?\.t \?\? null, votado: !!deEsteSitio\(S\.comparativa\) \},\n\s*tituloFranja\(sel, code\)\)/.test(src)
      && /class="part__cambio">\$\{esc\(cambio\)\}/.test(src));
   ok('todas las pestañas salen de la misma bajada: franjas y 10 días leen S.data.fc',
      /function horasDelDia\(fc, dia\)/.test(src) && /const hs = horasDelDia\(S\.data\?\.fc, dia\);/.test(src)
