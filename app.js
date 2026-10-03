@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-2009';
+const BUILD = '2026.10.03-2033';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -1516,6 +1516,18 @@ function palabraLluvia(mm, esSirimiri = false, thr = S.thr) {
   return mm > 0 ? 'Cuatro gotas' : 'Sin lluvia';
 }
 
+/* Los milímetros del modelo que presta el código del cielo, a la hora de
+   `h` y en la comparativa de SU sitio. null si no se sabe (03-10-2026). */
+function mmDelQuePresta(h) {
+  const C = deEsteSitio(S.comparativa, h?.sitio)?.hourly;
+  if (!C?.time || !h?.date) return null;
+  const om = COMPARAR.find(m => m.name === h.cieloDe)?.om ?? CIELO_PRESTADO;
+  const iso = new Date(h.date.getTime() - h.date.getTimezoneOffset() * 60000).toISOString().slice(0, 13);
+  const i = C.time.findIndex(t => t.slice(0, 13) === iso);
+  const v = i >= 0 ? C[`precipitation_${om}`]?.[i] : null;
+  return has(v) ? v : null;
+}
+
 function comoLlueve(h, thr = S.thr) {
   if (!has(h.prec)) return { k: 'nd', et: 'sin dato' };
   /* Con lo que se IMPRIME (26-09-2026): 0,15 mm sale «0,2 mm» en
@@ -1525,8 +1537,15 @@ function comoLlueve(h, thr = S.thr) {
   // Por debajo del umbral: o es sirimiri, o no cae nada. Lo que lo
   // distingue es el código del modelo, no los milímetros — ver la
   // sección del sirimiri en CLAUDE.md.
-  if (esLlovizna(h.codeLluvia ?? h.code))
-                              return { k: 'sirimiri', et: 'Sirimiri' };
+  /* Y SI EL CÓDIGO ES PRESTADO, CON POCA AGUA DE QUIEN LO PRESTA (03-10-2026,
+     TRASPASO §67 8). AROME no publica cielo: la llovizna sale del código de
+     ECMWF, y es sirimiri solo si ECMWF da ≤ AGUA_ACUERDO a esa hora, la regla
+     de `lluviaDeUnSitio()`. Con más, es lluvia de ECMWF: la dice su chip,
+     con su nombre y su número, y no se le cuelga a AROME como «Sirimiri». */
+  if (esLlovizna(h.codeLluvia ?? h.code)) {
+    const mmP = !has(h.codeLluvia) && h.codigoAjeno ? mmDelQuePresta(h) : null;
+    if (!(has(mmP) && mmP > AGUA_ACUERDO)) return { k: 'sirimiri', et: 'Sirimiri' };
+  }
   if (h.prec > 0)             return { k: 'poco', et: 'Cuatro gotas' };
   /* El código de lluvia del MISMO modelo que da los milímetros, con 0,0
      por redondeo: moja algo (regla del 08-09), y el icono lo pintaba con
@@ -6050,7 +6069,11 @@ function lluviaQueNoVesTu(c) {
   /* 51 a 57, como `esLlovizna`. Dos sitios se habían quedado en 55 y
      dejaban fuera el 56 y el 57, que son llovizna ENGELANTE — o sea la
      peor de todas, la que hiela sobre el metal (20-09-2026). */
-  const sirimiri = esLlovizna(peor.code);
+  /* Y CON POCA AGUA (03-10-2026): el código de llovizna con 1,1 mm/h salía
+     como «sirimiri: moja sin marcar», y 1,1 mm/h marca. Sirimiri es la
+     llovizna con poquita agua, ≤ AGUA_ACUERDO, la misma regla que
+     `lluviaDeUnSitio()`; con más, va su número. */
+  const sirimiri = esLlovizna(peor.code) && peor.mm <= AGUA_ACUERDO;
   /* ── Y SI NOMBRA UNO QUE NO ESTÁ EN SU SELECTOR, SE AVISA ─────────
      Suyo, 30-08-2026: *«HARMONIE sí, pero no tenemos, ¿no? no lo veo
      ese modelo»*. Y lleva razón: en el selector hay cinco —Automático,
@@ -6158,6 +6181,9 @@ function lluviaQueVieneYNoVesTu() {
     /* Del que la ve antes, que es el que marca la hora que se enseña. */
     mm24: otros[0].total,
     cuantos: otros.length,
+    /* Cada uno con su primera hora, para poder decir quién la ve ANTES que
+       el dueño cuando el dueño también la ve (03-10-2026). */
+    lista: otros.map(x => ({ nom: x.nom, hora: new Date(x.cuando) })),
   };
 }
 
@@ -9580,9 +9606,14 @@ function renderParte() {
                ? ` <span class="pt__tab__par">· tapa ${H.cin.toFixed(0)}${
                    H?.tapaDe ? ` <small>la da ${esc(H.tapaDe)}</small>` : ''}</span>` : ''}` : '',
              '<span class="pt__tab__no">ningún aparato lo mide</span>')
+      /* Y EL CIELO, FIRMADO COMO LA TAPA (03-10-2026, TRASPASO §67 8): la
+         columna dice «AROME HD» y AROME no publica cielo; el texto salía de
+         la votación de los cinco o del código de ECMWF sin decirlo. */
       + fila('Cielo',
              (has(H?.code) || has(H?.cloud))
-               ? `<b>${esc(cieloVisto(H).txt ?? '—')}</b>${has(H?.cloud) ? ` · ${Math.round(H.cloud)} %` : ''}`
+               ? (() => { const V = cieloVisto(H);
+                   return `<b>${esc(V.txt ?? '—')}</b>${has(H?.cloud) ? ` · ${Math.round(H.cloud)} %` : ''}`
+                     + (H.votado ? ' <small>lo votan los 5</small>' : H.cieloDe ? ` <small>lo dice ${esc(H.cieloDe)}</small>` : ''); })()
                : '',
              M ? '<span class="pt__tab__no">ningún aparato lo mide</span>' : '')
       + fila('Temperatura',
@@ -15156,9 +15187,19 @@ function renderNow() {
            hoy diciendo «Sin lluvia». Leído a las 02:08, «01:00» es una
            hora que acaba de pasar. La función ya existe y se usa dos
            renglones más arriba en la misma pantalla. */
+        /* CON SU DUEÑO Y CON QUIEN LA VE ANTES (03-10-2026, TRASPASO §67 8).
+           La hora era solo la de AROME HD y no lo decía; ese día en Bilbao
+           AROME la ponía a las 20:00 e ICON y ECMWF ya la daban a las 19:00,
+           con la lluvia cayendo. La hora es la del dueño, firmada; si otro
+           la ve antes, se dice quién y a qué hora. */
+        const dueno = nombreDeModelo(duenoLluvia());
+        const otra = lluviaQueVieneYNoVesTu();
+        const antes = (otra?.lista || []).filter(x => x.hora < proxima.date);
         return dt('Próxima lluvia',
-          `${String(proxima.date.getHours()).padStart(2, '0')}:00${diaSiNoEsHoy(proxima.date)}`,
-          `${mmTxt(proxima.prec)} mm esa hora · ${mmTxt(agua24)} mm en 24 h`,
+          `${String(proxima.date.getHours()).padStart(2, '0')}:00${diaSiNoEsHoy(proxima.date)}<small> según ${esc(dueno)}</small>`,
+          `${mmTxt(proxima.prec)} mm esa hora · ${mmTxt(agua24)} mm en 24 h`
+            + (antes.length ? ` · ⚠ <b>${esc(listar(antes.map(x => x.nom)))}</b> la ${antes.length > 1 ? 'ven' : 've'} antes,`
+              + ` desde las ${String(antes[0].hora.getHours()).padStart(2, '0')}:00${diaSiNoEsHoy(antes[0].hora)}` : ''),
           'warn');
       }
       if (agua24 >= 0.2) {

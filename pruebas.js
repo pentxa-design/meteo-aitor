@@ -155,6 +155,10 @@ eval(sacarConst('esLlovizna'));
 eval(sacarConst('mmRedonda'));
 eval(sacar('function palabraLluvia('));
 eval(sacar('function comoLlueve('));
+/* Desde el 03-10-2026 `comoLlueve` mira los milímetros de quien presta el
+   código (sirimiri solo con ≤ AGUA_ACUERDO). */
+eval(sacar('function mmDelQuePresta('));
+eval(sacarConst('CIELO_PRESTADO')); eval(sacarConst('AGUA_ACUERDO'));
 globalThis.PERFILES = { hierro: { et: 'x', vientoManda: false, rafagaAviso: 70, rafagaBestia: 90,
   lluviaManda: false, alturaImporta: false, sirimiriImporta: true } };
 globalThis.perfil = () => PERFILES.hierro;
@@ -2201,6 +2205,7 @@ if (typeof duenoLluvia !== 'function') globalThis.duenoLluvia = () => 'ecmwf_ifs
 if (typeof MODELS === 'undefined') globalThis.MODELS = [
   { name: 'Automático' }, { name: 'ECMWF' }, { name: 'GFS' },
   { name: 'ICON' }, { name: 'AROME HD' }];
+if (typeof AGUA_ACUERDO === 'undefined') eval(sacarConst('AGUA_ACUERDO'));   // el «poquita agua» del sirimiri (03-10-2026)
 eval(sacar('function lluviaQueNoVesTu(c) {'));
 
 /* La hora en curso, en HORA LOCAL. Con `toISOString()` no vale: da UTC,
@@ -2263,6 +2268,28 @@ const fuerte = lluviaQueNoVesTu({ prec: 0.0 });
 ok('con lluvia de verdad no lo llama sirimiri', fuerte && !fuerte.sirimiri, JSON.stringify(fuerte));
 ok('y se queda con el que más da', fuerte?.mm === 2.4, String(fuerte?.mm));
 ok('nombrando a los dos que la ven', fuerte?.cuantos === 2, String(fuerte?.cuantos));
+/* LLOVIZNA CON 1,1 mm/h NO ES SIRIMIRI (03-10-2026, TRASPASO §67 8): el
+   código de llovizna de ECMWF con 1,1 mm/h salía «sirimiri: moja sin
+   marcar». Sirimiri es la llovizna con ≤ AGUA_ACUERDO (1 mm/h). */
+S.comparativa = comparativa([1.1, 0.0, 0.0, 0.0], [53, 3, 3, 3]);
+const llov11 = lluviaQueNoVesTu({ prec: 0.0 });
+ok('llovizna de ECMWF con 1,1 mm/h: no la llama sirimiri, va con su número', llov11 && llov11.sirimiri === false && llov11.mm === 1.1, JSON.stringify(llov11));
+S.comparativa = comparativa([1.0, 0.0, 0.0, 0.0], [53, 3, 3, 3]);
+ok('y con 1,0 mm/h justos, sí es sirimiri', lluviaQueNoVesTu({ prec: 0.0 })?.sirimiri === true);
+/* Y LA PALABRA DE LA HORA (`comoLlueve`): AROME a 0,0 con el código de
+   llovizna PRESTADO de ECMWF solo es «Sirimiri» si ECMWF da ≤ 1 mm/h a esa
+   hora; con 1,5 es lluvia de ECMWF y va en su chip (03-10-2026, §67 8). */
+{
+  const hP = { prec: 0.0, code: 53, codigoAjeno: true, cieloDe: 'ECMWF', sitio: S.place,
+               date: new Date(new Date().setMinutes(0, 0, 0)) };
+  const T = { rainWarn: 0.2, rainNo: 2 };
+  S.comparativa = comparativa([1.5, 0.0, 0.0, 0.0], [53, 3, 3, 3]);
+  ok('código de llovizna prestado de ECMWF con 1,5 mm/h y AROME a 0,0: la hora no dice «Sirimiri»', comoLlueve(hP, T).k === 'no', JSON.stringify(comoLlueve(hP, T)));
+  S.comparativa = comparativa([0.6, 0.0, 0.0, 0.0], [53, 3, 3, 3]);
+  ok('y con 0,6 mm/h de ECMWF, sí: es sirimiri', comoLlueve(hP, T).k === 'sirimiri');
+  S.comparativa = null;
+  ok('y sin saber los milímetros de ECMWF, se queda en sirimiri (como lluviaDeUnSitio)', comoLlueve(hP, T).k === 'sirimiri');
+}
 globalThis.duenoLluvia = duenoReal;   // el mundo vuelve a su dueño real
 
 /* Sin comparativa cargada no se inventa nada. */
@@ -8397,7 +8424,7 @@ grupo('El cielo en el mano a mano modelos-estación (31-08-2026, 18:26)');
      comparaba racha, viento, lluvia, temperatura y humedad, y el cielo
      no estaba. */
   ok('la fila Cielo existe, con el código visto y el % de nubes',
-     /fila\('Cielo',/.test(src) && /esc\(cieloVisto\(H\)\.txt \?\? '—'\)/.test(src));
+     /fila\('Cielo',/.test(src) && /const V = cieloVisto\(H\);[\s\S]{0,80}esc\(V\.txt \?\? '—'\)/.test(src));
   ok('y la estación dice la verdad: ningún aparato suyo mide la nube',
      /fila\('Cielo',[\s\S]{0,700}ningún aparato lo mide/.test(src),
      'una celda vacía sin porqué se lee como fallo de la estación');
