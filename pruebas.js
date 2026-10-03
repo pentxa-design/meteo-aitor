@@ -1089,11 +1089,13 @@ grupo('El número y la palabra de las nubes, cuando no cuadran (25-09-2026)');
      más abajo, así que aquí hay que traerlos antes de usarlos. */
   eval(sacarConst('WMO'));
   eval(sacarConst('wmoText'));
-  const fuente = sacar('function nubesPie(');
+  const fuente = sacar('function nubesPie(') + '\n' + sacar('function firmaDelCielo(');
   const hacer = (code, txt) => new Function(
-    'cieloVisto', 'VELADO', 'has', 'codigoVotado', 'tapado', 'textoVisto',
+    'cieloVisto', 'VELADO', 'has', 'codigoVotado', 'tapado', 'textoVisto', 'HAY_AGUA', 'isStormCode', 'ReglasTiempo', 'mmDelQuePresta', 'nombreDeModelo', 'duenoLluvia', 'mmTxt',
     fuente + '; return nubesPie;'
-  )(() => ({ code, dia: 1, txt }), VELADO, has, codigoVotado, tapado, textoVisto);
+  )(() => ({ code, dia: 1, txt }), VELADO, has, codigoVotado, tapado, textoVisto, 51, c => c === 95 || c === 96 || c === 99,
+    globalThis.ReglasTiempo, h => h.mmPresta ?? null, om => (om === 'meteofrance_arome_france_hd' ? 'AROME HD' : om), () => 'meteofrance_arome_france_hd',
+    v => (v === null || v === undefined ? '—' : v.toFixed(1).replace('.', ',')));
   let nubesPie;
   const con = (code, txt) => { nubesPie = hacer(code, txt); };
 
@@ -1148,6 +1150,20 @@ grupo('El número y la palabra de las nubes, cuando no cuadran (25-09-2026)');
        votado({ cloud: 40, votado: true, cieloDe: 'ICON' }) === 'nubes · Parcialmente nuboso · lo votan los 5');
     ok('y si no se sabe de quién es, no se inventa',
        votado({ cloud: 40 }) === 'nubes · Parcialmente nuboso');
+    /* 04-10-2026: en una hora de AGUA la palabra sale de los mm del dueño, y la
+       firma también. «Lluvia fuerte · lo dice ECMWF» con 16,1 mm/h de AROME HD. */
+    const agua = hacer(65, 'Lluvia fuerte');
+    ok('BI BERMEO 22:00, 16,1 mm/h de AROME HD con el código de ECMWF: la firma es «16,1 mm/h de AROME HD», no «lo dice ECMWF»',
+       agua({ prec: 16.1, code: 55, codigoAjeno: true, cieloDe: 'ECMWF', mmPresta: 1.2 }) === 'nubes · Lluvia fuerte · 16,1 mm/h de AROME HD',
+       agua({ prec: 16.1, code: 55, codigoAjeno: true, cieloDe: 'ECMWF', mmPresta: 1.2 }));
+    ok('   ni «lo votan los 5»: el agua no se vota',
+       agua({ prec: 16.1, code: 55, codigoAjeno: true, cieloDe: 'ECMWF', votado: true, mmPresta: 1.2 }) === 'nubes · Lluvia fuerte · 16,1 mm/h de AROME HD');
+    const siri = hacer(53, 'Llovizna moderada');
+    ok('   y el sirimiri prestado dice quién ve la llovizna',
+       siri({ prec: 0, code: 53, codigoAjeno: true, cieloDe: 'ECMWF', mmPresta: 0.7 }) === 'nubes · Llovizna moderada · la llovizna la ve ECMWF',
+       siri({ prec: 0, code: 53, codigoAjeno: true, cieloDe: 'ECMWF', mmPresta: 0.7 }));
+    ok('   y la fila «Cielo» de Mis estaciones firma por la misma función (una sola copia)',
+       (src.match(/firmaDelCielo\(H, V\)/g) || []).length === 2 && !/H\.votado \? ' <small>lo votan los 5/.test(src));
   }
   ok('la hora apunta si el cielo salió de la votación o de un modelo',
      /if \(h\.t\) h\.votado = !!cieloVotado\(h\.t, h\.sitio\);/.test(src),
@@ -1921,6 +1937,25 @@ grupo('Centro Operativo y agenda: un fallo al releer AEMET no borra el veto que 
   ok('Durango con 55 descargas: si AEMET falla al releer, el veto SIGUE y se dice que no se ha podido volver a leer',
      sal.a === true && sal.b === true && /Han caído rayos encima/.test(sal.t) && /No he podido volver a leer AEMET/.test(sal.t), JSON.stringify(sal));
 }
+
+grupo('aguaPrestada() va con la regla única: el sirimiri prestado con ≤ 1 mm se dibuja y no es «agua prestada» (04-10-2026)');
+{
+  const ap = new Function('has', 'HAY_AGUA', 'isStormCode', 'ReglasTiempo', 'mmDelQuePresta', sacar('function aguaPrestada(') + '\nreturn aguaPrestada;')(
+    globalThis.has, 51, c => c === 95 || c === 96 || c === 99, globalThis.ReglasTiempo, h => h.mmPresta ?? null);
+  ok('ECMWF llovizna (55) con 1,1 mm y AROME 0,0: NO se dibuja, así que sí es agua prestada (sale el chip «ECMWF ve llovizna · 1,1 mm»)',
+     ap({ codigoAjeno: true, code: 55, prec: 0, mmPresta: 1.1 }) === 55);
+  ok('ECMWF llovizna (53) con 0,7 mm y AROME 0,0: es sirimiri, se dibuja, y NO es agua prestada (antes salía el chip con el icono seco)',
+     ap({ codigoAjeno: true, code: 53, prec: 0, mmPresta: 0.7 }) === null);
+  ok('ECMWF lluvia (61) con AROME 0,0: no se dibuja → agua prestada; con AROME 0,5 sí se dibuja → nada',
+     ap({ codigoAjeno: true, code: 61, prec: 0, mmPresta: 2 }) === 61 && ap({ codigoAjeno: true, code: 61, prec: 0.5, mmPresta: 2 }) === null);
+  ok('el código propio nunca es «prestado»', ap({ codigoAjeno: false, code: 61, prec: 0 }) === null);
+}
+
+grupo('La casilla Lluvia de Ahora: «Llueve bien» solo acompañado, como el parte (04-10-2026)');
+ok('con el dueño en ≥ 2 mm/h y ningún otro por encima de 1 mm/h, la casilla dice «Puede llover bien» en ámbar',
+   /if \(L\.k === 'bien'\) \{\n\s*const hc = horaEnComparativa\(c\);/.test(src)
+   && /L\.et = 'Puede llover bien'; L\.solo = true;/.test(src)
+   && /L\.k === 'bien' && !L\.solo \? 'no' :/.test(src));
 
 grupo('«Próxima lluvia» con la lluvia cayendo dice que ya llueve (03-10-2026, Bermeo 13,6 mm/h)');
 ok('la búsqueda empieza en la hora EN CURSO y, si llueve ya, dice «está lloviendo» y no la hora siguiente',

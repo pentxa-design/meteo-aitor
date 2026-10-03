@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.04-0115';
+const BUILD = '2026.10.04-0120';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -1310,10 +1310,15 @@ const esLlovizna = ReglasTiempo.esLlovizna;
    de agua prestado, o null si no es el caso. */
 function aguaPrestada(h) {
   if (!h?.codigoAjeno) return null;
-  const mm = h.prec;
-  if (!has(mm) || mm > 0) return null;
   const c = has(h.codeLluvia) ? h.codeLluvia : h.code;
-  return has(c) && c >= HAY_AGUA ? c : null;
+  if (!has(c) || c < HAY_AGUA || isStormCode(c)) return null;
+  /* Con la regla única (04-10-2026): era una tercera copia sin el corte de
+     1 mm/h, y el chip decía «ECMWF ve llovizna · 1,1 mm» con el icono seco.
+     El código prestado que SÍ se dibuja (sirimiri con ≤ 1 mm del que presta,
+     o agua del dueño) no es «agua prestada»: solo el que se queda fuera. */
+  const r = ReglasTiempo.codigoConAgua({ mm: h.prec, codigoPropio: h.codeLluvia, codigo: h.code,
+    codigoAjeno: true, mmDelQuePresta: () => mmDelQuePresta(h) });
+  return r.agua ? null : c;
 }
 
 /* ── CUÁNTA AGUA VE EL OTRO (15-09-2026, 23:53, portátil) ───────────
@@ -5142,7 +5147,17 @@ function renderTower() {
   /* El número solo no basta: 0,0 mm con sirimiri se lee «no llueve» y
      moja. Va la palabra delante y los milímetros detrás. */
   const kLluvia = (() => {
-      const L = comoLlueve(c);
+      const L = { ...comoLlueve(c) };
+      /* «LLUEVE BIEN» SOLO ACOMPAÑADO, TAMBIÉN AQUÍ (04-10-2026): la regla del
+         acuerdo vivía solo en la ventana del parte; esta casilla decía «Llueve
+         bien» con AROME 2,2 y los demás ≤ 0,5 mientras el parte decía «Puede
+         llover bien». Sin comparativa no se afirma ni se niega: se deja. */
+      if (L.k === 'bien') {
+        const hc = horaEnComparativa(c);
+        if (hc && !ReglasTiempo.otrosDelAgua(duenoLluvia()).some(m => (hc.C[`precipitation_${m.om}`]?.[hc.i] ?? 0) > AGUA_ACUERDO)) {
+          L.et = 'Puede llover bien'; L.solo = true;
+        }
+      }
       const otro = lluviaQueNoVesTu(c);
       const base = [L.k === 'sirimiri' ? 'No marca en el pluviómetro, pero moja'
                       : (cieloVisto(c).txt ?? '') + avisoCielo(c.cloud, { corto: true }),
@@ -5163,7 +5178,7 @@ function renderTower() {
       return kpi('Lluvia',
         `${L.et}${has(c.prec) ? `<i>${mmTxt(c.prec)} mm/h</i>` : ''}`,
         [base, aviso].filter(Boolean).join('<br>'),
-        L.k === 'bien' ? 'no' : (L.k === 'sirimiri' || L.k === 'poco') ? 'warn'
+        L.k === 'bien' && !L.solo ? 'no' : (L.k === 'sirimiri' || L.k === 'poco' || L.solo) ? 'warn'
         : L.k === 'nd' ? 'nd' : otro ? 'warn' : 'go');
     })();
   /* ── Y ARRIBA DE LAS CASILLAS, LO QUE VIENE HOY (26-09-2026) ──────
@@ -9569,7 +9584,7 @@ function renderParte() {
              (has(H?.code) || has(H?.cloud))
                ? (() => { const V = cieloVisto(H);
                    return `<b>${esc(V.txt ?? '—')}</b>${has(H?.cloud) ? ` · ${Math.round(H.cloud)} %` : ''}`
-                     + (H.votado ? ' <small>lo votan los 5</small>' : H.cieloDe ? ` <small>lo dice ${esc(H.cieloDe)}</small>` : ''); })()
+                     + (firmaDelCielo(H, V) ? ` <small>${esc(firmaDelCielo(H, V))}</small>` : ''); })()
                : '',
              M ? '<span class="pt__tab__no">ningún aparato lo mide</span>' : '')
       + fila('Temperatura',
@@ -17867,6 +17882,24 @@ function avisoCielo(nubes, { corto = false } = {}) {
 
    Y solo con cielo seco: si el código que se ve es de agua, no hay
    escala de nubes con la que comparar. */
+/* LA FIRMA DEL CIELO, EN UN SOLO SITIO (04-10-2026). Estaba escrita dos
+   veces (aquí y en la fila «Cielo» de Mis estaciones) y las dos firmaban con
+   `votado`/`cieloDe` sin mirar que, en una hora de AGUA, la palabra sale de
+   los milímetros del dueño: «Lluvia fuerte · lo dice ECMWF» con 16,1 mm/h de
+   AROME HD y ECMWF dando llovizna de 1,2. */
+function firmaDelCielo(h, V = cieloVisto(h)) {
+  if (!h) return '';
+  if (has(V.code) && V.code >= HAY_AGUA && !isStormCode(V.code)) {
+    const r = ReglasTiempo.codigoConAgua({ mm: h.prec, codigoPropio: h.codeLluvia, codigo: h.code,
+      codigoAjeno: h.codigoAjeno, mmDelQuePresta: () => mmDelQuePresta(h) });
+    if (r.k === 'sirimiri') return `la llovizna la ve ${h.codigoAjeno && h.cieloDe ? h.cieloDe : nombreDeModelo(duenoLluvia())}`;
+    if (r.k === 'poco' || r.k === 'bien') return `${mmTxt(h.prec)} mm/h de ${nombreDeModelo(duenoLluvia())}`;
+  }
+  if (h.votado) return 'lo votan los 5';
+  if (h.cieloDe) return `lo dice ${h.cieloDe}`;
+  return '';
+}
+
 function nubesPie(h) {
   const V = cieloVisto(h);
   if (!V.txt) return 'nubes';
@@ -17894,8 +17927,8 @@ function nubesPie(h) {
 
      Cuando la tarjeta SÍ ha podido votar (es el sitio abierto), esto no
      sale: `votado` lo dice. */
-  if (h?.votado) s += ' · lo votan los 5';
-  else if (h?.cieloDe) s += ` · lo dice ${h.cieloDe}`;
+  const firma = firmaDelCielo(h, V);
+  if (firma) s += ' · ' + firma;
   const seco = c => c === VELADO || (has(c) && c >= 0 && c <= 3);
   if (has(h?.cloud) && seco(V.code)) {
     const delTotal = codigoVotado({ bm: h.cloud, alta: null });
