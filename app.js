@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.04-0128';
+const BUILD = '2026.10.04-0135';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -5529,7 +5529,8 @@ function renderTimeline(hrs) {
         + (end + 1 < hrs.length && enDuda(hrs[end + 1])
             ? ', que es cuando los modelos dejan de coincidir' : '')
       : mismoDia
-        ? `próximo tramo sin nada: ${nombreDia(a)} de ${f(a)} a ${f(b)}`
+        ? (start === end ? `próximo tramo sin nada: ${nombreDia(a)} a las ${f(a)}, una sola hora`   // «de 20:00 a 20:00» (04-10-2026)
+                         : `próximo tramo sin nada: ${nombreDia(a)} de ${f(a)} a ${f(b)}`)
         : `próximo tramo sin nada: ${conDe(a)} a las ${f(a)} `
           + `hasta ${nombreDia(b)} a las ${f(b)}`;
   }
@@ -15638,7 +15639,7 @@ function renderDays() {
        «💧 100 % ECMWF · 72,0 mm» se leía con los 72 mm de ECMWF, y eran de
        AROME HD (el del día, que por ser el del día no llevaba nombre). */
     const deMm = de('precipitation_sum')
-      || (de('precipitation_probability_max') && modeloDia ? ` <small class="dcard__de">${esc(nombreDeModelo(modeloDia))}</small>` : '');
+      || (de('precipitation_probability_max') ? ` <small class="dcard__de">${esc(modeloDia ? nombreDeModelo(modeloDia) : modeloDato().name)}</small>` : '');
     const ry = rayoDelDia(t);
     const tormenta = !!ry;
     /* ── EL COLOR SALE DE LAS TRES COSAS, NO SOLO DE LA RACHA ─────────

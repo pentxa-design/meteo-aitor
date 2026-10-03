@@ -2102,6 +2102,9 @@ globalThis.horasLluviaEnDuda = () => ({ mapa:new Map(), sabido:true });
 renderTimeline(tTL.map(d => hora(d, 'go')));
 const h4 = pintado['#windowHint'] || '';
 ok('sin lluvia de otro, la misma ventana llega a las 17:00', /hasta las 17:00/.test(h4), h4);
+renderTimeline([hora(HH(0,14),'no'), hora(HH(0,15),'go'), hora(HH(0,16),'no')]);
+ok('una sola hora libre se dice «a las 15:00, una sola hora», no «de 15:00 a 15:00» (04-10-2026)',
+   /a las 15:00, una sola hora/.test(pintado['#windowHint'] || '') && !/de 15:00 a 15:00/.test(pintado['#windowHint'] || ''), pintado['#windowHint']);
 ok('la línea de la ventana no dice «apta» (describe, no autoriza: orden suya del 28-08)',
    ![h1, h2, h3, h4].some(x => /apta/i.test(x)), [h1, h2, h3, h4].join(' | '));
 S.saved = [];
@@ -10985,6 +10988,7 @@ grupo('La tarjeta de 10 días dice de quién es cada cifra que no es del modelo 
   ok('y la tarjeta lo pinta: el modelo del día bajo la fecha y el de cada cifra al lado (75 % ECMWF · 0,0 mm)',
      /class="dcard__m"/.test(src) && /class="dcard__de"/.test(src)
      && /\$\{de\('precipitation_probability_max'\)\}/.test(src) && /const deMm = de\('precipitation_sum'\)\s*\|\|/.test(src) && /\$\{deMm\}/.test(src) && /\$\{de\('wind_gusts_10m_max'\)\}/.test(src)
+     && /modeloDia \? nombreDeModelo\(modeloDia\) : modeloDato\(\)\.name/.test(src)   // «💧 100% ECMWF · 6,8 mm» con los mm sin firmar (04-10-2026)
      && /\.dcard__m\{/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8')),
      'sin esto el 75 % de ECMWF y los 0,0 mm de AROME iban en el mismo renglón como si fueran del mismo');
   const A = { con: [{ om: 'ecmwf_ifs025', nom: 'ECMWF', v: 1.6 }, { om: 'icon_seamless', nom: 'ICON', v: 0 }, { om: 'gfs_seamless', nom: 'GFS', v: 0.4 }] };
