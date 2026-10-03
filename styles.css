@@ -2769,7 +2769,14 @@ body.sin-scroll{overflow:hidden}
 
 /* El veredicto de trabajo se apaga en sitios que no son suyos: ahí sus
    listones no pintan nada y solo hacen ruido (01-09-2026). */
-#verdict[data-ajeno="si"]{display:none}
+/* En un sitio que no es suyo se esconde el VEREDICTO (sus listones son para
+   sus emplazamientos), pero NO el rayo medido: es algo que ha pasado en ese
+   punto, no un listón suyo (03-10-2026: «BI OIZ» buscado por nombre, 19
+   descargas a 4,3 km y ni una palabra de rayo). */
+#verdict[data-ajeno="si"] .verdict__badge, #verdict[data-ajeno="si"] #vTitle, #verdict[data-ajeno="si"] #vWhy,
+#verdict[data-ajeno="si"] #vCuando, #verdict[data-ajeno="si"] #vSalir, #verdict[data-ajeno="si"] #vAcceso,
+#verdict[data-ajeno="si"] #vModelos, #verdict[data-ajeno="si"] .verdict__r{display:none !important}
+#verdict[data-ajeno="si"]:not(:has(#vRayos:not([hidden]))):not(:has(#vRayosSat:not([hidden]))){display:none}
 #vAjeno{margin:.4rem 0 .8rem;opacity:.85}
 
 /* El aviso de «no he podido cargar tu catálogo de emplazamientos». No es

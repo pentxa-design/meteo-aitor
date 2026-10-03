@@ -112,6 +112,7 @@ eval(sacarConst('VISTO_MIN'));
 
 /* El orden de sus torres lo usan varias pruebas: se saca una sola vez. */
 eval(sacar('function kmEntre(a, b) {'));
+eval(sacar('function esSuyo('));   // ¿uno de sus sitios? por cercanía (03-10-2026)
 eval(sacarConst('BERMEO'));
 eval(sacar('function deCasaAFuera(a, b) {'));
 eval(sacar('function edadMedida(min) {'));
@@ -1975,9 +1976,14 @@ grupo('El rayo MEDIDO veta las horas, no solo la caja de arriba (03-10-2026, 22:
   ok('y cuando deja de vetar, la hora vuelve a lo que era (se deshace solo, sin dejar el motivo)',
      hv[0].st === 'warn' && !hv[0].reasons.some(r => r.rayoMedido) && hv[0].reasons.length === 1, JSON.stringify(hv[0]));
   ok('buildHours veta sus horas al calcularlas, y al llegar los rayos se vetan la ficha y Mis estaciones',
-     /return vetarPorRayo\(out, place \?\? S\.place\);/.test(src)
+     /return evaluarHoras\(out, place \?\? S\.place\);/.test(src) && /return vetarPorRayo\(hrs, place\);/.test(src)
      && /if \(S\.data\?\.hours\) \{ vetarPorRayo\(S\.data\.hours, S\.place\);/.test(src)
      && /for \(const t of S\.torres\) vetarPorRayo\(t\.horas, t\.place\);/.test(src));
+  /* UN SOLO CAMINO para evaluar horas: nadie más llama a assess() por su cuenta
+     (el de «10 días → Hoy» lo hacía y se quedaba sin el veto del rayo). */
+  const caminos = (src.match(/Object\.assign\(h, assess\(/g) || []).length;
+  ok('las horas se evalúan por UN solo camino (evaluarHoras), que lleva el veto del rayo medido',
+     caminos === 1 && /function evaluarHoras\(hrs, place\) \{\n  for \(const h of hrs\) Object\.assign\(h, assess\(/.test(src), `caminos: ${caminos}`);
   S.place = S0.place; S.rayos = S0.rayos; S.rayosTorres = S0.rayosTorres;
   /* El paso por sus estaciones, como mucho cada media hora (suyo: «así no
      andamos pillados»): lo de hace 20 min vale; lo de hace 31, se relee; y si
@@ -2920,6 +2926,12 @@ grupo('La tapa: lo que el adversario rompió sin que nada se pusiera rojo (27-09
     const propia = sinEt(avisoTormentaFranja([Hf({ cape: 800, cin: 0 })]));
     ok('y con la tapa propia en 0 y CAPE 800 sí: «Riesgo de tormenta … está abierta»',
        /Riesgo de tormenta/.test(propia) && /abierta/.test(propia), propia.trim());
+    /* BI MARKINA2, sábado 3 a las 23:00: 31 descargas a 1,5 km y la franja decía
+       «Sin riesgo eléctrico». Lo medido va delante y no se contradice. */
+    const vetada = sinEt(avisoTormentaFranja([Hf({ cape: 120, cin: 90,
+      reasons: [{ s: 'no', rayoMedido: true, txt: 'Han caído rayos encima: 31 descargas a menos de 15 km, la más cercana a 1,5 km, medidas por AEMET hasta las 22:00' }] })]));
+    ok('BI MARKINA2 23:00, 31 descargas a 1,5 km: la franja dice «Han caído rayos encima» y no «Sin riesgo eléctrico»',
+       /Han caído rayos encima: 31 descargas/.test(vetada) && !/Sin riesgo eléctrico/.test(vetada), vetada.trim());
     S.thr = thrAntes;
   } catch (e) { ok('la franja de tormenta se puede arrancar en el banco', false, String(e.message)); }
 
@@ -7531,14 +7543,24 @@ grupo('El veredicto de trabajo, solo en SUS sitios (01-09-2026)');
      sitio donde no va a subir a nada son ruido — y el ruido es lo que
      hace que un día no lea el aviso que sí importa. */
   ok('el veredicto se apaga cuando el sitio no es suyo',
-     /const suyo = !!\(S\.place && \(S\.saved \|\| \[\]\)\.some\(p => key\(p\) === key\(S\.place\)\)\);/.test(src)
+     /const suyo = esSuyo\(S\.place\);/.test(src)
      && /cajaV\.dataset\.ajeno = suyo \? '' : 'si';/.test(src));
+  /* Y «suyo» por CERCANÍA (03-10-2026): «BI OIZ» buscado por nombre cae a 150 m
+     de su BI OIZ guardado y se trataba como ajeno, con el rayo medido escondido. */
+  {
+    const S0 = S.saved;
+    S.saved = [{ name: 'BI OIZ', lat: 43.22805, lon: -2.5936 }, { name: 'BI BERMEO', lat: 43.4209, lon: -2.7215 }];
+    ok('«BI OIZ» buscado por nombre (a 150 m del guardado) ES suyo; Bermeo pueblo (a 0,9 km de BI BERMEO) no',
+       esSuyo({ lat: 43.2278, lon: -2.5921 }) === true && esSuyo({ lat: 43.4285, lon: -2.7213 }) === false
+       && esSuyo({ lat: 43.4209, lon: -2.7215 }) === true && esSuyo(null) === false);
+    S.saved = S0;
+  }
   ok('y se dice POR QUÉ, con cómo activarlo si va a trabajar allí',
      /Este sitio no es tuyo/.test(src) && /guárdalo con el <b>♥<\/b>/.test(src),
      'apagarlo sin explicarlo sería otro hueco callado');
   ok('el TIEMPO se sigue viendo entero: lo que se quita es el juicio, no el dato',
-     /#verdict\[data-ajeno="si"\]\{display:none\}/.test(
-       fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8')),
+     /#verdict\[data-ajeno="si"\] \.verdict__badge/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8'))
+     && /#verdict\[data-ajeno="si"\]:not\(:has\(#vRayos:not\(\[hidden\]\)\)\)/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8')),
      'solo se oculta la tarjeta del veredicto');
 }
 
@@ -7666,7 +7688,7 @@ grupo('CADA EMPLAZAMIENTO CON SUS DATOS, NO CON LOS DEL DE AL LADO (01-09)');
   /* Y que el parte evalúe cada fila con SU sitio. */
   ok('el parte construye las horas de cada emplazamiento con SU sitio',
      /buildHours\(fc, ALTURA_CASETA, p\)/.test(src)
-     && /assess\(h, S\.thr, S\.perfil, place \?\? S\.place\)/.test(src),
+     && /return evaluarHoras\(out, place \?\? S\.place\);/.test(src),
      'con veinte sitios, evaluar todos con el abierto es mandar con el color de otro');
   ok('y la comparativa lleva grabado de qué sitio es',
      /d\._sitio = key\(place\);/.test(src),
@@ -7972,7 +7994,7 @@ grupo('La altura de la nube, por el camino de verdad (01-09-2026)');
   }
   for (const f of ['function windAt', 'function nivelesDe', 'function gustAt',
                    'function techoDe', 'function alphaDe', 'function diaDeLaHora', 'function buildHours',
-                   'function loQueMideLaNube', 'function rayoMedidoVeta', 'function vetarPorRayo']) {
+                   'function loQueMideLaNube', 'function rayoMedidoVeta', 'function vetarPorRayo', 'function evaluarHoras']) {
     try { eval(sacar(f)); } catch { /* el que no exista, se ignora */ }
   }
 
@@ -9127,7 +9149,7 @@ grupo('Sin cobertura, cada torre se juzga con SUS datos (01-09-2026)');
   ok('y son las dos que hay: con cobertura y sin ella',
      ramas.length === 2, `encontradas ${ramas.length}`);
   ok('buildHours sigue cayendo en S.place solo como último recurso',
-     /assess\(h, S\.thr, S\.perfil, place \?\? S\.place\)/.test(src),
+     /return evaluarHoras\(out, place \?\? S\.place\);/.test(src),
      'ese respaldo vale para la pantalla de un solo sitio, no para la tabla de veinte');
 }
 
@@ -11174,7 +11196,7 @@ grupo('Tocar un día en «10 días» abre ese día entero, hora a hora (17-09-20
      && (A.match(/<div class="hcard" data-s="\$\{h\.st\}">/g) || []).length === 1);
   ok('al tocar una tarjeta de «10 días» se abre debajo el día entero con esas mismas tarjetas, y se cierra al volver a tocar',
      /function renderDiaDetalle\(desplazar = false\)/.test(A) && /S\.diaAbierto = S\.diaAbierto === li\.dataset\.dia \? null : li\.dataset\.dia;/.test(A)
-     && /const hs = dia && S\.data\?\.fc \? horasDelDia\(S\.data\.fc, dia\) : \[\];/.test(A) && /hs\.forEach\(h => Object\.assign\(h, assess\(h, S\.thr, S\.perfil, S\.place\)\)\);/.test(A)
+     && /const hs = dia && S\.data\?\.fc \? horasDelDia\(S\.data\.fc, dia\) : \[\];/.test(A) && /evaluarHoras\(hs, S\.place\);/.test(A)
      && /hs\.map\(tarjetaHora\)\.join\(''\)/.test(A)
      && /\}\)\.join\(''\);\n  renderDiaDetalle\(\);\n\}/.test(A));
 }

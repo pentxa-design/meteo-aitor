@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.03-2314';
+const BUILD = '2026.10.03-2321';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -4687,6 +4687,15 @@ function vetarPorRayo(hrs, place, ahora = Date.now()) {
   return hrs;
 }
 
+/* UN SOLO CAMINO PARA EVALUAR LAS HORAS (03-10-2026): sus listones y, encima,
+   el rayo medido. Había dos —el de las 48 h y el de «10 días → abrir un
+   día»— y el veto del rayo solo estaba en el primero: la misma hora de las
+   23:00 salía roja en Horas y ámbar al abrir «Hoy». */
+function evaluarHoras(hrs, place) {
+  for (const h of hrs) Object.assign(h, assess(h, S.thr, S.perfil, place));
+  return vetarPorRayo(hrs, place);
+}
+
 function buildHours(fc, height, place = null) {
   const H = fc.hourly, out = [];
   const extra = extrasDe(fc);
@@ -4698,8 +4707,7 @@ function buildHours(fc, height, place = null) {
     if (i === idx0) conAhora(h, fc.current);
     out.push(h);
   }
-  out.forEach(h => Object.assign(h, assess(h, S.thr, S.perfil, place ?? S.place)));
-  return vetarPorRayo(out, place ?? S.place);
+  return evaluarHoras(out, place ?? S.place);
 }
 
 /* Todas las horas de un día (AAAA-MM-DD) del sitio abierto, por el mismo
@@ -4746,6 +4754,15 @@ const VC = { go: 'var(--go)', warn: 'var(--warn)', no: 'var(--no)', nd: 'var(--f
    vistazo, pero sin decir qué hacer con ello. */
 const VT = { go: 'SIN NADA', warn: 'OJO', no: 'FUERTE', nd: 'SIN DATO' };
 
+/* ¿ES UNO DE SUS SITIOS? Por CERCANÍA, no por coordenadas idénticas
+   (03-10-2026): buscando «BI OIZ» sale la ficha del catálogo, a 150 m de su
+   BI OIZ guardado, y por no ser idénticas la app la trataba como ajena y le
+   escondía el veredicto — con 19 descargas a 4,3 km. 300 m es menos que la
+   celda más fina (AROME HD, 1,3 km): es el mismo sitio. */
+function esSuyo(p = S.place) {
+  return !!(p && (S.saved || []).some(q => key(q) === key(p) || (has(q?.lat) && kmEntre(q, p) <= 0.3)));
+}
+
 function renderTower() {
   const hrs = S.data.hours;
   if (!hrs?.length) return;
@@ -4767,7 +4784,7 @@ function renderTower() {
      activarlo si de verdad va a trabajar ahí. El TIEMPO se sigue viendo
      entero: temperatura, lluvia, viento, tormenta, mar, mapas. Lo que se
      quita es el juicio sobre si puede subir, no el dato. */
-  const suyo = !!(S.place && (S.saved || []).some(p => key(p) === key(S.place)));
+  const suyo = esSuyo(S.place);
   const cajaV = $('#verdict');
   if (cajaV) {
     cajaV.dataset.ajeno = suyo ? '' : 'si';
@@ -5427,7 +5444,7 @@ function renderTimeline(hrs) {
      El semáforo se calló en los demás; esta barra se quedó hablando: en
      Bilbao, que no es suyo, decía «próxima ventana apta: mañana domingo de
      03:00 a 05:00». No se deja en blanco: se dice por qué no está. */
-  const suyo = !!(S.place && (S.saved || []).some(p => key(p) === key(S.place)));
+  const suyo = esSuyo(S.place);
   if (!suyo) {
     $('#tl').innerHTML = '';
     $('#tlDetail').innerHTML = '';
@@ -12840,7 +12857,7 @@ function antesDeSalir() {
 function pintarAntesDeSalir() {
   const el = $('#vSalir');
   if (!el) return;
-  const suyo = !!(S.place && (S.saved || []).some(p => key(p) === key(S.place)));
+  const suyo = esSuyo(S.place);
   if (!suyo || !S.data?.hours?.length) { el.hidden = true; el.innerHTML = ''; return; }
 
   /* Lo que falte se pide, una vez y sin bloquear: cada carga repinta esto al llegar. */
@@ -12886,6 +12903,13 @@ function pintarRayosTorre() {
   if (!R) {
     el.hidden = false;
     el.innerHTML = `<p class="note">Mirando las descargas de AEMET de este emplazamiento…</p>`;
+    /* Y se piden aquí, en cualquier sitio (03-10-2026): antes solo los pedía
+       «antes de salir», que solo corre en sus sitios, y en uno ajeno esto se
+       quedaba en «Mirando…» para siempre. */
+    if (!pintarRayosTorre._pidiendo) {
+      pintarRayosTorre._pidiendo = true;
+      Promise.resolve().then(() => cargarRayosAemet()).catch(() => {}).finally(() => { pintarRayosTorre._pidiendo = false; });
+    }
     return;
   }
   if (R.error) {
@@ -15345,7 +15369,7 @@ function renderDiaDetalle(desplazar = false) {
      de «Horas»: probando el sábado, el detalle se cortaba a las 12:00 y
      el domingo salía vacío. Mismo semáforo (assess) que «Horas». */
   const hs = dia && S.data?.fc ? horasDelDia(S.data.fc, dia) : [];
-  hs.forEach(h => Object.assign(h, assess(h, S.thr, S.perfil, S.place)));
+  evaluarHoras(hs, S.place);
   if (!dia || !hs.length) { det.hidden = true; det.innerHTML = ''; return; }
   const nombre = hs[0].date.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
   det.innerHTML = `<div class="ddet__h"><span>${esc(nombre.charAt(0).toUpperCase() + nombre.slice(1))} · hora a hora</span>
@@ -15931,6 +15955,11 @@ function rangoDeHoras(hs) {
 
 function avisoTormentaFranja(horas) {
   if (!horas?.length) return '';
+  /* LO MEDIDO VA DELANTE (03-10-2026). Con 31 descargas a 1,5 km de BI
+     MARKINA2 esta línea decía «Sin riesgo eléctrico»: el veto estaba en la
+     hora (`vetarPorRayo`) y esta frase solo miraba el CAPE de los modelos. */
+  const rm = horas.flatMap(h => h?.reasons || []).find(r => r.rayoMedido);
+  const medido = rm ? `<br><span class="part__ray">⚡ ${esc(rm.txt)}</span>` : '';
 
   /* La LECTURA primero, el número después. Lo pidió él el 25-08-2026:
      «si no hay, pones sin riesgo o lo que sea; y si hay, valora». Lo de
@@ -16019,18 +16048,18 @@ function avisoTormentaFranja(horas) {
     for (const v of todos) if (v.por === 'codigo') codigos.set(v.quien, [...(codigos.get(v.quien) ?? []), v.h]);
     for (const [nom, hs] of codigos) partes.push(`${esc(nom)} da tormenta (su código de tormenta) ${rangoDeHoras(hs)}`);
     if (!todos.some(v => v.propio)) partes.push(`tu modelo: ${cifras}`);
-    return `<br><span class="part__ray">⚡ Riesgo de tormenta ${rangoDeHoras(conRayo.map(x => x.h))}`
+    return medido + `<br><span class="part__ray">⚡ Riesgo de tormenta ${rangoDeHoras(conRayo.map(x => x.h))}`
          + (todos.every(v => v.propio) ? '' : ` <small>(lo ${nombres.length > 1 ? 'ven' : 've'} ${esc(listar(nombres))})</small>`)
          + `</span><br><span class="part__ray--cif">${partes.join(' · ')}</span>`;
   }
-  if (!has(pico.cape)) return '';
+  if (!has(pico.cape)) return medido;
 
   // Cargado, pero sin chispa. Se DICE, no se calla: es distinto de «no
   // hay riesgo», y si el cielo cambia esto cambia con él.
   if (combinacion.length) {
     const peor = combinacion.reduce((a, b) => b.cape > a.cape ? b : a);
     const hh = String(peor.date.getHours()).padStart(2, '0');
-    return `<br><span class="part__ray--ojo">Ambiente cargado, sin nada que lo dispare ${rangoDeHoras(combinacion)}</span>`
+    return medido + `<br><span class="part__ray--ojo">Ambiente cargado, sin nada que lo dispare ${rangoDeHoras(combinacion)}</span>`
          + `<br><span class="part__ray--cif">CAPE ${peor.cape.toFixed(0)} y la tapa en `
          + `${peor.cin.toFixed(0)}${esc(firmaTapa(peor))}, pero ${peor.pop} % de probabilidad de lluvia</span>`;
   }
@@ -16063,7 +16092,8 @@ function avisoTormentaFranja(horas) {
     lectura = 'Riesgo eléctrico bajo';
   }
 
-  return `<br><span class="${clase}">${lectura}</span>`
+  if (rm && lectura === 'Sin riesgo eléctrico') return medido;   // no se contradice con lo que ha caído
+  return medido + `<br><span class="${clase}">${lectura}</span>`
        + `<br><span class="part__ray--cif">${cifras}</span>`;
 }
 
