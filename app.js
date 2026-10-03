@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.02-2216';
+const BUILD = '2026.10.03-1109';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -2246,7 +2246,7 @@ async function cargarMarcador() {
               <span class="marc__mn">${esc(m.modelo)}</span>
               <span class="marc__md">${dice}</span>
               <span class="marc__me">error medio ${txt(m.error)} en ${m.n} comparaciones${
-                m.cortas ? ` · <b>${m.cortas}</b> veces más de ${txt(G.corto ?? 10)} corto` : ''}${
+                m.cortas ? ` · <b>${m.cortas}</b> ${m.cortas === 1 ? 'vez' : 'veces'} más de ${txt(G.corto ?? 10)} corto` : ''}${
                 has(m.peor) && m.peor < 0 ? ` · lo peor: ${txt(-m.peor)} corto` : ''}</span>
             </div>`;
           }).join('')

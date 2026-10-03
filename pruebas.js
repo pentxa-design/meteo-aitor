@@ -5469,6 +5469,9 @@ ok('se dice de quién sale ese dato, no aparece a secas',
      && /cargarRayosAemet\(\{ forzar: true \}\)\.catch\(\(\) => \{\}\);\n    cargarRayosSatelite\(\{ forzar: true \}\)/.test(src));
 }
 
+ok('el marcador dice «1 vez» y «3 veces», no «1 veces» (repaso del 03-10-2026)',
+   /\$\{m\.cortas === 1 \? 'vez' : 'veces'\}/.test(src) && !/<\/b> veces más de/.test(src));
+
 /* ── LA FRANJA NO DICE «LLOVIZNA» ARRIBA Y «SECA» ABAJO (02-10-2026) ──
    Suyo, 22:10: «Cubierto · llovizna débil desde las 12:00» y debajo
    «AROME HD la ve seca · 0,0 mm». AROME HD manda en la lluvia y no publica
@@ -11588,7 +11591,7 @@ grupo('Sus pantallazos del 25-09 a las 07:13: seis fallos de pantalla');
   ok('la lista de anemómetros dice «de AEMET y Euskalmet», que es lo que lleva dentro',
      (() => { const ix = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8'); return /Anemómetros de AEMET y Euskalmet cerca de tu emplazamiento/.test(ix) && !/Anemómetros de AEMET cerca/.test(ix); })());
   ok('el marcador dice «N veces más de 10 km/h corto», no «N por debajo de 10 km/h»',
-     /\$\{m\.cortas\}<\/b> veces más de \$\{txt\(G\.corto \?\? 10\)\} corto/.test(src) && !/por debajo de \$\{txt\(G\.corto \?\? 10\)\}/.test(src));
+     /\$\{m\.cortas\}<\/b> \$\{m\.cortas === 1 \? 'vez' : 'veces'\} más de \$\{txt\(G\.corto \?\? 10\)\} corto/.test(src) && !/por debajo de \$\{txt\(G\.corto \?\? 10\)\}/.test(src));
 }
 
 grupo('El hilo de notas se mira cada minuto, no cada 20 s (27-09-2026, «adelante» a la duda 2)');
