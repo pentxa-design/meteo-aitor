@@ -735,12 +735,19 @@ async function unSitio(s, previo = null, reloj = null) {
      «puede», y «puede» no se manda al móvil: al móvil va lo MEDIDO por AEMET
      (descargas a menos de 15 km) y el CÓDIGO de tormenta de un modelo. La
      pareja se queda en la app, en ámbar, como riesgo. */
-  for (const d of Object.values(porDia)) {
+  for (const [dia, d] of Object.entries(porDia)) {
     for (const h of [...d.horas]) {
       const claro = !!d.porHora[h]?.codigo;
       if (!claro) { d.horas.delete(h); delete d.porHora[h]; }
     }
     delete d.modelosPareja;
+    /* Un día que se queda sin horas no es un día de rayo; y el CAPE y el
+       «quién» son los de las horas que quedan, no los de la pareja tirada. */
+    if (!d.horas.size) { delete porDia[dia]; continue; }
+    const restan = [...d.horas].map(h => d.porHora[h]);
+    d.cape = Math.max(0, ...restan.map(x => x.v || 0));
+    const q = restan.find(x => x.codigo);
+    if (q) d.quien = q.quien + ' (código de tormenta)';
   }
   const dias = {};
   for (const [dia, d] of Object.entries(porDia)) {
