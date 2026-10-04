@@ -163,6 +163,7 @@ eval(sacar('function comoLlueve('));
 /* Desde el 03-10-2026 `comoLlueve` mira los milímetros de quien presta el
    código (sirimiri solo con ≤ AGUA_ACUERDO). */
 eval(sacar('function mmDelQuePresta('));
+eval(sacar('function lloviznaAcompanada('));   // ¿otro modelo ve agua en esa hora? (04-10-2026)
 eval(sacarConst('CIELO_PRESTADO')); eval(sacarConst('AGUA_ACUERDO'));
 globalThis.PERFILES = { hierro: { et: 'x', vientoManda: false, rafagaAviso: 70, rafagaBestia: 90,
   lluviaManda: false, alturaImporta: false, sirimiriImporta: true } };
@@ -1091,11 +1092,11 @@ grupo('El número y la palabra de las nubes, cuando no cuadran (25-09-2026)');
   eval(sacarConst('wmoText'));
   const fuente = sacar('function nubesPie(') + '\n' + sacar('function firmaDelCielo(');
   const hacer = (code, txt) => new Function(
-    'cieloVisto', 'VELADO', 'has', 'codigoVotado', 'tapado', 'textoVisto', 'HAY_AGUA', 'isStormCode', 'ReglasTiempo', 'mmDelQuePresta', 'nombreDeModelo', 'duenoLluvia', 'mmTxt',
+    'cieloVisto', 'VELADO', 'has', 'codigoVotado', 'tapado', 'textoVisto', 'HAY_AGUA', 'isStormCode', 'ReglasTiempo', 'mmDelQuePresta', 'nombreDeModelo', 'duenoLluvia', 'mmTxt', 'lloviznaAcompanada',
     fuente + '; return nubesPie;'
   )(() => ({ code, dia: 1, txt }), VELADO, has, codigoVotado, tapado, textoVisto, 51, c => c === 95 || c === 96 || c === 99,
     globalThis.ReglasTiempo, h => h.mmPresta ?? null, om => (om === 'meteofrance_arome_france_hd' ? 'AROME HD' : om), () => 'meteofrance_arome_france_hd',
-    v => (v === null || v === undefined ? '—' : v.toFixed(1).replace('.', ',')));
+    v => (v === null || v === undefined ? '—' : v.toFixed(1).replace('.', ',')), h => h.acompanada ?? null);
   let nubesPie;
   const con = (code, txt) => { nubesPie = hacer(code, txt); };
 
@@ -1940,8 +1941,8 @@ grupo('Centro Operativo y agenda: un fallo al releer AEMET no borra el veto que 
 
 grupo('aguaPrestada() va con la regla única: el sirimiri prestado con ≤ 1 mm se dibuja y no es «agua prestada» (04-10-2026)');
 {
-  const ap = new Function('has', 'HAY_AGUA', 'isStormCode', 'ReglasTiempo', 'mmDelQuePresta', sacar('function aguaPrestada(') + '\nreturn aguaPrestada;')(
-    globalThis.has, 51, c => c === 95 || c === 96 || c === 99, globalThis.ReglasTiempo, h => h.mmPresta ?? null);
+  const ap = new Function('has', 'HAY_AGUA', 'isStormCode', 'ReglasTiempo', 'mmDelQuePresta', 'lloviznaAcompanada', sacar('function aguaPrestada(') + '\nreturn aguaPrestada;')(
+    globalThis.has, 51, c => c === 95 || c === 96 || c === 99, globalThis.ReglasTiempo, h => h.mmPresta ?? null, h => h.acompanada ?? null);
   ok('ECMWF llovizna (55) con 1,1 mm y AROME 0,0: NO se dibuja, así que sí es agua prestada (sale el chip «ECMWF ve llovizna · 1,1 mm»)',
      ap({ codigoAjeno: true, code: 55, prec: 0, mmPresta: 1.1 }) === 55);
   ok('ECMWF llovizna (53) con 0,7 mm y AROME 0,0: es sirimiri, se dibuja, y NO es agua prestada (antes salía el chip con el icono seco)',
@@ -1969,6 +1970,26 @@ grupo('«Próxima lluvia» con la lluvia cayendo dice que ya llueve (03-10-2026,
 ok('la búsqueda empieza en la hora EN CURSO y, si llueve ya, dice «está lloviendo» y no la hora siguiente',
    /const proxima = \(\(\) => \{\n    for \(let i = 0; i < Math\.min\(25, hrs\.length\); i\+\+\)/.test(src)
    && /if \(proxima === hrs\[0\]\)\n\s*return dt\('Próxima lluvia', `está lloviendo/.test(src));
+
+grupo('La llovizna PRESTADA solo cuenta acompañada (04-10-2026, Bermeo: nueve horas de gotas con sol y 0,0 mm)');
+{
+  const R = globalThis.ReglasTiempo;
+  /* Bermeo 15:00: ECMWF 25 km llovizna (51) con 0,2 mm, él solo; AROME 0,0; sol y 0,0 medidos. */
+  const sola = R.codigoConAgua({ mm: 0, codigo: 51, codigoAjeno: true, mmDelQuePresta: 0.2, acompanada: false });
+  ok('Bermeo 15:00: la llovizna de ECMWF 25 km él solo NO es sirimiri: cielo sin gotas', sola.agua === false && sola.cieloSeco === 3, JSON.stringify(sola));
+  const acomp = R.codigoConAgua({ mm: 0, codigo: 51, codigoAjeno: true, mmDelQuePresta: 0.2, acompanada: true });
+  ok('   y con otro modelo viendo agua a esa hora (ECMWF 9 km 0,2 a las 17) sí es sirimiri', acomp.agua === true && acomp.k === 'sirimiri');
+  const nose = R.codigoConAgua({ mm: 0, codigo: 51, codigoAjeno: true, mmDelQuePresta: 0.2, acompanada: null });
+  ok('   y sin comparativa (no se sabe) se deja como estaba: un hueco no decide', nose.agua === true && nose.k === 'sirimiri');
+  const H = { time: ['2026-10-04T15:00', '2026-10-04T17:00'],
+    precipitation_meteofrance_arome_france_hd: [0, 0], weather_code_ecmwf_ifs025: [51, 51], precipitation_ecmwf_ifs025: [0.2, 0.2],
+    precipitation_icon_seamless: [0, 0], precipitation_gfs_seamless: [0, 0], precipitation_ecmwf_ifs: [0, 0.2] };
+  const L = R.lluviaDeUnSitio(H, 'BERMEO', new Date('2026-10-04T15:00').getTime(), new Date('2026-10-04T17:00').getTime(), R.LISTON, R.DUENO_AGUA);
+  ok('   la ventana del parte igual: a las 15 no hay sirimiri (nadie acompaña) y a las 17 sí (ECMWF 9 km 0,2)',
+     L.llueve && L.nHoras === 1 && L.soloSirimiri && new Date(L.ini).getHours() === 17, JSON.stringify({ llueve: L.llueve, n: L.nHoras, ini: L.ini }));
+  ok('   y la app pasa «acompañada» en los cuatro sitios que leen el código prestado (comoLlueve, codigoQueSeVe, firmaDelCielo, aguaPrestada)',
+     (src.match(/acompanada: lloviznaAcompanada\(h\)/g) || []).length === 4 && /return i < 0 \? null : ReglasTiempo\.lloviznaAcompanadaEn\(C, i, duenoLluvia\(\)\);/.test(src));
+}
 
 grupo('Las reglas del tiempo viven en UN fichero, el mismo para las tres webs (03-10-2026, 22:15)');
 {
@@ -2561,8 +2582,10 @@ ok('y con 1,0 mm/h justos, sí es sirimiri', lluviaQueNoVesTu({ prec: 0.0 })?.si
   const T = { rainWarn: 0.2, rainNo: 2 };
   S.comparativa = comparativa([1.5, 0.0, 0.0, 0.0], [53, 3, 3, 3]);
   ok('código de llovizna prestado de ECMWF con 1,5 mm/h y AROME a 0,0: la hora no dice «Sirimiri»', comoLlueve(hP, T).k === 'no', JSON.stringify(comoLlueve(hP, T)));
+  S.comparativa = comparativa([0.6, 0.0, 0.1, 0.0], [53, 3, 3, 3]);
+  ok('y con 0,6 mm/h de ECMWF y otro modelo viendo agua (ICON 0,1), sí: es sirimiri', comoLlueve(hP, T).k === 'sirimiri');
   S.comparativa = comparativa([0.6, 0.0, 0.0, 0.0], [53, 3, 3, 3]);
-  ok('y con 0,6 mm/h de ECMWF, sí: es sirimiri', comoLlueve(hP, T).k === 'sirimiri');
+  ok('   pero ECMWF él solo, con todos los demás secos, NO (Bermeo 04-10: nueve horas de gotas con sol)', comoLlueve(hP, T).k === 'no', JSON.stringify(comoLlueve(hP, T)));
   S.comparativa = null;
   ok('y sin saber los milímetros de ECMWF, se queda en sirimiri (como lluviaDeUnSitio)', comoLlueve(hP, T).k === 'sirimiri');
 }
@@ -12127,7 +12150,7 @@ grupo('La lluvia es de su DUEÑO y lo de los demás va con su nombre (03-10-2026
       [AR]: [0, 0, 0, 0, 0, 0, 0, 0.3, 4.2, 1.5, 0.7, 0, 1.6],
       [EC]: [2.3, 2.3, 2.3, 0.3, 0.3, 0.3, 1.1, 1.1, 1.1, 0.4, 0.3, 0.2, 0.2],
       [GF]: [0, 0, 0, 1.2, 2.5, 2.7, 1.0, 0.4, 0.6, 1.0, 0, 0, 0],
-      [IC]: [0, 0, 0, 0, 0.1, 0.2, 0.9, 3.8, 1.4, 0, 0, 0, 0],
+      [IC]: [0, 0, 0, 0, 0.1, 0.2, 0.9, 3.8, 1.4, 0, 0, 0.1, 0],   // a las 02 ICON acompaña (0,1): el sirimiri prestado cuenta
     }, { [EC]: [61, 61, 61, 55, 55, 55, 55, 55, 55, 53, 51, 51, 51] });
     const fin = new Date(2026, 9, 3, 23, 59, 59, 999).getTime();
     const L = lluviaDeUnSitio(H, 'bermeo', T0, fin, THR, AR);

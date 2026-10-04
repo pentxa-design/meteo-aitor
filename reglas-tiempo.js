@@ -50,6 +50,13 @@ const ReglasTiempo = (() => {
   });
   const nombreDe = om => NOMBRES[om] || om;
 
+  /* ¿Algún modelo que no sea el dueño ni el que presta el código ve agua
+     (≥ 0,1 mm) en la hora i? Es lo que hace que una llovizna PRESTADA cuente. */
+  const AGUA_ACOMPANA = 0.1;
+  function lloviznaAcompanadaEn(H, i, duenoOm = DUENO_AGUA) {
+    return MODELOS_TORMENTA.some(m => m.om !== duenoOm && m.om !== CIELO_PRESTADO && (H[`precipitation_${m.om}`]?.[i] ?? 0) >= AGUA_ACOMPANA);
+  }
+
   /* ¿Esa hora de ese modelo moja? Con 0,05 mm o más, sí. Y con el CÓDIGO
      de llovizna (51-57) aunque no marque milímetros: es la regla del
      sirimiri (CLAUDE.md de weather-app, 25-08). */
@@ -85,7 +92,11 @@ const ReglasTiempo = (() => {
       if (esLlov(cPropio)) return nombre(own.om);
       if (own.om !== CIELO_PRESTADO) {
         const c = H[`weather_code_${CIELO_PRESTADO}`]?.[i], mm = serieDe(CIELO_PRESTADO)?.[i];
-        if (esLlov(c) && (!has(mm) || mm <= AGUA_ACUERDO)) return nombre(CIELO_PRESTADO);
+        /* SOLO ACOMPAÑADA (04-10-2026, Bermeo): ECMWF 25 km dio llovizna con
+           0,1-0,2 mm de 12 a 17, él solo —ICON, GFS y ECMWF 9 km secos—, y la
+           app pintó nube con gotas nueve horas con sol y 0,0 mm medidos. La
+           llovizna prestada cuenta si otro modelo ve algo de agua a esa hora. */
+        if (esLlov(c) && (!has(mm) || mm <= AGUA_ACUERDO) && lloviznaAcompanadaEn(H, i, own.om)) return nombre(CIELO_PRESTADO);
       }
       return null;
     };
@@ -233,16 +244,19 @@ const ReglasTiempo = (() => {
      del MISMO modelo que da los mm (si lo publica); `codigo`, el del cielo
      (prestado si `codigoAjeno`); `mmDelQuePresta`, los mm del que presta el
      código (número o función, para no buscarlo si no hace falta). */
-  function comoLlueve({ mm, codigoPropio, codigo, codigoAjeno, mmDelQuePresta } = {}, thr = LISTON) {
+  function comoLlueve({ mm, codigoPropio, codigo, codigoAjeno, mmDelQuePresta, acompanada = null } = {}, thr = LISTON) {
     if (!has(mm)) return { k: 'nd', et: 'sin dato' };
     if (mmRedonda(mm) >= mmRedonda(thr.rainNo))   return { k: 'bien', et: 'Llueve bien' };
     if (mmRedonda(mm) >= mmRedonda(thr.rainWarn)) return { k: 'poco', et: 'Llueve poco' };
     /* Por debajo del listón: sirimiri, o nada. Si el código de llovizna es
        PRESTADO, solo si el que lo presta da poca agua (≤ AGUA_ACUERDO). */
     if (esLlovizna(codigoPropio ?? codigo)) {
-      const mmP = !has(codigoPropio) && codigoAjeno
-        ? (typeof mmDelQuePresta === 'function' ? mmDelQuePresta() : mmDelQuePresta) : null;
-      if (!(has(mmP) && mmP > AGUA_ACUERDO)) return { k: 'sirimiri', et: 'Sirimiri' };
+      const prestada = !has(codigoPropio) && codigoAjeno;
+      const mmP = prestada ? (typeof mmDelQuePresta === 'function' ? mmDelQuePresta() : mmDelQuePresta) : null;
+      /* La prestada, solo acompañada (04-10-2026); `acompanada` null = no se
+         sabe (sin comparativa): se deja como estaba, que un hueco no decide. */
+      const sola = prestada && acompanada === false;
+      if (!(has(mmP) && mmP > AGUA_ACUERDO) && !sola) return { k: 'sirimiri', et: 'Sirimiri' };
     }
     if (mm > 0) return { k: 'poco', et: 'Cuatro gotas' };
     /* El código de lluvia del MISMO modelo con 0,0 por redondeo: moja algo. */
@@ -268,11 +282,11 @@ const ReglasTiempo = (() => {
   /* El código que se DIBUJA en una hora, si hay agua o tormenta. Si no la
      hay, `agua:false` y `cieloSeco` es el código del cielo sin gotas: el
      cielo seco lo decide cada web (la app lo vota entre modelos). */
-  function codigoConAgua({ mm, codigoPropio, codigo, codigoCielo = codigo, codigoAjeno, mmDelQuePresta } = {}, thr = LISTON) {
+  function codigoConAgua({ mm, codigoPropio, codigo, codigoCielo = codigo, codigoAjeno, mmDelQuePresta, acompanada = null } = {}, thr = LISTON) {
     const tormenta = [codigoPropio, codigoCielo].find(c => has(c) && c >= 95);
     if (has(tormenta)) return { agua: true, code: tormenta, k: 'tormenta' };
     if (has(mm)) {
-      const k = comoLlueve({ mm, codigoPropio, codigo, codigoAjeno, mmDelQuePresta }, thr).k;
+      const k = comoLlueve({ mm, codigoPropio, codigo, codigoAjeno, mmDelQuePresta, acompanada }, thr).k;
       if (k === 'sirimiri' || k === 'poco' || k === 'bien')
         return { agua: true, k, code: iconoDeAgua(k, [codigoPropio, codigoCielo].find(c => has(c) && c >= HAY_AGUA), mm, thr) };
       /* «Sin lluvia»: ni una gota en el dibujo; lo que vea otro modelo va en
@@ -733,7 +747,7 @@ const ReglasTiempo = (() => {
 
   return Object.freeze({
     has, LISTON, DUENO_AGUA, AGUA_ACUERDO, RELLENO_AGUA, CIELO_PRESTADO, ECMWF_9KM,
-    MODELOS_TORMENTA, NOMBRES, nombreDe, mojaEsaHora, lluviaDeUnSitio,
+    MODELOS_TORMENTA, NOMBRES, nombreDe, mojaEsaHora, lluviaDeUnSitio, lloviznaAcompanadaEn, AGUA_ACOMPANA,
     HAY_AGUA, AGUA_FUERTE, WMO, wmoText, esLlovizna, isStormCode, mmRedonda,
     palabraLluvia, palabraDeLaVentana, comoLlueve, iconoDeAgua, codigoConAgua, codigoDeVarias, tramosDeCodigos,
     RAYO_ENCIMA, RAYO_CERCA, RAYO_RADIO, RAYO_VIGENTE, kmEntre, loQueAunCuenta, lectorDeRayos,

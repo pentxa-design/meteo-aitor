@@ -1317,7 +1317,7 @@ function aguaPrestada(h) {
      El código prestado que SÍ se dibuja (sirimiri con ≤ 1 mm del que presta,
      o agua del dueño) no es «agua prestada»: solo el que se queda fuera. */
   const r = ReglasTiempo.codigoConAgua({ mm: h.prec, codigoPropio: h.codeLluvia, codigo: h.code,
-    codigoAjeno: true, mmDelQuePresta: () => mmDelQuePresta(h) });
+    codigoAjeno: true, mmDelQuePresta: () => mmDelQuePresta(h), acompanada: lloviznaAcompanada(h) });
   return r.agua ? null : c;
 }
 
@@ -1453,7 +1453,7 @@ function iconoDeAgua(k, c, mm, thr) { return ReglasTiempo.iconoDeAgua(k, c, mm, 
 function codigoQueSeVe(h, codigoDelCielo, thr = S.thr) {
   /* El agua y la tormenta, con la regla única de reglas-tiempo.js (03-10-2026). */
   const r = ReglasTiempo.codigoConAgua({ mm: h?.prec, codigoPropio: h?.codeLluvia, codigo: h?.code,
-    codigoCielo: codigoDelCielo, codigoAjeno: h?.codigoAjeno, mmDelQuePresta: () => mmDelQuePresta(h) }, thr);
+    codigoCielo: codigoDelCielo, codigoAjeno: h?.codigoAjeno, mmDelQuePresta: () => mmDelQuePresta(h), acompanada: lloviznaAcompanada(h) }, thr);
   if (r.agua) return r.code;
   codigoDelCielo = r.cieloSeco;
   /* La niebla tampoco se vota: es un dato de visibilidad, no de nubes. */
@@ -1480,6 +1480,16 @@ function palabraLluvia(mm, esSirimiri = false, thr = S.thr) { return ReglasTiemp
 
 /* Los milímetros del modelo que presta el código del cielo, a la hora de
    `h` y en la comparativa de SU sitio. null si no se sabe (03-10-2026). */
+/* ¿Otro modelo (que no sea el dueño ni el que presta) ve agua en esa hora?
+   null si no hay comparativa del sitio: un hueco no decide (04-10-2026). */
+function lloviznaAcompanada(h) {
+  const C = deEsteSitio(S.comparativa, h?.sitio)?.hourly;
+  if (!C?.time || !h?.date) return null;
+  const iso = new Date(h.date.getTime() - h.date.getTimezoneOffset() * 60000).toISOString().slice(0, 13);
+  const i = C.time.findIndex(t => t.slice(0, 13) === iso);
+  return i < 0 ? null : ReglasTiempo.lloviznaAcompanadaEn(C, i, duenoLluvia());
+}
+
 function mmDelQuePresta(h) {
   const C = deEsteSitio(S.comparativa, h?.sitio)?.hourly;
   if (!C?.time || !h?.date) return null;
@@ -1493,7 +1503,7 @@ function mmDelQuePresta(h) {
 function comoLlueve(h, thr = S.thr) {
   /* La regla, en reglas-tiempo.js (03-10-2026): la misma en las tres webs. */
   return ReglasTiempo.comoLlueve({ mm: h.prec, codigoPropio: h.codeLluvia, codigo: h.code,
-    codigoAjeno: h.codigoAjeno, mmDelQuePresta: () => mmDelQuePresta(h) }, thr);
+    codigoAjeno: h.codigoAjeno, mmDelQuePresta: () => mmDelQuePresta(h), acompanada: lloviznaAcompanada(h) }, thr);
 }
 
 /* ── ¿ESE CIELO LO VE ALGUIEN MÁS? ──────────────────────────────────
@@ -17908,7 +17918,7 @@ function firmaDelCielo(h, V = cieloVisto(h)) {
   if (!h) return '';
   if (has(V.code) && V.code >= HAY_AGUA && !isStormCode(V.code)) {
     const r = ReglasTiempo.codigoConAgua({ mm: h.prec, codigoPropio: h.codeLluvia, codigo: h.code,
-      codigoAjeno: h.codigoAjeno, mmDelQuePresta: () => mmDelQuePresta(h) });
+      codigoAjeno: h.codigoAjeno, mmDelQuePresta: () => mmDelQuePresta(h), acompanada: lloviznaAcompanada(h) });
     if (r.k === 'sirimiri') return `la llovizna la ve ${h.codigoAjeno && h.cieloDe ? h.cieloDe : nombreDeModelo(duenoLluvia())}`;
     if (r.k === 'poco' || r.k === 'bien') return `${mmTxt(h.prec)} mm/h de ${nombreDeModelo(duenoLluvia())}`;
   }
