@@ -185,7 +185,8 @@ function fetchDeMentira({ tormentaManana = false } = {}) {
         const h = { time: T.map(iso) };
         for (const om of modelos) for (const c of campos) h[`${c}_${om}`] = T.map(d => {
           const manana = d.getDate() !== hoy0.getDate(), hh = d.getHours();
-          const rayo = tormentaManana && k === 0 && om === 'icon_eu' && manana && hh <= 2;
+          /* Dos modelos (ICON y GFS): desde el 04-10-2026 la pareja de uno solo no avisa al móvil. */
+          const rayo = tormentaManana && k === 0 && (om === 'icon_eu' || om === 'gfs_seamless') && manana && hh <= 2;
           if (c === 'cape') return rayo ? 900 : 40;
           if (c === 'convective_inhibition') return rayo ? 10 : 120;
           if (c === 'precipitation') return 0;
