@@ -15354,17 +15354,26 @@ function renderHours() {
   const av = $('#avisoAlcance');
   if (av) av.innerHTML = avisoAlcanceModelo(S.data?.fc);
   drawGraph($('#graph'), hrs);
-  $('#hlist').innerHTML = hrs.slice(0, 48).map(tarjetaHora).join('');
+  /* LAS HORAS PASADAS DE HOY TAMBIÉN (04-10-2026). Suyo, a las 10:29: «me
+     gustaría que no esconda lo de todo el día: si quiero ver qué tiempo ha
+     hecho a las 7 am no tengo opción». La tira empezaba en la hora en curso;
+     ahora va desde las 00:00 de hoy, las pasadas atenuadas y marcadas, y la
+     tira se abre en la hora en curso para que no cambie lo que ve primero. */
+  const hoy = hrs[0]?.date ? `${hrs[0].date.getFullYear()}-${String(hrs[0].date.getMonth() + 1).padStart(2, '0')}-${String(hrs[0].date.getDate()).padStart(2, '0')}` : null;
+  const pasadas = hoy && S.data?.fc ? evaluarHoras(horasDelDia(S.data.fc, hoy).filter(h => h.date < hrs[0].date), S.place) : [];
+  $('#hlist').innerHTML = pasadas.map(h => tarjetaHora(h, true)).join('') + hrs.slice(0, 48).map(h => tarjetaHora(h)).join('');
+  const ahora = $('#hlist .hcard:not(.hcard--pasada)');
+  if (ahora && pasadas.length) requestAnimationFrame(() => { $('#hlist').scrollLeft = Math.max(0, ahora.offsetLeft - 8); });
   renderDiaDetalle();
 }
 
 /* ── LA TARJETA DE UNA HORA (17-09-2026): la misma para «Horas» y para
    el día entero que se abre desde «10 días». Una sola plantilla, para
    que las dos pantallas no discrepen nunca. */
-function tarjetaHora(h) {
+function tarjetaHora(h, pasada = false) {
   return `
-    <div class="hcard" data-s="${h.st}">
-      <div class="hcard__h">${String(h.date.getHours()).padStart(2,'0')}:00</div>
+    <div class="hcard${pasada ? ' hcard--pasada' : ''}" data-s="${h.st}">
+      <div class="hcard__h">${String(h.date.getHours()).padStart(2,'0')}:00${pasada ? ' <small>pasada</small>' : ''}</div>
       <div class="hcard__d">${h.date.toLocaleDateString('es',{weekday:'short'})}</div>
       <div class="hcard__i">${(v => icon(v.code, v.dia))(cieloVisto(h))}</div>${chipsOtrosHora(h, 'nubes')}
       <div class="hcard__t">${has(h.temp) ? `${h.temp.toFixed(0)}°` : '—'}</div>

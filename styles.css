@@ -2988,3 +2988,7 @@ body.sin-scroll{overflow:hidden}
    título es «la hora en curso», y sin esto las horas de mañana se leían
    como de hoy. */
 .tor__parte__d{font-size:.78rem;opacity:.8;margin:0 0 .35rem;letter-spacing:.02em}
+
+/* Las horas pasadas de hoy en la tira de Horas (04-10-2026): se ven, pero atenuadas. */
+.hcard--pasada{opacity:.55}
+.hcard--pasada .hcard__h small{font-size:.62em;font-weight:600;opacity:.8;margin-left:3px;text-transform:uppercase}

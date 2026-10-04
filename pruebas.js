@@ -1957,6 +1957,13 @@ ok('con el dueño en ≥ 2 mm/h y ningún otro por encima de 1 mm/h, la casilla 
    && /L\.et = 'Puede llover bien'; L\.solo = true;/.test(src)
    && /L\.k === 'bien' && !L\.solo \? 'no' :/.test(src));
 
+grupo('Horas enseña también las horas pasadas de hoy, atenuadas, y se abre en la hora en curso (04-10-2026)');
+ok('la tira va desde las 00:00 de hoy: las pasadas se evalúan por el mismo camino, van marcadas «pasada» y la tira se desplaza a la hora en curso',
+   /const pasadas = hoy && S\.data\?\.fc \? evaluarHoras\(horasDelDia\(S\.data\.fc, hoy\)\.filter\(h => h\.date < hrs\[0\]\.date\), S\.place\) : \[\];/.test(src)
+   && /pasadas\.map\(h => tarjetaHora\(h, true\)\)\.join\(''\) \+ hrs\.slice\(0, 48\)/.test(src)
+   && /hcard\$\{pasada \? ' hcard--pasada' : ''\}/.test(src) && /scrollLeft = Math\.max\(0, ahora\.offsetLeft - 8\)/.test(src)
+   && /\.hcard--pasada\{opacity:\.55\}/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8')));
+
 grupo('«Próxima lluvia» con la lluvia cayendo dice que ya llueve (03-10-2026, Bermeo 13,6 mm/h)');
 ok('la búsqueda empieza en la hora EN CURSO y, si llueve ya, dice «está lloviendo» y no la hora siguiente',
    /const proxima = \(\(\) => \{\n    for \(let i = 0; i < Math\.min\(25, hrs\.length\); i\+\+\)/.test(src)
@@ -11300,8 +11307,8 @@ grupo('Tocar un día en «10 días» abre ese día entero, hora a hora (17-09-20
   /* Suyo: «quieren saber el sábado qué día va a hacer entero, por horas; me lo piden los de casa, Apple lo tiene así». */
   const A = require('fs').readFileSync(require('path').join(__dirname, 'app.js'), 'utf8');
   ok('la tarjeta de la hora es UNA plantilla (tarjetaHora) y «Horas» la usa: las dos pantallas no pueden discrepar',
-     /function tarjetaHora\(h\)/.test(A) && /\$\('#hlist'\)\.innerHTML = hrs\.slice\(0, 48\)\.map\(tarjetaHora\)\.join\(''\);/.test(A)
-     && (A.match(/<div class="hcard" data-s="\$\{h\.st\}">/g) || []).length === 1);
+     /function tarjetaHora\(h, pasada = false\)/.test(A) && /pasadas\.map\(h => tarjetaHora\(h, true\)\)\.join\(''\) \+ hrs\.slice\(0, 48\)\.map\(h => tarjetaHora\(h\)\)\.join\(''\);/.test(A)
+     && (A.match(/<div class="hcard\$\{pasada \? ' hcard--pasada' : ''\}" data-s="\$\{h\.st\}">/g) || []).length === 1);
   ok('al tocar una tarjeta de «10 días» se abre debajo el día entero con esas mismas tarjetas, y se cierra al volver a tocar',
      /function renderDiaDetalle\(desplazar = false\)/.test(A) && /S\.diaAbierto = S\.diaAbierto === li\.dataset\.dia \? null : li\.dataset\.dia;/.test(A)
      && /const hs = dia && S\.data\?\.fc \? horasDelDia\(S\.data\.fc, dia\) : \[\];/.test(A) && /evaluarHoras\(hs, S\.place\);/.test(A)
