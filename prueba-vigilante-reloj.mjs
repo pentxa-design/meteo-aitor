@@ -29,6 +29,33 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import zlib from 'node:zlib';
+
+/* ── UN MAPA DE RAYOS DE MENTIRA, CON EL FORMATO DE AEMET (04-10-2026) ──
+   PNG en RGBA con fondo transparente y un punto rojo de 2×2 por descarga,
+   en Mercator dentro de `BOUNDS_RAYOS`, que es como lo dibuja AEMET. El
+   vigilante lo lee con lib/rayos-png.mjs y cuenta con la regla única. */
+const BOUNDS_RAYOS = { lon0: -4, lon1: -1.5, lat0: 42.5, lat1: 44 };
+function pngDeRayos(puntos, W = 800, H = 600) {
+  const B = BOUNDS_RAYOS, my = la => Math.log(Math.tan(Math.PI / 4 + la * Math.PI / 360));
+  const y0 = my(B.lat0), y1 = my(B.lat1);
+  const filas = Buffer.alloc((W * 4 + 1) * H);
+  for (const { lat, lon } of puntos) {
+    const x = Math.round((lon - B.lon0) / (B.lon1 - B.lon0) * W), y = Math.round((y1 - my(lat)) / (y1 - y0) * H);
+    for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+      const o = (y + dy) * (W * 4 + 1) + 1 + (x + dx) * 4;
+      filas[o] = 230; filas[o + 1] = 20; filas[o + 2] = 20; filas[o + 3] = 255;
+    }
+  }
+  const crc = b => { let c = ~0; for (const x of b) { c ^= x; for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1)); } return ~c >>> 0; };
+  const trozo = (t, d) => { const l = Buffer.alloc(4); l.writeUInt32BE(d.length); const td = Buffer.concat([Buffer.from(t), d]);
+    const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([l, td, c]); };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(W, 0); ihdr.writeUInt32BE(H, 4); ihdr[8] = 8; ihdr[9] = 6;
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), trozo('IHDR', ihdr),
+                        trozo('IDAT', zlib.deflateSync(filas)), trozo('IEND', Buffer.alloc(0))]);
+}
+/* Un punto a `km` al norte de (lat, lon). */
+const alNorte = (p, km) => ({ lat: p.lat + km / 111.32, lon: p.lon });
 
 const aqui = path.dirname(fileURLToPath(import.meta.url));
 const FUENTE = process.env.VIGILANTE_DIR || aqui;
@@ -64,6 +91,8 @@ for (const d of ['api', 'lib']) {
   }
 }
 fs.writeFileSync(path.join(tmp, 'lib', 'motor.mjs'), MOTOR);
+/* Las reglas únicas, que el vigilante carga por lib/reglas.mjs (04-10-2026). */
+fs.copyFileSync(path.join(FUENTE, 'reglas-tiempo.js'), path.join(tmp, 'reglas-tiempo.js'));
 
 const ESTADO = 'avisos/vigilante.json';
 const { localAUTC, resumen: resumenVerif, PUNTOS_CONTRASTE, ranking, duenoAprendido } = await import(pathToFileURL(path.join(tmp, 'lib', 'verificacion.mjs')).href);
@@ -131,6 +160,22 @@ function red(esc, fijo, llamadas) {
     const s = String(u); llamadas.push({ u: s, init });
     const q = new URL(s).searchParams;
     if (s.includes('/api/torres')) return R({ torres: SITIOS_ESC });
+    /* `esc.rayosMedidos: [{ k, km, hace }]`: una descarga a `km` del sitio k,
+       en el mapa que acabó hace `hace` minutos. `esc.rayosCaidos`: el
+       catálogo contesta 503. Sin nada, dos mapas vacíos (se lee igual). */
+    if (s.includes('/rayos')) {
+      if (esc.rayosCaidos) return R({ error: true, reason: 'caído a propósito' }, false, 503);
+      const f = q.get('f');
+      const rm = esc.rayosMedidos || [];
+      const haceMax = rm.length ? Math.min(...rm.map(x => x.hace ?? 20)) : 20;
+      const fin = new RealDate(fijo.getTime() - haceMax * 60000);
+      const marcos = [1, 0].map(i => ({ f: `m${i}.png`, desde: new RealDate(fin.getTime() - (i + 1) * 3600e3).toISOString(),
+                                        hasta: new RealDate(fin.getTime() - i * 3600e3).toISOString() }));
+      if (!f) return R({ fuente: 'AEMET (de mentira)', ambitos: { PB: { bounds: BOUNDS_RAYOS, marcos } } });
+      const puntos = f === 'm0.png' ? rm.map(x => alNorte(SITIOS_ESC[x.k], x.km)) : [];
+      const png = pngDeRayos(puntos);
+      return Promise.resolve({ ok: true, status: 200, arrayBuffer: () => Promise.resolve(png.buffer.slice(png.byteOffset, png.byteOffset + png.length)) });
+    }
     if (s.includes('/estaciones')) {
       if (esc.estacionesCaidas) return R({ error: 'caído a propósito' }, false, 503);
       const pts = (q.get('puntos') || '').split('|').filter(Boolean).map(x => x.split(',').map(Number));
@@ -390,19 +435,19 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
                             esc: { rayo: [{ k: 0, dia: 'man', horas: [0, 12, 13, 18, 19] }] } });
   ok('22:30 · del rayo de mañana solo se dice la madrugada («mañana 00h»), no el resto del día (su aviso de las 21:00)',
      !H2.reventó && H2.b.inminentes?.[0] === 'BERMEO mañana 00h', resumen(H2));
-  ok('   y sale como inminente diciendo que es MAÑANA y a qué hora, con su aviso de tormenta',
+  ok('   y sale como inminente diciendo que es MAÑANA y a qué hora, pero SIN aviso al móvil: el rayo de los modelos ya no va al móvil (04-10-2026, «estos sobran y al final enredan»)',
      /* A las 22:30 las tres horas siguientes llegan hasta la 01h: se dice
         hasta ahí, que es lo que cuenta ahora (deManana). */
      Array.isArray(H.b.inminentes) && H.b.inminentes[0] === 'BERMEO mañana 00h-01h'
-     && titulos(H.b).some(t => /Próximas 3 h|crítico/i.test(t)), resumen(H));
+     && !titulos(H.b).some(t => /⚡|Próximas 3 h|crítico/i.test(t)), resumen(H));
 }
 
 /* ── 14:00 · EL CÓDIGO DE TORMENTA CUENTA COMO RAYO ────────────────── */
 {
   const I = await pasada({ hora: '14:00', antes: tranquilo('14:00', 130),
                            esc: { codigo: [{ k: 0, dia: 'hoy', horas: [15, 16], om: 'ecmwf_ifs025' }] } });
-  ok('14:00 · «tormenta» (código 95) con CAPE 40 en un modelo cuenta como rayo, como en la app',
-     !I.reventó && (I.b.inminentes || []).includes('BERMEO 15h-16h') && titulos(I.b).some(t => /Próximas 3 h|crítico/i.test(t)), resumen(I));
+  ok('14:00 · «tormenta» (código 95) con CAPE 40 en un modelo cuenta como rayo en la app y en el parte, pero NO suena en el móvil (04-10-2026: los «⚡ Crítico» de las 15:06 por código de ECMWF 9 km e ICON, con nada en el radar)',
+     !I.reventó && (I.b.inminentes || []).includes('BERMEO 15h-16h') && !titulos(I.b).some(t => /⚡|Próximas 3 h|crítico/i.test(t)), resumen(I));
 }
 
 /* ── 14:00 · «NO HE PODIDO MIRAR» SOLO SI PUEDE CAMBIAR ALGO ──────── */
@@ -468,13 +513,12 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const N5 = await pasada({ hora: '22:00', antes: tranquilo('22:00', 130, {
                               sitios: { BERMEO: { [MAN]: { ini: 13, fin: 19, tramos: [{ ini: 13, fin: 19 }] } } }, aguaSitios: {}, rachaSitios: {} }),
                             esc: { rayo: [{ k: 0, dia: 'man', horas: Array.from({ length: 20 }, (_, i) => i) }] } });
-  const c5 = (N5.b.avisados || []).find(a => /Próximas 3 h|crítico/i.test(a.titulo))?.cuerpo || '';
-  ok('22:00 · del rayo de mañana solo se dice la madrugada que cae en las 3 h siguientes: «BERMEO: rayo mañana 00h-01h», nada de «13h-19h pasa a…» (su aviso de las 22:00)',
-     /BERMEO: riesgo de rayo mañana 00h-01h/.test(c5) && !/19h|pasa a/.test(c5), c5 || resumen(N5));
+  ok('22:00 · el rayo de mañana de los modelos no suena: ni «rayo mañana 00h-01h» ni «13h-19h pasa a…» (04-10-2026, al móvil solo lo medido)',
+     !N5.reventó && !titulos(N5.b).some(t => /⚡|Próximas 3 h|crítico|CAMBIO/i.test(t)), resumen(N5));
   const N4 = await pasada({ hora: '22:00', antes: conAguaGuardada('22:00', 130),
                            esc: { rayo: [{ k: 0, dia: 'man', horas: [0, 1, 2] }] } });
-  ok('22:00 · pero el rayo de madrugada (00-02 h) sí avisa, que es la noche de guardia',
-     !N4.reventó && titulos(N4.b).some(t => /Próximas 3 h|crítico/i.test(t)), resumen(N4));
+  ok('22:00 · y el de madrugada (00-02 h) tampoco: lo previsto va en la app; de noche lo que suena es lo MEDIDO',
+     !N4.reventó && !titulos(N4.b).some(t => /⚡|Próximas 3 h|crítico/i.test(t)), resumen(N4));
 }
 
 /* ── EL RUIDO DEL LUNES 28-09 A MEDIODÍA (su pantallazo de las 12:01) ──
@@ -501,9 +545,8 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      !R2.reventó && !titulos(R2.b).some(t => /CAMBIO|Próximas 3 h|crítico/i.test(t)), resumen(R2));
   const R3 = await pasada({ hora: '12:00', antes: conRayoGuardado('12:00', 40, 13, 16),
                             esc: { rayo: [{ k: 0, dia: 'hoy', horas: [13, 14, 15, 16] }, { k: 1, dia: 'hoy', horas: [14, 15] }] } });
-  const c3 = (R3.b.avisados || []).find(a => /Próximas 3 h|crítico/i.test(a.titulo))?.cuerpo || '';
-  ok('12:00 · y si entra un sitio NUEVO (ORDUNA) sí vuelve a sonar «Próximas 3 h», con los dos sitios, «riesgo de rayo» (modelo, no medida) y sus horas recortadas a las 3 h siguientes (hasta las 15h)',
-     !R3.reventó && /ORDUNA: riesgo de rayo 14h-15h/.test(c3) && /BERMEO: riesgo de rayo 13h-15h/.test(c3) && !/16h/.test(c3), c3 || resumen(R3));
+  ok('12:00 · y aunque entre un sitio NUEVO (ORDUNA) con rayo de modelo, no suena: el rayo previsto no va al móvil (04-10-2026)',
+     !R3.reventó && !titulos(R3.b).some(t => /⚡|Próximas 3 h|crítico/i.test(t)), resumen(R3));
 }
 
 /* ── «AGUA FUERTE AHORA» SIN AGUA FUERTE (30-09-2026, 13:34) ──────────
@@ -535,8 +578,8 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const A3 = await pasada({ hora: '12:00', antes: tranquilo('12:00', 130),
                             esc: { rayo: [{ k: 0, dia: 'hoy', horas: [13, 14] }], agua: [{ k: 1, dia: 'hoy', horas: [13], mm: 3 }] } });
   const a3 = (A3.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
-  ok('12:00 · si en el aviso hay rayo, el título lleva el ⚡ aunque también haya agua',
-     !A3.reventó && /^⚡ Próximas 3 h/.test(a3?.titulo || ''), a3?.titulo || resumen(A3));
+  ok('12:00 · con rayo de modelo y agua, el aviso es solo de agua: 🌧 y sin «riesgo de rayo» (el rayo previsto no va al móvil, 04-10-2026)',
+     !A3.reventó && /^🌧 Próximas 3 h/.test(a3?.titulo || '') && !/rayo/.test(a3?.cuerpo || ''), JSON.stringify(a3) || resumen(A3));
 }
 
 /* ── LA RACHA, CON SU HORA (30-09-2026) ─────────────────────────────
@@ -611,8 +654,8 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const L6c = await pasada({ hora: '14:00', antes: tranquilo('14:00', 200),
     esc: { codigo: [{ k: 0, dia: 'hoy', horas: [16], om: 'icon_eu' }] } });
   const l6c = (L6c.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
-  ok('   y el código de tormenta de UN modelo sigue avisando (no admite interpretación)',
-     !L6c.reventó && /riesgo de rayo/.test(l6c?.cuerpo || ''), l6c?.cuerpo || resumen(L6c));
+  ok('   ni el código de tormenta de un modelo: «estos sobran y al final enredan» (suyo, 04-10-2026, con los «⚡ Crítico» de las 15:06 y nada en el radar)',
+     !L6c.reventó && !l6c && !titulos(L6c.b).some(t => /⚡/.test(t)), l6c?.cuerpo || resumen(L6c));
   ok('y el agua sola avisa SIN vibrar (importante: false): la vibración larga es del rayo y la racha de 70',
      l2 && l2.importante === false && /^🌧/.test(l2.titulo), JSON.stringify(l2));
   /* PERO LA TROMBA VIBRA (03-10-2026): con 15 mm/h para arriba («llueve
@@ -624,15 +667,66 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   ok('10:00 · tromba de 18 mm/h de AROME HD con ICON de acuerdo: el aviso VIBRA (importante) y dice «lluvia fuerte»',
      !TR.reventó && tr?.importante === true && /AROME HD ve lluvia fuerte a las 11h \(18 mm\/h/.test(tr?.cuerpo || ''), JSON.stringify(tr) || resumen(TR));
   const L3 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200),
-                            esc: { agua: [{ k: 0, dia: 'hoy', horas: [11], mm: 3 }], rayo: [{ k: 1, dia: 'hoy', horas: [11] }] } });
-  const l3 = (L3.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
-  ok('con rayo en el mismo aviso SÍ es importante (vibra): es su veto',
-     l3 && l3.importante === true && /^⚡/.test(l3.titulo), JSON.stringify(l3));
+                            esc: { rayosMedidos: [{ k: 1, km: 4, hace: 20 }] } });
+  const l3 = (L3.b.avisados || []).find(a => /Rayo medido/.test(a.titulo));
+  ok('el rayo MEDIDO sí es importante (vibra): es su veto',
+     l3 && l3.importante === true && /^⚡/.test(l3.titulo), JSON.stringify(l3) || resumen(L3));
   const L4 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200),
                             esc: { racha: [{ k: 0, dia: 'hoy', horas: [11], v: 80 }] } });
   const l4 = (L4.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
   ok('y con una racha de 70 o más también',
      l4 && l4.importante === true && /^💨/.test(l4.titulo), JSON.stringify(l4));
+}
+
+/* ── AL MÓVIL, EL RAYO MEDIDO (04-10-2026) ─────────────────────────────
+   Suyo: «estos sobran y al final enredan» (los «⚡ Crítico» de las 15:06
+   por código de ECMWF 9 km e ICON, nada en el radar ni en los rayos) ·
+   «y el rayo sí entró, pero a las 20:00, y me estaba avisando todo el
+   día». Al móvil va lo que MIDE la red de AEMET a menos de 15 km y de
+   hace menos de 90 min, con la regla única (la misma del veto de la app). */
+{
+  const M1 = await pasada({ hora: '20:30', antes: tranquilo('20:30', 200),
+                            esc: { rayosMedidos: [{ k: 0, km: 3, hace: 20 }] } });
+  const m1 = (M1.b.avisados || []).find(a => /Rayo medido/.test(a.titulo));
+  ok('20:30 · una descarga medida a 3 km de BERMEO hace 20 min: suena «⚡ Rayo medido», vibra, nombra el sitio y dice que es medido, no previsto',
+     /* 2,7 y no 3: la posición sale del píxel (0,35 km en LOCL; aquí, más gordo). Y MUNGIA y
+        GERNIKA salen también, que esa misma descarga les cae a 14 km: es verdad. ORDUNA, a 47 km, no. */
+     !M1.reventó && m1?.importante === true && /BERMEO: 1 descarga a menos de 15 km, la más cercana a [23](,\d)? km/.test(m1?.cuerpo || '')
+     && /Medido por la red de AEMET/.test(m1?.cuerpo || '') && !/ORDUNA/.test(m1?.cuerpo || ''), JSON.stringify(m1) || resumen(M1));
+  const M2 = await pasada({ hora: '20:30', antes: tranquilo('20:30', 200),
+                            esc: { rayosMedidos: [{ k: 0, km: 25, hace: 20 }] } });
+  ok('20:30 · a 25 km (por la zona, no encima) NO suena: el veto es a 15 km',
+     !M2.reventó && !titulos(M2.b).some(t => /⚡/.test(t)), resumen(M2));
+  const M3 = await pasada({ hora: '20:30', antes: tranquilo('20:30', 200),
+                            esc: { rayosMedidos: [{ k: 0, km: 3, hace: 120 }] } });
+  ok('20:30 · la misma descarga, pero de hace dos horas: NO suena (pasados 90 min es historia, no veto)',
+     !M3.reventó && !titulos(M3.b).some(t => /⚡/.test(t)), resumen(M3));
+  /* La firma es «sitio@hora del mapa»: la del mapa que acabó hace 20 min. */
+  const finMapa = new RealDate(new RealDate().setHours(20, 10, 0, 0)).toISOString();
+  const M4 = await pasada({ hora: '20:30', antes: tranquilo('20:30', 200, { rayosAvisados: [`BERMEO@${finMapa}`] }),
+                            esc: { rayosMedidos: [{ k: 0, km: 3, hace: 20 }] } });
+  ok('20:30 · si ESA descarga ya se avisó en BERMEO, a BERMEO no se le repite',
+     !M4.reventó && !(M4.b.avisados || []).some(a => /⚡/.test(a.titulo) && /BERMEO/.test(a.cuerpo)), resumen(M4));
+  const M5 = await pasada({ hora: '20:30', antes: tranquilo('20:30', 10), seSalta: true,
+                            esc: { rayosMedidos: [{ k: 0, km: 3, hace: 20 }] } });
+  ok('20:30 · y suena también en un tic que se salta la pasada de los modelos: el rayo medido se mira cada 30 min',
+     !M5.reventó && M5.b.saltada === true && (M5.b.avisados || []).some(a => /Rayo medido/.test(a.titulo)), resumen(M5));
+  const M6 = await pasada({ hora: '20:30', antes: tranquilo('20:30', 10), seSalta: true, esc: { rayosCaidos: true } });
+  ok('20:30 · con el catálogo de AEMET caído no suena nada y se DICE que no se pudo leer (no es «no hay rayos»)',
+     !M6.reventó && !titulos(M6.b).some(t => /⚡/.test(t)) && /caído a propósito|catálogo/.test(M6.b.rayosMedidos?.fallo || ''), resumen(M6) + ' ' + JSON.stringify(M6.b.rayosMedidos));
+}
+
+/* ── LO QUE NO SE ESCRIBE NO SE DA POR DICHO (04-10-2026) ──────────────
+   Suyo: «ayer igual, tanto aviso y al final ni avisó la tromba de agua de
+   Bilbao». El cuerpo lleva cinco sitios como mucho y la firma marcaba
+   todos; ahora lo NUEVO va primero. Cinco ya dichos y OIZ nuevo: OIZ sale. */
+{
+  const dichos = ['BERMEO', 'ORDUNA', 'MUNGIA', 'DURANGO', 'GERNIKA'].map(n => `${n}:agua:11`).join('|');
+  const T1 = await pasada({ hora: '10:00', antes: tranquilo('10:00', 200, { ultimoAviso: dichos }),
+                            esc: { agua: [0, 1, 2, 3, 4, 5].map(k => ({ k, dia: 'hoy', horas: [11], mm: 3 })) } });
+  const t1 = (T1.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
+  ok('10:00 · seis sitios con agua, cinco ya avisados y OIZ nuevo: el aviso NOMBRA a OIZ (antes quedaba fuera de los cinco y se daba por dicho)',
+     !T1.reventó && /OIZ: AROME HD ve que llueve bien/.test(t1?.cuerpo || ''), t1?.cuerpo || resumen(T1));
 }
 
 /* ── LA PALABRA SEGÚN LA INTENSIDAD (01-10-2026) ──────────────────────
@@ -795,15 +889,15 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
    paréntesis. */
 {
   const T1 = await pasada({ hora: '14:00', antes: tranquilo('14:00', 130),
-    esc: { criticos: [3], rayo: [{ k: 3, dia: 'hoy', horas: [16, 17] }, { k: 5, dia: 'hoy', horas: [17] }], agua: [{ k: 0, dia: 'hoy', horas: [15], mm: 2.2 }] } });
+    esc: { criticos: [3], agua: [{ k: 3, dia: 'hoy', horas: [16, 17], mm: 2.2 }, { k: 0, dia: 'hoy', horas: [15], mm: 2.2 }] } });
   const t1 = (T1.b.avisados || []).find(a => /crítico|Próximas 3 h/i.test(a.titulo));
   const T2 = await pasada({ hora: '14:00', antes: tranquilo('14:00', 130),
-    esc: { rayo: [{ k: 5, dia: 'hoy', horas: [17] }], agua: [{ k: 0, dia: 'hoy', horas: [15], mm: 2.2 }] } });
+    esc: { agua: [{ k: 5, dia: 'hoy', horas: [17], mm: 2.2 }, { k: 0, dia: 'hoy', horas: [15], mm: 2.2 }] } });
   const t2 = (T2.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
   ok('los títulos del aviso de las 3 h caben en su móvil (15 letras como mucho, SIN nombre de sitio) y el crítico y cuántos sitios van en el cuerpo',
-     !T1.reventó && !T2.reventó && t1?.titulo === '⚡ Crítico' && t2?.titulo === '⚡ Próximas 3 h'
+     !T1.reventó && !T2.reventó && t1?.titulo === '🌧 Crítico' && t2?.titulo === '🌧 Próximas 3 h'
      && [...t1.titulo].length <= 15 && [...t2.titulo].length <= 15 && !/MATIENA|OIZ|BERMEO/.test(t1.titulo + t2.titulo)
-     && /^Crítico: MATIENA\. 3 sitios\. MATIENA: riesgo de rayo 16h-17h: .+ da tormenta\./.test(t1.cuerpo) && /^2 sitios\. /.test(t2.cuerpo),   // al móvil va el CÓDIGO de tormenta (04-10-2026)
+     && /^Crítico: MATIENA\. 2 sitios\. MATIENA: AROME HD ve que llueve bien/.test(t1.cuerpo) && /^2 sitios\. /.test(t2.cuerpo),   // con agua: el rayo previsto ya no va al móvil (04-10-2026)
      `${t1?.titulo} — ${t1?.cuerpo} | ${t2?.titulo} — ${t2?.cuerpo}`);
 }
 

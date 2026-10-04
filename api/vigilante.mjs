@@ -28,6 +28,8 @@
 import { leerJSON, guardarJSON } from '../lib/almacen.mjs';
 import { verificar, cargar as cargarRegistro, resumen as resumenVerificacion, RUTA as RUTA_VERIF, PUNTOS_CONTRASTE } from '../lib/verificacion.mjs';
 import { leer, guardar } from './suscribir.mjs';
+import { ReglasTiempo } from '../lib/reglas.mjs';
+import { lectorDeRayosServidor } from '../lib/rayos-png.mjs';
 
 const ESTADO = 'avisos/vigilante.json';
 const APP = 'https://weather-app-ochre-one-76.vercel.app';
@@ -972,6 +974,74 @@ async function leerEuskalmet(sitios) {
    (AGUA_TROMBA, 15 mm/h, «lluvia fuerte» de AEMET). Euskalmet da `lluvia`
    en `lluviaMin` minutos: el ritmo es lluvia × 60 / lluviaMin. */
 const MEDIDA_KM = 5, MEDIDA_FRESCA = 75, MEDIDA_MIN_VENTANA = 20;
+/* ── EL RAYO MEDIDO, EN CADA TIC (04-10-2026) ───────────────────────
+   Suyo, esa tarde, con el móvil lleno de «⚡ Crítico» por código de
+   tormenta de ECMWF 9 km e ICON y nada en el radar ni en los rayos:
+   «estos sobran y al final enredan» · «si no da muy claro, que no los
+   envíe» · «pero si no hay ni rayos» · «y el rayo sí entró, pero a las
+   20:00, y me estaba avisando todo el día».
+
+   Así que al móvil el rayo va solo MEDIDO: descargas de la red de AEMET
+   a menos de RAYO_ENCIMA (15 km) de un sitio suyo y de hace menos de
+   RAYO_VIGENTE (90 min) — la misma regla con la que la app, el Centro
+   Operativo y la agenda ponen el veto. El código y la pareja de los
+   modelos se quedan en la app (ámbar, «puede») y en el parte de la
+   mañana («riesgo»), que es donde él los lee como lo que son.
+
+   Se lee en CADA tic (cada 30 min, también los que se saltan la pasada):
+   AEMET publica por horas cerradas y con hasta 70 min de retraso, y
+   «70 minutos, estando él debajo de la torre, son una eternidad». Cuesta
+   8 ms de CPU por mapa (lib/rayos-png.mjs), y solo se leen mapas cuando
+   AEMET ha publicado uno nuevo: si el último fichero es el ya leído, no
+   se baja nada. Validado el 04-10 con la tormenta de la víspera: Santamaña
+   ×31 a 0,8 km de 18 a 19 h, Matiena ×44 a 3,3 km de 20 a 21 h. */
+const RAYOS_MARCOS = 2;   // las dos últimas horas publicadas cubren los 90 min del veto
+const horaCorta = iso => new Date(iso).toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' });
+async function leerRayosMedidos(sitios, previo) {
+  const ahora = new Date().toISOString();
+  const lector = lectorDeRayosServidor({ base: APP });
+  /* De QUÉ sitios es la lectura: si cambia la lista, se vuelve a leer. */
+  const lista = sitios.map(x => x.n).sort().join('|');
+  try {
+    const cat = await lector.catalogo();
+    const amb = lector.ambito(cat, sitios[0]);
+    if (!amb) return { ultimo: null, hasta: null, encima: [], lista, fuera: true, fallo: null, leidoEn: ahora };
+    const ultimo = cat.ambitos[amb].marcos.at(-1)?.f || null;
+    /* Nada nuevo publicado para los mismos sitios: lo de antes sigue valiendo. */
+    if (previo && !previo.fallo && previo.ultimo === ultimo && previo.lista === lista && Array.isArray(previo.encima))
+      return { ...previo, fallo: null, leidoEn: ahora };
+    const r = await lector.sobreTorres(sitios, { horas: RAYOS_MARCOS, radio: ReglasTiempo.RAYO_CERCA });
+    const encima = (r?.tocadas || []).filter(f => f.encima > 0).map(f => {
+      const ult = f.marcosEncima[f.marcosEncima.length - 1];
+      return { n: f.t.n, lat: f.t.lat, lon: f.t.lon, critico: !!f.t.critico,
+               encima: f.encima, km: Math.min(...f.marcosEncima.map(m => m.km)),
+               desde: f.marcosEncima[0].desde, hasta: ult.hasta, firma: `${f.t.n}@${ult.hasta}` };
+    });
+    return { ultimo, hasta: r?.hasta || null, encima, lista, fuera: false, fallo: null, leidoEn: ahora };
+  } catch (e) {
+    /* Un fallo NO borra lo que ya se sabía, y se dice: no es «no hay
+       rayos», es «no lo he podido leer». */
+    return { ...(previo || { ultimo: null, hasta: null, encima: [], lista }), fallo: String(e?.message || e).slice(0, 80), leidoEn: ahora };
+  }
+}
+/** Las descargas que todavía vetan y de las que no se ha avisado. */
+function rayosQueAvisan(rm, yaAvisados, ahoraMs = Date.now()) {
+  const ya = new Set(yaAvisados || []);
+  return (rm?.encima || []).filter(x => ahoraMs - new Date(x.hasta).getTime() <= ReglasTiempo.RAYO_VIGENTE && !ya.has(x.firma));
+}
+function avisoDeRayosMedidos(nuevos, rm) {
+  const orden = [...nuevos].sort((a, b) => (b.critico ? 1 : 0) - (a.critico ? 1 : 0) || b.encima - a.encima);
+  const crit = orden[0].critico;
+  const lista = orden.slice(0, 5).map(x => `${x.n}: ${x.encima} descarga${x.encima === 1 ? '' : 's'} a menos de ${ReglasTiempo.RAYO_ENCIMA} km, la más cercana a ${coma(Math.round(x.km * 10) / 10)} km, de ${horaCorta(x.desde)} a ${horaCorta(x.hasta)}`).join('. ');
+  return {
+    titulo: '⚡ Rayo medido',
+    url: orden.length === 1 ? `./?sitio=${orden[0].lat},${orden[0].lon}` : './?v=torres',
+    cuerpo: `${crit ? `Crítico: ${orden[0].n}. ` : ''}${orden.length > 1 ? `${sitiosTxt(orden.length)}. ` : ''}${lista}${orden.length > 5 ? `. Y ${orden.length - 5} más` : ''}`
+          + `. Medido por la red de AEMET hasta las ${horaCorta(rm.hasta)}, no previsto. Lo de después aún no está publicado: mira Blitzortung, el radar y el oído.`,
+    tag: 'rayo-medido', importante: true,
+  };
+}
+
 function lluviaMedidaCerca(leido) {
   const out = [];
   (leido?.orden || []).forEach((s, k) => {
@@ -1184,6 +1254,10 @@ export default async function handler(req, res) {
         /* Lo que se está armando, en crudo: es lo que decide cada cuánto
            pasa el vigilante, y un número que decide tiene que poder
            mirarse desde fuera. Ya nos pasó con `envia` y con `nLista`. */
+        /* El rayo medido (04-10-2026): hasta qué hora llega lo leído y si
+           la última lectura falló, para que la app lo diga. */
+        rayosMedidos: e.rayosMedidos ? { hasta: e.rayosMedidos.hasta ?? null, leidoEn: e.rayosMedidos.leidoEn ?? null,
+                                        fallo: e.rayosMedidos.fallo ?? null, encima: e.rayosMedidos.encima?.length ?? 0 } : null,
         ojo: e.ojo ?? null });
     } catch (err) {
       return res.status(200).json({ ultima: null, haceMin: null, fallo: String(err?.message || err).slice(0, 60) });
@@ -1565,11 +1639,37 @@ export default async function handler(req, res) {
      va redondeado, así que una pasada de más de 30 s hacía que el tic de
      las 2 h viese 119 y se saltase hasta el siguiente: 2 h 30 en vez de 2.
      Cinco minutos de margen y la cadencia es la que él fijó (27-09-2026). */
+  /* ── EL RAYO MEDIDO VA ANTES DEL FRENO (04-10-2026) ──────────────
+     Las pasadas saltadas no piden ni la lista ni los modelos; el rayo
+     medido sí se mira en todas, con las coordenadas que dejó la última
+     pasada entera (`coords`) o, si no las hay, la lista de respaldo. */
+  const sinLeidoEn = x => { const { leidoEn, ...r } = x || {}; return JSON.stringify(r); };
+  const rayoMedidoDe = async lista => {
+    const rm = await leerRayosMedidos(lista, antes?.rayosMedidos || null);
+    const nuevos = rayosQueAvisan(rm, antes?.rayosAvisados);
+    return { rayosMedidos: rm, rayosNuevos: nuevos, avisosTic: nuevos.length ? [avisoDeRayosMedidos(nuevos, rm)] : [] };
+  };
+
   if (!ojeadaAMano && !ventanaDelParte && huecoPrevio !== null && huecoPrevio < cadaMin - 5) {
+    const sitiosRayo = Array.isArray(antes?.coords) && antes.coords.length ? antes.coords : SITIOS;
+    const { rayosMedidos, rayosNuevos, avisosTic } = await rayoMedidoDe(sitiosRayo);
+    const enviadosTic = [];
+    if (process.env.VIGILANTE_ENVIA === '1')
+      for (const a of avisosTic) enviadosTic.push({ ...a, ...(await empujar(a.titulo, a.cuerpo, a.tag, a.importante, a.url)) });
+    const llegaron = enviadosTic.some(e => (e.enviados || 0) > 0);
+    const rayosAvisados = (llegaron ? [...(antes?.rayosAvisados || []), ...rayosNuevos.map(x => x.firma)] : (antes?.rayosAvisados || [])).slice(-60);
+    let guardado = null;
+    if (sinLeidoEn(rayosMedidos) !== sinLeidoEn(antes?.rayosMedidos) || llegaron) {
+      try { await guardarEstado({ ...antes, rayosMedidos, rayosAvisados }); guardado = true; }
+      catch (e) { guardado = String(e?.message || e).slice(0, 60); }
+    }
     return res.status(200).json({
       ok: true, saltada: true, nivel, ...medida(),
       nota: `${nivel}: se pasa cada ${cadaMin} min`,
       ultimaPasada: antes.cuando,
+      rayosMedidos: { hasta: rayosMedidos.hasta, fallo: rayosMedidos.fallo, encima: rayosMedidos.encima?.length ?? 0, nuevos: rayosNuevos.length },
+      avisados: enviadosTic.map(e => ({ titulo: e.titulo, cuerpo: e.cuerpo, tag: e.tag, importante: !!e.importante, enviados: e.enviados, nota: e.nota })),
+      ...(guardado === null ? {} : { estadoGuardado: guardado }),
     });
   }
 
@@ -1591,6 +1691,8 @@ export default async function handler(req, res) {
       listaDeRespaldo = false;
     }
   } catch { /* nos quedamos con la de respaldo, y se dice */ }
+  /* El rayo medido de la pasada entera, con SU lista de verdad (04-10-2026). */
+  const { rayosMedidos, rayosNuevos, avisosTic } = await rayoMedidoDe(sitios);
 
   /* Dos peticiones para los veinte. Si alguna tanda falla, sus huecos los
      rellena cada sitio por su cuenta dentro de `unSitio` (ver la nota). */
@@ -1866,13 +1968,11 @@ export default async function handler(req, res) {
   const tramosEnVentana = x => (x?.tramos || []).filter(t => t.ini <= H3 && t.fin >= h0);
   const queViene = d => {
     const f = [];
-    for (const t of tramosEnVentana(deHoy(d.dias[claveHoy]))) {
-      const r = rayoEnHoras(d.dias[claveHoy], Math.max(t.ini, h0), Math.min(t.fin, H3));
-      f.push({ que: 'rayo', clave: `rayo:${t.ini}`, txt: `riesgo de rayo ${tramoTxt3(t, '')}${r ? `: ${r}` : ''}` });
-    }   // «riesgo»: es modelo, no medida (28-09-2026, 15:32)
-    const rm = deManana(d.dias[claveManana]);
-    for (const t of (rm?.tramos || []))
-      f.push({ que: 'rayo', clave: `rayo:m${t.ini}`, txt: `riesgo de rayo mañana ${t.ini === t.fin ? hh(t.ini) : `${hh(t.ini)}-${hh(t.fin)}`}` });
+    /* EL RAYO DE LOS MODELOS YA NO VA AL MÓVIL (04-10-2026). Aquí iba
+       «riesgo de rayo 14h-15h: ECMWF 9 km da tormenta · ICON da tormenta»,
+       y ese día, con nada en el radar ni en los rayos: «estos sobran y al
+       final enredan». El rayo al móvil es el MEDIDO (ver leerRayosMedidos);
+       el de los modelos sigue en `inminentes`, en el estado y en el parte. */
     /* Solo las horas que de verdad pasan de 2 mm/h, con el pico de ESAS
        horas y su modelo, y «prevista»: es modelo, no medida (30-09-2026,
        su captura de las 13:34 con el cielo gris y seco). */
@@ -1912,7 +2012,7 @@ export default async function handler(req, res) {
   const yaAvisado = firmaAhora.split('|').filter(Boolean).every(yaDicho);
   const AVISAR_CAMBIOS = false;   // apagado el 28-09-2026 por él: «si cambia o no cambia no me interesa»
 
-  const avisos = [];
+  const avisos = [...avisosTic];
 
   /* LA A: lo medido, cuando toca la lectura de la hora (sin llamadas nuevas). */
   let leidoEusk = null, medidaFallo = null;
@@ -1933,8 +2033,17 @@ export default async function handler(req, res) {
       tag: 'medida', importante: tromba,
     });
   }
+  /* LO QUE NO SE ESCRIBE NO SE DA POR DICHO (04-10-2026). Suyo: «ayer
+     igual, tanto aviso y al final ni avisó la tromba de agua de Bilbao».
+     El cuerpo lleva cinco sitios como mucho, pero la firma marcaba como
+     avisados TODOS: el sexto se daba por dicho sin haber salido nunca.
+     Ahora los sitios con algo NUEVO van primero y la firma es solo la de
+     los que de verdad se escribieron. */
+  const esNuevo = x => x.f.some(f => !yaDicho(`${x.d.n}:${f.clave}`));
+  let escritos = [];
   if (proximas.length && !yaAvisado) {
-    const orden = [...proximas].sort((a, b) => (b.d.critico ? 1 : 0) - (a.d.critico ? 1 : 0));
+    const orden = [...proximas].sort((a, b) => (esNuevo(b) ? 1 : 0) - (esNuevo(a) ? 1 : 0) || (b.d.critico ? 1 : 0) - (a.d.critico ? 1 : 0));
+    escritos = orden.slice(0, 5);
     const crit = orden[0].d.critico;
     /* El símbolo dice QUÉ viene (30-09-2026): un aviso que solo era de agua
        salía con el ⚡ del rayo, que es su veto y le hace leerlo distinto. */
@@ -1957,7 +2066,7 @@ export default async function handler(req, res) {
          se quita sola). El agua, sola, avisa sin gritar (01-10-2026). */
       /* Y el agua de 15 mm/h para arriba («llueve fuerte», AEMET), desde el
          03-10-2026: ese día las trombas de Bilbao llegaban sin vibrar. */
-      tag: 'tormenta', importante: proximas.some(x => x.f.some(f => f.que === 'rayo' || f.que === 'racha'
+      tag: 'tormenta', importante: proximas.some(x => x.f.some(f => f.que === 'racha'
                                                    || (f.que === 'agua' && f.v >= AGUA_TROMBA))),
     });
   }
@@ -2386,7 +2495,7 @@ export default async function handler(req, res) {
          deja lo que hubiera y la pasada siguiente vuelve a intentarlo. */
       ultimoAviso: !proximas.length ? null
         : (enviados.some(e => e.tag === 'tormenta' && (e.enviados || 0) > 0)
-             ? firmaAhora
+             ? [...new Set([...firmaAhora.split('|').filter(yaDicho), ...escritos.flatMap(x => x.f.map(f => `${x.d.n}:${f.clave}`))])].sort().join('|')
              : (antes?.ultimoAviso ?? null)),
       sitios: Object.fromEntries(buenos.map(d => [d.n, d.dias])),
       /* ── CUÁNTOS TENÍA, NO SOLO CUÁNTOS PUDE ─────────────────────
@@ -2443,6 +2552,12 @@ export default async function handler(req, res) {
       /* Lo medido ya avisado, para no repetirlo (las 60 últimas firmas). */
       medidasAvisadas: (!soloMirar && medidasNuevas.length
         ? [...(antes?.medidasAvisadas || []), ...medidasNuevas.map(m => m.firma)] : (antes?.medidasAvisadas || [])).slice(-60),
+      /* El rayo medido (04-10-2026): lo leído, lo ya avisado (solo si llegó
+         al móvil) y las coordenadas para que los tics saltados lo miren. */
+      rayosMedidos,
+      rayosAvisados: (enviados.some(e => e.tag === 'rayo-medido' && (e.enviados || 0) > 0)
+        ? [...(antes?.rayosAvisados || []), ...rayosNuevos.map(x => x.firma)] : (antes?.rayosAvisados || [])).slice(-60),
+      coords: buenos.map(d => ({ n: d.n, lat: d.lat, lon: d.lon, critico: !!d.critico })),
     };
 
     const sinHora = e => { const { cuando, ...r } = e || {}; return JSON.stringify(r); };

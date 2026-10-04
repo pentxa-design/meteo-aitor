@@ -46,6 +46,7 @@ fs.mkdirSync(path.join(tmp, 'lib'), { recursive: true });
 for (const f of fs.readdirSync(path.join(aqui, 'lib'))) {
   fs.copyFileSync(path.join(aqui, 'lib', f), path.join(tmp, 'lib', f));
 }
+fs.copyFileSync(path.join(aqui, 'reglas-tiempo.js'), path.join(tmp, 'reglas-tiempo.js'));   // lib/reglas.mjs la pide (04-10-2026)
 /* El vigilante importa hermanos suyos de `api/` (suscribir, torres…).
    Se copian al lado para que la copia los encuentre. */
 for (const f of fs.readdirSync(path.join(aqui, 'api'))) {

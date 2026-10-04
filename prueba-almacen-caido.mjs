@@ -74,6 +74,8 @@ for (const d of ['api', 'lib']) {
   }
 }
 
+fs.copyFileSync(path.join(aqui, 'reglas-tiempo.js'), path.join(tmp, 'reglas-tiempo.js'));   // lib/reglas.mjs la pide (04-10-2026)
+
 /* ── UN `res` DE MENTIRA QUE APUNTA LO QUE LE DICEN ───────────────── */
 function resFalso() {
   const r = { code: null, body: null, cabeceras: {} };
@@ -240,9 +242,9 @@ const fetchReal = globalThis.fetch;
   /* La respuesta lista los inminentes y, según VIGILANTE_ENVIA, los avisos
      mandados (`avisados`) o los que habría mandado (`habriaAvisado`). */
   const titulos = [...(res.body?.avisados || []).map(a => a.titulo), ...(res.body?.habriaAvisado || [])];
-  ok('y ese sitio sale como inminente, con su aviso de tormenta preparado',
+  ok('y ese sitio sale como inminente (mañana), sin aviso de rayo al móvil: el rayo previsto ya no se manda (04-10-2026)',
      !reventó && Array.isArray(res.body?.inminentes) && res.body.inminentes.length === 1
-     && /mañana/.test(res.body.inminentes[0]) && titulos.some(t => /Próximas 3 h|crítico/i.test(String(t))),
+     && /mañana/.test(res.body.inminentes[0]) && !titulos.some(t => /⚡|Próximas 3 h|crítico/i.test(String(t))),
      JSON.stringify({ inminentes: res.body?.inminentes, titulos }).slice(0, 200));
 }
 globalThis.fetch = fetchReal;

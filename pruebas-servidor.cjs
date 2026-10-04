@@ -384,11 +384,13 @@ ok('el agua no se mezcla con el rayo: lleva su propio aviso',
    /titulo: `🌧 AGUA/.test(vig) && /tag: 'agua'/.test(vig));
 ok('y la racha el suyo',
    /titulo: `💨 RACHA/.test(vig) && /tag: 'racha'/.test(vig));
-ok('el rayo sigue siendo el único que manda con su veto, sin tocar',
+ok('el rayo sigue siendo el único que manda con su veto: el MEDIDO vibra siempre',
    /* 01-10-2026: importante solo si hay rayo o racha de 70; el agua sola avisa
-      sin vibrar, salvo la tromba (≥ AGUA_TROMBA, 03-10-2026). Lo EJECUTA
-      prueba-vigilante-reloj.mjs. */
-   /tag: 'tormenta', importante: proximas\.some\(x => x\.f\.some\(f => f\.que === 'rayo' \|\| f\.que === 'racha'\s*\|\| \(f\.que === 'agua' && f\.v >= AGUA_TROMBA\)\)\)/.test(vig));
+      sin vibrar, salvo la tromba (≥ AGUA_TROMBA, 03-10-2026). Desde el
+      04-10-2026 el rayo al móvil es solo el medido (tag 'rayo-medido'). Lo
+      EJECUTA prueba-vigilante-reloj.mjs. */
+   /tag: 'tormenta', importante: proximas\.some\(x => x\.f\.some\(f => f\.que === 'racha'\s*\|\| \(f\.que === 'agua' && f\.v >= AGUA_TROMBA\)\)\)/.test(vig)
+   && /tag: 'rayo-medido', importante: true/.test(vig));
 
 ok('del vaivén de milímetros NO se avisa: solo aparecer, agravarse o adelantarse',
    /const aFuerte = !va\.fuerte && vb\.fuerte;/.test(vig)
@@ -458,8 +460,9 @@ ok('lo inminente mira también las primeras horas de mañana',
    hace vibrar los avisos `importante: true`; aquí se guarda CUÁLES lo son.
    Si el parte diario se marcara importante, vibraría todos los días y él
    acabaría silenciando la app entera — y entonces no avisaría de nada. */
-ok('vibran los que decidan algo: tormenta, racha de 70 y «llevo sin vigilar»',
-   /tag: 'tormenta', importante: proximas\.some\(x => x\.f\.some\(f => f\.que === 'rayo' \|\| f\.que === 'racha'\s*\|\| \(f\.que === 'agua' && f\.v >= AGUA_TROMBA\)\)\)/.test(vig)
+ok('vibran los que decidan algo: rayo medido, racha de 70, tromba y «llevo sin vigilar»',
+   /tag: 'tormenta', importante: proximas\.some\(x => x\.f\.some\(f => f\.que === 'racha'\s*\|\| \(f\.que === 'agua' && f\.v >= AGUA_TROMBA\)\)\)/.test(vig)
+   && /tag: 'rayo-medido', importante: true/.test(vig)
    && /tag: 'racha', importante: true/.test(vig)
    && /tag: 'parado', importante: true/.test(vig));
 ok('y el parte de la mañana NO vibra: llega todos los días',
@@ -920,7 +923,7 @@ console.log('\n  Avisado es que haya LLEGADO, no que se haya intentado');
      /e\.tag === 'tormenta' && \(e\.enviados \|\| 0\) > 0/.test(v),
      'si no, un envío fallido se traga el aviso de tormenta para siempre');
   ok('y si no llegó, se conserva lo de antes para reintentar',
-     /\? firmaAhora\s*\n\s*: \(antes\?\.ultimoAviso \?\? null\)/.test(v));
+     /\? \[\.\.\.new Set\(\[\.\.\.firmaAhora\.split\('\|'\)\.filter\(yaDicho\), \.\.\.escritos\.flatMap\([^\n]*\n\s*: \(antes\?\.ultimoAviso \?\? null\)/.test(v));
   ok('el parte de la mañana, igual',
      /e\.tag === 'parte' && \(e\.enviados \|\| 0\) > 0/.test(v));
 

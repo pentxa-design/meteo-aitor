@@ -411,7 +411,31 @@ const ReglasTiempo = (() => {
     };
   }
 
-  function lectorDeRayos({ base = '' } = {}) {
+  /* El mapa de AEMET, leído con lo que tenga cada sitio: en el navegador,
+     createImageBitmap y un canvas; en el servidor (el vigilante, 04-10-2026)
+     se le pasa `imagen`, que descodifica el PNG sin navegador. Las dos
+     devuelven lo mismo —ancho, alto y un recorte en RGBA— y el recuento de
+     descargas es UNO, el de abajo. */
+  async function imagenDelNavegador(bytes) {
+    const blob = new Blob([bytes], { type: 'image/png' });
+    const entera = await createImageBitmap(blob);
+    const W = entera.width, H = entera.height;
+    entera.close?.();
+    return {
+      W, H,
+      async pixeles(sx, sy, sw, sh) {
+        const trozo = await createImageBitmap(blob, sx, sy, sw, sh);
+        const c = document.createElement('canvas');
+        c.width = sw; c.height = sh;
+        const cx = c.getContext('2d', { willReadFrequently: true });
+        cx.drawImage(trozo, 0, 0);
+        trozo.close?.();
+        return cx.getImageData(0, 0, sw, sh).data;
+      },
+    };
+  }
+
+  function lectorDeRayos({ base = '', imagen = imagenDelNavegador, pedir = (u, o) => fetch(u, o) } = {}) {
     const clamp = clampR;
     return {
     cat: null,          // catálogo de AEMET (qué horas hay publicadas)
@@ -421,7 +445,7 @@ const ReglasTiempo = (() => {
     /** El catálogo, con cinco minutos de memoria. */
     async catalogo() {
       if (this.cat && Date.now() - this.catT < 5 * 60e3) return this.cat;
-      const r = await fetch(`${base}/rayos`, { cache: 'no-store' });   // el catálogo del veto, nunca de la caché del navegador
+      const r = await pedir(`${base}/rayos`, { cache: 'no-store' });   // el catálogo del veto, nunca de la caché del navegador
       const d = await r.json().catch(() => null);
       if (!r.ok || !d || d.error) {
         throw new Error(d?.reason || `AEMET no ha dado el catálogo de rayos (${r.status})`);
@@ -466,14 +490,14 @@ const ReglasTiempo = (() => {
       const my = la => Math.log(Math.tan(Math.PI / 4 + la * Math.PI / 360));
       const y0 = my(B.lat0), y1 = my(B.lat1);
 
-      const r = await fetch(`${base}/rayos?f=${encodeURIComponent(marco.f)}`);
+      const r = await pedir(`${base}/rayos?f=${encodeURIComponent(marco.f)}`);
       if (!r.ok) throw new Error(`AEMET no ha dado el mapa de las ${horaCorta(marco.desde)} (${r.status})`);
-      const blob = await r.blob();
+      const bytes = await r.arrayBuffer();
 
       // El tamaño real de la imagen se lee de la propia imagen: si AEMET
       // cambia la resolución, esto sigue cuadrando solo.
-      const entera = await createImageBitmap(blob);
-      const W = entera.width, H = entera.height;
+      const img = await imagen(bytes);
+      const W = img.W, H = img.H;
       const aX = lon => (lon - B.lon0) / (B.lon1 - B.lon0) * W;
       const aY = lat => (y1 - my(lat)) / (y1 - y0) * H;
 
@@ -483,14 +507,7 @@ const ReglasTiempo = (() => {
       const ey = clamp(Math.ceil(aY(caja.lat0)),  1, H);
       const sw = Math.max(1, ex - sx), sh = Math.max(1, ey - sy);
 
-      const trozo = await createImageBitmap(blob, sx, sy, sw, sh);
-      entera.close?.();
-      const c = document.createElement('canvas');
-      c.width = sw; c.height = sh;
-      const cx = c.getContext('2d', { willReadFrequently: true });
-      cx.drawImage(trozo, 0, 0);
-      trozo.close?.();
-      const px = cx.getImageData(0, 0, sw, sh).data;
+      const px = await img.pixeles(sx, sy, sw, sh);
 
       // Manchas pegadas = una descarga. Recorrido plano, sin recursión.
       const visto = new Uint8Array(sw * sh);
@@ -755,3 +772,8 @@ const ReglasTiempo = (() => {
     CAPE_COMBINACION, TAPA_ROMPE, MODELOS_RAYO, rayoDelModelo, otrosDelAgua, rayoEnHoras,
   });
 })();
+/* En el servidor (el vigilante de Vercel) se carga con require; en el
+   navegador y en las copias del Centro Operativo y la agenda no hay
+   `module` y esta línea no hace nada. */
+// eslint-disable-next-line no-undef
+if (typeof module !== 'undefined' && module.exports) module.exports = ReglasTiempo;
