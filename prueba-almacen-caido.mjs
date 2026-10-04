@@ -191,7 +191,7 @@ function fetchDeMentira({ tormentaManana = false } = {}) {
           if (c === 'convective_inhibition') return rayo ? 10 : 120;
           if (c === 'precipitation') return 0;
           if (c === 'wind_gusts_10m') return 20;
-          if (c === 'weather_code') return 1;
+          if (c === 'weather_code') return rayo ? 95 : 1;   // el código de tormenta es lo que avisa (04-10-2026)
           return null;
         });
         return { latitude: +lat, longitude: +lon, hourly: h };

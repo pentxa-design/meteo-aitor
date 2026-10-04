@@ -595,7 +595,7 @@ async function unSitio(s, previo = null, reloj = null) {
         d.horas.add(h);
         (d.modelosPareja ??= {})[h] = (d.modelosPareja[h] ?? new Set()).add(m);   // quién rompe por pareja a esa hora
         // El CAPE y la tapa de ESA hora y de quién (como el agua y la racha): ver rayoEnHoras.
-        if (!(d.porHora[h]?.v >= c)) d.porHora[h] = { v: Math.round(c), tapa: Math.round(t), quien: nombreDe(m) + (deLado ? ' en la celda de al lado' : '') };
+        if (!(d.porHora[h]?.v >= c)) d.porHora[h] = { codigo: d.porHora[h]?.codigo, v: Math.round(c), tapa: Math.round(t), quien: nombreDe(m) + (deLado ? ' en la celda de al lado' : '') };   // el código no se pierde
         if (c > d.cape) {
           d.cape = Math.round(c);
           d.quien = nombreDe(m) + (deLado ? ' en la celda de al lado' : '');
@@ -730,13 +730,14 @@ async function unSitio(s, previo = null, reloj = null) {
      con ECMWF 9 km dando CAPE 700-1000 y tapa 0-4… y la red de AEMET con
      CERO descargas en Euskadi de 06 a 10. Medido el 03-10 contra AEMET: de
      las horas en que un solo modelo rompe por pareja, el 77 % no tienen un
-     rayo a menos de 15 km. La pareja de UN solo modelo es «puede»; para
-     avisar al móvil hace falta el código de tormenta de alguno, o que DOS
-     modelos distintos rompan por pareja a la misma hora. Lo medido por AEMET
-     avisa siempre. */
+     rayo a menos de 15 km. Y a las 11:10, con el radar limpio: «pero si no
+     hay ni rayos» · «quitar esos avisos raros alarmistas». La pareja es
+     «puede», y «puede» no se manda al móvil: al móvil va lo MEDIDO por AEMET
+     (descargas a menos de 15 km) y el CÓDIGO de tormenta de un modelo. La
+     pareja se queda en la app, en ámbar, como riesgo. */
   for (const d of Object.values(porDia)) {
     for (const h of [...d.horas]) {
-      const claro = d.porHora[h]?.codigo || (d.modelosPareja?.[h]?.size ?? 0) >= 2;
+      const claro = !!d.porHora[h]?.codigo;
       if (!claro) { d.horas.delete(h); delete d.porHora[h]; }
     }
     delete d.modelosPareja;

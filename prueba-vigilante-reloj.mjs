@@ -92,7 +92,8 @@ const AYER = clave(new RealDate(RealDate.now() - 86400e3));
    `esc` dice qué ve cada sitio (k = 0 BERMEO, 1 ORDUNA, 2 MUNGIA, 3 DURANGO,
    4 GERNIKA, 5 OIZ):
      agua:    [{ k, dia: 'hoy'|'man', horas: [..], mm }]
-     rayo:    [{ k, dia, horas, om? }]         CAPE 900 y tapa 10
+     rayo:    [{ k, dia, horas, om? }]         tormenta prevista: CAPE 900, tapa 10 Y código 95
+     pareja:  [{ k, dia, horas, om? }]         solo la pareja CAPE 900 / tapa 10, sin código (no avisa al móvil, 04-10-2026)
      codigo:  [{ k, dia, horas, om? }]         código de tormenta 95
      racha:   [{ k, dia, horas, v }]
      ojoCape: [{ k, dia, horas, v }]           CAPE sin tapa abierta
@@ -118,11 +119,11 @@ function red(esc, fijo, llamadas) {
   const valor = (k, om, campo, d) => {
     const dia = clave(d) === clave(hoy0) ? 'hoy' : 'man', hh = d.getHours();
     if ((esc.sinModelo || []).includes(om)) return null;
-    if (campo === 'cape') { if (hit('rayo', k, om, dia, hh)) return 900; const o = hit('ojoCape', k, om, dia, hh); return o ? o.v : 40; }
-    if (campo === 'convective_inhibition') return hit('rayo', k, om, dia, hh) ? 10 : 120;
+    if (campo === 'cape') { if (hit('rayo', k, om, dia, hh) || hit('pareja', k, om, dia, hh)) return 900; const o = hit('ojoCape', k, om, dia, hh); return o ? o.v : 40; }
+    if (campo === 'convective_inhibition') return (hit('rayo', k, om, dia, hh) || hit('pareja', k, om, dia, hh)) ? 10 : 120;
     if (campo === 'precipitation') { const a = hit('agua', k, om, dia, hh); return a ? a.mm : 0; }
     if (campo === 'wind_gusts_10m') { const r = hit('racha', k, om, dia, hh); return r ? r.v : 20; }
-    if (campo === 'weather_code') return hit('codigo', k, om, dia, hh) ? 95 : 1;
+    if (campo === 'weather_code') return (hit('codigo', k, om, dia, hh) || hit('rayo', k, om, dia, hh)) ? 95 : 1;
     if (campo === 'temperature_2m') return 15;
     return null;
   };
@@ -598,15 +599,15 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      envíe»): la pareja de UN solo modelo no avisa al móvil (el 77 % sin rayo,
      medido); con DOS modelos, o con el código de tormenta, sí. */
   const L6 = await pasada({ hora: '14:00', antes: tranquilo('14:00', 200),
-    esc: { rayo: [{ k: 0, dia: 'hoy', horas: [16, 17], om: 'icon_eu' }] } });
+    esc: { pareja: [{ k: 0, dia: 'hoy', horas: [16, 17], om: 'icon_eu' }] } });
   const l6 = (L6.b.avisados || []).find(a => /Próximas 3 h|Crítico/.test(a.titulo));
   ok('14:00 · solo ICON rompe por pareja (16-17h): NO se manda aviso de rayo al móvil (04-10-2026, 40 «Crítico» con cero descargas)',
      !L6.reventó && !/riesgo de rayo/.test(l6?.cuerpo || ''), l6?.cuerpo || resumen(L6));
   const L6b = await pasada({ hora: '14:00', antes: tranquilo('14:00', 200),
-    esc: { rayo: [{ k: 0, dia: 'hoy', horas: [16, 17], om: 'icon_eu' }, { k: 0, dia: 'hoy', horas: [16, 17], om: 'gfs_seamless' }] } });
+    esc: { pareja: [{ k: 0, dia: 'hoy', horas: [16, 17], om: 'icon_eu' }, { k: 0, dia: 'hoy', horas: [16, 17], om: 'gfs_seamless' }] } });
   const l6b = (L6b.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
-  ok('   y con ICON y GFS rompiendo a la vez sí, diciendo quién lo ve y con qué: «BERMEO: riesgo de rayo 16h-17h: … ve CAPE 900, tapa 10»',
-     !L6b.reventó && /BERMEO: riesgo de rayo 16h-17h: (ICON|GFS) ve CAPE 900, tapa 10/.test(l6b?.cuerpo || ''), l6b?.cuerpo || resumen(L6b));
+  ok('   ni con ICON y GFS a la vez: la pareja es «puede» y «puede» no va al móvil (suyo, 11:10: «quitar esos avisos raros alarmistas»)',
+     !L6b.reventó && !/riesgo de rayo/.test(l6b?.cuerpo || ''), l6b?.cuerpo || resumen(L6b));
   const L6c = await pasada({ hora: '14:00', antes: tranquilo('14:00', 200),
     esc: { codigo: [{ k: 0, dia: 'hoy', horas: [16], om: 'icon_eu' }] } });
   const l6c = (L6c.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
@@ -802,7 +803,7 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   ok('los títulos del aviso de las 3 h caben en su móvil (15 letras como mucho, SIN nombre de sitio) y el crítico y cuántos sitios van en el cuerpo',
      !T1.reventó && !T2.reventó && t1?.titulo === '⚡ Crítico' && t2?.titulo === '⚡ Próximas 3 h'
      && [...t1.titulo].length <= 15 && [...t2.titulo].length <= 15 && !/MATIENA|OIZ|BERMEO/.test(t1.titulo + t2.titulo)
-     && /^Crítico: MATIENA\. 3 sitios\. MATIENA: riesgo de rayo 16h-17h: .+ ve CAPE 900, tapa 10\./.test(t1.cuerpo) && /^2 sitios\. /.test(t2.cuerpo),
+     && /^Crítico: MATIENA\. 3 sitios\. MATIENA: riesgo de rayo 16h-17h: .+ da tormenta\./.test(t1.cuerpo) && /^2 sitios\. /.test(t2.cuerpo),   // al móvil va el CÓDIGO de tormenta (04-10-2026)
      `${t1?.titulo} — ${t1?.cuerpo} | ${t2?.titulo} — ${t2?.cuerpo}`);
 }
 
