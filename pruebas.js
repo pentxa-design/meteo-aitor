@@ -12269,6 +12269,13 @@ grupo('El parte cuenta el CÓDIGO de tormenta, no solo la pareja CAPE+tapa (03-1
   ok('   pero la pareja sola NO frena la ventana: «nada te frena», no «ahora te frena: rayo» (04-10-2026)',
      vE9 && vE9.nFrenadas === 0, JSON.stringify(vE9 && { nFrenadas: vE9.nFrenadas, ahora: vE9.ahora?.frenos }));
   const vCod = ctx.__run([{ n: 'CARRANZA' }], [{ hourly: { ...base, weather_code_icon_seamless: [3, 95, 95, 3, 3, 3, 3, 3, 3] } }], v).cuandoTorres?.[0];
+  /* Zornotza 04-10: pareja toda la tarde y código en UNA hora. El rojo cubre
+     solo la hora del código: `codigo.fin` dice hasta dónde llega. */
+  const mixto = ctx.__run([{ n: 'ZORNOTZA' }], [{ hourly: { ...base, weather_code_icon_seamless: [3, 3, 3, 95, 3, 3, 3, 3, 3],
+    cape_ecmwf_ifs: Array(n).fill(900), convective_inhibition_ecmwf_ifs: Array(n).fill(10) } }], v).parteTorres[0];
+  ok('Zornotza 04-10: pareja de 15 a 23 h y código solo a las 18 → el parte sabe que el código empieza y acaba a las 18 (el chip rojo cubre esa hora, no la tarde entera)',
+     mixto?.codigo && new Date(mixto.codigo.hora).getHours() === 18 && new Date(mixto.codigo.fin).getHours() === 18
+     && new Date(mixto.ini).getHours() === 15, JSON.stringify(mixto && { ini: mixto.ini, codigo: mixto.codigo }));
   ok('   y el código de tormenta sí frena: 2 horas, las del 95',
      vCod && vCod.nFrenadas === 2, JSON.stringify(vCod && { nFrenadas: vCod.nFrenadas }));
 }

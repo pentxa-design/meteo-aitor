@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.04-2107';
+const BUILD = '2026.10.04-2115';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -8950,7 +8950,7 @@ function calcularParte(sitios, arr) {
        Zeberio de 15 a 23 h…— y el parte decía «riesgo de rayo en 9 de 20»
        mientras el vigilante del móvil decía 19 y «¿se llega?» de la misma
        tarjeta ya los contaba. El código no admite interpretación: cuenta. */
-    let porCodigo = null;
+    let porCodigo = null, finCodigo = null;
     const venCodigo = new Set();
     for (const m of MODELOS_TORMENTA) {
       const cod = H[`weather_code_${m.om}`];
@@ -8962,9 +8962,13 @@ function calcularParte(sitios, arr) {
         if (!ini || t < ini) ini = t;
         if (!fin || t > fin) fin = t;
         if (!porCodigo || t < porCodigo.d) porCodigo = { d: t, nom: m.nom, code: cod[i] };
+        if (!finCodigo || t > finCodigo) finCodigo = t;
       }
     }
-    const codigoTxt = porCodigo ? { quien: listar([...venCodigo]), hora: porCodigo.d } : null;
+    /* `fin`: hasta dónde llega el CÓDIGO. El chip rojo cubre solo esas horas;
+       las de la pareja sola son «puede tronar» (04-10-2026: Zornotza salía
+       «RAYO de 06 a 20 h» con el código en UNA hora). */
+    const codigoTxt = porCodigo ? { quien: listar([...venCodigo]), hora: porCodigo.d, fin: finCodigo } : null;
     if (!peor && porCodigo) {
       return { k, salta: true, porCodigo: true, ini, fin, cape: null, cin: null, hora: porCodigo.d,
                modelo: codigoTxt.quien, codigo: codigoTxt, nVen: 0, nPodian: podian.size };
@@ -10596,7 +10600,9 @@ function renderParte() {
             <span class="pt__m">· lo ve ${esc(d.modelo)}${cuantosLoVen(d)}</span></div>`}
           ${lineaCodigo}
           ${cuandoSePuede(k)}${lineaCambio(k)}`;
-      const rojo = rayoRojoDelParte(d), etq = `${rojo ? 'RAYO' : 'PUEDE TRONAR'} ${esc(cuando)}`;
+      const rojo = rayoRojoDelParte(d);
+      const etq = rojo && d.codigo?.hora && d.codigo?.fin
+        ? `RAYO ${esc(tramo(d.codigo.hora, d.codigo.fin))}` : `${rojo ? 'RAYO' : 'PUEDE TRONAR'} ${esc(cuando)}`;
       S.parteFilas.set(key(p), { est: rojo ? 'no' : 'warn', etq, dia: rotuloDelParte,
                                  cuerpo: cuerpoR, comp: comparativa(p) });
       return `<div class="pt" data-s="${rojo ? 'no' : 'warn'}">
