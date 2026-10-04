@@ -2543,7 +2543,11 @@ S.comparativa = comparativa([0.4, 0.0, 0.0, 0.0], [51, 3, 3, 3]);
 const bermeo = lluviaQueNoVesTu({ prec: 0.0 });
 ok('avisa cuando solo ECMWF ve el agua', !!bermeo, JSON.stringify(bermeo));
 ok('dice QUIÉN la ve', bermeo?.quien === 'ECMWF', bermeo?.quien);
-ok('y que es sirimiri, no un chaparrón', bermeo?.sirimiri === true, JSON.stringify(bermeo));
+/* 04-10-2026: la llovizna de ECMWF 25 km SOLA no es sirimiri (pintó 9 h
+   de llovizna en Bermeo con sol); se dice su número, no la palabra. */
+ok('pero la llovizna de ECMWF que nadie acompaña NO la llama sirimiri (04-10-2026, sol en Bermeo)', bermeo?.sirimiri === false, JSON.stringify(bermeo));
+S.comparativa = comparativa([0.4, 0.0, 0.2, 0.0], [51, 3, 3, 3]);
+ok('y si ICON ve 0,2 mm a esa hora, sí es sirimiri', lluviaQueNoVesTu({ prec: 0.0 })?.sirimiri === true, JSON.stringify(lluviaQueNoVesTu({ prec: 0.0 })));
 
 /* Y AHORA LO QUE IMPORTA IGUAL: QUE SE CALLE CUANDO TOCA. */
 S.comparativa = comparativa([0.0, 0.0, 0.0, 0.0], [3, 3, 3, 3]);
@@ -2571,8 +2575,8 @@ ok('nombrando a los dos que la ven', fuerte?.cuantos === 2, String(fuerte?.cuant
 S.comparativa = comparativa([1.1, 0.0, 0.0, 0.0], [53, 3, 3, 3]);
 const llov11 = lluviaQueNoVesTu({ prec: 0.0 });
 ok('llovizna de ECMWF con 1,1 mm/h: no la llama sirimiri, va con su número', llov11 && llov11.sirimiri === false && llov11.mm === 1.1, JSON.stringify(llov11));
-S.comparativa = comparativa([1.0, 0.0, 0.0, 0.0], [53, 3, 3, 3]);
-ok('y con 1,0 mm/h justos, sí es sirimiri', lluviaQueNoVesTu({ prec: 0.0 })?.sirimiri === true);
+S.comparativa = comparativa([1.0, 0.0, 0.1, 0.0], [53, 3, 3, 3]);
+ok('y con 1,0 mm/h justos (y ICON acompañando), sí es sirimiri', lluviaQueNoVesTu({ prec: 0.0 })?.sirimiri === true);
 /* Y LA PALABRA DE LA HORA (`comoLlueve`): AROME a 0,0 con el código de
    llovizna PRESTADO de ECMWF solo es «Sirimiri» si ECMWF da ≤ 1 mm/h a esa
    hora; con 1,5 es lluvia de ECMWF y va en su chip (03-10-2026, §67 8). */

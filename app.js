@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.04-1541';
+const BUILD = '2026.10.04-1551';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -6154,7 +6154,14 @@ function lluviaQueNoVesTu(c) {
      como «sirimiri: moja sin marcar», y 1,1 mm/h marca. Sirimiri es la
      llovizna con poquita agua, ≤ AGUA_ACUERDO, la misma regla que
      `lluviaDeUnSitio()`; con más, va su número. */
-  const sirimiri = esLlovizna(peor.code) && peor.mm <= AGUA_ACUERDO;
+  /* Y SOLO SI ALGUIEN LA ACOMPAÑA (04-10-2026): la llovizna de ECMWF
+     25 km —el que presta el cielo— sola no es sirimiri; ese día pintó
+     llovizna 9 h seguidas en Bermeo con sol y nada en los pluviómetros.
+     La regla es `lloviznaAcompanadaEn`, la de las tres webs. Sin la
+     palabra, sigue diciendo lo que ve ese modelo, con su número. */
+  const peorOm = COMPARAR.find(m => m.name === peor.nom)?.om;
+  const sirimiri = esLlovizna(peor.code) && peor.mm <= AGUA_ACUERDO
+    && (peorOm !== ReglasTiempo.CIELO_PRESTADO || ReglasTiempo.lloviznaAcompanadaEn(H, i, duenoLluvia()));
   /* ── Y SI NOMBRA UNO QUE NO ESTÁ EN SU SELECTOR, SE AVISA ─────────
      Suyo, 30-08-2026: *«HARMONIE sí, pero no tenemos, ¿no? no lo veo
      ese modelo»*. Y lleva razón: en el selector hay cinco —Automático,
@@ -10861,7 +10868,10 @@ function loQueVieneHoy(k, horas, ahoraMs = Date.now()) {
     else {
       /* El sirimiri por el respaldo: código de llovizna (51-57) sin
          llegar al listón. Misma regla que `palabraLluvia`. */
-      const siri = sel.filter(h => has(h.code) && h.code >= 51 && h.code <= 57);
+      /* Con la regla de la hora (`comoLlueve`), no con el código a secas:
+         la llovizna prestada de ECMWF que nadie acompaña no es sirimiri
+         (04-10-2026: «SIRIMIRI hoy de 15:00 a 21:00» con sol en Bermeo). */
+      const siri = sel.filter(h => comoLlueve(h).k === 'sirimiri');
       if (siri.length)
         av.push(`SIRIMIRI ${deA(siri[0].date, +siri[siri.length - 1].date + 3600e3)} · la llovizna la ve ${esc(quienDaElCielo())}`);
     }
@@ -19431,11 +19441,15 @@ async function montarAvisos() {
        tranquilo y un aviso roto se ven exactamente igual. Es la misma
        regla de siempre de esta casa, aplicada al propio aviso. */
     di(`Avisos ACTIVADOS en ${estoEs()}.`,
-       'Te llega el <b>parte de la mañana</b> y, aunque tengas la app cerrada, un aviso cuando cambia algo:'
-       + `<br>⚡ <b>rayo</b> — CAPE ${CAPE_COMBINACION} con la tapa por debajo de ${TAPA_ROMPE}`
-       + '<br>🌧 <b>agua</b> — desde 0,3 mm/h; «fuerte» a partir de 2,0'
+       /* Lo que de verdad manda el vigilante (04-10-2026): el rayo, solo
+          MEDIDO; el de los modelos se queda aquí en la app. Antes ponía
+          «rayo — CAPE 700 con la tapa por debajo de 75» y «solo de lo que
+          cambia», que ya no eran ciertos. */
+       'Te llega el <b>parte de la mañana</b> y, aunque tengas la app cerrada, un aviso cuando viene algo en las 3 horas siguientes:'
+       + `<br>⚡ <b>rayo</b> — solo el <b>medido</b> por la red de AEMET: descargas a menos de ${ReglasTiempo.RAYO_ENCIMA} km de un sitio tuyo en la última hora y media. El rayo que solo prevén los modelos (CAPE ${CAPE_COMBINACION} con tapa por debajo de ${TAPA_ROMPE}, o su código de tormenta) no suena: lo ves aquí`
+       + '<br>🌧 <b>agua</b> — cuando llueve bien (2 mm/h o más) y otro modelo lo acompaña; con 15 o más, vibra. Y la lluvia que <b>miden</b> las estaciones de Euskalmet'
        + '<br>💨 <b>racha</b> — por encima de 70 km/h, la que te hace no salir'
-       + '<br>Solo de lo que <b>cambia</b>: que aparezca, que empeore o que se adelante. '
+       + '<br>Cada cosa suena una vez: si ya te lo dijo, no lo repite. '
        + 'Pruébalo con el botón de al lado: si no suena, hay que verlo <b>ahora</b>, no el día de la tormenta.');
   } else {
     btn.textContent = `Activar avisos en ${estoEs()}`;

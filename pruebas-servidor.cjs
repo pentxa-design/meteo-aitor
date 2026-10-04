@@ -314,8 +314,13 @@ const numVig = n => Number(vig.match(new RegExp('const ' + n + ' = ([0-9.]+);'))
      numVig('CAPE_MIN') === nApp(/const CAPE_COMBINACION = (\d+);/) && numVig('TAPA_MAX') === nApp(/const TAPA_ROMPE = (\d+);/));
   ok('y el diálogo de los avisos de la app dice el mismo número de racha que el vigilante',
      nApp(/racha<\/b> — por encima de (\d+) km\/h, la que te hace no salir/) === numVig('RACHA_TOPE'));
-  ok('y el mismo umbral de agua (AGUA_MIN) y de «fuerte» (AGUA_FUERTE)',
-     new RegExp(`desde ${String(numVig('AGUA_MIN')).replace('.', ',')} mm/h; «fuerte» a partir de ${numVig('AGUA_FUERTE').toFixed(1).replace('.', ',')}`).test(A));
+  /* Desde el 04-10-2026 el diálogo dice lo que de verdad suena: el agua
+     desde «llueve bien» (AGUA_FUERTE) y la tromba que vibra (AGUA_TROMBA). */
+  ok('y el mismo umbral de «llueve bien» (AGUA_FUERTE) y de tromba que vibra (AGUA_TROMBA)',
+     new RegExp(`llueve bien \\(${String(numVig('AGUA_FUERTE')).replace('.', ',')} mm/h o más\\) y otro modelo lo acompaña; con ${numVig('AGUA_TROMBA')} o más, vibra`).test(A),
+     `AGUA_FUERTE ${numVig('AGUA_FUERTE')} · AGUA_TROMBA ${numVig('AGUA_TROMBA')}`);
+  ok('y el rayo que dice que suena es el MEDIDO, no el CAPE con su tapa (04-10-2026)',
+     /rayo<\/b> — solo el <b>medido<\/b> por la red de AEMET/.test(A) && !/rayo<\/b> — CAPE/.test(A));
 }
 
 /* El push (27-09-2026): con TTL 3600 y sin urgencia, un móvil que retrase
