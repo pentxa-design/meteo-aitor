@@ -1720,6 +1720,7 @@ eval(sacarConst('listar')); eval(sacarConst('MODELOS_TORMENTA'));   // la nota d
 /* Las dos piezas de la lluvia de su dueño (03-10-2026) que usan el parte y la tarjeta. */
 eval(sacar('function palabraDeLaVentana('));
 eval(sacar('function otrosVenTxt('));
+eval(sacar('function rayoRojoDelParte('));   // rojo con código, ámbar con la pareja sola (04-10-2026)
 eval(sacar('function renderParte() {'));
 
 const P = (n, lat, lon) => ({ name: n, lat, lon });
@@ -2353,7 +2354,12 @@ ok('y se avisa arriba', /ha cambiado 1 torre/.test(pintado['#parteHint'] || ''),
 {
   const hint = pintado['#parteHint'] || '';
   ok('la cabecera del parte NOMBRA los sitios con riesgo de rayo, no solo los cuenta',
-     /riesgo de rayo en 3 de 5: /.test(hint) && hint.includes(sitios[0].name) && hint.includes(sitios[1].name) && hint.includes(sitios[2].name), hint);
+     /puede tronar \(CAPE\+tapa\) en 3 de 5: /.test(hint) && hint.includes(sitios[0].name) && hint.includes(sitios[1].name) && hint.includes(sitios[2].name), hint);
+  /* 04-10-2026: la pareja CAPE+tapa sola es «puede tronar» en ámbar; el
+     rojo «RAYO», con el código de tormenta de un modelo. */
+  ok('y la pareja sola sale en ámbar «PUEDE TRONAR», no en rojo «RAYO» (04-10-2026, «¿casi 12 horas de aviso de tormenta? no puede ser»)',
+     rayoRojoDelParte({ salta: true, codigo: null }) === false && rayoRojoDelParte({ salta: true, porCodigo: true }) === true
+     && rayoRojoDelParte({ salta: true, codigo: { quien: 'ICON' } }) === true && !/tormenta \(código/.test(hint), hint);
   ok('y cada nombre lleva a su tarjeta (data-ir con la clave del sitio)',
      hint.includes(`data-ir="${k(sitios[0])}"`) && hint.includes(`data-ir="${k(sitios[2])}"`), hint);
   ok('los que no saltan no se nombran ahí', !hint.includes(sitios[3].name) && !hint.includes(sitios[4].name), hint);
@@ -9982,7 +9988,10 @@ console.log('\n  Revisión 04-09: clases 1b, 2, 4, 5 y 6 — lo que se imprime c
   /* C1b */
   ok('el ⚡ del día lleva su hora y quién lo ve, con la regla única del rayo (rayoEnHoras), no una quinta copia',
      /const rayoDelDia = dia =>/.test(codigo) && /ReglasTiempo\.rayoEnHoras\(C, idx\)/.test(codigo)
-     && /Riesgo de tormenta · \$\{ry\.horas\.length === 1/.test(codigo) && !/isStormCode\(D\.weather_code\[i\]\)/.test(codigo));
+     && /\$\{ry\.rojo \? 'Riesgo de tormenta' : 'Puede tronar'\} · \$\{ry\.horas\.length === 1/.test(codigo) && !/isStormCode\(D\.weather_code\[i\]\)/.test(codigo));
+  /* 04-10-2026: el día con solo la pareja CAPE+tapa es ámbar «Puede tronar»; rojo, con código. */
+  ok('y el día con solo la pareja CAPE+tapa es ámbar «Puede tronar», el rojo es del código de tormenta (04-10-2026)',
+     /const nivel = peorDe\(tormenta \? \(ry\.rojo \? 'no' : 'warn'\) : 'go', nRacha, nLluvia\);/.test(codigo));
 }
 
 console.log('\n  Revisión 04-09: el parte no dice «hoy» para otro día');
@@ -11230,9 +11239,10 @@ grupo('El chip de Horas dice cuánta agua ve el otro modelo (15-09-2026, 23:53)'
     eval(sacar('function frasOtraTormenta('));
     const sinEt = t => t.replace(/<[^>]*>/g, '');
     ok('«otro ve tormenta» dice cuándo ese otro es tu propio modelo',
-       sinEt(frasOtraTormenta({ quien: 'ICON', propio: false })) === 'ICON ve tormenta'
+       /* «puede tronar» desde el 04-10-2026: es la pareja CAPE+tapa, ámbar. */
+       sinEt(frasOtraTormenta({ quien: 'ICON', propio: false })) === 'ICON ve que puede tronar'
        && sinEt(frasOtraTormenta({ quien: 'AROME HD', propio: true }))
-            === 'AROME HD (tu modelo, con su propia tapa) ve tormenta'
+            === 'AROME HD (tu modelo, con su propia tapa) ve que puede tronar'
        && frasOtraTormenta(null) === '',
        sinEt(frasOtraTormenta({ quien: 'AROME HD', propio: true })));
     ok('y los tres sitios que lo enseñan usan esa frase, ninguno escribe el nombre a pelo',
@@ -12251,6 +12261,16 @@ grupo('El parte cuenta el CÓDIGO de tormenta, no solo la pareja CAPE+tapa (03-1
   const e9 = ctx.__run([{ n: 'BERMEO' }], [{ hourly: { ...base, weather_code_icon_seamless: Array(n).fill(3),
     cape_ecmwf_ifs: Array(n).fill(900), convective_inhibition_ecmwf_ifs: Array(n).fill(10) } }], v).parteTorres[0];
   ok('   y ECMWF 9 km con su propia pareja (900/10) sí da rayo, y se nombra', e9?.salta === true && e9.modelo === 'ECMWF 9 km', JSON.stringify(e9));
+  /* 04-10-2026, decisión suya: la pareja sola es «puede tronar» (ámbar) y
+     NO cierra la ventana de «cuándo se puede»; el código de tormenta, sí.
+     Ese día la pareja cerraba la ventana 11-14 h por sitio sin un rayo. */
+  const vE9 = ctx.__run([{ n: 'BERMEO' }], [{ hourly: { ...base, weather_code_icon_seamless: Array(n).fill(3),
+    cape_ecmwf_ifs: Array(n).fill(900), convective_inhibition_ecmwf_ifs: Array(n).fill(10) } }], v).cuandoTorres?.[0];
+  ok('   pero la pareja sola NO frena la ventana: «nada te frena», no «ahora te frena: rayo» (04-10-2026)',
+     vE9 && vE9.nFrenadas === 0, JSON.stringify(vE9 && { nFrenadas: vE9.nFrenadas, ahora: vE9.ahora?.frenos }));
+  const vCod = ctx.__run([{ n: 'CARRANZA' }], [{ hourly: { ...base, weather_code_icon_seamless: [3, 95, 95, 3, 3, 3, 3, 3, 3] } }], v).cuandoTorres?.[0];
+  ok('   y el código de tormenta sí frena: 2 horas, las del 95',
+     vCod && vCod.nFrenadas === 2, JSON.stringify(vCod && { nFrenadas: vCod.nFrenadas }));
 }
 
 grupo('Cambiar de sitio rápido: la respuesta tardía del anterior no pisa al nuevo (03-10-2026)');

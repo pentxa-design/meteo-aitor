@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.04-1551';
+const BUILD = '2026.10.04-2107';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -2353,7 +2353,10 @@ function tormentaQueNoVesTu(h, place = null) {
    una tapa de 68, que en la escala de la casa es «aguanta». */
 function frasOtraTormenta(o) {
   if (!o) return '';
-  return `${esc(o.quien)}${o.propio ? ' (tu modelo, con su propia tapa)' : ''} ve tormenta`;
+  /* «Puede tronar», no «ve tormenta» (04-10-2026): esto es la pareja
+     CAPE+tapa, y la pareja sola es ámbar; ese día marcó 112 horas-sitio
+     sin un solo rayo medido. El rojo es para el código de tormenta. */
+  return `${esc(o.quien)}${o.propio ? ' (tu modelo, con su propia tapa)' : ''} ve que puede tronar`;
 }
 
 /* ── ¿HAY RAYO A ESTA HORA, Y QUIÉN LO VE? (03-10-2026, TRASPASO §67 1) ──
@@ -5740,7 +5743,7 @@ function renderStorm(c) {
        propia pareja ya rompe, esto no añade nada y sobra. */
     (o => o ? row(`⚠ ${frasOtraTormenta(o)}`, 'a esta hora, con su tapa',
                   `${Math.round(o.cape)} J/kg`,
-                  `tapa ${Math.round(o.cin)} — ${colaTapa(o.cape, o.cin, null)}`, 'no') : '')(
+                  `tapa ${Math.round(o.cin)} — ${colaTapa(o.cape, o.cin, null)}`, 'warn') : '')(
       laParejaRompe(c?.cape, c?.cin, c) ? null : tormentaQueNoVesTu(c)) +
     row('Índice de elevación', 'Lifted Index', show(c.li, '', 1),
         liTxt === nd ? '' : `Atmósfera ${liTxt}`, tonoLi) +
@@ -7124,10 +7127,14 @@ function tablaTormenta(H, i, hora) {
                 + `pero no hay gasolina: CAPE máximo ${capeMax}, y hacen falta ${CAPE_COMBINACION}.`
               : `${listar(losQueSaben.map(f => f.name))} publican la tapa: sigue puesta con la gasolina que hay.` };
   } else if (losQueSaltan.length === losQueSaben.length) {
-    cab = { s: 'no', t: 'Todos los que saben ven tormenta',
+    /* ROJO SOLO CON CÓDIGO (04-10-2026, decisión suya): si ninguno da su
+       código de tormenta, es la pareja CAPE+tapa, «puede tronar», ámbar. */
+    cab = { s: losQueSaltan.some(f => f.porCodigo) ? 'no' : 'warn',
+            t: losQueSaltan.some(f => f.porCodigo) ? 'Todos los que saben ven tormenta' : 'Todos los que saben ven que puede tronar',
             x: 'Coinciden los que publican la tapa.' };
   } else {
-    cab = { s: 'no', t: `${losQueSaltan.length} de ${losQueSaben.length} ven tormenta`,
+    cab = { s: losQueSaltan.some(f => f.porCodigo) ? 'no' : 'warn',
+            t: `${losQueSaltan.length} de ${losQueSaben.length} ven ${losQueSaltan.some(f => f.porCodigo) ? 'tormenta' : 'que puede tronar'}`,
             x: `${listar(losQueSaltan.map(f => f.name))} sí y ${
                  listar(losQueSaben.filter(f => !salta(f)).map(f => f.name))} no. `
              + 'Basta con que uno acierte: el rayo no admite promedios.' };
@@ -7140,7 +7147,7 @@ function tablaTormenta(H, i, hora) {
     <div class="cmp__h">Tormenta · CAPE con su tapa · ${esc(hora)}</div>
     ${filas.map(f => {
       const pc = has(f.cape) ? clamp(f.cape / tope * 100, f.cape > 0 ? 4 : 0, 100) : 0;
-      const st = salta(f) ? 'no' : alFilo(f) ? 'warn' : sabe(f) ? 'go' : 'nd';
+      const st = salta(f) ? (f.porCodigo ? 'no' : 'warn') : alFilo(f) ? 'warn' : sabe(f) ? 'go' : 'nd';
       const tapa = f.porCodigo
         ? `<em class="cmp__tap">su código de tormenta${has(f.cin) ? ` · tapa ${nCape(f.cin)}` : ''}</em>`
         : sabe(f)
@@ -8861,9 +8868,12 @@ function calcularParte(sitios, arr) {
         if (has(g) && (racha === null || g > racha)) racha = g;
         const l = H[`precipitation_${m.om}`]?.[i];
         if (has(l) && (lluvia === null || l > lluvia)) lluvia = l;
-        const c = H[`cape_${m.om}`]?.[i], k2 = H[`convective_inhibition_${m.om}`]?.[i];
+        /* Solo el código de tormenta frena. La pareja CAPE+tapa sola ya NO
+           (04-10-2026, decisión suya): es «puede tronar», en ámbar. Medido
+           ese día contra AEMET: de 182 horas-sitio marcadas, las 112 que
+           salían solo de la pareja no tuvieron ni un rayo, y cerraba la
+           ventana 11-14 h al día. */
         if (isStormCode(H[`weather_code_${m.om}`]?.[i])) rayo = true;
-        if (has(c) && c >= CAPE_COMBINACION && has(k2) && k2 < TAPA_ROMPE) rayo = true;
       }
 
       const frenos = [];
@@ -9254,6 +9264,10 @@ async function discrepaTorres(sitios) {
    compara al detalle salta un «ha cambiado» en cada pasada y deja de
    mirarse. Lo que importa es si hay rayo, cuándo, y si el orden de
    magnitud se mueve. */
+/** ¿El rayo del parte es rojo? Solo con el código de tormenta de un modelo;
+ *  la pareja CAPE+tapa sola es «puede tronar», ámbar (04-10-2026). */
+function rayoRojoDelParte(d) { return !!(d?.salta && (d.porCodigo || d.codigo)); }
+
 function huellaParte(d) {
   if (!d) return null;
   return d.salta
@@ -10475,6 +10489,9 @@ function renderParte() {
 
   const conRayo = filas.filter(x => x.d.salta);
   const nSalta = conRayo.length;
+  /* ROJO SOLO CON CÓDIGO (04-10-2026): la pareja CAPE+tapa sola es «puede
+     tronar», en ámbar. Se nombran aparte, para que se lean distinto. */
+  const rojos = conRayo.filter(x => rayoRojoDelParte(x.d)), puedenTronar = conRayo.filter(x => !rayoRojoDelParte(x.d));
   const v_ = ventanaParte();
   const cual = v_.etiqueta;
   const cab = $('#parteCab');
@@ -10496,15 +10513,16 @@ function renderParte() {
      hasta el final para ir a Virgen Orduña». La lista se queda por
      cercanía —lo prefirió él—; lo que salta se nombra AQUÍ y el nombre
      lleva a su tarjeta. Solo lo del rayo, que es su veto. */
-  const nombresRayo = conRayo
+  const nombresDe = xs => xs
     .map(x => `<a href="#" class="pt__ir" data-ir="${esc(key(x.p))}">${esc(x.p.name)}</a>`).join(', ');
   const hint = $('#parteHint');
   hint.innerHTML =
     (nCam ? `· ⚠ ${nCam === 1 ? 'ha cambiado 1 torre' : `han cambiado ${nCam} torres`}`
           + (nPeor ? ` (${nPeor} a peor)` : '') + ' '
           : '')
-    + (nSalta ? `· riesgo de rayo en ${nSalta} de ${filas.length}: ${nombresRayo}`
-              : `· ninguno con riesgo de rayo ${esc(cual)}`)
+    + (rojos.length ? `· tormenta (código de un modelo) en ${rojos.length} de ${filas.length}: ${nombresDe(rojos)}` : '')
+    + (puedenTronar.length ? ` · puede tronar (CAPE+tapa) en ${puedenTronar.length} de ${filas.length}: ${nombresDe(puedenTronar)}` : '')
+    + (nSalta ? '' : `· ninguno con riesgo de rayo ${esc(cual)}`)
     /* Y si faltan sitios, va aquí mismo: el recuento de arriba dice
        «ninguno con riesgo» sobre los que SÍ llegaron, y sin esto se lee
        como si fueran los veinte. */
@@ -10578,12 +10596,13 @@ function renderParte() {
             <span class="pt__m">· lo ve ${esc(d.modelo)}${cuantosLoVen(d)}</span></div>`}
           ${lineaCodigo}
           ${cuandoSePuede(k)}${lineaCambio(k)}`;
-      S.parteFilas.set(key(p), { est: 'no', etq: `RAYO ${esc(cuando)}`, dia: rotuloDelParte,
+      const rojo = rayoRojoDelParte(d), etq = `${rojo ? 'RAYO' : 'PUEDE TRONAR'} ${esc(cuando)}`;
+      S.parteFilas.set(key(p), { est: rojo ? 'no' : 'warn', etq, dia: rotuloDelParte,
                                  cuerpo: cuerpoR, comp: comparativa(p) });
-      return `<div class="pt" data-s="no">
+      return `<div class="pt" data-s="${rojo ? 'no' : 'warn'}">
         <div class="pt__izq">
           <div class="pt__h"><b>${esc(p.name)}</b>
-            <span class="pt__b">RAYO ${esc(cuando)}</span></div>
+            <span class="pt__b">${etq}</span></div>
           ${cuerpoR}
         </div>${comparativa(p)}
       </div>`;
@@ -15686,7 +15705,8 @@ function renderDays() {
     const nRacha = nivelRacha(racha);   // la misma decisión que la tarjeta de la hora
     const nLluvia = !has(mm) ? 'nd'
       : mm >= (S.thr?.rainNo ?? 2) ? 'no' : mm >= (S.thr?.rainWarn ?? 0.2) ? 'warn' : 'go';
-    const nivel = tormenta ? 'no' : peorDe(nRacha, nLluvia);
+    /* Rojo con código de tormenta; la pareja CAPE+tapa sola, ámbar (04-10-2026). */
+    const nivel = peorDe(tormenta ? (ry.rojo ? 'no' : 'warn') : 'go', nRacha, nLluvia);
     return `<li class="dcard" data-s="${nivel}" data-dia="${esc(t)}">
       <div class="dcard__top"></div>
       <div class="dcard__d">${i === 0 ? 'Hoy' : d.toLocaleDateString('es',{weekday:'short'})}</div>
@@ -15756,7 +15776,7 @@ function renderDays() {
         if (!X) return '';
         return `<div class="dcard__x" title="${esc(X.secos.join(', '))}: secos">⚠ ${esc(X.texto)}</div>`;
       })()}
-      ${tormenta ? `<div class="dcard__s">⚡ Riesgo de tormenta · ${ry.horas.length === 1 ? `a las ${hhDe(ry.horas[0])}` : `de ${hhDe(ry.horas[0])} a ${hhDe(ry.horas[ry.horas.length - 1])}`} · lo ve ${esc(ry.quien.join(', '))}</div>` : ''}
+      ${tormenta ? `<div class="dcard__s">⚡ ${ry.rojo ? 'Riesgo de tormenta' : 'Puede tronar'} · ${ry.horas.length === 1 ? `a las ${hhDe(ry.horas[0])}` : `de ${hhDe(ry.horas[0])} a ${hhDe(ry.horas[ry.horas.length - 1])}`} · lo ve ${esc(ry.quien.join(', '))}</div>` : ''}
     </li>`;
   }).join('');
   renderDiaDetalle();

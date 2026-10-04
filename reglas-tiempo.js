@@ -743,23 +743,36 @@ const ReglasTiempo = (() => {
      del Centro Operativo, subido aquí para que lo usen las tres: «10 días»
      de la app llevaba su propia regla (el código DIARIO del modelo cargado
      y el CAPE de AROME con la tapa de ICON), la quinta copia. */
+  /* ROJO SOLO CON CÓDIGO; LA PAREJA, ÁMBAR (04-10-2026, decisión suya).
+     Medido ese día sobre sus 21 sitios y 24 h contra AEMET: la regla marcó
+     182 horas-sitio y cayeron rayos en 26 (acertó 13); de las 182, 112
+     salían solo de la pareja CAPE+tapa y en NINGUNA de esas 112 cayó un
+     rayo. Para el día siguiente marcaba de 11 a 14 h por sitio: «¿por qué
+     casi 12 horas de aviso de tormenta? no puede ser». Pero esa pareja es
+     la que vio Lekeitio y Durango el 23-08 sin código de nadie, así que no
+     se calla: se dice «puede tronar», en ámbar, como decidió él el 24-08
+     («el rojo, solo tormenta en curso»). `horasCodigo` son las horas con
+     código de tormenta de algún modelo: esas son las rojas. */
   function rayoEnHoras(H, idx) {
     if (!H?.time || !idx?.length) return null;
-    const horas = [], quien = new Set();
+    const horas = [], quien = new Set(), horasCodigo = [], quienCodigo = new Set();
     let peor = null;
     for (const i of idx) {
-      let aqui = false;
+      let aqui = false, aquiCodigo = false;
       for (const m of MODELOS_RAYO) {
         const c = H[`cape_${m.om}`]?.[i], k = H[`convective_inhibition_${m.om}`]?.[i], w = H[`weather_code_${m.om}`]?.[i];
         const { porCodigo, porPareja } = rayoDelModelo({ cape: c, cin: k, code: w });
         if (!porCodigo && !porPareja) continue;
         aqui = true; quien.add(m.nom);
+        if (porCodigo) { aquiCodigo = true; quienCodigo.add(m.nom); }
         if (!peor || (porPareja && (!peor.porPareja || c > peor.cape)))
           peor = { i, hora: H.time[i], quien: m.nom, porCodigo, porPareja, cape: porPareja ? c : null, tapa: porPareja ? k : null };
       }
       if (aqui) horas.push(H.time[i]);
+      if (aquiCodigo) horasCodigo.push(H.time[i]);
     }
-    return horas.length ? { horas, quien: [...quien], peor } : null;
+    return horas.length ? { horas, quien: [...quien], peor, horasCodigo, quienCodigo: [...quienCodigo],
+                            rojo: horasCodigo.length > 0 } : null;
   }
 
   return Object.freeze({
