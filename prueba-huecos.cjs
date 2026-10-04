@@ -74,6 +74,9 @@ eval(sacarConst('mmTxt'));
 eval(sacarConst('mmRedonda'));   // el redondeo con el que se decide la lluvia (26-09-2026)
 eval(sacarConst('kmTxt'));
 eval(sacarConst('esLlovizna'));
+globalThis.duenoLluvia = () => ReglasTiempo.DUENO_AGUA;   // el dueño del agua de fábrica, sin el registro de aciertos
+eval(sacar('function lloviznaAcompanada('));   // ¿otro modelo ve agua en esa hora? (04-10-2026) — sin comparativa, null
+eval(sacar('function mmDelQuePresta('));
 eval(sacar('function comoLlueve('));
 eval(sacarConst('PERFILES'));           // los de verdad: rafagaBestia 70 / 90 / null
 globalThis.perfil = () => PERFILES[S.perfil] ?? PERFILES.hierro;
