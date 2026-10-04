@@ -593,6 +593,7 @@ async function unSitio(s, previo = null, reloj = null) {
         const dia = H_.time[i].slice(0, 10), h = Number(H_.time[i].slice(11, 13));
         const d = porDia[dia] ??= { horas: new Set(), cape: 0, quien: null, deLado: false, porHora: {} };
         d.horas.add(h);
+        (d.modelosPareja ??= {})[h] = (d.modelosPareja[h] ?? new Set()).add(m);   // quién rompe por pareja a esa hora
         // El CAPE y la tapa de ESA hora y de quién (como el agua y la racha): ver rayoEnHoras.
         if (!(d.porHora[h]?.v >= c)) d.porHora[h] = { v: Math.round(c), tapa: Math.round(t), quien: nombreDe(m) + (deLado ? ' en la celda de al lado' : '') };
         if (c > d.cape) {
@@ -723,6 +724,23 @@ async function unSitio(s, previo = null, reloj = null) {
                                  ...(x.sinDato ? { sinDato: x.sinDato } : {}) }]; })) };
   }
 
+  /* ── SOLO SI ESTÁ CLARO (suyo, 04-10-2026, 11:10: «si no da muy claro, que
+     no los envíe») ───────────────────────────────────────────────────
+     Esa mañana el móvil llevaba 40 avisos «Crítico» de rayo, uno cada hora,
+     con ECMWF 9 km dando CAPE 700-1000 y tapa 0-4… y la red de AEMET con
+     CERO descargas en Euskadi de 06 a 10. Medido el 03-10 contra AEMET: de
+     las horas en que un solo modelo rompe por pareja, el 77 % no tienen un
+     rayo a menos de 15 km. La pareja de UN solo modelo es «puede»; para
+     avisar al móvil hace falta el código de tormenta de alguno, o que DOS
+     modelos distintos rompan por pareja a la misma hora. Lo medido por AEMET
+     avisa siempre. */
+  for (const d of Object.values(porDia)) {
+    for (const h of [...d.horas]) {
+      const claro = d.porHora[h]?.codigo || (d.modelosPareja?.[h]?.size ?? 0) >= 2;
+      if (!claro) { d.horas.delete(h); delete d.porHora[h]; }
+    }
+    delete d.modelosPareja;
+  }
   const dias = {};
   for (const [dia, d] of Object.entries(porDia)) {
     const hs = [...d.horas].sort((a, b) => a - b);

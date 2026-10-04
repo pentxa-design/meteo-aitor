@@ -594,11 +594,24 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   ok('10:00 · AROME HD sin dato y ECMWF (el que manda entonces) solo 0,5: NO hay aviso, aunque ICON vea 5',
      !SA2.reventó && !(SA2.b.avisados || []).some(a => /llueve bien/.test(a.cuerpo || '')), resumen(SA2));
   /* Y el rayo dice quién ve qué CAPE y a qué hora. */
+  /* SOLO SI ESTÁ CLARO (suyo, 04-10-2026: «si no da muy claro, que no los
+     envíe»): la pareja de UN solo modelo no avisa al móvil (el 77 % sin rayo,
+     medido); con DOS modelos, o con el código de tormenta, sí. */
   const L6 = await pasada({ hora: '14:00', antes: tranquilo('14:00', 200),
     esc: { rayo: [{ k: 0, dia: 'hoy', horas: [16, 17], om: 'icon_eu' }] } });
-  const l6 = (L6.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
-  ok('14:00 · el rayo dice QUIÉN lo ve y con qué: «BERMEO: riesgo de rayo 16h-17h: ICON ve CAPE 900, tapa 10»',
-     !L6.reventó && /BERMEO: riesgo de rayo 16h-17h: ICON ve CAPE 900, tapa 10/.test(l6?.cuerpo || ''), l6?.cuerpo || resumen(L6));
+  const l6 = (L6.b.avisados || []).find(a => /Próximas 3 h|Crítico/.test(a.titulo));
+  ok('14:00 · solo ICON rompe por pareja (16-17h): NO se manda aviso de rayo al móvil (04-10-2026, 40 «Crítico» con cero descargas)',
+     !L6.reventó && !/riesgo de rayo/.test(l6?.cuerpo || ''), l6?.cuerpo || resumen(L6));
+  const L6b = await pasada({ hora: '14:00', antes: tranquilo('14:00', 200),
+    esc: { rayo: [{ k: 0, dia: 'hoy', horas: [16, 17], om: 'icon_eu' }, { k: 0, dia: 'hoy', horas: [16, 17], om: 'gfs_seamless' }] } });
+  const l6b = (L6b.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
+  ok('   y con ICON y GFS rompiendo a la vez sí, diciendo quién lo ve y con qué: «BERMEO: riesgo de rayo 16h-17h: … ve CAPE 900, tapa 10»',
+     !L6b.reventó && /BERMEO: riesgo de rayo 16h-17h: (ICON|GFS) ve CAPE 900, tapa 10/.test(l6b?.cuerpo || ''), l6b?.cuerpo || resumen(L6b));
+  const L6c = await pasada({ hora: '14:00', antes: tranquilo('14:00', 200),
+    esc: { codigo: [{ k: 0, dia: 'hoy', horas: [16], om: 'icon_eu' }] } });
+  const l6c = (L6c.b.avisados || []).find(a => /Próximas 3 h/.test(a.titulo));
+  ok('   y el código de tormenta de UN modelo sigue avisando (no admite interpretación)',
+     !L6c.reventó && /riesgo de rayo/.test(l6c?.cuerpo || ''), l6c?.cuerpo || resumen(L6c));
   ok('y el agua sola avisa SIN vibrar (importante: false): la vibración larga es del rayo y la racha de 70',
      l2 && l2.importante === false && /^🌧/.test(l2.titulo), JSON.stringify(l2));
   /* PERO LA TROMBA VIBRA (03-10-2026): con 15 mm/h para arriba («llueve
