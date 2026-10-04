@@ -1962,7 +1962,8 @@ ok('la tira va desde las 00:00 de hoy: las pasadas se evalúan por el mismo cami
    /const pasadas = hoy && S\.data\?\.fc \? evaluarHoras\(horasDelDia\(S\.data\.fc, hoy\)\.filter\(h => h\.date < hrs\[0\]\.date\), S\.place\) : \[\];/.test(src)
    && /pasadas\.map\(h => tarjetaHora\(h, true\)\)\.join\(''\) \+ hrs\.slice\(0, 48\)/.test(src)
    && /hcard\$\{pasada \? ' hcard--pasada' : ''\}/.test(src) && /scrollLeft = Math\.max\(0, ahora\.offsetLeft - 8\)/.test(src)
-   && /\.hcard--pasada\{opacity:\.55\}/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8')));
+   && /\.hcard--pasada\{opacity:\.55\}/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8'))
+   && /document\.querySelector\('#hlist \.hcard:not\(\.hcard--pasada\)'\)/.test(src));   // y el vigía del cielo mira la hora en curso, no la primera pasada
 
 grupo('«Próxima lluvia» con la lluvia cayendo dice que ya llueve (03-10-2026, Bermeo 13,6 mm/h)');
 ok('la búsqueda empieza en la hora EN CURSO y, si llueve ya, dice «está lloviendo» y no la hora siguiente',

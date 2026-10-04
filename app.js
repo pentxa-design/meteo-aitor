@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.04-0143';
+const BUILD = '2026.10.04-1035';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -18052,7 +18052,9 @@ function comprobarCielo() {
   const grande = codigos($('#nowIco'))[0];
   if (has(grande) && has(h0.code) && grande !== h0.code)
     faltas.push(`Ahora pinta ${grande} y la hora en curso dice ${h0.code}`);
-  const primera = portadaDeEstacion ? null : document.querySelector('#hlist .hcard');
+  /* La hora EN CURSO, no la primera tarjeta: desde el 04-10-2026 la tira
+     empieza en las 00:00 de hoy con las pasadas atenuadas. */
+  const primera = portadaDeEstacion ? null : document.querySelector('#hlist .hcard:not(.hcard--pasada)');
   if (primera) {
     const c1 = codigos(primera)[0];
     if (has(c1) && has(grande) && c1 !== grande) faltas.push(`Horas pinta ${c1} en la hora en curso y Ahora ${grande}`);
