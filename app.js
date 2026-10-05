@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.05-2134';
+const BUILD = '2026.10.05-2334';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -18523,6 +18523,7 @@ function setView(v) {
                         cargarObservacion(); cargarMarcador(); }
   if (v === 'cams')   renderCams();
   if (v === 'rayos')  renderRayos();
+  if (v === 'alerts') pintarAprendido();
   /* Cazado el 31-08-2026 en su pantallazo: el aviso «los modelos van de
      27° a 41°» no salía NUNCA — la lista se pintaba al cargar (antes de
      llegar la comparación de 10 días) y al entrar en la pestaña nadie
@@ -19713,6 +19714,35 @@ async function avisoDePrueba() {
    puede quedarse por el camino y aparecer veinte minutos tarde; si solo
    pusiera una hora, un aviso viejo se leería como de ahora mismo. Es la
    misma regla de toda la app: el dato lleva su hora encima.        */
+/* ── LO QUE HA APRENDIDO DE LA LLUVIA (05-10-2026) ────────────────────
+   Suyo: «¿datos no vienen en la app o cómo va?». El registro de aciertos
+   (lib/verificacion.mjs) compara cada hora lo que dijo cada modelo con lo
+   que midió el pluviómetro; esto lo enseña. Una lectura al abrir Avisos,
+   como mucho cada 10 min, y del CDN: no gasta casi nada. */
+let aprendidoT = 0;
+async function pintarAprendido() {
+  const el = $('#aprendido');
+  if (!el || Date.now() - aprendidoT < 10 * 60e3) return;
+  aprendidoT = Date.now();
+  let j;
+  try {
+    const ac = new AbortController(); setTimeout(() => ac.abort(), 10000);
+    const r = await fetch('/api/vigilante?verificar=1', { signal: ac.signal });
+    j = await r.json();
+  } catch { el.innerHTML = '<p class="dim">No he podido leer el registro ahora: no es que no haya datos, es que no lo sé.</p>'; aprendidoT = 0; return; }
+  if (!j?.hay) { el.innerHTML = `<p class="dim">${esc(j?.texto || j?.error || 'Todavía no hay nada guardado.')}</p>`; return; }
+  const pc = x => has(x) ? `${Math.round(x * 100)} %` : '—';
+  const mm = x => has(x) ? `${String(x).replace('.', ',')} mm/h` : '—';
+  const tabla = (titulo, rk) => !rk?.length ? '' : `<p class="note"><b>${titulo}</b> · ${rk[0].n.toLocaleString('es-ES')} horas comparadas</p>
+    <table class="tabla-mini"><tr><th>Modelo</th><th>Acierta si llueve y cuánto</th><th>Falla en litros cuando llueve</th></tr>
+    ${rk.map(m => `<tr><td>${esc(m.nombre)}</td><td>${pc(m.acierto)}</td><td>${mm(m.litros?.mae)}</td></tr>`).join('')}</table>`;
+  const R = j.regla;
+  const avisoTxt = R?.n ? `<p class="note">Tu aviso «llueve bien» al móvil ha salido <b>${R.n}</b> veces: llovió fuerte en <b>${Math.round(100 * R.bien / R.n)} %</b>, algo en ${Math.round(100 * R.poco / R.n)} % y seco en <b>${Math.round(100 * R.seco / R.n)} %</b>.${j.perdidas ? ` Se escaparon ${j.perdidas} chaparrones fuertes que no vio nadie.` : ''}</p>` : '';
+  el.innerHTML = `<p class="note">Desde el ${esc(new Date(j.desde).toLocaleDateString('es-ES', { day: 'numeric', month: 'numeric' }))}, cada hora: lo que dijo cada modelo contra lo que midió el pluviómetro más cercano (AEMET; en Tarragona, Barcelona y Girona, Meteocat).</p>
+    ${tabla('En tus emplazamientos de Euskadi', j.ranking?.eus)}${tabla('Fuera de Euskadi (puntos de contraste)', j.ranking?.contraste)}
+    ${avisoTxt}<p class="note">Manda en la lluvia: <b>${esc((typeof j.manda === 'string' ? j.manda : j.manda?.nombre) || nombreDeModelo(ReglasTiempo.DUENO_AGUA))}</b>. Lo aprendido no cambia la pantalla solo: si otro modelo acierta claramente más, se te enseña y decides tú.</p>`;
+}
+
 async function pintarRecibidos() {
   const el = $('#recibidos');
   if (!el) return;

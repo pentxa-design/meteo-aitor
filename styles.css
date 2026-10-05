@@ -2992,3 +2992,9 @@ body.sin-scroll{overflow:hidden}
 /* Las horas pasadas de hoy en la tira de Horas (04-10-2026): se ven, pero atenuadas. */
 .hcard--pasada{opacity:.55}
 .hcard--pasada .hcard__h small{font-size:.62em;font-weight:600;opacity:.8;margin-left:3px;text-transform:uppercase}
+
+/* Lo que ha aprendido la app de la lluvia (Avisos, 05-10-2026) */
+.tabla-mini{width:100%;border-collapse:collapse;font-size:.86rem;margin:4px 0 10px}
+.tabla-mini th,.tabla-mini td{text-align:left;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.08)}
+.tabla-mini th{color:var(--muted,#9aa4b2);font-weight:600;font-size:.78rem}
+.tabla-mini tr:nth-child(2) td{color:var(--go,#3cc88c);font-weight:600}

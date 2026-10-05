@@ -1187,7 +1187,9 @@ export default async function handler(req, res) {
     } catch (e) { return res.status(200).json({ error: String(e?.message || e).slice(0, 120) }); }
   }
   if (req.method === 'GET' && req.query?.verificar === '1') {
-    res.setHeader('Cache-Control', 'no-store');
+    /* 10 min en el CDN (05-10-2026): ahora lo lee la pestaña Avisos y el
+       registro solo cambia en las pasadas. Leerlo no arranca la función. */
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=600, stale-while-revalidate=600');
     try { return res.status(200).json(resumenVerificacion((await leerJSON(RUTA_VERIF, null)).dato)); }
     catch (e) { return res.status(200).json({ error: String(e?.message || e).slice(0, 100) }); }
   }

@@ -12280,6 +12280,27 @@ grupo('El parte cuenta el CÓDIGO de tormenta, no solo la pareja CAPE+tapa (03-1
      vCod && vCod.nFrenadas === 2, JSON.stringify(vCod && { nFrenadas: vCod.nFrenadas }));
 }
 
+grupo('Avisos enseña lo que ha aprendido la app de la lluvia (05-10-2026)');
+{
+  /* Suyo: «¿datos no vienen en la app o cómo va?». Se arranca la tarjeta con
+     una respuesta del registro como la de producción (05-10, 21:40): `manda`
+     viene como TEXTO, y `dueno` es lo que aprendería (ICON), no quien manda. */
+  const el = { innerHTML: '' };
+  const J = { hay: true, desde: '2026-10-01T15:00:50.511Z', manda: 'AROME HD', dueno: { nombre: 'ICON' }, perdidas: 11,
+    regla: { n: 371, seco: 0, poco: 58, bien: 313 },
+    ranking: { eus: [{ nombre: 'AROME HD', n: 3657, acierto: 0.57, litros: { mae: 4.94 } }, { nombre: 'ICON', n: 3657, acierto: 0.47, litros: { mae: 4.19 } }],
+               contraste: [{ nombre: 'AROME HD', n: 1661, acierto: 0.54, litros: { mae: 5.03 } }] } };
+  const fn = new Function('$', 'esc', 'has', 'fetch', 'nombreDeModelo', 'ReglasTiempo', 'AbortController', 'setTimeout',
+    sacar('let aprendidoT = 0;').replace(/^let aprendidoT = 0;\n/, 'let aprendidoT = 0;\n') + '\n' + sacar('async function pintarAprendido() {') + '\nreturn pintarAprendido;');
+  (globalThis.__pendientes ??= []).push((async () => {
+    const pintar = fn(() => el, x => String(x), v => v != null, async () => ({ json: async () => J }), om => om, { DUENO_AGUA: 'AROME HD' }, AbortController, () => 0);
+    await pintar();
+    ok('Avisos dice quién manda en la lluvia (AROME HD), no lo que aprendería (ICON)', /Manda en la lluvia: <b>AROME HD<\/b>/.test(el.innerHTML), el.innerHTML.slice(-260));
+    ok('   con las dos tablas (Euskadi y contraste) y el acierto en %', /En tus emplazamientos de Euskadi/.test(el.innerHTML) && /Fuera de Euskadi/.test(el.innerHTML) && /57 %/.test(el.innerHTML) && /4,94 mm\/h/.test(el.innerHTML));
+    ok('   y el aviso «llueve bien»: 371 veces, 84 % fuerte, 0 % seco, 11 escapados', /371<\/b> veces/.test(el.innerHTML) && /84 %/.test(el.innerHTML) && /seco en <b>0 %/.test(el.innerHTML) && /11 chaparrones/.test(el.innerHTML));
+  })());
+}
+
 grupo('Cambiar de sitio rápido: la respuesta tardía del anterior no pisa al nuevo (03-10-2026)');
 {
   /* Reproducido por la auditoría con el go() real: BERMEO y enseguida OIZ,
