@@ -30,6 +30,7 @@ import { verificar, cargar as cargarRegistro, resumen as resumenVerificacion, RU
 import { leer, guardar } from './suscribir.mjs';
 import { ReglasTiempo } from '../lib/reglas.mjs';
 import { lectorDeRayosServidor } from '../lib/rayos-png.mjs';
+import { lluviaMeteocat, cuotaMeteocat } from '../lib/meteocat.mjs';
 
 const ESTADO = 'avisos/vigilante.json';
 const APP = 'https://weather-app-ochre-one-76.vercel.app';
@@ -822,6 +823,20 @@ async function unSitio(s, previo = null, reloj = null) {
 
 /** Lo que MIDIÓ AEMET en las últimas 24 h junto a cada sitio: la estación más
  *  cercana (≤ 15 km) con pluviómetro. Map(sitio → Map('YYYY-MM-DDTHH' UTC → mm)). */
+/* LOS PLUVIÓMETROS DE METEOCAT EN CATALUÑA (05-10-2026). En los puntos de
+   contraste de Cataluña se usa el pluviómetro de la XEMA más cercano (a
+   menos de 10 km) en vez del de AEMET; fuera de Cataluña, o si Meteocat
+   falla o se queda sin cupo, AEMET como siempre. Ver lib/meteocat.mjs. */
+async function medidasConMeteocat(sitios) {
+  const out = await medidasAEMET(sitios);
+  const hoy = new Date().toISOString().slice(0, 10), ayer = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  try {
+    const mc = await lluviaMeteocat(sitios, [ayer, hoy]);
+    mc.forEach((m, k) => { if (m && sitios[k]) out.set(sitios[k].n, new Map(Object.entries(m.horas))); });
+  } catch { /* sin Meteocat: se queda lo de AEMET */ }
+  return out;
+}
+
 async function medidasAEMET(sitios) {
   const u = `${APP}/estaciones?puntos=${sitios.map(s => `${s.lat.toFixed(4)},${s.lon.toFixed(4)}`).join('|')}&historia=24&radio=15`;
   const r = await fetch(u, { signal: AbortSignal.timeout(12000) });
@@ -1153,6 +1168,24 @@ export default async function handler(req, res) {
      única forma de que eso no vuelva a pasar es que el aviso salga donde
      él SÍ mira, que es la app, y que no dependa de que corra nada. */
   /* Lo avisado contra lo que cayó (lib/verificacion.mjs). */
+  /* Lo que trae Meteocat para los puntos de contraste de Cataluña, y cuántas
+     consultas van este mes (05-10-2026). Con la caché del almacén, mirarlo
+     no gasta: el día en curso se pide como mucho cada 110 min. */
+  if (req.method === 'GET' && req.query?.meteocat === '1') {
+    res.setHeader('Cache-Control', 'no-store');
+    const cuota = await cuotaMeteocat().catch(e => ({ error: String(e?.message || e) }));
+    if (cuota.error) return res.status(200).json({ cuota });
+    try {
+      const cat = PUNTOS_CONTRASTE.filter(x => /Tarragona|Barcelona|Girona/.test(x.n));
+      const hoy = new Date().toISOString().slice(0, 10), ayer = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+      const r = await lluviaMeteocat(cat, [ayer, hoy]);
+      const cuenta = (await leerJSON('meteocat/cuenta.json', null)).dato;
+      return res.status(200).json({ fuente: 'Servei Meteorològic de Catalunya', consultasMes: cuenta,
+        puntos: cat.map((x, k) => ({ n: x.n, estacion: r[k]?.estacion ?? null, km: r[k]?.km ?? null,
+          horas: r[k] ? Object.keys(r[k].horas).length : 0,
+          ultimas: r[k] ? Object.entries(r[k].horas).slice(-3) : [] })) });
+    } catch (e) { return res.status(200).json({ error: String(e?.message || e).slice(0, 120) }); }
+  }
   if (req.method === 'GET' && req.query?.verificar === '1') {
     res.setHeader('Cache-Control', 'no-store');
     try { return res.status(200).json(resumenVerificacion((await leerJSON(RUTA_VERIF, null)).dato)); }
@@ -2603,7 +2636,7 @@ export default async function handler(req, res) {
         sitios: todos, cargado: ledger, porDefecto: nombreDe(DUENO_AGUA),
         ahoraISO: new Date().toISOString(), ahoraMs: Date.now(), desde,
         dueno: nombreDe(duenoId),
-        pedirMedidas: nombres => medidasAEMET(todos.filter(d => nombres.includes(d.n))),
+        pedirMedidas: nombres => medidasConMeteocat(todos.filter(d => nombres.includes(d.n))),
       });
     } catch (e) { verif = { error: String(e?.message || e).slice(0, 80) }; }
   }

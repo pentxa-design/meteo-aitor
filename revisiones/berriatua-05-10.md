@@ -47,3 +47,9 @@ Suyo: «el que acertó nubes, ponle a ese». Referencia: la **máscara de nubes 
 | AROME HD | 80,6 % | 91 % | 42 % | 76,5 % |
 
 **El que acierta ya es el que manda.** ICON es el que más falla cuando está despejado (lo pinta nublado 3 de cada 4 veces). Hoy en Bermeo, hora a hora contra el satélite: ECMWF 25 km 6 de 8, GFS 5, AROME HD 5, ECMWF 9 km 4, ICON 3; en Bilbao GFS 8 de 8, AROME 7, ECMWF 25 km 6, ICON 4. La niebla de las 15:00 en Bermeo solo la tenía AROME HD (89 %), pero AROME también daba 84-95 % de 12 a 14 h con el satélite limpio. No se cambia nada.
+
+## Bermeo por la tarde (19:24, suyo: «cielo azul toda la tarde · muy poquitas nubes blancas»)
+
+Satélite (máscara de nubes) en Bermeo: nube a las 15 y 16 h (la niebla de las 15:30), **despejado de 17 a 19 h**. Modelos a las 19 h: ECMWF 25 km **63 %** (el que pone el cielo: falla), ECMWF 9 km 15 %, ICON 5 %, AROME HD 3 %, GFS 32 %. Esta tarde (15-19 h) en Bermeo: ECMWF 25 km acertó 2 de 5; ECMWF 9 km, ICON y AROME HD, 4 de 5. En Bilbao, ECMWF 25 km 5 de 5.
+
+Es el nudo de 18 km tierra adentro otra vez. Con 7 días y 21 sitios ECMWF 25 km sigue arriba (82,9 % frente a 82,5 % del de 9 km, empatados en la costa), así que no se cambia por un día; si Bermeo se repite, el candidato es ECMWF 9 km (el mismo europeo, que lee Bermeo a 2 km).
