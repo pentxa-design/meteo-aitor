@@ -32,3 +32,18 @@ Ninguno da agua hasta las 15-16 h. Rayo medido por AEMET (6 h, < 60 km, hasta la
 | GFS | 27,2 | 48 % | 12 % | 24 km |
 
 El cielo de las tres webs sale de ECMWF 25 km, que en Bermeo lee un nudo 18 km tierra adentro: da el tiempo de Forua, no la niebla de la costa. AROME HD y ECMWF 9 km sí la ven. Se le preguntó si cambiar el dueño del cielo (ECMWF 9 km) o avisar la nube baja de AROME; **cerró la pregunta sin elegir: no se ha tocado nada.**
+
+## ¿Quién acierta las nubes? Medido contra el satélite (05-10, 16:00)
+
+Suyo: «el que acertó nubes, ponle a ese». Referencia: la **máscara de nubes de EUMETSAT** (`msg_fes:clm`, cada 15 min, guardada desde 2020; azul mar despejado, verde tierra despejada, blanco nube), en una caja de 3×3 píxeles alrededor de cada sitio. Modelo «nublado» con ≥ 50 % de nube total. Sus 21 sitios, 7 días, 176 horas, 3.696 horas-sitio (`revisiones/medir-nubes.mjs 7`; el pasado de los modelos, de api.open-meteo.com por fuera, porque /om no aguanta 21 sitios × 6 modelos × 8 días de golpe).
+
+| modelo | acierto | ve nubes cuando las hay | ve despejado cuando lo está | costa |
+|---|---|---|---|---|
+| **ECMWF 25 km (el que manda hoy)** | **82,9 %** | 92 % | **51 %** | 79,5 % |
+| ECMWF 9 km | 82,5 % | 92 % | 49 % | 79,2 % |
+| GFS | 82,5 % | 95 % | 36 % | 79,3 % |
+| ICON | 81,4 % | 96 % | **27 %** | 76,2 % |
+| Automático | 80,7 % | 92 % | 40 % | 76,5 % |
+| AROME HD | 80,6 % | 91 % | 42 % | 76,5 % |
+
+**El que acierta ya es el que manda.** ICON es el que más falla cuando está despejado (lo pinta nublado 3 de cada 4 veces). Hoy en Bermeo, hora a hora contra el satélite: ECMWF 25 km 6 de 8, GFS 5, AROME HD 5, ECMWF 9 km 4, ICON 3; en Bilbao GFS 8 de 8, AROME 7, ECMWF 25 km 6, ICON 4. La niebla de las 15:00 en Bermeo solo la tenía AROME HD (89 %), pero AROME también daba 84-95 % de 12 a 14 h con el satélite limpio. No se cambia nada.
