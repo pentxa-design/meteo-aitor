@@ -319,6 +319,8 @@ const numVig = n => Number(vig.match(new RegExp('const ' + n + ' = ([0-9.]+);'))
   ok('y el mismo umbral de «llueve bien» (AGUA_FUERTE) y de tromba que vibra (AGUA_TROMBA)',
      new RegExp(`llueve bien \\(${String(numVig('AGUA_FUERTE')).replace('.', ',')} mm/h o más\\) y otro modelo lo acompaña; con ${numVig('AGUA_TROMBA')} o más, vibra`).test(A),
      `AGUA_FUERTE ${numVig('AGUA_FUERTE')} · AGUA_TROMBA ${numVig('AGUA_TROMBA')}`);
+  ok('y empieza diciendo que no es un aviso de hoy, que es la lista de lo que puede llegar (05-10-2026, «¿esto de cuándo es?»)',
+     /<b>Esto no es un aviso de hoy:<\/b> es lo que te puede llegar al móvil/.test(A));
   ok('y el rayo que dice que suena es el MEDIDO, no el CAPE con su tapa (04-10-2026)',
      /rayo<\/b> — solo el <b>medido<\/b> por la red de AEMET/.test(A) && !/rayo<\/b> — CAPE/.test(A));
 }

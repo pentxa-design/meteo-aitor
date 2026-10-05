@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.04-2115';
+const BUILD = '2026.10.05-1313';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -19471,7 +19471,11 @@ async function montarAvisos() {
           MEDIDO; el de los modelos se queda aquí en la app. Antes ponía
           «rayo — CAPE 700 con la tapa por debajo de 75» y «solo de lo que
           cambia», que ya no eran ciertos. */
-       'Te llega el <b>parte de la mañana</b> y, aunque tengas la app cerrada, un aviso cuando viene algo en las 3 horas siguientes:'
+       /* «Esto de cuándo es? porque hoy hace un tiempo muy bueno» (suyo,
+          05-10-2026 a las 13:10, leyendo esto en el móvil): se leía como un
+          aviso de hoy. Es la lista fija de lo que te puede llegar; se dice. */
+       '<b>Esto no es un aviso de hoy:</b> es lo que te puede llegar al móvil. '
+       + 'Te llega el <b>parte de la mañana</b> y, aunque tengas la app cerrada, un aviso cuando viene algo en las 3 horas siguientes:'
        + `<br>⚡ <b>rayo</b> — solo el <b>medido</b> por la red de AEMET: descargas a menos de ${ReglasTiempo.RAYO_ENCIMA} km de un sitio tuyo en la última hora y media. El rayo que solo prevén los modelos (CAPE ${CAPE_COMBINACION} con tapa por debajo de ${TAPA_ROMPE}, o su código de tormenta) no suena: lo ves aquí`
        + '<br>🌧 <b>agua</b> — cuando llueve bien (2 mm/h o más) y otro modelo lo acompaña; con 15 o más, vibra. Y la lluvia que <b>miden</b> las estaciones de Euskalmet'
        + '<br>💨 <b>racha</b> — por encima de 70 km/h, la que te hace no salir'
