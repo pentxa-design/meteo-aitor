@@ -30,7 +30,7 @@ import { verificar, cargar as cargarRegistro, resumen as resumenVerificacion, RU
 import { leer, guardar } from './suscribir.mjs';
 import { ReglasTiempo } from '../lib/reglas.mjs';
 import { lectorDeRayosServidor } from '../lib/rayos-png.mjs';
-import { lluviaMeteocat, cuotaMeteocat } from '../lib/meteocat.mjs';
+import { lluviaMeteocat, cuotaMeteocat, pruebaXema } from '../lib/meteocat.mjs';
 
 const ESTADO = 'avisos/vigilante.json';
 const APP = 'https://weather-app-ochre-one-76.vercel.app';
@@ -1173,14 +1173,14 @@ export default async function handler(req, res) {
      no gasta: el día en curso se pide como mucho cada 110 min. */
   if (req.method === 'GET' && req.query?.meteocat === '1') {
     res.setHeader('Cache-Control', 'no-store');
-    const cuota = await cuotaMeteocat().catch(e => ({ error: String(e?.message || e) }));
-    if (cuota.error) return res.status(200).json({ cuota });
+    if (req.query?.prueba === '1') return res.status(200).json(await pruebaXema().catch(e => ({ error: String(e?.message || e) })));
+    const cuota = await cuotaMeteocat().catch(e => ({ error: String(e?.message || e) }));   // puede no entrar en el plan: se enseña y se sigue
     try {
       const cat = PUNTOS_CONTRASTE.filter(x => /Tarragona|Barcelona|Girona/.test(x.n));
       const hoy = new Date().toISOString().slice(0, 10), ayer = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
       const r = await lluviaMeteocat(cat, [ayer, hoy]);
       const cuenta = (await leerJSON('meteocat/cuenta.json', null)).dato;
-      return res.status(200).json({ fuente: 'Servei Meteorològic de Catalunya', consultasMes: cuenta,
+      return res.status(200).json({ fuente: 'Servei Meteorològic de Catalunya', consultasMes: cuenta, cuota,
         puntos: cat.map((x, k) => ({ n: x.n, estacion: r[k]?.estacion ?? null, km: r[k]?.km ?? null,
           horas: r[k] ? Object.keys(r[k].horas).length : 0,
           ultimas: r[k] ? Object.entries(r[k].horas).slice(-3) : [] })) });

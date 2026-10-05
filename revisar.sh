@@ -85,6 +85,7 @@ node pruebas-servidor.cjs || exit 1
 echo "  · con el almacén caído, ninguna función miente"
 node prueba-almacen-caido.mjs || exit 1
 node prueba-vigilante-reloj.mjs || exit 1
+node prueba-meteocat.mjs || exit 1
 
 # ── LA LLUVIA DE SU DUEÑO, CON EL TIEMPO DE HOY (03-10-2026) ────────────
 # Suyo: «automatiza esto, no me vale reparar hoy y mañana mal otra vez».
