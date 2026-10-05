@@ -72,8 +72,12 @@ function copiar() {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   if (process.argv.includes('--mirar')) {
-    const { mirar } = await import('./reglas-iguales.mjs');
-    process.exit(mirar() ? 0 : 1);
+    /* En otro proceso: reglas-iguales.mjs importa este fichero, y un
+       `await import` de vuelta desde aquí se quedaba esperándose a sí mismo
+       (salía con código 13 sin decir nada, 05-10-2026). */
+    const { spawnSync } = await import('node:child_process');
+    const r = spawnSync(process.execPath, [path.join(AQUI, 'reglas-iguales.mjs')], { stdio: 'inherit' });
+    process.exit(r.status ?? 1);
   }
   for (const h of copiar()) console.log('  ✓ copiadas a ' + h);
   console.log('  → publica también el Centro Operativo (./publicar-cloudflare.sh) y la agenda (./deploy.sh): hasta entonces, lo publicado de esas dos no lleva estas reglas.');
