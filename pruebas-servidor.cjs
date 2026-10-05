@@ -316,13 +316,14 @@ const numVig = n => Number(vig.match(new RegExp('const ' + n + ' = ([0-9.]+);'))
      nApp(/racha<\/b> — por encima de (\d+) km\/h, la que te hace no salir/) === numVig('RACHA_TOPE'));
   /* Desde el 04-10-2026 el diálogo dice lo que de verdad suena: el agua
      desde «llueve bien» (AGUA_FUERTE) y la tromba que vibra (AGUA_TROMBA). */
-  ok('y el mismo umbral de «llueve bien» (AGUA_FUERTE) y de tromba que vibra (AGUA_TROMBA)',
-     new RegExp(`llueve bien \\(${String(numVig('AGUA_FUERTE')).replace('.', ',')} mm/h o más\\) y otro modelo lo acompaña; con ${numVig('AGUA_TROMBA')} o más, vibra`).test(A),
-     `AGUA_FUERTE ${numVig('AGUA_FUERTE')} · AGUA_TROMBA ${numVig('AGUA_TROMBA')}`);
+  /* 05-10-2026: al móvil solo lo muy necesario; el texto dice los mismos números que el vigilante. */
+  ok('y el mismo umbral de agua que suena (AGUA_TROMBA) y de mucho CAPE (CAPE_MUCHO) que el vigilante',
+     new RegExp(`solo mucha: ${numVig('AGUA_TROMBA')} mm/h o más`).test(A) && new RegExp(`${String(numVig('CAPE_MUCHO')).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} o más con la tapa abierta en dos modelos`).test(A),
+     `AGUA_TROMBA ${numVig('AGUA_TROMBA')} · CAPE_MUCHO ${numVig('CAPE_MUCHO')}`);
   ok('y empieza diciendo que no es un aviso de hoy, que es la lista de lo que puede llegar (05-10-2026, «¿esto de cuándo es?»)',
      /<b>Esto no es un aviso de hoy:<\/b> es lo que te puede llegar al móvil/.test(A));
   ok('y el rayo que dice que suena es el MEDIDO, no el CAPE con su tapa (04-10-2026)',
-     /rayo<\/b> — solo el <b>medido<\/b> por la red de AEMET/.test(A) && !/rayo<\/b> — CAPE/.test(A));
+     /rayo<\/b> — el <b>medido<\/b> por la red de AEMET/.test(A) && !/rayo<\/b> — CAPE/.test(A));
 }
 
 /* El push (27-09-2026): con TTL 3600 y sin urgencia, un móvil que retrase
@@ -396,7 +397,7 @@ ok('el rayo sigue siendo el único que manda con su veto: el MEDIDO vibra siempr
       sin vibrar, salvo la tromba (≥ AGUA_TROMBA, 03-10-2026). Desde el
       04-10-2026 el rayo al móvil es solo el medido (tag 'rayo-medido'). Lo
       EJECUTA prueba-vigilante-reloj.mjs. */
-   /tag: 'tormenta', importante: proximas\.some\(x => x\.f\.some\(f => f\.que === 'racha'\s*\|\| \(f\.que === 'agua' && f\.v >= AGUA_TROMBA\)\)\)/.test(vig)
+   /tag: 'tormenta', importante: proximas\.some\(x => x\.f\.some\(f => f\.que === 'racha' \|\| f\.que === 'cape'\s*\|\| \(f\.que === 'agua' && f\.v >= AGUA_TROMBA\)\)\)/.test(vig)
    && /tag: 'rayo-medido', importante: true/.test(vig));
 
 ok('del vaivén de milímetros NO se avisa: solo aparecer, agravarse o adelantarse',
@@ -468,7 +469,7 @@ ok('lo inminente mira también las primeras horas de mañana',
    Si el parte diario se marcara importante, vibraría todos los días y él
    acabaría silenciando la app entera — y entonces no avisaría de nada. */
 ok('vibran los que decidan algo: rayo medido, racha de 70, tromba y «llevo sin vigilar»',
-   /tag: 'tormenta', importante: proximas\.some\(x => x\.f\.some\(f => f\.que === 'racha'\s*\|\| \(f\.que === 'agua' && f\.v >= AGUA_TROMBA\)\)\)/.test(vig)
+   /tag: 'tormenta', importante: proximas\.some\(x => x\.f\.some\(f => f\.que === 'racha' \|\| f\.que === 'cape'\s*\|\| \(f\.que === 'agua' && f\.v >= AGUA_TROMBA\)\)\)/.test(vig)
    && /tag: 'rayo-medido', importante: true/.test(vig)
    && /tag: 'racha', importante: true/.test(vig)
    && /tag: 'parado', importante: true/.test(vig));

@@ -200,6 +200,12 @@ const cerca = (a, b) => Math.hypot((a.lat - b.lat) * 111.32,
 
 const CAPE_MIN = 700;
 const TAPA_MAX = 75;
+/* MUCHO CAPE (05-10-2026, suyo: «los avisos solo si son muy necesarios:
+   mucha agua, mucho viento… mucho CAPE»; eligió «2.000 o más»). Al móvil
+   solo cuando DOS modelos dan CAPE ≥ 2.000 con SU propia tapa por debajo de
+   75 a la misma hora. Aquí es raro: pocos días al año. */
+const CAPE_MUCHO = 2000;
+const CAPE_MUCHO_MODELOS = 2;
 
 /* ── LA LISTA DE ABAJO YA NO MANDA: MANDA LA SUYA ─────────────────────
    Cazado el 29-08-2026, y él lo llamó por su nombre: *«pues error grave,
@@ -322,7 +328,7 @@ const picoTxt = (hPico, ini) => `a las ${hh(hPico ?? ini)}`;
    aviso que solo era de agua salía con el ⚡ del rayo porque el título se
    escribía a mano, aparte del cuerpo. ⚡ si hay rayo, 🌧 si hay agua,
    💨 si es solo racha. Lo usan «Próximas 3 h» y «CAMBIO». */
-const simboloDe = ques => (ques.includes('rayo') ? '⚡' : ques.includes('agua') ? '🌧' : '💨');
+const simboloDe = ques => (ques.includes('rayo') || ques.includes('cape') ? '⚡' : ques.includes('agua') ? '🌧' : '💨');
 /** Qué modelo ve qué en las horas de rayo de esa ventana: «ICON ve CAPE 920,
  *  tapa 23», o «ICON da tormenta» si es el código. null si no hay detalle. */
 function rayoEnHoras(d, desde, hasta) {
@@ -585,6 +591,7 @@ async function unSitio(s, previo = null, reloj = null) {
       }
     }
   }
+  const capeMucho = {};   // día → hora → { modelos: Map(nombre → CAPE) } con CAPE ≥ CAPE_MUCHO y su tapa abierta
   for (const [H_, deLado] of [[H, false], [C, true]]) {
     if (!H_?.time) continue;
     for (const m of MODELOS) {
@@ -594,6 +601,10 @@ async function unSitio(s, previo = null, reloj = null) {
         const c = cape[i], t = cin[i];
         if (c == null || t == null || c < CAPE_MIN || t >= TAPA_MAX) continue;
         const dia = H_.time[i].slice(0, 10), h = Number(H_.time[i].slice(11, 13));
+        if (c >= CAPE_MUCHO) {
+          const x = ((capeMucho[dia] ??= {})[h] ??= { modelos: new Map() });
+          if (!(x.modelos.get(nombreDe(m)) >= c)) x.modelos.set(nombreDe(m), Math.round(c));
+        }
         const d = porDia[dia] ??= { horas: new Set(), cape: 0, quien: null, deLado: false, porHora: {} };
         d.horas.add(h);
         (d.modelosPareja ??= {})[h] = (d.modelosPareja[h] ?? new Set()).add(m);   // quién rompe por pareja a esa hora
@@ -818,7 +829,14 @@ async function unSitio(s, previo = null, reloj = null) {
      horas: es lo que se apunta en el registro (lib/verificacion.mjs) para
      compararlo después con lo medido. Solo las horas con algo de agua. */
   const pv = reloj?.desde ? pvDe(H, reloj.desde) : null;
-  return { n: s.n, lat: s.lat, lon: s.lon, critico: !!s.critico, dias, agua, aguaOtros, racha, ojo, horas: H.time, pv };
+  /* Mucho CAPE en tramos, solo las horas en que lo dan DOS modelos o más. */
+  const capeAlto = {};
+  for (const [dia, horasD] of Object.entries(capeMucho)) {
+    const hs = Object.keys(horasD).map(Number).filter(h => horasD[h].modelos.size >= CAPE_MUCHO_MODELOS).sort((a, b) => a - b);
+    if (!hs.length) continue;
+    capeAlto[dia] = { tramos: enTramos(hs), porHora: Object.fromEntries(hs.map(h => [h, Object.fromEntries(horasD[h].modelos)])) };
+  }
+  return { n: s.n, lat: s.lat, lon: s.lon, critico: !!s.critico, dias, agua, aguaOtros, racha, ojo, horas: H.time, pv, capeAlto };
 }
 
 /** Lo que MIDIÓ AEMET en las últimas 24 h junto a cada sitio: la estación más
@@ -1065,7 +1083,7 @@ function lluviaMedidaCerca(leido) {
     if (!Number.isFinite(e.km) || e.km > MEDIDA_KM) return;
     if (!Number.isFinite(e.haceMinutos) || e.haceMinutos > MEDIDA_FRESCA) return;
     const ritmo = e.lluvia * 60 / e.lluviaMin;
-    if (ritmo < AGUA_FUERTE || e.lluvia < 1) return;
+    if (ritmo < AGUA_TROMBA || e.lluvia < 1) return;   // solo mucha agua medida (05-10-2026)
     out.push({ n: s.n, lat: s.lat, lon: s.lon, critico: !!s.critico, est: e.nombre, km: e.km, mm: e.lluvia,
                min: e.lluviaMin, ritmo, hace: e.haceMinutos, firma: `${e.id}@${e.medidoEn}` });
   });
@@ -2014,6 +2032,10 @@ export default async function handler(req, res) {
     const ag = d.agua?.[claveHoy];
     for (const t of tramosEnVentana(deHoy({ tramos: ag?.fuertes }))) {
       const p = picoEnHoras(ag, Math.max(t.ini, h0), Math.min(t.fin, H3));
+      /* SOLO MUCHA AGUA (05-10-2026, suyo: «los avisos solo si son muy
+         necesarios»): al móvil desde AGUA_TROMBA (15 mm/h, «lluvia fuerte»
+         de AEMET). Lo de 2 a 15 mm/h se ve en la app y en el parte. */
+      if (!(p?.v >= AGUA_TROMBA)) continue;
       /* LA PALABRA ES LA SUYA (01-10-2026): «agua fuerte» para 2-5 mm/h era
          exagerar —«estaríamos en Valencia, que han dado 200 litros esta
          tarde»—. Su escala es sirimiri · poco · bien: 2 mm/h es «llueve
@@ -2023,6 +2045,17 @@ export default async function handler(req, res) {
       f.push({ que: 'agua', clave: `agua:${t.ini}`, v: p?.v,
                txt: p ? `${p.quien} ve ${palabraAgua(p.v)} ${tramoTxt3(t, '')} (${coma(p.v)} mm/h${tambien.length ? `; también ${tambien.join(', ')}` : ''}${p.sinDato ? `; ${p.sinDato} no da dato a esa hora` : ''})`
                       : `llueve bien ${tramoTxt3(t, '')}` });
+    }
+    /* MUCHO CAPE (05-10-2026): dos modelos o más con CAPE ≥ 2.000 y su tapa
+       abierta, con sus números de ESAS horas. Es «puede», pero muy cargado. */
+    const ca = d.capeAlto?.[claveHoy];
+    for (const t of tramosEnVentana(deHoy(ca))) {
+      let pico = null;
+      for (let h = Math.max(t.ini, h0); h <= Math.min(t.fin, H3); h++)
+        for (const [q, v] of Object.entries(ca.porHora[h] || {})) if (!pico || v > pico.v) pico = { q, v, h, todos: ca.porHora[h] };
+      const otros = pico ? Object.entries(pico.todos).filter(([q]) => q !== pico.q).map(([q, v]) => `${q} ${v}`).join(', ') : '';
+      f.push({ que: 'cape', clave: `cape:${t.ini}`,
+               txt: `mucho CAPE ${tramoTxt3(t, '')}${pico ? ` (${pico.q} ${pico.v}${otros ? `; también ${otros}` : ''}, con la tapa abierta): puede tronar fuerte` : ''}` });
     }
     /* La racha, igual: su número es el de ESAS horas, no el máximo del día. */
     const ra = d.racha?.[claveHoy];
@@ -2041,7 +2074,7 @@ export default async function handler(req, res) {
   const dichasViejas = new Set(), dichas = new Set();
   for (const x of String(antes?.ultimoAviso || '').split('|').filter(Boolean)) {
     const [n, q, t] = x.split(':');
-    if (['rayo', 'agua', 'racha'].includes(q) && t !== undefined) dichas.add(x); else dichasViejas.add(n);
+    if (['rayo', 'agua', 'racha', 'cape'].includes(q) && t !== undefined) dichas.add(x); else dichasViejas.add(n);
   }
   const yaDicho = x => dichas.has(x) || (x.split(':')[1] === 'rayo' && dichasViejas.has(x.split(':')[0]));
   const yaAvisado = firmaAhora.split('|').filter(Boolean).every(yaDicho);
@@ -2101,7 +2134,7 @@ export default async function handler(req, res) {
          se quita sola). El agua, sola, avisa sin gritar (01-10-2026). */
       /* Y el agua de 15 mm/h para arriba («llueve fuerte», AEMET), desde el
          03-10-2026: ese día las trombas de Bilbao llegaban sin vibrar. */
-      tag: 'tormenta', importante: proximas.some(x => x.f.some(f => f.que === 'racha'
+      tag: 'tormenta', importante: proximas.some(x => x.f.some(f => f.que === 'racha' || f.que === 'cape'
                                                    || (f.que === 'agua' && f.v >= AGUA_TROMBA))),
     });
   }

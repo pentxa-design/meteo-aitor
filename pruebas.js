@@ -1866,6 +1866,19 @@ ok('un sitio AL FILO no sale en verde',
 ok('y se le pone la etiqueta AL FILO',
    bloques.some(b => /AL FILO/.test(b) && /pero no a la vez/.test(b)));
 
+/* EL SIRIMIRI EN ROJO (05-10-2026, suyo: «sirimiri y eso, que no me avise;
+   que lo ponga en rojo y listo»). Se repinta el parte con el sitio 1 en
+   sirimiri y su bloque tiene que salir en rojo con la etiqueta SIRIMIRI. */
+{
+  const antesL = S.lluviaTorres;
+  S.lluviaTorres = antesL.map(x => x.k === k(sitios[1]) ? { ...x, pico: 0.1, soloSirimiri: true } : x);
+  renderParte();
+  const bl = (pintado['#parte'] || '').split('<div class="pt" ').slice(1).find(b => b.includes(sitios[1].name)) || '';
+  ok('el sirimiri en Mis estaciones sale en ROJO y se nombra (no va al móvil)',
+     /^data-s="no"/.test(bl) && /sirimiri/i.test(bl), bl.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 120));
+  S.lluviaTorres = antesL;
+}
+
 grupo('El parte sin emplazamientos guardados no se esconde en silencio');
 S.saved = []; S.torres = []; S.parteTorres = null;
 renderParte();

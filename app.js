@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.05-2334';
+const BUILD = '2026.10.05-2347';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -10603,9 +10603,13 @@ function renderParte() {
       const rojo = rayoRojoDelParte(d);
       const etq = rojo && d.codigo?.hora && d.codigo?.fin
         ? `RAYO ${esc(tramo(d.codigo.hora, d.codigo.fin))}` : `${rojo ? 'RAYO' : 'PUEDE TRONAR'} ${esc(cuando)}`;
-      S.parteFilas.set(key(p), { est: rojo ? 'no' : 'warn', etq, dia: rotuloDelParte,
+      /* Con «puede tronar» (ámbar) y además agua o sirimiri, en rojo: el
+         agua y el sirimiri van en rojo (20-09 y 05-10-2026). */
+      const Lr = S.lluviaTorres?.find(x => x?.k === k);
+      const est = (rojo || (Lr?.llueve && (Lr.pico >= (S.thr?.rainWarn ?? 0.2) || Lr.soloSirimiri))) ? 'no' : 'warn';
+      S.parteFilas.set(key(p), { est, etq, dia: rotuloDelParte,
                                  cuerpo: cuerpoR, comp: comparativa(p) });
-      return `<div class="pt" data-s="${rojo ? 'no' : 'warn'}">
+      return `<div class="pt" data-s="${est}">
         <div class="pt__izq">
           <div class="pt__h"><b>${esc(p.name)}</b>
             <span class="pt__b">${etq}</span></div>
@@ -10657,7 +10661,9 @@ function renderParte() {
        encima la tarjeta del mismo sitio sí se marcaba. */
     const R_ = S.rachaTorres?.find(x => x?.k === k);
     const rachaPasa = nivelRacha(R_?.racha) === 'no';
-    const est = (alFilo || rachaPasa || (mojaDeVerdad && !L_.soloSirimiri)) ? 'no'
+    /* EL SIRIMIRI, EN ROJO TAMBIÉN (05-10-2026, suyo: «sirimiri y eso, que
+       no me avise; que lo ponga en rojo y listo»). Al móvil no va; aquí sí. */
+    const est = (alFilo || rachaPasa || mojaDeVerdad) ? 'no'
       : (mojaDeVerdad || otroVe) ? 'warn' : 'go';
 
     /* No salta el rayo: se dice de qué le falta. Y son TRES casos, no
@@ -19477,8 +19483,11 @@ async function montarAvisos() {
           aviso de hoy. Es la lista fija de lo que te puede llegar; se dice. */
        '<b>Esto no es un aviso de hoy:</b> es lo que te puede llegar al móvil. '
        + 'Te llega el <b>parte de la mañana</b> y, aunque tengas la app cerrada, un aviso cuando viene algo en las 3 horas siguientes:'
-       + `<br>⚡ <b>rayo</b> — solo el <b>medido</b> por la red de AEMET: descargas a menos de ${ReglasTiempo.RAYO_ENCIMA} km de un sitio tuyo en la última hora y media. El rayo que solo prevén los modelos (CAPE ${CAPE_COMBINACION} con tapa por debajo de ${TAPA_ROMPE}, o su código de tormenta) no suena: lo ves aquí`
-       + '<br>🌧 <b>agua</b> — cuando llueve bien (2 mm/h o más) y otro modelo lo acompaña; con 15 o más, vibra. Y la lluvia que <b>miden</b> las estaciones de Euskalmet'
+       /* Solo lo muy necesario (05-10-2026, suyo): mucha agua, mucho viento,
+          mucho CAPE y el rayo medido. El sirimiri no suena: se ve en rojo. */
+       + `<br>⚡ <b>rayo</b> — el <b>medido</b> por la red de AEMET: descargas a menos de ${ReglasTiempo.RAYO_ENCIMA} km de un sitio tuyo en la última hora y media`
+       + '<br>⚡ <b>mucho CAPE</b> — 2.000 o más con la tapa abierta en dos modelos a la vez. El resto del rayo que prevén los modelos no suena: lo ves aquí'
+       + '<br>🌧 <b>agua</b> — solo mucha: 15 mm/h o más (lluvia fuerte), prevista con otro modelo de acuerdo o <b>medida</b> por una estación de Euskalmet. El sirimiri no suena: sale en rojo en Mis estaciones'
        + '<br>💨 <b>racha</b> — por encima de 70 km/h, la que te hace no salir'
        + '<br>Cada cosa suena una vez: si ya te lo dijo, no lo repite. '
        + 'Pruébalo con el botón de al lado: si no suena, hay que verlo <b>ahora</b>, no el día de la tormenta.');
