@@ -47,6 +47,11 @@ const SITIOS = [
 /* Los mismos listones que usa la app en pantalla. Si se cambian aquí y
    allí no, le diría una cosa el móvil y otra la app. */
 const CAPE_MIN = 700;
+/* SOLO MUCHO CAPE (06-10-2026, con la regla de los avisos del 05-10): el
+   parte dice tormenta cuando DOS modelos dan CAPE ≥ 2.000 con su propia
+   tapa abierta a la misma hora. Antes bastaba la pareja 700/75 de uno, y
+   con 26° y sol en Bermeo llegaba «riesgo de rayo en 19 de 21». */
+const CAPE_MUCHO = 2000, CAPE_MUCHO_MODELOS = 2;
 const TAPA_MAX = 75;
 
 /* DOS MODELOS, no uno. Medido el 26-08-2026: con el Automático solo
@@ -141,8 +146,8 @@ async function unSitio(s) {
      servidor, se volvió a colar. Lo cazó la sesión del vigilante
      leyéndolo, no yo probándolo.                                     */
   let capeMax = 0, quien = null, lluvia = 0;
-  const horas = new Set();              // horas de HOY que cumplen
-  const madrugada = new Set();          // horas de mañana que también cumplen
+  const porHoraHoy = new Map();         // hora de HOY → modelos con mucho CAPE
+  const porHoraMan = new Map();         // hora de mañana (madrugada) → modelos
 
   for (const m of MODELOS) {
     const cape = H[`cape_${m}`], cin = H[`convective_inhibition_${m}`];
@@ -153,15 +158,17 @@ async function unSitio(s) {
       if (esHoy && pr && pr[i] > lluvia) lluvia = pr[i];
       const c = cape[i], t = cin?.[i];
       if (c == null || t == null) continue;
-      if (c < CAPE_MIN || t >= TAPA_MAX) continue;
+      if (c < CAPE_MUCHO || t >= TAPA_MAX) continue;
       const h = Number(H.time[i].slice(11, 13));
-      if (!esHoy) { if (h <= 6) madrugada.add(h); continue; }
-      horas.add(h);
+      if (!esHoy) { if (h <= 6) (porHoraMan.get(h) ?? porHoraMan.set(h, new Set()).get(h)).add(m); continue; }
+      (porHoraHoy.get(h) ?? porHoraHoy.set(h, new Set()).get(h)).add(m);
       if (c > capeMax) { capeMax = c; quien = nombreDe(m); }
     }
   }
 
-  const tramos = enTramos([...horas]);
+  const horas = [...porHoraHoy].filter(([, ms]) => ms.size >= CAPE_MUCHO_MODELOS).map(([h]) => h);
+  const madrugada = new Set([...porHoraMan].filter(([, ms]) => ms.size >= CAPE_MUCHO_MODELOS).map(([h]) => h));
+  const tramos = enTramos(horas);
   const ultimo = tramos.at(-1) ?? null;
 
   /* «Sigue» = el día acaba a las 23:00 cumpliendo Y la medianoche de
@@ -239,15 +246,15 @@ export default async function handler(req, res) {
            + (saltan.length > 5 ? ` y ${saltan.length - 5} más` : '')
            + (mojan.length ? `. Lluvia en ${mojan.length} más.` : '');
   } else if (mojan.length) {
-    cuerpo = `Sin riesgo de rayo. Llueve en ${mojan.length}: `
+    cuerpo = `Sin tormenta clara. Llueve en ${mojan.length}: `
            + mojan.slice(0, 5).map(x => x.n).join(', ') + '.';
   } else {
     /* «Día limpio» es una afirmación fuerte. Si hay sitios sin mirar, el
        número solo no basta: se dice en la misma frase, no en un añadido
        al final que se lee después de haberse quedado tranquilo. */
     cuerpo = fallos.length
-      ? `Ni rayo ni lluvia que moje en los ${buenos.length} que he podido mirar.`
-      : `Día limpio en los ${buenos.length}: ni rayo ni lluvia que moje.`;
+      ? `Ni mucho CAPE ni lluvia que moje en los ${buenos.length} que he podido mirar.`
+      : `Día limpio en los ${buenos.length}: ni mucho CAPE ni lluvia que moje.`;
   }
 
   /* LOS FALLOS SE DICEN. Un parte que se calla los sitios que no ha
@@ -262,8 +269,8 @@ export default async function handler(req, res) {
   }
 
   const titulo = saltan.length
-    ? `Parte de hoy · riesgo de rayo en ${saltan.length} de ${buenos.length}`
-    : `Parte de hoy · sin riesgo de rayo`;
+    ? `Parte de hoy · mucho CAPE en ${saltan.length} de ${buenos.length}`
+    : `Parte de hoy · sin tormenta clara`;
 
   /* MATIENA ES CRÍTICO. Dicho por él: de ese depende servicio. Si salta,
      va el primero y con su nombre en el título. */

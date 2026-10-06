@@ -105,11 +105,5 @@
         }
       ]
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/parte",
-      "schedule": "30 4 * * *"
-    }
   ]
 }

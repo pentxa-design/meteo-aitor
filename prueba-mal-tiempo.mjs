@@ -137,8 +137,10 @@ console.log('\n  BERMEO hoy · lo que diga, respaldado por su cifra\n');
   const nRayo = Object.keys(r.dias).length, nRacha = Object.keys(r.racha).length;
   console.log(`      rayo: ${nRayo} · racha: ${nRacha}`);
   for (const [dia, d] of Object.entries(r.dias))
-    ok(`BERMEO ${dia}: el rayo lo respalda el CAPE, no es un aviso de más`,
-       Number.isFinite(d.cape) && d.cape >= 700, `cape=${d.cape}`);
+    /* Desde el 04-10-2026 un día de rayo puede ser solo por CÓDIGO de tormenta
+       (la pareja sola se quita): lo respalda su código o su CAPE. */
+    ok(`BERMEO ${dia}: el rayo lo respalda su código de tormenta o el CAPE, no es un aviso de más`,
+       (Number.isFinite(d.cape) && d.cape >= 700) || Object.values(d.porHora || {}).some(x => x?.codigo), `cape=${d.cape} · ${JSON.stringify(d.porHora).slice(0, 120)}`);
   for (const [dia, w] of Object.entries(r.racha))
     ok(`BERMEO ${dia}: la racha pasa del listón del viaje (70)`,
        Number.isFinite(w.kmh) && w.kmh >= 70, `kmh=${w.kmh}`);

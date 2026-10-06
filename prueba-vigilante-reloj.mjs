@@ -96,7 +96,8 @@ fs.copyFileSync(path.join(FUENTE, 'reglas-tiempo.js'), path.join(tmp, 'reglas-ti
 
 const ESTADO = 'avisos/vigilante.json';
 const { localAUTC, resumen: resumenVerif, PUNTOS_CONTRASTE, ranking, duenoAprendido } = await import(pathToFileURL(path.join(tmp, 'lib', 'verificacion.mjs')).href);
-process.env.VIGILANTE_ENVIA = '1';        // que construya y «mande» (sin claves: 0 enviados, pero se ve)
+process.env.VIGILANTE_ENVIA = '1';
+process.env.VIGILANTE_MOVIL = '1';   // la lógica de los avisos se sigue probando; en producción están apagados (06-10-2026)        // que construya y «mande» (sin claves: 0 enviados, pero se ve)
 delete process.env.MOVILES_EXTRA;
 delete process.env.VAPID_PUBLICA; delete process.env.VAPID_PRIVADA;
 
@@ -719,6 +720,38 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const M6 = await pasada({ hora: '20:30', antes: tranquilo('20:30', 10), seSalta: true, esc: { rayosCaidos: true } });
   ok('20:30 · con el catálogo de AEMET caído no suena nada y se DICE que no se pudo leer (no es «no hay rayos»)',
      !M6.reventó && !titulos(M6.b).some(t => /⚡/.test(t)) && /caído a propósito|catálogo/.test(M6.b.rayosMedidos?.fallo || ''), resumen(M6) + ' ' + JSON.stringify(M6.b.rayosMedidos));
+}
+
+/* ── LOS AVISOS AL MÓVIL, APAGADOS (06-10-2026) ────────────────────────
+   Suyo: «no quiero más avisos» · «solo que se muestren en la app, quítalo»
+   · «son falsos» · «fuera, así menos gasto». Sin VIGILANTE_MOVIL=1 (como en
+   Vercel), una tromba y un rayo medido encima NO llegan a ningún móvil, y no
+   se leen los rayos solo para avisar. */
+{
+  delete process.env.VIGILANTE_MOVIL;
+  const OFF = await pasada({ hora: '14:00', antes: tranquilo('14:00', 200),
+    esc: { rayosMedidos: [{ k: 0, km: 3, hace: 20 }], agua: [{ k: 0, dia: 'hoy', horas: [15], mm: 30 }] } });
+  const algunoLlega = (OFF.b.avisados || []).some(a => (a.enviados || 0) > 0 || !/apagados por él/.test(a.nota || ''));
+  const pideRayos = OFF.llamadas.some(c => /\/rayos/.test(c.u));
+  process.env.VIGILANTE_MOVIL = '1';
+  ok('con los avisos apagados (como en Vercel), ni la tromba ni el rayo medido salen al móvil: todo queda «apagados por él»',
+     !OFF.reventó && !algunoLlega, JSON.stringify((OFF.b.avisados || []).map(a => [a.titulo, a.enviados, a.nota])));
+  ok('   y no se gasta leyendo los rayos para avisar', !pideRayos, OFF.llamadas.filter(c => /\/rayos/.test(c.u)).map(c => c.u).join(' '));
+  const P = await pasada({ hora: '14:00', antes: tranquilo('14:00', 10), metodo: 'GET', query: { pulso: '1' } });
+  ok('   y el pulso dice si están apagados (aquí, con VIGILANTE_MOVIL=1, no)', P.b.apagado === false, JSON.stringify(P.b).slice(0, 120));
+  /* EL RAYO DE LOS PARTES (06-10-2026, 14:05: «pero si en Bermeo hace 26
+     grados y solazo»): el segundo parte decía «⚡ rayo en 21 sitios» con el
+     código de tormenta de los modelos. Ahora solo rayo medido o mucho CAPE. */
+  const PA = await pasada({ hora: '13:15', antes: tranquilo('13:15', 200, { parte2De: null }),
+    esc: { rayo: [{ k: 0, dia: 'hoy', horas: [16, 17] }], agua: [{ k: 1, dia: 'hoy', horas: [18], mm: 3 }] } });
+  const pa = (PA.b.avisados || []).find(a => a.tag === 'parte2');
+  ok('13:15 · con tormenta solo de modelo (código 95), el segundo parte NO dice «rayo» ni «tormenta» (06-10, 26° y sol en Bermeo)',
+     !PA.reventó && pa && !/rayo|tormenta/i.test(pa.cuerpo), JSON.stringify(pa) || resumen(PA));
+  const PB = await pasada({ hora: '13:15', antes: tranquilo('13:15', 200, { parte2De: null }),
+    esc: { capeAlto: [{ k: 0, dia: 'hoy', horas: [16], om: 'ecmwf_ifs', v: 2300 }, { k: 0, dia: 'hoy', horas: [16], om: 'icon_eu', v: 2100 }] } });
+  const pb = (PB.b.avisados || []).find(a => a.tag === 'parte2');
+  ok('   y con mucho CAPE en dos modelos sí: «⚡ tormenta en 1 sitio: BERMEO mucho CAPE 16h»',
+     !PB.reventó && /⚡ tormenta en 1 sitio: BERMEO mucho CAPE 16h/.test(pb?.cuerpo || ''), JSON.stringify(pb) || resumen(PB));
 }
 
 /* ── MUCHO CAPE (05-10-2026) ───────────────────────────────────────────

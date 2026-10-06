@@ -892,7 +892,17 @@ const guardarEstado = e => guardarJSON(ESTADO, e);
    no para hobby. Queda solo el apartado de la pestaña Avisos, que se lee
    ÚNICAMENTE cuando él abre la pestaña. El vigilante no toca España. */
 
+/* LOS AVISOS AL MÓVIL, APAGADOS (06-10-2026). Suyo, con 26° y sol en
+   Bermeo y los partes diciendo «rayo en 21 sitios»: «no quiero más avisos» ·
+   «solo que se muestren en la app, quítalo» · «son falsos» · «fuera, así menos
+   gasto». El vigilante sigue pasando (el registro de aciertos y el pulso de la
+   app), pero no manda nada. Para volver a encenderlos, la variable
+   VIGILANTE_MOVIL=1 en Vercel (las pruebas la ponen para seguir probando la
+   lógica de los avisos; sin ella, apagado). */
+export const MOVIL_APAGADO = process.env.VIGILANTE_MOVIL !== '1';
+
 async function empujar(titulo, cuerpo, tag, importante, url) {
+  if (MOVIL_APAGADO) return { enviados: 0, nota: 'avisos al móvil apagados por él (06-10-2026): todo se ve en la app' };
   /* Perezoso (23-09-2026): el pulso y las pasadas saltadas —que son casi
      todas las llamadas— no cargan web-push (27 ms de CPU medidos en local
      por arranque, más en Vercel). Solo se paga cuando hay algo que enviar. */
@@ -1262,7 +1272,7 @@ export default async function handler(req, res) {
         const base = `${APP}/api/vigilante`;
         fetch(base, { method: 'POST', headers: { 'x-clave': process.env.CRON_SECRET || '', 'x-revivido': '1' } })
           .catch(() => {});
-        return res.status(200).json({ ...medida(), ultima: e.cuando, haceMin, envia,
+        return res.status(200).json({ ...medida(), ultima: e.cuando, haceMin, envia, apagado: MOVIL_APAGADO,
           parteDe: e.parteDe ?? null,
           sitios: Object.keys(e.sitios || {}).length, revivido: true });
       }
@@ -1283,7 +1293,7 @@ export default async function handler(req, res) {
          pero que no se puede mirar es un dato que acaba contándose de
          memoria, y de memoria ya me he equivocado dos veces esta semana.
          Sale la fecha del último parte, que no dice nada de nadie. */
-      return res.status(200).json({ ...medida(), ultima: e.cuando, haceMin, envia,
+      return res.status(200).json({ ...medida(), ultima: e.cuando, haceMin, envia, apagado: MOVIL_APAGADO,
         lista: e.listaDeRespaldo ? 'respaldo' : 'la tuya',
         parteDe: e.parteDe ?? null,
         dueno: e.dueno ?? null,
@@ -1698,6 +1708,9 @@ export default async function handler(req, res) {
      pasada entera (`coords`) o, si no las hay, la lista de respaldo. */
   const sinLeidoEn = x => { const { leidoEn, ...r } = x || {}; return JSON.stringify(r); };
   const rayoMedidoDe = async lista => {
+    /* Con el móvil apagado no se leen los rayos aquí: solo servían para el
+       aviso, y la app los lee sola al abrirla. Menos gasto (06-10-2026). */
+    if (MOVIL_APAGADO) return { rayosMedidos: antes?.rayosMedidos ?? null, rayosNuevos: [], avisosTic: [] };
     const rm = await leerRayosMedidos(lista, antes?.rayosMedidos || null);
     const nuevos = rayosQueAvisan(rm, antes?.rayosAvisados);
     return { rayosMedidos: rm, rayosNuevos: nuevos, avisosTic: nuevos.length ? [avisoDeRayosMedidos(nuevos, rm)] : [] };
@@ -2342,6 +2355,20 @@ export default async function handler(req, res) {
      de las 08 contaba como aviso del día. Solo lo que queda por delante. */
   const quedaHoy = x => x && x.fin >= h0;
   const tocaParte = h0 >= HORA_PARTE && h0 < 12 && antes?.parteDe !== claveHoy;
+  /* EL RAYO DE LOS PARTES, CON LA REGLA DE LOS AVISOS (06-10-2026). Suyo, a
+     las 14:05 con 26° y solazo en Bermeo: «los avisos de tormenta que me
+     acaban de llegar». El segundo parte decía «⚡ rayo en 21 sitios» con el
+     código de tormenta de los modelos, la regla vieja, que en los avisos de
+     las 3 h se cambió el 04-10 y aquí no. Ahora en los partes el rayo es el
+     MEDIDO por AEMET o MUCHO CAPE (2.000 con su tapa abierta en dos modelos). */
+  const rayoDelParte = d => {
+    const med = (rayosMedidos?.encima || []).filter(x => x.n === d.n && Date.now() - new Date(x.hasta).getTime() <= ReglasTiempo.RAYO_VIGENTE);
+    const ca = (d.capeAlto?.[claveHoy]?.tramos || []).filter(t => t.fin >= h0);
+    return (med.length || ca.length) ? { med: med[0] || null, ca } : null;
+  };
+  const rayoTxtParte = d => { const r = rayoDelParte(d);
+    return [r.med ? `rayo medido a ${coma(Math.round(r.med.km * 10) / 10)} km` : null,
+            r.ca.length ? `mucho CAPE ${r.ca.map(t => (t.ini === t.fin ? hh(t.ini) : `${hh(t.ini)}-${hh(t.fin)}`)).join(', ')}` : null].filter(Boolean).join(' y '); };
   /* LOS QUE NO SE HAN PODIDO MIRAR VAN EN LOS DOS PARTES (03-10-2026,
      TRASPASO §67 7). El aviso «no he podido mirar» solo suena con un crítico
      o con 4 o más; con 1 a 3 caídos, el parte decía «sin nada por encima de
@@ -2353,14 +2380,14 @@ export default async function handler(req, res) {
     : '';
   const noMiradosAhora = new Set(fallos.map(f => f.n));
   if (tocaParte) {
-    const conRayo = buenos.filter(d => quedaHoy(d.dias[claveHoy]));
+    const conRayo = buenos.filter(rayoDelParte);
     const conAgua = buenos.filter(d => quedaHoy(d.agua?.[claveHoy]));
     const conRacha = buenos.filter(d => quedaHoy(d.racha?.[claveHoy]));
 
     const trozos = [];
     if (conRayo.length) {
-      trozos.push(`⚡ rayo en ${sitiosTxt(conRayo.length)}: `
-        + conRayo.slice(0, 3).map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana, deManana, h0)}`).join(' · ')
+      trozos.push(`⚡ tormenta en ${sitiosTxt(conRayo.length)}: `
+        + conRayo.slice(0, 3).map(d => `${d.n} ${rayoTxtParte(d)}`).join(' · ')
         + (conRayo.length > 3 ? ` y ${conRayo.length - 3} más` : ''));
     }
     if (conAgua.length) {
@@ -2394,7 +2421,7 @@ export default async function handler(req, res) {
           : 'El parte de hoy · sin nada por encima de tus listones',
       cuerpo: (trozos.length
         ? trozos.join('. ') + (sinMirar || otrosTxt ? '.' : '')
-        : `Los ${buenos.length} emplazamientos${fallos.length ? ' que he mirado' : ''}, sin rayo, sin agua de ${coma(AGUA_MIN)} mm/h para arriba${otrosTxt ? ` según ${nombreDe(duenoId)}` : ''} y sin rachas de ${RACHA_TOPE}.`)
+        : `Los ${buenos.length} emplazamientos${fallos.length ? ' que he mirado' : ''}, sin rayo medido ni mucho CAPE, sin agua de ${coma(AGUA_MIN)} mm/h para arriba${otrosTxt ? ` según ${nombreDe(duenoId)}` : ''} y sin rachas de ${RACHA_TOPE}.`)
         + otrosTxt + sinMirar + ` Ábrela para el detalle.`,
       tag: 'parte', importante: false,
     });
@@ -2432,7 +2459,7 @@ export default async function handler(req, res) {
   const HORA_PARTE2 = 13;
   const tocaParte2 = h0 >= HORA_PARTE2 && h0 < 16 && antes?.parte2De !== claveHoy;
   if (tocaParte2) {
-    const conRayo = buenos.filter(d => quedaHoy(d.dias[claveHoy]));
+    const conRayo = buenos.filter(rayoDelParte);
     const conAgua = buenos.filter(d => quedaHoy(d.agua?.[claveHoy]));
     const conRacha = buenos.filter(d => quedaHoy(d.racha?.[claveHoy]));
     const hay = conRayo.length + conAgua.length + conRacha.length;
@@ -2458,8 +2485,8 @@ export default async function handler(req, res) {
         cmp(conRacha.map(d => d.n), nombres(antesR.racha), 'racha');
       }
       const trozos2 = [];
-      if (conRayo.length) trozos2.push(`⚡ rayo en ${sitiosTxt(conRayo.length)}: `
-        + conRayo.slice(0, 3).map(d => `${d.n} ${cuandoTxt(d, claveHoy, claveManana, deManana, h0)}`).join(' · ')
+      if (conRayo.length) trozos2.push(`⚡ tormenta en ${sitiosTxt(conRayo.length)}: `
+        + conRayo.slice(0, 3).map(d => `${d.n} ${rayoTxtParte(d)}`).join(' · ')
         + (conRayo.length > 3 ? ` y ${conRayo.length - 3} más` : ''));
       if (conAgua.length) {
         const peor = conAgua.reduce((a2, b2) => aguaDeParte(b2.agua[claveHoy]).mm > aguaDeParte(a2.agua[claveHoy]).mm ? b2 : a2);

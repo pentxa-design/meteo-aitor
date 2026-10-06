@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.05-2347';
+const BUILD = '2026.10.06-1517';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -19354,6 +19354,9 @@ function nombreDeAparato(ua, plat, touch, instalada) {
   return `${que}${nav}${instalada ? ' · instalada' : ' · en el navegador'}`;
 }
 
+/* Los avisos al móvil, apagados por él el 06-10-2026 (ver api/vigilante.mjs, MOVIL_APAGADO). */
+const AVISOS_MOVIL_APAGADOS = true;
+
 async function montarAvisos() {
   const btn = $('#btnAvisos'), est = $('#avisoEstado'),
         nota = $('#avisoNota'), prueba = $('#btnAvisoPrueba');
@@ -19473,6 +19476,16 @@ async function montarAvisos() {
        Una app que avisa tiene que decir **de qué avisa**: si no, un día
        tranquilo y un aviso roto se ven exactamente igual. Es la misma
        regla de siempre de esta casa, aplicada al propio aviso. */
+    /* APAGADOS DESDE EL 06-10-2026 (suyo: «no quiero más avisos» · «solo
+       que se muestren en la app» · «fuera, así menos gasto»). El aparato
+       sigue apuntado, pero el vigilante no manda nada: se dice delante. */
+    if (AVISOS_MOVIL_APAGADOS) {
+      di(`Avisos al móvil APAGADOS.`,
+         'Lo decidiste el 6 de octubre: «solo que se muestren en la app». No te llega nada al móvil: ni partes, ni lluvia, ni rayo. '
+         + 'Todo lo que antes avisaba lo ves aquí: el rayo medido en Rayos y en cada sitio, y la lluvia, el viento y el CAPE en Ahora y en Mis estaciones. '
+         + `${estoEs()} sigue apuntado: si algún día los quieres, se encienden sin volver a darte de alta.`);
+      prueba.hidden = true;   // no hay nada que probar: no se manda
+    } else
     di(`Avisos ACTIVADOS en ${estoEs()}.`,
        /* Lo que de verdad manda el vigilante (04-10-2026): el rayo, solo
           MEDIDO; el de los modelos se queda aquí en la app. Antes ponía
@@ -20835,7 +20848,11 @@ function textoPulso(d) {
      dijera y no se arregló la pantalla para que lo leyera. Cazado en el
      barrido del 01-09-2026. */
   const pegas = [];
-  if (d.envia === false)
+  /* Apagados por él (06-10-2026, «solo que se muestren en la app»): no es
+     un fallo, es su decisión, y se dice así, sin alarma. */
+  if (d.apagado)
+    pegas.push(`Los avisos al móvil están <b>apagados</b> (decisión tuya, 06-10-2026): todo se ve aquí, en la app.`);
+  else if (d.envia === false)
     pegas.push(`<b>PERO ESTÁ MUDO</b>: mira, y NO manda avisos al móvil.
       O sea que pasa por tus sitios y no te cuenta lo que ve.`);
   if (d.lista === 'respaldo')
