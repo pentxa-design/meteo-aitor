@@ -8417,6 +8417,14 @@ grupo('Los dibujos distinguen el peligro: hielo, granizo y nieve (01-09-2026)');
   if (typeof globalThis.isStormCode !== 'function') eval(sacar('function isStormCode'));
   eval(sacar('function icon('));
 
+  /* LAS GOTAS SEGÚN LA LLUVIA (06-10-2026, suyo: «lluvia débil y pone una
+     nube con muchas gotas… se ponen menos gotitas, así parece que va a caer
+     200 litros»). Se cuentan las gotas del dibujo: débil 2, lluvia 3, fuerte 4. */
+  const gotas = c => { const m = icon(c, 1).match(/stroke-linecap="round"><path d="([^"]+)"/); return m ? (m[1].match(/M/g) || []).length : 0; };
+  ok('la lluvia DÉBIL (61) y el chubasco débil (80) llevan 2 gotas, no 3: «así parece que va a caer 200 litros»',
+     gotas(61) === 2 && gotas(80) === 2, `61: ${gotas(61)} · 80: ${gotas(80)}`);
+  ok('   la lluvia (63, 81) 3 y la fuerte (65, 82) 4: el dibujo dice cuánta agua',
+     gotas(63) === 3 && gotas(81) === 3 && gotas(65) === 4 && gotas(82) === 4, `63:${gotas(63)} 81:${gotas(81)} 65:${gotas(65)} 82:${gotas(82)}`);
   const hielo = c => icon(c, 1).includes('#bcd4ff');
   ok('los cuatro códigos de HIELO llevan su marca: 48, 56, 57, 66 y 67',
      [48, 56, 57, 66, 67].every(hielo),

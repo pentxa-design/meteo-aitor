@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.06-1517';
+const BUILD = '2026.10.06-1905';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -1090,6 +1090,11 @@ function icon(code, day = 1) {
   const drops = (f, cuanta = 'media') => {
     const P = {
       fina:   { xs: [10.5, 14.5],           largo: 1.4, grosor: 1.5, y: 21.0 },
+      /* LA LLUVIA DÉBIL, CON DOS GOTAS (06-10-2026). Suyo, viendo «Lluvia
+         débil (0,6 mm/h)» con tres gotas: «se ponen menos gotitas, así
+         parece que va a caer 200 litros». Dos gotas de lluvia (no las
+         cortitas del sirimiri), tres para la lluvia y cuatro para la fuerte. */
+      debil:  { xs: [10.5, 14.5],           largo: 2.2, grosor: 1.9, y: 20.5 },
       media:  { xs: [9, 13, 17],            largo: 2.4, grosor: 2.0, y: 20.4 },
       fuerte: { xs: [7.5, 11, 14.5, 18],    largo: 3.3, grosor: 2.4, y: 19.9 },
     }[cuanta];
@@ -1137,10 +1142,12 @@ function icon(code, day = 1) {
   else if (code >= 51 && code <= 57)               g = cloud(0, -1.6) + drops('#7fb6ff', 'fina') + (code >= 56 ? hielo : '');
   // Lluvia fuerte y helada: cuatro gotas largas
   else if (code === 65 || code === 67)             g = cloud(0, -1.6, '#8d9cb8') + drops('#4a95ff', 'fuerte') + (code === 67 ? hielo : '');
+  else if (code === 61 || code === 66)             g = cloud(0, -1.6, '#9fb0cf') + drops('#5aa2ff', 'debil') + (code === 66 ? hielo : '');
   else if (code >= 61 && code <= 67)               g = cloud(0, -1.6, '#9fb0cf') + drops('#5aa2ff') + (code === 66 ? hielo : '');
   else if (code >= 71 && code <= 77)               g = cloud(0, -1.6, '#b9c6df') + snow;
   // Chubascos: el violento (82) también con cuatro
   else if (code === 82)                            g = cloud(0, -1.6, '#8d9cb8') + drops('#4a95ff', 'fuerte');
+  else if (code === 80)                            g = cloud(0, -1.6, '#9fb0cf') + drops('#5aa2ff', 'debil');
   else if (code >= 80 && code <= 82)               g = cloud(0, -1.6, '#9fb0cf') + drops('#5aa2ff');
   else if (code === 85 || code === 86)             g = cloud(0, -1.6, '#b9c6df') + snow;
   else if (isStormCode(code))                      g = cloud(0, -2.4, '#8d9cb8') + bolt + (code === 96 || code === 99 ? granizo : '');
