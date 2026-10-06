@@ -12738,6 +12738,66 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 }
 
 
+/* ── «GFS NO LLEGA HASTA BI BERMEO», CON SU 100 % PINTADO ENCIMA ─────
+   Su captura del 06-10-2026, 19:16: GFS 13 km y Nubes total, el «100»
+   de Bermeo en pantalla y el cartel diciendo que GFS no llega. Medido en
+   su Chrome: GFS lee 100 en Bermeo, y el aviso publicado, con la lectura
+   de la capa ANTERIOR, sacaba ese mismo cartel con el nombre del modelo
+   de ahora. Se ejecuta el `avisoSinDominio` de maps.js con un mapa de
+   mentira: una lectura vieja con hueco se calla; la de ahora con hueco
+   (ICON-D2 en Euskadi, 26-08) sigue avisando. */
+{
+  grupo('El aviso de «no llega» no habla con una lectura vieja');
+  const m = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const i = m.indexOf('  async avisoSinDominio(L_) {');
+  let d = 0, j = m.indexOf('{', i);
+  for (let k = j; k < m.length; k++) { if (m[k] === '{') d++; else if (m[k] === '}' && !--d) { j = k; break; } }
+  const fn = eval('(' + m.slice(i, j + 1).replace('  async avisoSinDominio(L_)', 'async function (L_)') + ')');
+  (globalThis.__pendientes ??= []).push((async () => {
+    const el = { hidden: true, dataset: { k: '' }, innerHTML: '' };
+    const viejos = { document: globalThis.document, S: globalThis.S, OM: globalThis.OMWeatherMapLayer,
+                     TM: globalThis.TMODELS, lm: globalThis.limpiarMarca, esc: globalThis.esc };
+    globalThis.document = { querySelector: () => el };
+    globalThis.S = { place: { lat: 43.413, lon: -2.7183, name: 'BI BERMEO' } };
+    globalThis.OMWeatherMapLayer = { getValueFromLatLong: async () => ({ value: NaN }) };
+    globalThis.TMODELS = [{ id: 'ncep_gfs013', name: 'GFS' }];
+    globalThis.limpiarMarca = u => u;
+    globalThis.esc = x => String(x);
+    const yo = { layer: 'clouds', t: 't20', usando: { modelo: 'ncep_gfs013', meta: {} },
+                 map: { getCenter: () => ({ lat: 43.4, lng: -2.7 }), getBounds: () => ({ contains: () => true }), getZoom: () => 2 },
+                 omUrl: (v, t, mod) => `${mod}/${v}/${t}` };
+    const prueba = async L_ => { el.hidden = true; el.dataset.k = ''; el.innerHTML = '';
+                                 await fn.call(yo, L_); return el.hidden ? 'calla' : el.innerHTML; };
+    const capaVieja = await prueba({ id: 'precipitation', v: 'precipitation' });
+    const capaDeAhora = await prueba({ id: 'clouds', v: 'cloud_cover' });
+    Object.assign(globalThis, { document: viejos.document, S: viejos.S, OMWeatherMapLayer: viejos.OM,
+                                TMODELS: viejos.TM, limpiarMarca: viejos.lm, esc: viejos.esc });
+    ok('una lectura de la capa ANTERIOR con hueco no dice «GFS no llega» (Bermeo, 06-10 19:16)',
+       capaVieja === 'calla', capaVieja.slice(0, 80));
+    ok('   y con la capa de ahora sin dato SÍ avisa (el ICON-D2 en Euskadi del 26-08)',
+       /GFS<\/?b?>? ?no llega hasta BI BERMEO|GFS no llega hasta BI BERMEO/.test(capaDeAhora), capaDeAhora.slice(0, 80));
+  })());
+}
+
+/* ── EL MAR DESPEJADO NO PUEDE PARECER NUBE (06-10-2026) ─────────────
+   Suyo, 19:16, con Windy al lado: «la nuestra marca en todo el mundo que
+   hay nubes». GFS daba 0-6 % en medio Atlántico, pero el mar iba en gris
+   azulado y la nube cerrada en gris: no se distinguían. Se miden los
+   colores de maps.js: el mar de debajo tiene que ser cálido (ocre) y cada
+   nube de la escala, neutra o fría. */
+{
+  grupo('Bajo las nubes, el mar despejado no es gris');
+  const m = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const mar = (m.match(/id:'marLayer'[\s\S]{0,200}?'fill-color':'(#[0-9a-f]{6})'/i) || [])[1];
+  const nubes = [...((m.match(/const nbc = \[([\s\S]*?)\];/) || [])[1] || '').matchAll(/'(#[0-9a-f]{6})'/gi)].map(x => x[1]);
+  const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const calido = h => { const [r, , b] = rgb(h); return r - b >= 30; };
+  ok('el mar despejado bajo Nubes es ocre, no gris azulado (el océano entero «nublado» del 06-10)',
+     !!mar && calido(mar), `mar ${mar}`);
+  ok('   y ninguna nube de la escala es ocre: lo gris o blanco es nube, siempre',
+     nubes.length >= 6 && nubes.every(c => !calido(c)), nubes.join(' '));
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════
    EL RECUENTO VA EL ÚLTIMO. SIEMPRE.

@@ -3295,8 +3295,17 @@ const Maps = {
       this.map.addLayer({ id:'sueloLayer', type:'background',
         paint:{ 'background-color':'#bfae74', 'background-opacity':0.8 } }, agua?.id || this.firstLabelLayer());
       if (agua && this.map.getSource('carto')) {
+        /* EL MAR DESPEJADO, OCRE COMO LA TIERRA (06-10-2026). Suyo, con
+           Windy al lado a las 19:16: «la nuestra marca en todo el mundo que
+           hay nubes». Los datos estaban bien —medido en su Chrome con GFS:
+           0-6 % frente a Canarias, Mauritania, Chile o el Índico; 96 % en
+           el golfo de Bizkaia—, pero el mar sin nubes iba en gris azulado
+           (#6f8aa0) y la nube cerrada en gris (#98a2ae): casi el mismo
+           color. Ahora el despejado es ocre en tierra y en mar, como en
+           Windy, y el mar un tono más oscuro para que se vea la costa. Lo
+           gris o blanco es nube, siempre. */
         this.map.addLayer({ id:'marLayer', type:'fill', source:'carto', 'source-layer':'water',
-          paint:{ 'fill-color':'#6f8aa0', 'fill-opacity':0.85 } }, this.firstLabelLayer());
+          paint:{ 'fill-color':'#9a8a52', 'fill-opacity':0.85 } }, this.firstLabelLayer());
       }
     } catch (e) { console.warn('suelo para nubes: no se ha podido poner', e); }
   },
@@ -3537,6 +3546,16 @@ const Maps = {
         r = await leer();
       } catch { return; }        // no se ha podido mirar: no se dice nada
     }
+    /* ── UNA LECTURA VIEJA NO HABLA DEL MODELO NUEVO (06-10-2026) ──────
+       Su captura de las 19:16: «GFS no llega hasta BI BERMEO» con GFS
+       13 km puesto y su propio «100» de nubes pintado encima de Bermeo.
+       La lectura es asíncrona: si mientras tanto cambia de capa, de
+       modelo o de hora, lo leído es de lo de ANTES, pero el cartel se
+       escribía con el nombre del modelo de AHORA. Si ya no es lo mismo,
+       se calla: ya mirará la llamada de lo que hay ahora en pantalla. */
+    const sigue = L_.id === this.layer && this.usando?.meta
+      && this.omUrl(L_.v, this.t, this.usando.modelo, this.usando.meta) === url;
+    if (!sigue) return;
     const v = r?.value;
     if (v !== null && v !== undefined && !Number.isNaN(v)) { quitar(); return; }
 
