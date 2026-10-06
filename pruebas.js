@@ -12798,6 +12798,27 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      nubes.length >= 6 && nubes.every(c => !calido(c)), nubes.join(' '));
 }
 
+/* ── LOS RAYOS DE ESTA TARDE NO SE PINTAN SOBRE MAÑANA (06-10-2026) ──
+   Suyo, 20:57: «¿por qué rayos pinta tanto aquí a las 11 am?» — AROME en
+   CAPE a las 11:00 del miércoles y encima las descargas medidas del
+   martes por la tarde. Se ejecuta `rayosAEstaHora` de maps.js. */
+{
+  grupo('Los rayos medidos solo sobre su hora');
+  const m = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const i = m.indexOf('  rayosAEstaHora(mira, hasta) {');
+  let d = 0, j = m.indexOf('{', i);
+  for (let k = j; k < m.length; k++) { if (m[k] === '{') d++; else if (m[k] === '}' && !--d) { j = k; break; } }
+  const f = eval('(function ' + m.slice(i + 2, j + 1) + ')');
+  const hasta = '2026-10-06T18:00:00Z';
+  const manana11 = new Date('2026-10-07T09:00:00Z');
+  ok('mañana a las 11:00 NO se pintan los rayos de esta tarde (su captura de las 20:57)',
+     typeof f(manana11, hasta) === 'string' && /no se pintan/.test(f(manana11, hasta)), String(f(manana11, hasta)).slice(0, 60));
+  ok('   y a la hora de ahora SÍ (radar de las 19:10 con la última hora de AEMET hasta las 20:00)',
+     f(new Date('2026-10-06T17:10:00Z'), hasta) === null);
+  ok('   sin hora del mapa no se esconden: un hueco no decide',
+     f(null, hasta) === null && f(manana11, undefined) === null);
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════
    EL RECUENTO VA EL ÚLTIMO. SIEMPRE.

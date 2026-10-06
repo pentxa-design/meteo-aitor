@@ -5218,6 +5218,24 @@ const Maps = {
     if (this.map.getSource('rayosSrc')) this.map.removeSource('rayosSrc');
     const el = document.querySelector('#mapRayos'); if (el) el.textContent = '';
   },
+  /* ── LOS RAYOS MEDIDOS NO SE PINTAN EN OTRA HORA (06-10-2026) ──────
+     Suyo, 20:57, con AROME en CAPE a las 11:00 de MAÑANA y el mapa lleno
+     de puntos rojos: «¿por qué rayos pinta tanto aquí a las 11 am?». Eran
+     las descargas de ESTA tarde encima de una previsión de mañana: se leía
+     como «mañana a las 11 caen rayos aquí», y nadie puede medir un rayo
+     del futuro. Si la hora del mapa se aleja de la última hora publicada
+     de AEMET (más de 90 min después, o más de 3 h antes), no se pintan y
+     se dice por qué. Devuelve el texto del pie, o null si se pintan. */
+  rayosAEstaHora(mira, hasta) {
+    const fin = hasta ? Date.parse(hasta) : NaN;
+    if (!(mira instanceof Date) || Number.isNaN(mira.getTime()) || Number.isNaN(fin)) return null;
+    const t = mira.getTime();
+    if (t <= fin + 90 * 60e3 && t >= fin - 3 * 3600e3) return null;
+    const hh = typeof horaHM === 'function' ? horaHM(hasta) : '';
+    return `⚡ Los rayos son MEDIDOS y llegan hasta las ${hh}: no se pintan sobre otra hora. `
+      + (t > fin ? 'Nadie mide los rayos del futuro: para lo que puede venir, mira CAPE y tapa.'
+                 : 'Para los de entonces, la pestaña Rayos y su «por dónde pasó».');
+  },
   rayosPronto() {
     clearTimeout(this._rayosDeb);
     this._rayosDeb = setTimeout(() => this.rayos(), 700);
@@ -5250,6 +5268,14 @@ const Maps = {
       const b = this.map.getBounds();
       const caja = { lat0: b.getSouth(), lat1: b.getNorth(), lon0: b.getWest(), lon1: b.getEast() };
       const marcos = cat.ambitos[amb].marcos.slice(-2);
+      const hastaUlt = marcos[marcos.length - 1]?.hasta;
+      const fuera = this.rayosAEstaHora(this.horaMirada(), hastaUlt);
+      if (fuera) {
+        for (const id of ['rayosLayer', 'rayosHalo']) if (this.map.getLayer(id)) this.map.removeLayer(id);
+        if (this.map.getSource('rayosSrc')) this.map.removeSource('rayosSrc');
+        if (el) el.textContent = fuera;
+        return;
+      }
       const feats = [];
       for (let k = 0; k < marcos.length; k++) {
         const ds = await Rayos.leer(amb, marcos[k], caja, cat);
@@ -5610,6 +5636,7 @@ const Maps = {
     this._dir = dirMov;
     if (+t !== this.t) this.cerrarPopups();
     this.t = +t;
+    if (this.verRayos) this.rayosPronto();   // los rayos dependen de la hora que miras (ver rayosAEstaHora)
     const L_ = TLAYERS.find(l => l.id === this.layer);
 
     // Satélite: si la capa ya está montada, solo se le cambia la hora en
