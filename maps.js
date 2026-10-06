@@ -2966,6 +2966,13 @@ const Maps = {
     try {
       // El catálogo se pide una vez y vale para las tres capas
       if (!this._satCat) {
+        /* Mientras llega (la primera vez, ~6 s medidos el 06-10-2026) no
+           se deja la leyenda ni la hora de la capa de ANTES encima del
+           mapa en blanco: su captura de las 19:14 enseñaba «Tormentas»
+           con la barra de «Precipitación · mm/h» y «20:00» —una hora que
+           el satélite aún no tiene—. Se dice que está cargando. */
+        document.querySelector('#mapLegend').hidden = true;
+        if (st) { st.textContent = 'cargando…'; st.style.color = ''; st.title = ''; }
         this.status('leyendo el catálogo de EUMETSAT…');
         this._satCat = await jget(API.sat, { n: 12 }, { timeout: 15000 });
       }
