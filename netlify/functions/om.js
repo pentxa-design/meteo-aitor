@@ -43,6 +43,12 @@ const PERMITIDOS = {
      Las dos son de Open-Meteo y del mismo plan gratuito. No las usa la
      app en marcha: las usa la medición. */
   hist:   'https://historical-forecast-api.open-meteo.com/v1/forecast',
+  /* `runs` — una PASADA concreta de un modelo (`run=2026-10-06T06:00`).
+     Añadido el 06-10-2026, con la tormenta de las 22 h encima de Bermeo.
+     Suyo: «en directo cualquiera, yo quiero saber hace unas horas quién
+     estuvo más cerca» · «pero quiero de mi app». Es lo que dice quién lo
+     vio venir CON HORAS, no en la última pasada. */
+  runs:   'https://single-runs-api.open-meteo.com/v1/forecast',
   arch:   'https://archive-api.open-meteo.com/v1/archive',
 
   /* ── EL CATÁLOGO DEL RADAR DE RAINVIEWER (05-09-2026) ──────────────

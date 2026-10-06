@@ -33,7 +33,7 @@
 ## Quién lo vio venir CON HORAS (pasadas de 00, 06 y 12 UTC)
 
 Pedido por él a las 22:25: *«en directo cualquiera, yo quiero saber hace unas horas quién estuvo más cerca»*.
-Fuente: **Open-Meteo Single Runs API, POR FUERA** de /om (/om no la sirve), Bermeo 43,413 / −2,7183. Horas locales 20 · 21 · 22 · 23, «mm / CAPE / código»:
+Fuente: Open-Meteo Single Runs API, **repetido por /om?api=runs (añadido 06-10 22:30): mismos números exactos**, Bermeo 43,413 / −2,7183. Horas locales 20 · 21 · 22 · 23, «mm / CAPE / código»:
 
 | pasada | AROME HD | ECMWF 9 km | ECMWF 25 km | ICON | GFS |
 |---|---|---|---|---|---|
@@ -46,3 +46,4 @@ Fuente: **Open-Meteo Single Runs API, POR FUERA** de /om (/om no la sirve), Berm
 - **La tormenta la dijo ECMWF 9 km**: código 95 en la pasada de 06 UTC, para las 20 h. Llegó unas 2 h más tarde. **Corrige el veredicto de la tarde** («ECMWF 9 km se pasó»): se adelantó, no se inventó la tormenta.
 - **AROME HD tuvo la energía más alta en TODAS las pasadas** (1.150-1.390 J/kg a esas horas) pero 0 mm hasta su última pasada. Gasolina sí, chispa no; y sin tapa publicada no puede disparar el aviso.
 - **GFS (00 UTC)** fue el que más cerca puso el agua EN HORA (0,6 a las 22, 1,1 a las 23), pero sin energía.
+- 22:26 suyo: «ya baja la lluvia» · «los truenos se alejan» · «lo que duró 20 minutos o algo más» · «poco».
