@@ -28,3 +28,21 @@
 **AEMET rayos:** a las 22:19 lo publicado llega solo hasta las 21:00 (nada a < 15 km de 19 a 21 h; el más cercano a 40,8 km, Ugao-Zeberio, de 20 a 21 h). La hora de 21 a 22 está pendiente de publicar: se completa al salir.
 
 **Hallazgo:** el «puede tronar» pide CAPE ≥ 700 con la tapa DEL MISMO modelo < 75. AROME no publica tapa → su CAPE de 1.160 no puede disparar el aviso. ICON daba tapa 39 a las 22:00. Propuesto a él: CAPE de AROME + tapa de ICON, midiendo antes cuánto saltaría. Pendiente de su sí.
+- 22:21 suyo: «aquí está tirando bien» (lluvia fuerte en Bermeo).
+
+## Quién lo vio venir CON HORAS (pasadas de 00, 06 y 12 UTC)
+
+Pedido por él a las 22:25: *«en directo cualquiera, yo quiero saber hace unas horas quién estuvo más cerca»*.
+Fuente: **Open-Meteo Single Runs API, POR FUERA** de /om (/om no la sirve), Bermeo 43,413 / −2,7183. Horas locales 20 · 21 · 22 · 23, «mm / CAPE / código»:
+
+| pasada | AROME HD | ECMWF 9 km | ECMWF 25 km | ICON | GFS |
+|---|---|---|---|---|---|
+| 00 UTC | 0 mm todas · CAPE 1.210-1.230 | 0,1 · **1,1** · 0,5 · 0 (llovizna) | 0,5-0,7 llovizna | 0 · 0,3 · 0,3 · 0 | 0 · 0,2 · **0,6** · **1,1** |
+| 06 UTC | 0 mm todas · **CAPE 1.150-1.390** | **2,7 mm y código 95 (tormenta) a las 20** · 0,6 · 0,2 · 0 | 0,9 · 0,4 · 0,4 · 0,4 | 0 · 0,3 · 0 · 0 | 0 · 0,3 · 0,2 · 0,7 |
+| 12 UTC | 0,1 · 0 · 0,1 · 0 · CAPE 1.170-1.230 | 1,3 · 0,2 · 0 · 0 | **3,4 a las 20** · 0,1… | 0,2 · 0,1 · 0,2 · 0,1 | 0,2 · 0 · 0 · 0 |
+
+**Veredicto con horas de antelación:**
+- **Nadie clavó la lluvia fuerte de las 22.** Todos se quedaron cortos (medido 3-10 mm/h a las 22:10).
+- **La tormenta la dijo ECMWF 9 km**: código 95 en la pasada de 06 UTC, para las 20 h. Llegó unas 2 h más tarde. **Corrige el veredicto de la tarde** («ECMWF 9 km se pasó»): se adelantó, no se inventó la tormenta.
+- **AROME HD tuvo la energía más alta en TODAS las pasadas** (1.150-1.390 J/kg a esas horas) pero 0 mm hasta su última pasada. Gasolina sí, chispa no; y sin tapa publicada no puede disparar el aviso.
+- **GFS (00 UTC)** fue el que más cerca puso el agua EN HORA (0,6 a las 22, 1,1 a las 23), pero sin energía.
