@@ -4,3 +4,4 @@
 - **15:10** — fotos: cielo azul con cirros. Radar AEMET y RainViewer limpios en Euskadi; tope convectivo ~2.000 m; ICON 0,1-0,7 mm/h hacia las 17 h en la costa; solo ECMWF 9 km da código de tormenta (17 y 20 h).
 - **15:40** — suyo: «de momento ni gota».
 - **18:55** — suyo, con fotos: nubes de algodón (cúmulos y algo de estratocúmulo), gris hacia el sur, seco. Ni tormenta ni lluvia fuerte: lo que daba ECMWF 9 km (código de tormenta a las 17 y 3-5 mm) no pasó.
+- **~19:00** — suyo: «cayeron dos gotitas de agua fina, que apenas mojó el suelo, y paró». Matxitxako y Forua: 0 mm de 15 a 18 h. **Veredicto del día:** acertó AROME HD (el que manda en la lluvia: costa casi seca, algo suelto por la tarde); ECMWF 9 km se pasó (código de tormenta a las 17 y 20 h, 3-5 mm). Bien apagados los avisos de modelo.
