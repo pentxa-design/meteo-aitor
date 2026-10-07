@@ -53,3 +53,5 @@ Fuente: Open-Meteo Single Runs API, **repetido por /om?api=runs (añadido 06-10 
 **Suyo:** «Bermeo cayendo sirimiri majo».
 **La app a las 15 h (por /om):** AROME HD (dueño del agua) **0 mm**; ECMWF 9 km 0,3 mm código 51 (llovizna); ECMWF 25 km 2 mm código 61; GFS 0,2 código 51; ICON 0. **El sirimiri lo veían ECMWF y GFS; el dueño no.**
 **Lo que viene (misma consulta):** 17 h AROME HD **10,4 mm** · ICON **código 95** · ECMWF 9 km código 80 → 18 h ECMWF 9 km **código 95**, ICON 4,3 mm. Tres modelos con tormenta o chaparrón fuerte entre las 17 y las 18.
+- 15:53 suyo: «pues en Bermeo sirimiri» (sigue el sirimiri; AROME daba 0,6 mm a las 16 y 10,4 a las 17).
+- 15:53 suyo: «me dicen que por el interior, Zalla, cae más fuerte; aquí sirimiri». Euskalmet 15:40: La Garbea (717 m, a 5 km de Zalla) 0,2 mm en 50 min, racha 56; Almike 0 mm (el sirimiri no llega al pluviómetro), Matxitxako 0,1 mm.
