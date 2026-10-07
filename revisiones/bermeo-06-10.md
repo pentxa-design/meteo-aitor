@@ -55,3 +55,6 @@ Fuente: Open-Meteo Single Runs API, **repetido por /om?api=runs (añadido 06-10 
 **Lo que viene (misma consulta):** 17 h AROME HD **10,4 mm** · ICON **código 95** · ECMWF 9 km código 80 → 18 h ECMWF 9 km **código 95**, ICON 4,3 mm. Tres modelos con tormenta o chaparrón fuerte entre las 17 y las 18.
 - 15:53 suyo: «pues en Bermeo sirimiri» (sigue el sirimiri; AROME daba 0,6 mm a las 16 y 10,4 a las 17).
 - 15:53 suyo: «me dicen que por el interior, Zalla, cae más fuerte; aquí sirimiri». Euskalmet 15:40: La Garbea (717 m, a 5 km de Zalla) 0,2 mm en 50 min, racha 56; Almike 0 mm (el sirimiri no llega al pluviómetro), Matxitxako 0,1 mm.
+- 15:54 suyo: «ahora cae más fuerte» en Bermeo (AROME daba 0,6 mm a las 16 y 10,4 a las 17).
+- 15:55 suyo: «y otra vez sirimiri» (el fuerte duró unos minutos, desde las 15:54).
+- 15:55 suyo: «va algo fuerte unos segundos pero sigue el sirimiri» (rachas de agua de segundos, fondo de sirimiri).
