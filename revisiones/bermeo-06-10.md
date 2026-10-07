@@ -62,3 +62,19 @@ Fuente: Open-Meteo Single Runs API, **repetido por /om?api=runs (añadido 06-10 
 - 15:58 suyo: «CAE MÁS AHORA, MÁS FUERTE» — entra la banda (AROME la ponía de 16:30 a 18:00, 10 mm/h a las 17).
 - 16:01 — sus capturas del mapa (AROME HD e ICON-EU, 17:00) y del satélite (15:30): CAPE AROME **870** en Bermeo, 804 Bilbao · tapa ICON **0** · tope convectivo ICON **11.240 m** (más que Lekeitio, 10.640) · base convectiva **260 m** (Sollube, 665 m, dentro de la nube) · lluvia AROME 10 mm/h. AEMET hasta las 15:00: 4 descargas a < 100 km, la más cercana a **87,7 km** (Santander, 14-15 h). La pareja «CAPE de AROME + tapa de ICON» daría aviso de tormenta para las 17 h.
 - 16:16 suyo: «aquí ya flojo, sirimiri cae».
+- 18:59 suyo: «está lloviendo bien a ratos en Bermeo desde las 17 h».
+- 19:25 suyo: «cae bien» · «y sigue tirando bien» (lluvia fuerte que sigue pasadas las 19).
+
+## 07-10 · balance de la lluvia de 15 a 18 h (hecho a las 19:30)
+
+Medido: AEMET por hora (por /estaciones?historia=10; horas 14Z+15Z+16Z = 15 a 18 h). Previsto: la app por /om (última pasada de cada modelo, celda de tierra; horas 16+17+18).
+
+| sitio | medido | AROME HD | ECMWF 9 km | ECMWF 25 km | ICON | GFS |
+|---|---|---|---|---|---|---|
+| Matxitxako | 1,2 | 15,2 | 4,4 | 6,4 | 5,8 | 2,5 |
+| Forua | 6,6 | 8,9 | 5,6 | 6,4 | 6,4 | 2,7 |
+| Bilbao aeropuerto | 21,2 | 7,6 | 5,8 | 5,7 | 8,9 | 2,4 |
+| Amorebieta | 20,2 | **17,4** | 7,2 | 6,4 | 9,5 | 2,2 |
+| Güeñes | 19,2 | **18,5** | 6,7 | 5,7 | 7,2 | 2,3 |
+
+**Quién se acercó:** AROME HD en Amorebieta, Güeñes y Forua (el único que dio cantidades de 15-20 mm, que es lo que cayó). Falló en el sitio: se pasó en Matxitxako (15 frente a 1) y se quedó corto en Bilbao (8 frente a 21) — la banda cayó unos km más al sur/oeste de donde la ponía. ECMWF (9 y 25 km), ICON y GFS: todos en 2-10 mm donde cayeron 20. Windy dio lo mismo que la app (AROME 10-12 mm en Bermeo, ECMWF 3-4).
