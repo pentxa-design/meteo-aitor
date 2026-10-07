@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.07-1615';
+const BUILD = '2026.10.07-1620';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -13890,6 +13890,29 @@ function resumenCielo(sel) {
 }
 
 
+/* ── PRIMERO LO DE LAS 16, LUEGO LO DE LAS 19 (07-10-2026) ──────────
+   Suyo, con la tarde de Bermeo en pantalla: «el comentario primero sería
+   el de la franja de 16, luego el comentario de las 19». Ponía «Lluvia
+   moderada · cubierto desde las 19:00» y DEBAJO «10,9 mm en la franja de
+   16:00 a 18:00»: lo de las 19 se metía en medio de lo de las 16. Cuando
+   toda el agua de la franja cae en su PRIMER tramo, ese tramo va entero
+   —con sus horas y sus milímetros— y después lo que sigue. La línea de
+   los milímetros no se repite debajo: ya va aquí. Si el agua no cae toda
+   en el primer tramo, null y la franja se cuenta como siempre. */
+function franjaAguaPrimero(sel, mm) {
+  if (!has(mm) || mm < 0.1 || !sel?.length) return null;
+  const linea = tramosDeCielo(sel) || tramosCortos(sel);
+  if (!linea || linea.length < 2) return null;
+  const [p, ...resto] = linea;
+  if (!(has(p.code) && p.code >= HAY_AGUA)) return null;
+  const mojadas = sel.filter(h => has(h.prec) && h.prec >= 0.1).map(h => h.date.getHours());
+  if (!mojadas.length || Math.min(...mojadas) < p.desde || Math.max(...mojadas) > p.hasta) return null;
+  const hh = n => `${String(n).padStart(2, '0')}:00`;
+  const horas = p.desde === p.hasta ? `a las ${hh(p.desde)}` : `de ${hh(p.desde)} a ${hh(p.hasta)}`;
+  return `${p.txt} ${horas}: ${mmTxt(mm)} mm · `
+    + resto.map(t => `${t.txt.toLowerCase()} desde las ${t.hora}`).join(' · ');
+}
+
 function tituloFranja(sel, code, desde = '') {
   const base = textoVisto(code, esDeDia(sel)) ?? '—';
   if (!has(code) || !sel?.length) return base;
@@ -14538,6 +14561,7 @@ function renderNow() {
     const nombreDia = dia.toLocaleDateString('es', { weekday: 'long' });
     const cuando = ` · <b>${esc(esHoy ? 'hoy ' + nombreDia : nombreDia)}</b>`;
 
+    const aguaPrimero = franjaAguaPrimero(sel, mm);
     return `<div class="part" data-ini="${esc(sel[0].t ?? '')}" data-fin="${esc(sel[sel.length - 1].t ?? '')}"><div class="part__k">${name} · ${rotulo}${cuando}</div>
       <div class="part__b"><div class="part__i">${(() => {
         /* El dibujo acompaña al texto: si la franja tiene dos cielos,
@@ -14561,7 +14585,7 @@ function renderNow() {
         const lo = Math.min(...ts).toFixed(0), hi = Math.max(...ts).toFixed(0);
         return lo === hi ? `${lo}°` : `${lo}–${hi}°`;
       })() : nd}</div></div>
-      <div class="part__s">${esc(tituloFranja(sel, code, desde))}${cambio ? `<br><small class="part__cambio">${esc(cambio)}</small>` : ''}${nubesEnLaFranjaQueNoVesTu(sel, code)}${
+      <div class="part__s">${esc(aguaPrimero ?? tituloFranja(sel, code, desde))}${cambio ? `<br><small class="part__cambio">${esc(cambio)}</small>` : ''}${nubesEnLaFranjaQueNoVesTu(sel, code)}${
         /* Las franjas se ven en Ahora, en Torre y en Mis torres: con esto
            el aviso del cielo llega a las tres de una vez. Ver
            `avisoCielo()`. Solo en la franja que está EN CURSO, que es la
@@ -14583,7 +14607,8 @@ function renderNow() {
            Un 0,0 medido es un dato, y de los que más le sirven: en sus
            sitios el 90 % del trabajo es caseta, fusibles al aire y
            armarios de intemperie. */
-        `<br>${(() => {
+        `${aguaPrimero ? '' : '<br>'}${(() => {
+          if (aguaPrimero) return '';      // los mm ya van con su tramo, arriba
           if (!has(mm)) return 'Lluvia: sin dato';
           if (mm <= 0) {
             /* ── «SIN LLUVIA» A SECAS NO PUEDE CONVIVIR CON «LLOVIZNA» ──

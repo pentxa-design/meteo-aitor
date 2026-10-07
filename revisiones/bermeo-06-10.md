@@ -61,3 +61,4 @@ Fuente: Open-Meteo Single Runs API, **repetido por /om?api=runs (añadido 06-10 
 - 15:56 suyo: «diría que es algo más fuerte que sirimiri» (lluvia débil, no llovizna).
 - 15:58 suyo: «CAE MÁS AHORA, MÁS FUERTE» — entra la banda (AROME la ponía de 16:30 a 18:00, 10 mm/h a las 17).
 - 16:01 — sus capturas del mapa (AROME HD e ICON-EU, 17:00) y del satélite (15:30): CAPE AROME **870** en Bermeo, 804 Bilbao · tapa ICON **0** · tope convectivo ICON **11.240 m** (más que Lekeitio, 10.640) · base convectiva **260 m** (Sollube, 665 m, dentro de la nube) · lluvia AROME 10 mm/h. AEMET hasta las 15:00: 4 descargas a < 100 km, la más cercana a **87,7 km** (Santander, 14-15 h). La pareja «CAPE de AROME + tapa de ICON» daría aviso de tormenta para las 17 h.
+- 16:16 suyo: «aquí ya flojo, sirimiri cae».

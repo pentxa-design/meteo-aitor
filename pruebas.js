@@ -12836,6 +12836,31 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      /\.verdict__l\{flex-direction:column/.test(bloque), 'falta .verdict__l en columna dentro de @media(max-width:560px)');
 }
 
+/* ── LA FRANJA: PRIMERO LO DE LAS 16, LUEGO LO DE LAS 19 (07-10-2026) ──
+   Suyo, Bermeo, tarde 16-20 h: «el comentario primero sería el de la
+   franja de 16, luego el comentario de las 19». Se ejecuta
+   `franjaAguaPrimero` de app.js con los tramos de esa tarde. */
+{
+  grupo('La franja cuenta los tramos en orden, con su agua');
+  const src = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  const f = new Function('has', 'mmTxt', 'HAY_AGUA', 'tramosDeCielo', 'tramosCortos',
+    sacar.call ? (src.slice(src.indexOf('function franjaAguaPrimero('), src.indexOf('\n}', src.indexOf('function franjaAguaPrimero(')) + 2) + '\nreturn franjaAguaPrimero;') : '');
+  const has_ = v => v !== null && v !== undefined && !Number.isNaN(v);
+  const mm_ = v => String(Math.round(v * 10) / 10).replace('.', ',');
+  const horas = [16, 17, 18, 19, 20].map(h => ({ date: new Date(2026, 9, 7, h), prec: h <= 18 ? [0.6, 10.2, 0.1][h - 16] : 0 }));
+  const tramos = [{ code: 63, txt: 'Lluvia moderada', desde: 16, hasta: 18, hora: '16:00' },
+                  { code: 3, txt: 'Cubierto', desde: 19, hasta: 20, hora: '19:00' }];
+  const fa = f(has_, mm_, 51, () => tramos, () => null);
+  const t = fa(horas, 10.9);
+  ok('Bermeo 07-10: «Lluvia moderada de 16:00 a 18:00: 10,9 mm · cubierto desde las 19:00»',
+     t === 'Lluvia moderada de 16:00 a 18:00: 10,9 mm · cubierto desde las 19:00', String(t));
+  const fb = f(has_, mm_, 51, () => [{ code: 3, txt: 'Cubierto', desde: 16, hasta: 17, hora: '16:00' }, { code: 61, txt: 'Lluvia débil', desde: 18, hasta: 20, hora: '18:00' }], () => null);
+  ok('   si el agua NO va en el primer tramo, la franja se cuenta como siempre',
+     fb(horas.map(h => ({ ...h, prec: h.date.getHours() >= 18 ? 1 : 0 })), 3) === null);
+  ok('   y si también llueve después del primer tramo, tampoco: los mm no son solo de ese tramo',
+     fa(horas.map(h => ({ ...h, prec: h.date.getHours() === 20 ? 2 : h.prec })), 12.9) === null);
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════
    EL RECUENTO VA EL ÚLTIMO. SIEMPRE.
