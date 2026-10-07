@@ -12819,6 +12819,21 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      f(null, hasta) === null && f(manana11, undefined) === null);
 }
 
+/* ── EL VEREDICTO EN EL MÓVIL, A TODO LO ANCHO (07-10-2026) ──────────
+   Suyo, móvil en vertical: «no se lee». La etiqueta (APTO/OJO) iba al
+   lado del texto y centrada; con la tarjeta alta se iba abajo, fuera de
+   la vista, y dejaba el texto en 183 px de 375. Medido en el navegador
+   con el móvil de 375: con la regla, 323 px y la etiqueta arriba. Esto
+   solo guarda que la regla siga dentro del bloque del móvil (el layout
+   no se puede medir aquí). */
+{
+  grupo('El veredicto en el móvil');
+  const css = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+  const bloque = css.split('@media(max-width:560px){').slice(1).map(b => b.slice(0, b.indexOf('\n}'))).join('\n');
+  ok('en el móvil la etiqueta va ARRIBA y el texto a todo lo ancho («no se lee», 07-10)',
+     /\.verdict__l\{flex-direction:column/.test(bloque), 'falta .verdict__l en columna dentro de @media(max-width:560px)');
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════
    EL RECUENTO VA EL ÚLTIMO. SIEMPRE.
