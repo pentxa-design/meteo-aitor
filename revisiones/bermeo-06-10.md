@@ -47,3 +47,9 @@ Fuente: Open-Meteo Single Runs API, **repetido por /om?api=runs (añadido 06-10 
 - **AROME HD tuvo la energía más alta en TODAS las pasadas** (1.150-1.390 J/kg a esas horas) pero 0 mm hasta su última pasada. Gasolina sí, chispa no; y sin tapa publicada no puede disparar el aviso.
 - **GFS (00 UTC)** fue el que más cerca puso el agua EN HORA (0,6 a las 22, 1,1 a las 23), pero sin energía.
 - 22:26 suyo: «ya baja la lluvia» · «los truenos se alejan» · «lo que duró 20 minutos o algo más» · «poco».
+
+## 07-10 · 15:35 — sirimiri en Bermeo
+
+**Suyo:** «Bermeo cayendo sirimiri majo».
+**La app a las 15 h (por /om):** AROME HD (dueño del agua) **0 mm**; ECMWF 9 km 0,3 mm código 51 (llovizna); ECMWF 25 km 2 mm código 61; GFS 0,2 código 51; ICON 0. **El sirimiri lo veían ECMWF y GFS; el dueño no.**
+**Lo que viene (misma consulta):** 17 h AROME HD **10,4 mm** · ICON **código 95** · ECMWF 9 km código 80 → 18 h ECMWF 9 km **código 95**, ICON 4,3 mm. Tres modelos con tormenta o chaparrón fuerte entre las 17 y las 18.
