@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.07-0955';
+const BUILD = '2026.10.07-1615';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -8688,7 +8688,9 @@ function textoTapa(cin, h) {
 function fraseTapa(cin, h) {
   if (!has(cin)) return '';
   if (h !== undefined && !tapaVale(h))
-    return `La tapa no dice nada aquí: ese 0 lo pone ${h.tapaDe}, que no ve gasolina`;
+    /* El número que se enseña, no un 0 escrito a mano (07-10-2026: Bermeo,
+       16:00, la casilla ponía «tapa 22» y debajo «ese 0 lo pone ICON»). */
+    return `La tapa no dice nada aquí: ese ${Math.round(cin)} lo pone ${h.tapaDe}, que no ve gasolina`;
   if (cin < 25)  return 'Sin tapa: si hay CAPE, rompe';
   if (cin < 50)  return 'Tapa floja';
   if (cin < 200) return 'Tapa que aguanta';

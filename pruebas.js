@@ -1302,6 +1302,8 @@ grupo('Una tapa en 0 de quien no ve gasolina no dice nada (22-09-2026)');
   ok('fraseTapa dice quién puso el cero, y se calla la escala',
      fraseTapa(0, { cape: 800, cin: 0, tapaDe: 'ICON', capeTapa: 0 })
        === 'La tapa no dice nada aquí: ese 0 lo pone ICON, que no ve gasolina'
+     && fraseTapa(22, { cape: 740, cin: 22, tapaDe: 'ICON', capeTapa: 0 })
+       === 'La tapa no dice nada aquí: ese 22 lo pone ICON, que no ve gasolina'   // Bermeo 07-10 16:00: decía «ese 0» con la tapa en 22
      && fraseTapa(0, { cape: 800, cin: 0, tapaDe: null }) === 'Sin tapa: si hay CAPE, rompe'
      && fraseTapa(100, { cape: 0, cin: 100, tapaDe: null }) === 'Tapa que aguanta'
      && fraseTapa(null, {}) === '',
