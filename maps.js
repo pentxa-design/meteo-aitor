@@ -1746,8 +1746,13 @@ function escalasPropias() {
      larga, cada tramo entre nodos del modelo era una nube a medio pintar, y
      eso es lo que se veía borroso. Medido antes: las teselas ya llegan a
      512 px, el desenfoque no era de resolución. */
-  const nbc = [['#ffffff',0], ['#ffffff',.04], ['#ffffff',.40], ['#fbfbfb',.78], ['#f3f3f3',.92],
-               ['#dedede',.96], ['#c8c8c8',.98], ['#a8a8a8',.99]];
+  /* BLANCA TAMBIÉN CON EL CIELO CERRADO (08-10-2026, suyo con Windy al
+     lado, tres veces: «a ver si lo igualas» · «no se parece todavía» ·
+     «lo sigo viendo borroso»). El gris del 15-09 era lo que lo separaba
+     de Windy: allí la nube cerrada es blanca, y la masa se ve como masa.
+     Queda un gris muy ligero solo al 100 %, para distinguir el cerrado. */
+  const nbc = [['#ffffff',0], ['#ffffff',.04], ['#ffffff',.45], ['#ffffff',.82], ['#fbfbfb',.93],
+               ['#f4f4f4',.96], ['#ececec',.98], ['#e0e0e0',.99]];
   const nubes = {
     scale: { type:'breakpoint', unit:'%', breakpoints: nbm, colors: nbc.map(([c,a]) => hexRGBA(c, a)) },
     eje: nbm, unidad: '%', pos: nbm.map((_, i) => i),

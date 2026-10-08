@@ -11185,8 +11185,9 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
   const clara = nb.length >= 8
     && nb.slice(0, 5).every(s => canales(hexDe(s)).every(v => v >= 0xd0))
     && nb.slice(5).every(s => neutra(hexDe(s)))
-    && canales(hexDe(nb[7])).every(v => v < 0xb0) && canales(hexDe(nb[5])).every(v => v < 0xe0);
-  ok('la escala «nubes» va de transparente (0 %) a gris oscuro casi opaco (100 %): blanca con claros, gris con el cielo cerrado, y neutra, no azul',
+    /* 08-10-2026: como Windy, blanca también cerrada; solo un gris ligero al 100 % (≤ #e6). */
+    && canales(hexDe(nb[7])).every(v => v <= 0xe6 && v >= 0xd0);
+  ok('la escala «nubes» va de transparente (0 %) a blanco casi opaco (100 %): blanca como Windy, un gris ligero solo cerrada, y neutra, no azul',
      alfa.length >= 6 && alfa[0] === 0 && alfa[alfa.length - 1] >= 0.9 && alfa.every((a, i) => i === 0 || a >= alfa[i - 1]) && clara
      && /const nubes = \{/.test(M) && /presion, visibilidad, tempc, t850, rafagas, capeE, tapa, agua, isocero, sinColor, nubes,/.test(M),
      JSON.stringify({ alfa, clara }));
