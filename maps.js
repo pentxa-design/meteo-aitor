@@ -1738,8 +1738,11 @@ function escalasPropias() {
      55 %, gris claro al 70, gris al 85, gris oscuro al 100. Sin pedir una
      variable más (la nube baja): es la total, que ya se pide. */
   const nbm = [0, 10, 25, 40, 55, 70, 85, 100];
-  const nbc = [['#ffffff',0], ['#f6f8fa',.10], ['#f1f4f7',.28], ['#eceff3',.46], ['#e6eaee',.62],
-               ['#d2d8de',.80], ['#b9c1cb',.92], ['#98a2ae',.97]];
+  /* Más blancas y más tapadas, como Windy (08-10-2026: «no se parece
+     todavía»). Se mantiene su gris del 15-09 con el cielo cerrado, pero un
+     gris claro, no el azulado oscuro que se confundía con el suelo. */
+  const nbc = [['#ffffff',0], ['#f7f7f7',.15], ['#f2f2f2',.38], ['#ededed',.58], ['#e6e6e6',.74],
+               ['#d6d6d6',.88], ['#c4c4c4',.95], ['#a8a8a8',.98]];
   const nubes = {
     scale: { type:'breakpoint', unit:'%', breakpoints: nbm, colors: nbc.map(([c,a]) => hexRGBA(c, a)) },
     eje: nbm, unidad: '%', pos: nbm.map((_, i) => i),
@@ -2835,7 +2838,10 @@ const Maps = {
              negro dejaba la tierra gris y el verde flojo se leía como
              musgo (sus capturas del 18-09 a las 17:00). El botón Relieve
              no cambia, y en las demás capas la sombra sigue al 32 %. */
-          this.map.setPaintProperty('hillLayer', 'raster-opacity', CON_SUELO_NEGRO.has(L_.escala) ? 0 : 0.32);
+          /* Sin relieve también bajo las nubes (08-10-2026, «no se parece
+             todavía» a Windy): el sombreado blanquecino aclaraba el suelo
+             marrón y lo despejado parecía velo. */
+          this.map.setPaintProperty('hillLayer', 'raster-opacity', (CON_SUELO_NEGRO.has(L_.escala) || L_.escala === 'nubes') ? 0 : 0.32);
         } catch {}
       }
 

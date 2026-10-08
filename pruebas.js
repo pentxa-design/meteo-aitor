@@ -2963,7 +2963,7 @@ ok('«Valores» no rotula por debajo de 5 dBZ (pero el pulsar el punto sigue dan
 ok('bajo la lluvia, en mm/h y en dBZ, el suelo va negro como en AguaceroWx',
    /const CON_SUELO_NEGRO = new Set\(\['lluvia', 'lluviaVerde', 'dbz'\]\);/.test(mapsSrc)
    && /sueloParaLluvia\(CON_SUELO_NEGRO\.has\(L_\.escala\)\)/.test(mapsSrc)
-   && /setPaintProperty\('hillLayer', 'raster-opacity', CON_SUELO_NEGRO\.has\(L_\.escala\) \? 0 : 0\.32\)/.test(mapsSrc)
+   && /setPaintProperty\('hillLayer', 'raster-opacity', \(CON_SUELO_NEGRO\.has\(L_\.escala\) \|\| L_\.escala === 'nubes'\) \? 0 : 0\.32\)/.test(mapsSrc)
    && /const tono = \{ tierra: '#1b1d21'[^}]*mar: '#0b0c0f'/.test(mapsSrc)
    && !/#5a5f66/.test(mapsSrc),
    'suyo: «y si es de lluvia prefiero en mm»: misma pintada negra, leyendo milímetros');
@@ -7551,7 +7551,7 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
      /* 15-09-2026: las capas de nubes suben a ≥ 0,92 (nube blanca lavada sobre el mar azul acero); el resto sigue al valor del deslizador, nunca por debajo. */
      /const op = L_\.escala === 'nubes' \? Math\.max\(this\.opacity, 0\.92\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? Math\.max\(this\.opacity, 0\.95\)\s*: this\.opacity;/.test(M)
      && /moveLayer\('hillLayer', this\.firstLabelLayer\(\)\)/.test(M)
-     && /'raster-opacity', CON_SUELO_NEGRO\.has\(L_\.escala\) \? 0 : 0\.32/.test(M),
+     && /'raster-opacity', \(CON_SUELO_NEGRO\.has\(L_\.escala\) \|\| L_\.escala === 'nubes'\) \? 0 : 0\.32/.test(M),
      'sus dos peticiones a la vez: relieve visible y mapa sin lavar (y bajo la lluvia, sombra apagada: 18-09-2026)');
   ok('la T850 vive en el grupo AIRE, al lado de Temperatura 2 m',
      (() => { const i = M.indexOf("id:'temp'"); const j = M.indexOf("id:'t850'");
