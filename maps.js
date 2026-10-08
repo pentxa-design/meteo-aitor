@@ -1751,8 +1751,10 @@ function escalasPropias() {
      «lo sigo viendo borroso»). El gris del 15-09 era lo que lo separaba
      de Windy: allí la nube cerrada es blanca, y la masa se ve como masa.
      Queda un gris muy ligero solo al 100 %, para distinguir el cerrado. */
-  const nbc = [['#ffffff',0], ['#ffffff',.04], ['#ffffff',.45], ['#ffffff',.82], ['#fbfbfb',.93],
-               ['#f4f4f4',.96], ['#ececec',.98], ['#e0e0e0',.99]];
+  /* «Afínalo» (23:37): rampa aún más corta, nada hasta el 20 % y blanca
+     del todo al 45 %, para que el borde de la nube sea borde. */
+  const nbc = [['#ffffff',0], ['#ffffff',0], ['#ffffff',.30], ['#ffffff',.90], ['#fdfdfd',.97],
+               ['#f6f6f6',.98], ['#eeeeee',.99], ['#e2e2e2',1]];
   const nubes = {
     scale: { type:'breakpoint', unit:'%', breakpoints: nbm, colors: nbc.map(([c,a]) => hexRGBA(c, a)) },
     eje: nbm, unidad: '%', pos: nbm.map((_, i) => i),
