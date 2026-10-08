@@ -12861,6 +12861,18 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      fa(horas.map(h => ({ ...h, prec: h.date.getHours() === 20 ? 2 : h.prec })), 12.9) === null);
 }
 
+/* ── LA RACHA DE LA FRANJA: LA MÁS ALTA DE LOS CINCO, CON SU DUEÑO (08-10-2026) ──
+   «ok» suyo a dejarlo igual en las tres webs. Recordatorio de texto (el
+   comportamiento se miró en pantalla en las tres): que la franja no vuelva
+   a coger solo la racha del modelo cargado. */
+{
+  grupo('La racha de la franja es la más alta de los cinco');
+  const src = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  ok('la franja calcula la racha con peorRacha (todos los modelos) y dice de quién es',
+     /const otra = peorRacha\(h\);/.test(src) && /la más alta de los 5, la da \$\{esc\(gTop\.quien\)\}/.test(src)
+     && !/const gDatos = sel\.map\(h => h\.gust\)\.filter\(has\);/.test(src));
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════
    EL RECUENTO VA EL ÚLTIMO. SIEMPRE.

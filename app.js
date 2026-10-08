@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.07-1620';
+const BUILD = '2026.10.08-1603';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -14469,11 +14469,24 @@ function renderNow() {
                                  tituloFranja(sel, code));
     /* Con todas las rachas en null esto daba 0 y la línea «Racha máx» no
        se pintaba: silencio donde debería decir «sin dato» (20-09-2026). */
-    const gDatos = sel.map(h => h.gust).filter(has);
-    const gm = gDatos.length ? Math.max(...gDatos) : null;
+    /* ── LA MÁS ALTA DE LOS CINCO, DICIENDO DE QUIÉN (08-10-2026) ──────
+       Suyo, «ok» a dejarlo igual en las tres webs: la franja de Bermeo a
+       las 15:58 ponía «Racha máx 43» (la del modelo cargado) en la app y
+       en la agenda, y «46 · la más alta de los 5, la da ICON» en el Centro
+       Operativo. Ahora las tres dicen la más alta, con su dueño — que es
+       también como decide el semáforo (`peorRacha`). */
+    const gTop = sel.reduce((top, h) => {
+      const otra = peorRacha(h);
+      const c = (otra && has(otra.v) && (!has(h.gust) || otra.v > h.gust))
+        ? { v: otra.v, quien: otra.quien, date: h.date }
+        : has(h.gust) ? { v: h.gust, quien: modeloDato().name, date: h.date } : null;
+      return c && (!top || c.v > top.v) ? c : top;
+    }, null);
+    const gm = gTop ? gTop.v : null;
     // Y a qué hora es esa racha (suyo, 09-09-2026: «que se aplique siempre»).
-    const hGm = sel.find(h => has(h.gust) && h.gust === gm)?.date;   // sin «?? 0»: un hueco no es una racha
+    const hGm = gTop?.date;   // sin «?? 0»: un hueco no es una racha
     const gmCuando = gm > 0 && hGm ? ` · a las ${String(hGm.getHours()).padStart(2, '0')}:00` : '';
+    const gmQuien = gm > 0 && gTop?.quien ? ` · la más alta de los 5, la da ${esc(gTop.quien)}` : '';
     /* El viento medio, además de la racha. Suyo, 08-09-2026: «está bien
        saber las rachas pero también me gustaría saber el viento que hay a
        10 m». Va la horquilla de la franja, a la misma altura que la racha. */
@@ -14668,12 +14681,13 @@ function renderNow() {
          Es el mismo motivo por el que la tabla de «Mis torres» lleva
          escrito «a 10 m» en la cabecera desde que él preguntó *«¿es a
          10 m o qué significa?»*. Aquí faltaba. */
-      }${vTxt ? `<br>Viento ${vTxt}${dTxt}<small> a ${S.hgt} m</small>` : ''}${gm > 0 ? `<br>Racha máx ${wtxt(gm, true)}<small> a ${S.hgt} m${gmCuando}</small>`
+      }${vTxt ? `<br>Viento ${vTxt}${dTxt}<small> a ${S.hgt} m</small>` : ''}${gm > 0 ? `<br>Racha máx ${wtxt(gm, true)}<small> a ${S.hgt} m${gmCuando}${gmQuien}</small>`
        /* Sin dato NO es silencio: callarse se lee como «no hay racha que
           contar», y lo que pasa es que nadie la ha dado (20-09-2026). */
        : !has(gm) ? `<br>Racha máx<small> · sin dato en esta franja</small>` : ''}${(() => {
           const r = rachaEnLaFranjaQueNoVesTu(sel);
-          return r ? ` <span class="nd__ojo">⚠ ${esc(r.quien)} da ${wtxt(r.max, true)} a 10 m${r.cuando ? ` ${r.cuando}` : ''}${r.cruza && has(r.limite) ? ` — tu listón es ${wtxt(r.limite, true)}` : ''}</span>` : '';
+          /* Con la más alta ya en la línea, el chip solo si cruza tu listón (08-10-2026). */
+          return r && r.cruza ? ` <span class="nd__ojo">⚠ ${esc(r.quien)} da ${wtxt(r.max, true)} a 10 m${r.cuando ? ` ${r.cuando}` : ''}${r.cruza && has(r.limite) ? ` — tu listón es ${wtxt(r.limite, true)}` : ''}</span>` : '';
         })()}${
         avisoTormentaFranja(sel)}</div></div>`;
   }).join('');
