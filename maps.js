@@ -1741,8 +1741,13 @@ function escalasPropias() {
   /* Más blancas y más tapadas, como Windy (08-10-2026: «no se parece
      todavía»). Se mantiene su gris del 15-09 con el cielo cerrado, pero un
      gris claro, no el azulado oscuro que se confundía con el suelo. */
-  const nbc = [['#ffffff',0], ['#f7f7f7',.15], ['#f2f2f2',.38], ['#ededed',.58], ['#e6e6e6',.74],
-               ['#d6d6d6',.88], ['#c4c4c4',.95], ['#a8a8a8',.98]];
+  /* Rampa CORTA, como Windy (08-10-2026, «lo sigo viendo borroso»): de 0 a
+     25 % casi nada, y del 25 al 55 % se pone blanca de golpe. Con la rampa
+     larga, cada tramo entre nodos del modelo era una nube a medio pintar, y
+     eso es lo que se veía borroso. Medido antes: las teselas ya llegan a
+     512 px, el desenfoque no era de resolución. */
+  const nbc = [['#ffffff',0], ['#ffffff',.04], ['#ffffff',.40], ['#fbfbfb',.78], ['#f3f3f3',.92],
+               ['#dedede',.96], ['#c8c8c8',.98], ['#a8a8a8',.99]];
   const nubes = {
     scale: { type:'breakpoint', unit:'%', breakpoints: nbm, colors: nbc.map(([c,a]) => hexRGBA(c, a)) },
     eje: nbm, unidad: '%', pos: nbm.map((_, i) => i),
