@@ -78,3 +78,17 @@ Medido: AEMET por hora (por /estaciones?historia=10; horas 14Z+15Z+16Z = 15 a 18
 | Güeñes | 19,2 | **18,5** | 6,7 | 5,7 | 7,2 | 2,3 |
 
 **Quién se acercó:** AROME HD en Amorebieta, Güeñes y Forua (el único que dio cantidades de 15-20 mm, que es lo que cayó). Falló en el sitio: se pasó en Matxitxako (15 frente a 1) y se quedó corto en Bilbao (8 frente a 21) — la banda cayó unos km más al sur/oeste de donde la ponía. ECMWF (9 y 25 km), ICON y GFS: todos en 2-10 mm donde cayeron 20. Windy dio lo mismo que la app (AROME 10-12 mm en Bermeo, ECMWF 3-4).
+
+## 07-10 noche → 08-10 mañana (AEMET por hora, consultado el 08-10 a las 07:11)
+
+| estación | 18-20 h (17Z+18Z) | 20 h a 08 h | total |
+|---|---|---|---|
+| Matxitxako | **9,2** | 0,8 | 10,0 |
+| Forua | 11,0 | 2,2 | 13,2 |
+| Bilbao aeropuerto | 8,1 | 3,4 | 11,5 |
+| Punta Galea | 5,0 | 0,7 | 5,7 |
+| Güeñes | 16,2 | 9,5 | 25,7 |
+
+- El chaparrón de la costa fue de **18 a 20 h** (sus «llueve bien desde las 17» y «sigue tirando bien» a las 19:25), no de 16 a 18 como lo ponía AROME: en Bermeo llegó con unas 2 h de retraso sobre el modelo.
+- **Noche de 21 a 23 h:** ECMWF, GFS e ICON daban 4,5 mm en Bermeo; AROME, seco. Medido: Matxitxako 0, Forua 0,4, Bilbao 0,3-0,5. **Acertó AROME.**
+- Lo pendiente del 06-10 (rayos de AEMET de 21 a 22 h): ya no se puede leer; el catálogo de AEMET guarda 24 h y no se miró a tiempo.
