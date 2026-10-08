@@ -3300,7 +3300,10 @@ const Maps = {
       const ls = this.map.getStyle()?.layers || [];
       const agua = ls.find(l => l.id === 'water') || ls.find(l => l.type === 'fill' && /water/.test(l.id));
       this.map.addLayer({ id:'sueloLayer', type:'background',
-        paint:{ 'background-color':'#bfae74', 'background-opacity':0.8 } }, agua?.id || this.firstLabelLayer());
+        /* Marrón oliva de Windy, opaco (08-10-2026, suyo con Windy al lado:
+           «se ve mejor dónde hay nubes y dónde no»). El ocre claro de antes,
+           al 80 %, dejaba ver el mapa claro debajo y la nube fina se perdía. */
+        paint:{ 'background-color':'#8a773a', 'background-opacity':1 } }, agua?.id || this.firstLabelLayer());
       if (agua && this.map.getSource('carto')) {
         /* EL MAR DESPEJADO, OCRE COMO LA TIERRA (06-10-2026). Suyo, con
            Windy al lado a las 19:16: «la nuestra marca en todo el mundo que
@@ -3312,7 +3315,7 @@ const Maps = {
            Windy, y el mar un tono más oscuro para que se vea la costa. Lo
            gris o blanco es nube, siempre. */
         this.map.addLayer({ id:'marLayer', type:'fill', source:'carto', 'source-layer':'water',
-          paint:{ 'fill-color':'#9a8a52', 'fill-opacity':0.85 } }, this.firstLabelLayer());
+          paint:{ 'fill-color':'#7a6932', 'fill-opacity':1 } }, this.firstLabelLayer());
       }
     } catch (e) { console.warn('suelo para nubes: no se ha podido poner', e); }
   },

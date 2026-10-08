@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.08-1603';
+const BUILD = '2026.10.08-2057';
 
 /* ---------- 1. Constantes y estado ---------- */
 
