@@ -92,3 +92,5 @@ Medido: AEMET por hora (por /estaciones?historia=10; horas 14Z+15Z+16Z = 15 a 18
 - El chaparrón de la costa fue de **18 a 20 h** (sus «llueve bien desde las 17» y «sigue tirando bien» a las 19:25), no de 16 a 18 como lo ponía AROME: en Bermeo llegó con unas 2 h de retraso sobre el modelo.
 - **Noche de 21 a 23 h:** ECMWF, GFS e ICON daban 4,5 mm en Bermeo; AROME, seco. Medido: Matxitxako 0, Forua 0,4, Bilbao 0,3-0,5. **Acertó AROME.**
 - Lo pendiente del 06-10 (rayos de AEMET de 21 a 22 h): ya no se puede leer; el catálogo de AEMET guarda 24 h y no se miró a tiempo.
+- 08-10 07:50 suyo: «Bermeo lloviendo bien ahora».
+- 08-10 10:12 suyo: «Vitoria capital, lloviendo sirimiri, algo más» · «12 grados» (de camino a Anda). App a las 10-11 h: AROME 0,1-0,5 mm, ECMWF 9 y 25 km 0,2 con llovizna (51), GFS 0,1-0,3 llovizna, ICON 0,3 chubasco. Todos aciertan: sirimiri o algo más.
