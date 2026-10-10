@@ -94,3 +94,26 @@ Medido: AEMET por hora (por /estaciones?historia=10; horas 14Z+15Z+16Z = 15 a 18
 - Lo pendiente del 06-10 (rayos de AEMET de 21 a 22 h): ya no se puede leer; el catálogo de AEMET guarda 24 h y no se miró a tiempo.
 - 08-10 07:50 suyo: «Bermeo lloviendo bien ahora».
 - 08-10 10:12 suyo: «Vitoria capital, lloviendo sirimiri, algo más» · «12 grados» (de camino a Anda). App a las 10-11 h: AROME 0,1-0,5 mm, ECMWF 9 y 25 km 0,2 con llovizna (51), GFS 0,1-0,3 llovizna, ICON 0,3 chubasco. Todos aciertan: sirimiri o algo más.
+
+## 10-10 mañana: nubes en Laredo y Bermeo (suyo, desde el MacBook)
+
+- **Antes de las 08:43** él veía en Windy (ECMWF 9 km) «sin nubes hasta las 14» en Laredo y el
+  mapa nuestro tapado. El iMac aclaró la rampa a las 08:43 (nada hasta el 25 %, blanco del 70 %).
+  A las 09:12 las nubes pasaron a interpolación monótona, para quitar los cuadros.
+- **09:15, suyo:** «ojo que aquí hay nubes» · «el acierto, de momento, el nuestro». Laredo a las
+  09 h: ECMWF 9 km 100 % (66 baja), AROME baja 100 %, ECMWF 25 km 71 %, GFS 100 %, ICON 46 %.
+- **09:50, suyo:** «Bermeo 100 % cubierto; a la mañana había menos nubes y más claros» · «a esta
+  hora tapado» · «sin agua».
+
+| Bermeo | 08 h | 09 h | 10 h |
+|---|---|---|---|
+| ECMWF 9 km | 84 (44) | **100 (100)** | 71 (48) |
+| ICON | 81 (56) | **100 (58)** | 60 (45) |
+| GFS | 22 (0) | 60 (5) | 92 (46) |
+| AROME HD (baja; no da total) | 100 | 89 | 21 |
+| ECMWF 25 km (el que manda en el cielo) | 52 (20) | **38 (22)** | **25 (23)** |
+
+Total % (baja). **A las 09-10 aciertan ECMWF 9 km e ICON; ECMWF 25 km, el que manda en el cielo
+de la app desde el 05-10, da 25-38 % con el cielo tapado.** A las 08 h («menos nubes, con
+claros») se acercan más ECMWF 25 km y GFS. Por mirar: Laredo a las 11-13 h (ECMWF 9 km da 37 ·
+20 · 27 %; ICON 53 · 83 · 89 %).
