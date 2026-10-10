@@ -33,7 +33,10 @@ const ReglasTiempo = (() => {
   const DUENO_AGUA = 'meteofrance_arome_france_hd';
   const AGUA_ACUERDO = 1;                   // mm/h: «otro modelo la acompaña» / «poquita agua»
   const RELLENO_AGUA = 'ecmwf_ifs025';      // donde el dueño no llega (más allá de 48 h)
-  const CIELO_PRESTADO = 'ecmwf_ifs025';    // de quién sale el código si el dueño no lo publica
+  /* El código del cielo lo presta ECMWF 9 km desde el 10-10-2026 (orden suya,
+     con sus fotos de Bermeo, Laredo, Bilbao y Ajo; medido contra el satélite:
+     72,0 % frente al 69,1 % del de 25 km). Igual en las tres webs. */
+  const CIELO_PRESTADO = 'ecmwf_ifs';       // de quién sale el código si el dueño no lo publica
   const ECMWF_9KM = 'ecmwf_ifs';
   /* Los que se miran para el agua de «los demás» y para la tormenta. El
      «Automático» (best_match) no: es una mezcla (03-10-2026). */

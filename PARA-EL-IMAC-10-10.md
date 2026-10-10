@@ -48,3 +48,6 @@ desde 0,2 sigue igual. La prueba y la línea de NO-SE-TOCA están al día y la p
 con el gris puesto. Visto en el panel (ICON-EU, 14:00): nube blanca y limpia, sin rectángulos, y
 el agua de verdad en azul con bordes suaves. Suyo: «que se vea como Windy, bien; eso sí, datos
 reales, nada inventando».
+
+
+**HECHO desde el iMac, 10-10 23:15:** 0, 1 (medido: 9 km 72,0 % · 25 km 69,1 %) y 2 en las tres webs; 3 sin tocar. Ver revisiones/bermeo-06-10.md.

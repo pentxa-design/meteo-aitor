@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.10-1419';
+const BUILD = '2026.10.10-2314';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -1032,14 +1032,24 @@ function cieloVotado(t, place = null) {
     const a = C[`cloud_cover_high_${m.om}`]?.[i];
     if (has(a)) alta.push({ v: a, peso: m.peso || 1 });
   }
-  if (bm.length < 3) return null;
+  /* ── ECMWF 9 km DECIDE; EL VOTO QUEDA DE RESPALDO (10-10-2026) ──────
+     Ver ORDEN_CIELO. Si trae sus capas a esa hora, el cielo que se dibuja
+     es el suyo y la etiqueta lo dice («lo dice ECMWF 9 km»). El abanico
+     sigue siendo el desacuerdo entre los que votan, para el aviso del
+     cielo. Sin él (fuera de Europa, o la hora sin dato), la mediana
+     ponderada de los cuatro, como hasta hoy. */
+  const b9 = C[`cloud_cover_low_${ECMWF_9KM}`]?.[i], m9 = C[`cloud_cover_mid_${ECMWF_9KM}`]?.[i], a9 = C[`cloud_cover_high_${ECMWF_9KM}`]?.[i];
+  const nueve = (has(b9) && has(m9)) ? { bm: Math.min(100, b9 + m9), alta: has(a9) ? a9 : null, de: nombreDeModelo(ECMWF_9KM) } : null;
+  if (bm.length < 3 && !nueve) return null;
   /* Mediana PONDERADA por resolución (12-09-2026): con AROME 55, ICON
      82, ECMWF 3 y GFS 0 la mediana simple daba 29 («mayormente
      despejado») con medio cielo tapado en la ladera; ponderada da 55
      («parcialmente nuboso»), que es lo que había. El abanico sigue
      siendo del que menos al que más, sin pesos: es el desacuerdo. */
   const o = bm.map(p => p.v).sort((p, q) => p - q);
-  return { bm: medianaPonderada(bm), alta: alta.length ? medianaPonderada(alta) : null, n: bm.length, abanico: o[o.length - 1] - o[0] };
+  const abanico = o.length ? o[o.length - 1] - o[0] : 0;
+  if (nueve) return { bm: nueve.bm, alta: nueve.alta, n: bm.length, abanico, de: nueve.de };
+  return { bm: medianaPonderada(bm), alta: alta.length ? medianaPonderada(alta) : null, n: bm.length, abanico };
 }
 function codigoVotado(v) {
   if (v.bm >= 70) return 3;
@@ -3435,6 +3445,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3445,6 +3456,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3455,6 +3467,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3465,6 +3478,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3475,6 +3489,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3483,6 +3498,7 @@ const COBERTURA = {
     "best_match",
     "icon_seamless",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "gem_seamless",
     "gfs_seamless"
   ],
@@ -3491,6 +3507,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3500,6 +3517,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3510,6 +3528,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3520,6 +3539,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3530,6 +3550,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3537,6 +3558,7 @@ const COBERTURA = {
   "visibility": [
     "best_match",
     "icon_seamless",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gfs_seamless"
   ],
@@ -3546,6 +3568,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3555,6 +3578,7 @@ const COBERTURA = {
     "meteofrance_arome_france_hd",
     "icon_seamless",
     "meteofrance_arpege_europe",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3563,6 +3587,7 @@ const COBERTURA = {
     "best_match",
     "icon_seamless",
     "meteofrance_arpege_europe",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3571,6 +3596,7 @@ const COBERTURA = {
     "best_match",
     "icon_seamless",
     "meteofrance_arpege_europe",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe"
   ],
   "wind_direction_10m": [
@@ -3579,6 +3605,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3588,6 +3615,7 @@ const COBERTURA = {
     "meteofrance_arome_france_hd",
     "icon_seamless",
     "meteofrance_arpege_europe",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3598,6 +3626,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3607,6 +3636,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3615,6 +3645,7 @@ const COBERTURA = {
     "best_match",
     "icon_seamless",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
     "gfs_seamless"
@@ -3625,6 +3656,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "gem_seamless",
     "gfs_seamless"
   ],
@@ -3635,6 +3667,7 @@ const COBERTURA = {
   "convective_inhibition": [
     "best_match",
     "icon_seamless",
+    "ecmwf_ifs",
     "gfs_seamless"
   ],
   "freezing_level_height": [
@@ -3647,6 +3680,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "gem_seamless",
     "gfs_seamless"
   ],
@@ -3655,6 +3689,7 @@ const COBERTURA = {
     "icon_seamless",
     "meteofrance_arpege_europe",
     "ecmwf_ifs025",
+    "ecmwf_ifs",
     "gem_seamless",
     "gfs_seamless"
   ],
@@ -3671,6 +3706,7 @@ const GLOBALES = [
   "best_match",
   "icon_seamless",
   "ecmwf_ifs025",
+  "ecmwf_ifs",
   "gem_seamless",
   "gfs_seamless"
 ];
@@ -3854,6 +3890,18 @@ const ORDEN_FIABLE = [
   'meteofrance_arome_france_hd', 'ecmwf_ifs025', 'meteofrance_arpege_europe',
   'icon_seamless', 'gfs_seamless', 'knmi_harmonie_arome_europe', 'gem_seamless',
 ];
+/* ── EL CIELO TIENE SU PROPIA FILA: ECMWF 9 km DELANTE (10-10-2026) ────
+   Orden suya desde el MacBook, con sus fotos del día en el registro
+   (revisiones/bermeo-06-10.md, 10-10): en Bermeo tapado, y en Laredo y
+   Bilbao azul con velo alto, acertó ECMWF 9 km; ECMWF 25 km dio 25-44 %
+   con el cielo tapado y AROME 100 % de nube baja con el cielo azul. Medido
+   antes de cambiarlo contra la máscara de nubes de EUMETSAT, 7 días y 21
+   sitios (revisiones/medir-nubes.mjs): ECMWF 9 km 72,0 % de acierto,
+   ECMWF 25 km 69,1 %. No va por detrás: va delante.
+   SOLO para el cielo (código, total y capas). NO se mete en ORDEN_FIABLE:
+   prestaría también la tapa, y volvería la pareja CAPE de AROME + tapa de
+   ECMWF 9 km que se quitó el 03-10. */
+const ORDEN_CIELO = ['ecmwf_ifs', ...ORDEN_FIABLE];
 
 /** A quién se le pide un campo que el modelo cargado no publica.
  *  Devuelve null si no lo publica NADIE: entonces se queda el hueco, que
@@ -3887,11 +3935,12 @@ function quienLoMide(campo, salvo) {
      mismo, que en uno ponga sol y en el otro nubes»*.                  */
   if (CIELO_NO_DEL_AUTOMATICO.includes(campo)
       && !COBERTURA.cloud_cover?.includes(salvo)) {
-    const duenoTotal = ORDEN_FIABLE.find(om =>
+    const duenoTotal = ORDEN_CIELO.find(om =>
       om !== salvo && COBERTURA.cloud_cover?.includes(om));
     if (duenoTotal && puede.includes(duenoTotal)) return duenoTotal;
   }
-  return ORDEN_FIABLE.find(om => om !== salvo && puede.includes(om)) || null;
+  const fila = CIELO_NO_DEL_AUTOMATICO.includes(campo) ? ORDEN_CIELO : ORDEN_FIABLE;
+  return fila.find(om => om !== salvo && puede.includes(om)) || null;
 }
 
 const COMPLEMENTOS = [
@@ -6169,9 +6218,16 @@ function lluviaQueNoVesTu(c) {
      llovizna 9 h seguidas en Bermeo con sol y nada en los pluviómetros.
      La regla es `lloviznaAcompanadaEn`, la de las tres webs. Sin la
      palabra, sigue diciendo lo que ve ese modelo, con su número. */
+  /* ACOMPAÑADA POR OTRO DISTINTO DEL QUE LA VE (10-10-2026). Con el cielo
+     prestado por ECMWF 9 km, el de 25 km pasa a ser «otro modelo» y la regla
+     de arriba (solo el prestamista necesita compañía) habría llamado sirimiri
+     a su llovizna sola, que es justo lo del 04-10. Ahora cualquier llovizna
+     sola se dice con su número; «sirimiri» solo si alguien más ve agua. */
   const peorOm = COMPARAR.find(m => m.name === peor.nom)?.om;
-  const sirimiri = esLlovizna(peor.code) && peor.mm <= AGUA_ACUERDO
-    && (peorOm !== ReglasTiempo.CIELO_PRESTADO || ReglasTiempo.lloviznaAcompanadaEn(H, i, duenoLluvia()));
+  const mmPresta = H[`precipitation_${ReglasTiempo.CIELO_PRESTADO}`]?.[i];
+  const otroAcompana = otros.some(x => x.nom !== peor.nom)
+    || (peorOm !== ReglasTiempo.CIELO_PRESTADO && has(mmPresta) && mmPresta >= 0.1);
+  const sirimiri = esLlovizna(peor.code) && peor.mm <= AGUA_ACUERDO && otroAcompana;
   /* ── Y SI NOMBRA UNO QUE NO ESTÁ EN SU SELECTOR, SE AVISA ─────────
      Suyo, 30-08-2026: *«HARMONIE sí, pero no tenemos, ¿no? no lo veo
      ese modelo»*. Y lleva razón: en el selector hay cinco —Automático,
@@ -13691,6 +13747,7 @@ function cieloVisto(h) {
      cinco o de un solo modelo: es lo que separa lo que dice la portada
      de lo que dice cada tarjeta, y hasta hoy no se decía (25-09-2026). */
   if (h.t) h.votado = !!cieloVotado(h.t, h.sitio);
+  if (h.t) h.votoDe = cieloVotado(h.t, h.sitio)?.de || null;   // «lo dice ECMWF 9 km» cuando decide él (10-10-2026)
   const code = codigoQueSeVe(h, h.code);
   const hh = h.date instanceof Date ? h.date.getHours()
            : (h.t ? Number(String(h.t).slice(11, 13)) : NaN);
@@ -18012,7 +18069,7 @@ function firmaDelCielo(h, V = cieloVisto(h)) {
     if (r.k === 'sirimiri') return `la llovizna la ve ${h.codigoAjeno && h.cieloDe ? h.cieloDe : nombreDeModelo(duenoLluvia())}`;
     if (r.k === 'poco' || r.k === 'bien') return `${mmTxt(h.prec)} mm/h de ${nombreDeModelo(duenoLluvia())}`;
   }
-  if (h.votado) return 'lo votan los 5';
+  if (h.votado) return h.votoDe ? `lo dice ${h.votoDe}` : 'lo votan los 5';
   if (h.cieloDe) return `lo dice ${h.cieloDe}`;
   return '';
 }

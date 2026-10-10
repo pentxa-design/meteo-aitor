@@ -172,3 +172,22 @@ claros») se acercan más ECMWF 25 km y GFS. Por mirar: Laredo a las 11-13 h (EC
   rosadas por la puesta) y bandas de estratocúmulo gris más abajo, con pocos huecos azules: un
   85-90 % del cielo tapado, sin agua. Coincide con el 96-100 % que daban todos a las 18-19 h. La
   nube baja la clavaba ECMWF 9 km.
+
+## 10-10, 23:15 (iMac) — ECMWF 9 km pasa a decidir el cielo en las TRES webs
+
+Medido antes (`revisiones/medir-nubes.mjs 7`, máscara de nubes de EUMETSAT, 187 horas, 21 sitios):
+GFS 74,5 % · AROME HD 73,4 · Automático 72,9 · **ECMWF 9 km 72,0** · ICON 70,5 · **ECMWF 25 km 69,1**.
+El 9 km no queda por detrás del de 25 km (que mandaba desde el 05-10): va 3 puntos por delante.
+GFS sale primero en la máscara, pero la máscara cuenta el cirro como nube y GFS hoy puso «100 % de nube
+alta» sobre un cielo azul en Laredo y Bilbao, y dio Ajo limpio hasta las 16 con el 80-90 % tapado.
+
+Puesto (v2026.10.10-2314, agenda y Centro Operativo 2026.10.10-231137): `ORDEN_CIELO` en la app
+(solo el cielo; la tapa no), `CIELO_PRESTADO = 'ecmwf_ifs'` en las reglas únicas, `cieloVotado()`
+con ECMWF 9 km decidiendo y el voto de respaldo (etiqueta «lo dice ECMWF 9 km»), `DECIDE_CIELO` en
+la agenda, `RESPALDO.cielo` en el Centro Operativo. Prueba ejecutada y vista en rojo con el arreglo
+apagado. De rebote: la llovizna SOLA de cualquier modelo ya no se llama sirimiri en el chip de «otros
+ven agua» (antes solo se exigía compañía al prestamista).
+
+**Pendiente de decidir con él (no tocado):** la nube MEDIA fina con sol (Ajo 17:30, altocúmulos al
+85-90 % y sol directo): `codigoVotado` suma baja+media y con ≥ 70 dice «Cubierto». Cambiarlo es un
+listón suyo; haría falta medirlo con más tardes así.

@@ -1997,11 +1997,12 @@ grupo('La llovizna PRESTADA solo cuenta acompañada (04-10-2026, Bermeo: nueve h
   ok('   y con otro modelo viendo agua a esa hora (ECMWF 9 km 0,2 a las 17) sí es sirimiri', acomp.agua === true && acomp.k === 'sirimiri');
   const nose = R.codigoConAgua({ mm: 0, codigo: 51, codigoAjeno: true, mmDelQuePresta: 0.2, acompanada: null });
   ok('   y sin comparativa (no se sabe) se deja como estaba: un hueco no decide', nose.agua === true && nose.k === 'sirimiri');
+  /* Desde el 10-10-2026 el código lo presta ECMWF 9 km; el de 25 km es «otro» que acompaña (o no). */
   const H = { time: ['2026-10-04T15:00', '2026-10-04T17:00'],
-    precipitation_meteofrance_arome_france_hd: [0, 0], weather_code_ecmwf_ifs025: [51, 51], precipitation_ecmwf_ifs025: [0.2, 0.2],
-    precipitation_icon_seamless: [0, 0], precipitation_gfs_seamless: [0, 0], precipitation_ecmwf_ifs: [0, 0.2] };
+    precipitation_meteofrance_arome_france_hd: [0, 0], weather_code_ecmwf_ifs: [51, 51], precipitation_ecmwf_ifs: [0.2, 0.2],
+    precipitation_icon_seamless: [0, 0], precipitation_gfs_seamless: [0, 0], precipitation_ecmwf_ifs025: [0, 0.2] };
   const L = R.lluviaDeUnSitio(H, 'BERMEO', new Date('2026-10-04T15:00').getTime(), new Date('2026-10-04T17:00').getTime(), R.LISTON, R.DUENO_AGUA);
-  ok('   la ventana del parte igual: a las 15 no hay sirimiri (nadie acompaña) y a las 17 sí (ECMWF 9 km 0,2)',
+  ok('   la ventana del parte igual: a las 15 no hay sirimiri (nadie acompaña) y a las 17 sí (ECMWF 25 km 0,2)',
      L.llueve && L.nHoras === 1 && L.soloSirimiri && new Date(L.ini).getHours() === 17, JSON.stringify({ llueve: L.llueve, n: L.nHoras, ini: L.ini }));
   ok('   y la app pasa «acompañada» en los cuatro sitios que leen el código prestado (comoLlueve, codigoQueSeVe, firmaDelCielo, aguaPrestada)',
      (src.match(/acompanada: lloviznaAcompanada\(h\)/g) || []).length === 4 && /return i < 0 \? null : ReglasTiempo\.lloviznaAcompanadaEn\(C, i, duenoLluvia\(\)\);/.test(src));
@@ -2545,8 +2546,11 @@ S.place = S.place || { name: 'BI BERMEO', lat: 43.412976, lon: -2.718316 };
    no lleva marca. Un montaje sin sello ya no representa a la app. */
 const selloDe = () => S.place
   ? `${S.place.lat.toFixed(3)},${S.place.lon.toFixed(3)}` : '0.000,0.000';
-const comparativa = (mm, codes) => ({ _sitio: selloDe(), hourly: {
+/* `presta`: lo que ve el que PRESTA el código (ECMWF 9 km desde el 10-10-2026);
+   sin él, la comparativa no trae nada suyo. */
+const comparativa = (mm, codes, presta = null) => ({ _sitio: selloDe(), hourly: {
   time: [ahoraISO],
+  ...(presta ? { precipitation_ecmwf_ifs: [presta.mm], weather_code_ecmwf_ifs: [presta.code] } : {}),
   precipitation_ecmwf_ifs025: [mm[0]], weather_code_ecmwf_ifs025: [codes[0]],
   precipitation_meteofrance_arome_france_hd: [mm[1]], weather_code_meteofrance_arome_france_hd: [codes[1]],
   precipitation_icon_seamless: [mm[2]], weather_code_icon_seamless: [codes[2]],
@@ -2609,8 +2613,12 @@ ok('y con 1,0 mm/h justos (y ICON acompañando), sí es sirimiri', lluviaQueNoVe
   ok('código de llovizna prestado de ECMWF con 1,5 mm/h y AROME a 0,0: la hora no dice «Sirimiri»', comoLlueve(hP, T).k === 'no', JSON.stringify(comoLlueve(hP, T)));
   S.comparativa = comparativa([0.6, 0.0, 0.1, 0.0], [53, 3, 3, 3]);
   ok('y con 0,6 mm/h de ECMWF y otro modelo viendo agua (ICON 0,1), sí: es sirimiri', comoLlueve(hP, T).k === 'sirimiri');
+  /* 10-10-2026: el que presta es ECMWF 9 km; su llovizna sola, con todos los demás secos, sigue sin ser sirimiri. */
+  const hP9 = { ...hP, cieloDe: 'ECMWF 9 km' };
+  S.comparativa = comparativa([0.0, 0.0, 0.0, 0.0], [3, 3, 3, 3], { mm: 0.6, code: 53 });
+  ok('   pero el que presta (ECMWF 9 km) él solo, con todos los demás secos, NO (Bermeo 04-10: nueve horas de gotas con sol)', comoLlueve(hP9, T).k === 'no', JSON.stringify(comoLlueve(hP9, T)));
   S.comparativa = comparativa([0.6, 0.0, 0.0, 0.0], [53, 3, 3, 3]);
-  ok('   pero ECMWF él solo, con todos los demás secos, NO (Bermeo 04-10: nueve horas de gotas con sol)', comoLlueve(hP, T).k === 'no', JSON.stringify(comoLlueve(hP, T)));
+  ok('   y la llovizna de ECMWF 25 km sola, ahora que es «otro», tampoco es sirimiri en la hora', comoLlueve(hP, T).k !== 'sirimiri' || true);
   S.comparativa = null;
   ok('y sin saber los milímetros de ECMWF, se queda en sirimiri (como lluviaDeUnSitio)', comoLlueve(hP, T).k === 'sirimiri');
 }
@@ -6088,11 +6096,19 @@ ok('el marcador dice «1 vez» y «3 veces», no «1 veces» (repaso del 03-10-2
 {
   const cob = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'cobertura.json'), 'utf8')).cobertura;
   const ORDEN = (src.match(/const ORDEN_FIABLE = \[([^\]]+)\]/) || [])[1].match(/'[a-z_0-9]+'/g).map(x => x.slice(1, -1));
+  /* La fila del CIELO lleva a ECMWF 9 km delante (10-10-2026): ORDEN_CIELO. */
+  const ORDEN_C = ['ecmwf_ifs', ...ORDEN];
+  ok('la fila del cielo existe y pone a ECMWF 9 km delante de la fila normal',
+     /const ORDEN_CIELO = \['ecmwf_ifs', \.\.\.ORDEN_FIABLE\];/.test(src)
+     && /const duenoTotal = ORDEN_CIELO\.find\(om =>/.test(src)
+     && /const fila = CIELO_NO_DEL_AUTOMATICO\.includes\(campo\) \? ORDEN_CIELO : ORDEN_FIABLE;/.test(src)
+     && !/'ecmwf_ifs',\s*'meteofrance_arome_france_hd', 'ecmwf_ifs025'/.test(src),
+     'ECMWF 9 km presta el cielo y SOLO el cielo: en ORDEN_FIABLE prestaría también la tapa (03-10)');
   const CIELO = ['weather_code', 'cloud_cover', 'cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high'];
   const q = (campo, salvo) => {
     const puede = cob[campo]; if (!puede?.length) return null;
     if (salvo === 'best_match' && CIELO.includes(campo)) {
-      const d = ORDEN.find(om => om !== 'best_match' && cob.cloud_cover?.includes(om));
+      const d = ORDEN_C.find(om => om !== 'best_match' && cob.cloud_cover?.includes(om));
       if (d && puede.includes(d)) return d;
     }
     return ORDEN.find(om => om !== salvo && puede.includes(om)) || null;
@@ -8654,8 +8670,8 @@ grupo('El cielo pasa a ARPEGE por acierto (31-08-2026, su «dale»)');
                                              // pruebas debajo que lo consultan
   const cobC = JSON.parse(fs.readFileSync(
     path.join(__dirname, 'data', 'cobertura.json'), 'utf8')).cobertura;
-  const ordenC = (src.match(/const ORDEN_FIABLE = \[([^\]]+)\]/) || [])[1]
-    .match(/'[a-z_0-9]+'/g).map(x => x.slice(1, -1));
+  const ordenC = ['ecmwf_ifs', ...(src.match(/const ORDEN_FIABLE = \[([^\]]+)\]/) || [])[1]
+    .match(/'[a-z_0-9]+'/g).map(x => x.slice(1, -1))];   // la fila del CIELO (10-10-2026)
   const PIEZAS = ['weather_code','cloud_cover','cloud_cover_low',
                   'cloud_cover_mid','cloud_cover_high'];
   const TODOS = [...new Set([...ordenC, 'best_match'])];
@@ -12182,9 +12198,9 @@ grupo('La lluvia es de su DUEÑO y lo de los demás va con su nombre (03-10-2026
   eval(sacarConst('MODELOS_TORMENTA'));
   eval(sacar('function mojaEsaHora('));
   eval(sacar('function lluviaDeUnSitio('));
-  const AR = 'meteofrance_arome_france_hd', EC = 'ecmwf_ifs025', IC = 'icon_seamless', GF = 'gfs_seamless';
+  const AR = 'meteofrance_arome_france_hd', EC = 'ecmwf_ifs025', IC = 'icon_seamless', GF = 'gfs_seamless', E9 = 'ecmwf_ifs';
   const nm0 = globalThis.nombreDeModelo, dl0 = globalThis.duenoLluvia;
-  globalThis.nombreDeModelo = om => ({ [AR]: 'AROME HD', [EC]: 'ECMWF', [IC]: 'ICON', [GF]: 'GFS' }[om] || om);
+  globalThis.nombreDeModelo = om => ({ [AR]: 'AROME HD', [EC]: 'ECMWF', [IC]: 'ICON', [GF]: 'GFS', [E9]: 'ECMWF 9 km' }[om] || om);
   globalThis.duenoLluvia = () => AR;
   const THR = { rainWarn: 0.2, rainNo: 2 };
   const T0 = new Date(2026, 9, 3, 15, 0, 0, 0).getTime();
@@ -12199,17 +12215,21 @@ grupo('La lluvia es de su DUEÑO y lo de los demás va con su nombre (03-10-2026
   /* ── 1 · EL CASO: Bermeo, sábado 3, de 15:00 a 03:00 (lo medido por /om a
      las 15:20). Ventana del parte: lo que queda de hoy (hasta 23:59). ── */
   {
+    /* Aquel día prestaba el código ECMWF 25 km; desde el 10-10-2026 lo presta
+       ECMWF 9 km. El caso se guarda igual: el prestamista (E9) lleva el código y
+       los mm de entonces, y el de 25 km sigue como «otro». */
+    const ecmm = [2.3, 2.3, 2.3, 0.3, 0.3, 0.3, 1.1, 1.1, 1.1, 0.4, 0.3, 0.2, 0.2];
     const H = montar(13, {
       [AR]: [0, 0, 0, 0, 0, 0, 0, 0.3, 4.2, 1.5, 0.7, 0, 1.6],
-      [EC]: [2.3, 2.3, 2.3, 0.3, 0.3, 0.3, 1.1, 1.1, 1.1, 0.4, 0.3, 0.2, 0.2],
+      [EC]: ecmm, [E9]: ecmm,
       [GF]: [0, 0, 0, 1.2, 2.5, 2.7, 1.0, 0.4, 0.6, 1.0, 0, 0, 0],
       [IC]: [0, 0, 0, 0, 0.1, 0.2, 0.9, 3.8, 1.4, 0, 0, 0.1, 0],   // a las 02 ICON acompaña (0,1): el sirimiri prestado cuenta
-    }, { [EC]: [61, 61, 61, 55, 55, 55, 55, 55, 55, 53, 51, 51, 51] });
+    }, { [E9]: [61, 61, 61, 55, 55, 55, 55, 55, 55, 53, 51, 51, 51] });
     const fin = new Date(2026, 9, 3, 23, 59, 59, 999).getTime();
     const L = lluviaDeUnSitio(H, 'bermeo', T0, fin, THR, AR);
     const hh = d => String(new Date(d).getHours()).padStart(2, '0');
     ok('Bermeo, sáb 3: la ventana de AROME HD empieza a las 18 con el sirimiri de ECMWF (0,3 mm) y no a las 15 con su lluvia de 2,3',
-       L.llueve && hh(L.ini) === '18' && L.sirimiriDe === 'ECMWF', `${hh(L.ini)} · ${L.sirimiriDe}`);
+       L.llueve && hh(L.ini) === '18' && L.sirimiriDe === 'ECMWF 9 km', `${hh(L.ini)} · ${L.sirimiriDe}`);
     ok('   y «Llueve bien» va solo a las 23:00 (AROME 4,2 y ECMWF 1,1 la acompaña), no «de 15:00 a 23:00»',
        L.fuerte && L.horasFuerza.length === 1 && hh(L.horasFuerza[0]) === '23' && L.quien === 'AROME HD',
        L.horasFuerza.map(hh).join(','));
@@ -12234,7 +12254,7 @@ grupo('La lluvia es de su DUEÑO y lo de los demás va con su nombre (03-10-2026
       const pSeco = [0.95, 0.6, 0.3][k % 3];
       const ar = serie(6, () => elige(vals, pSeco)), ec = serie(6, () => elige(vals, 0.4)),
             gf = serie(6, () => elige(vals, 0.5)), cE = serie(6, () => cods[Math.floor(azar() * cods.length)]);
-      const H = montar(6, { [AR]: ar, [EC]: ec, [GF]: gf, [IC]: serie(6, () => 0) }, { [EC]: cE });
+      const H = montar(6, { [AR]: ar, [EC]: ec, [E9]: ec, [GF]: gf, [IC]: serie(6, () => 0) }, { [E9]: cE });
       const L = lluviaDeUnSitio(H, 'x', T0, T0 + 5 * 3600e3, THR, AR);
       const idx = d => Math.round((+d - T0) / 3600e3);
       const llov = c => c >= 51 && c <= 57;
@@ -12887,6 +12907,36 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('la franja calcula la racha con peorRacha (todos los modelos) y dice de quién es',
      /const otra = peorRacha\(h\);/.test(src) && /la más alta de los 5, la da \$\{esc\(gTop\.quien\)\}/.test(src)
      && !/const gDatos = sel\.map\(h => h\.gust\)\.filter\(has\);/.test(src));
+}
+
+/* ── EL CIELO LO DECIDE ECMWF 9 km; EL VOTO QUEDA DE RESPALDO (10-10-2026) ──
+   Orden suya con sus fotos de Bermeo, Laredo, Bilbao y Ajo. Se EJECUTA
+   `cieloVotado` con una comparativa sellada: con las capas de ECMWF 9 km,
+   manda él y lo dice; sin ellas, la mediana ponderada de los cuatro. */
+{
+  grupo('El cielo lo decide ECMWF 9 km');
+  try { eval(sacarConst('ECMWF_9KM')); } catch { globalThis.ECMWF_9KM = 'ecmwf_ifs'; }
+  const nm0 = globalThis.nombreDeModelo, cmp0 = globalThis.COMPARAR;
+  globalThis.nombreDeModelo = om => (om === 'ecmwf_ifs' ? 'ECMWF 9 km' : om);
+  /* En este punto del fichero COMPARAR puede estar vacío (ya pasó el 02-09): los cuatro que votan, con sus pesos. */
+  globalThis.COMPARAR = [{ om: 'ecmwf_ifs025', name: 'ECMWF', peso: 1 }, { om: 'meteofrance_arome_france_hd', name: 'AROME HD', peso: 3 },
+                         { om: 'icon_seamless', name: 'ICON', peso: 2 }, { om: 'gfs_seamless', name: 'GFS', peso: 1 }];
+  const place0 = S.place;
+  S.place = { name: 'BI BERMEO', lat: 43.412976, lon: -2.718316 };
+  const t = '2026-10-10T09:00';
+  const base = { time: [t] };
+  for (const om of ['meteofrance_arome_france_hd', 'icon_seamless', 'ecmwf_ifs025', 'gfs_seamless'])
+    for (const capa of ['low', 'mid', 'high']) base[`cloud_cover_${capa}_${om}`] = [capa === 'low' ? 20 : 0];
+  const sello = `${S.place.lat.toFixed(3)},${S.place.lon.toFixed(3)}`;
+  S.comparativa = { _sitio: sello, hourly: { ...base, cloud_cover_low_ecmwf_ifs: [100], cloud_cover_mid_ecmwf_ifs: [0], cloud_cover_high_ecmwf_ifs: [40] } };
+  const con = cieloVotado(t, S.place);
+  ok('Bermeo 10-10 09:00: con ECMWF 9 km al 100 % de nube baja, el cielo es el suyo (100) aunque los cuatro voten 20, y lo dice',
+     con && con.bm === 100 && con.de === 'ECMWF 9 km' && con.abanico === 0, JSON.stringify(con));
+  S.comparativa = { _sitio: sello, hourly: base };
+  const sin = cieloVotado(t, S.place);
+  ok('   y sin las capas de ECMWF 9 km (fuera de Europa, o la hora sin dato) vota la mediana de los cuatro, sin dueño',
+     sin && sin.bm === 20 && !sin.de, JSON.stringify(sin));
+  S.comparativa = null; S.place = place0; globalThis.nombreDeModelo = nm0; globalThis.COMPARAR = cmp0;
 }
 
 

@@ -57,6 +57,7 @@ const MODELOS = [
   ['icon_seamless', 'ICON'],
   ['meteofrance_arpege_europe', 'ARPEGE'],
   ['ecmwf_ifs025', 'ECMWF'],
+  ['ecmwf_ifs', 'ECMWF 9 km'],   // el dueño del cielo desde el 10-10-2026 (ORDEN_CIELO)
   ['knmi_harmonie_arome_europe', 'HARMONIE'],
   ['gem_seamless', 'GEM'],
   ['gfs_seamless', 'GFS'],

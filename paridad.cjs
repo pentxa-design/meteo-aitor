@@ -75,9 +75,10 @@ const js = fs.readFileSync(path.join(aqui, 'reglas-tiempo.js'), 'utf8') + '\n' +
    `data/cobertura.json`. Sigue sin estar escrito a mano, que era el
    motivo de leerlo en vez de ponerlo. */
 const DUENO_CIELO = (() => {
-  const i = js.indexOf('const ORDEN_FIABLE');
-  const orden = i < 0 ? [] :
-    (js.slice(i, js.indexOf(']', i)).match(/'[a-z0-9_]+'/g) || []).map(x => x.slice(1, -1));
+  /* La fila del CIELO (10-10-2026): ORDEN_CIELO = ['ecmwf_ifs', ...ORDEN_FIABLE]. */
+  const ids = k => { const i = js.indexOf(`const ${k}`); return i < 0 ? [] :
+    (js.slice(i, js.indexOf(']', i)).match(/'[a-z0-9_]+'/g) || []).map(x => x.slice(1, -1)); };
+  const orden = [...ids('ORDEN_CIELO'), ...ids('ORDEN_FIABLE')];
   let cob = {};
   try {
     cob = JSON.parse(require('fs').readFileSync(
