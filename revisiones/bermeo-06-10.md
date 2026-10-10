@@ -149,3 +149,13 @@ claros») se acercan más ECMWF 25 km y GFS. Por mirar: Laredo a las 11-13 h (EC
   iluminadas. Calculo un 70-80 % de cielo tapado, nube baja y fina, sin agua. Cuadra con lo que
   dijo él («80 a 90 %», «resol»). ECMWF 9 km (baja al 99-100 %) e ICON (69-80 %) aciertan la nube;
   el «100 %» se queda algo alto para un cielo con huecos y sol.
+- **Ajo, 17:30, sus dos fotos al aire libre:** el techo es de **altocúmulos** (nube MEDIA, en
+  borreguitos blancos), que tapa un 85-90 % del cielo hacia el sol y algo más de la mitad hacia el
+  otro lado, con huecos azules. Encima, velo alto fino (cirros), y nube baja casi nada. El sol
+  pasa a través: de ahí el «resol». En total, unos 70-80 % de cielo tapado y sin agua.
+  Capas a las 17 h (baja-media-alta): **ECMWF 9 km 29-94-85**, ICON 61-59-99, ECMWF 25 km 50-0-100,
+  AROME 29-6-67, GFS 26-0-5 (total 32). **Solo ECMWF 9 km ve la capa media que hay**; ECMWF 25 km
+  la pone como nube baja y alta, y AROME y GFS casi no la ven.
+  **Para el texto del cielo:** con media + baja ≥ 70, `codigoVotado` diría «Cubierto», y lo que
+  hay es altocúmulo fino con sol. La nube media fina no quita la luz como la baja cerrada. Lo dejo
+  apuntado para quien toque el cielo (ver PARA-EL-IMAC-10-10.md, punto 2).
