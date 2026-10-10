@@ -150,6 +150,18 @@ console.log('\n  Encendido otra vez (29-09-2026)\n');
      'si un día lo quiere quitar: APAGADO = true');
 }
 
+/* 10-10-2026, suyo: «solo meto el 11 y se abre la web» · «me pasa mucho, ojo».
+   Con type="password" el llavero del navegador guardaba el código y lo
+   completaba solo. El campo NO puede ser de contraseña ni dejar que lo guarden. */
+{
+  const m = HTML.match(/<input id="candEntrada"[^>]*>/);
+  const tag = m ? m[0] : '';
+  ok('el campo del código NO es type="password" (el llavero lo rellenaba con dos cifras)',
+     !!tag && !/type="password"/.test(tag) && /autocomplete="one-time-code"/.test(tag) && /data-1p-ignore/.test(tag), tag.slice(0, 120));
+  ok('y se oculta con CSS en vez de con el tipo del campo',
+     /#candEntrada\{-webkit-text-security:disc\}/.test(HTML));
+}
+
 console.log(`\n  ${bien} bien, ${mal} mal\n`);
 process.exit(mal ? 1 : 0);
 })();

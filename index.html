@@ -90,6 +90,7 @@ html[data-bloqueado]{overflow:hidden}
   border:1px solid #2a3450;background:#0f1626;color:#e8eefc;
   outline:none;-webkit-text-security:disc}
 #candEntrada:focus{border-color:#5b7fd6}
+#candEntrada{-webkit-text-security:disc}
 .cand__err{color:#ff8a8a;font-size:15px;margin:14px 0 0}
 .cand__n{color:#7d8ba6;font-size:13px;margin:22px 0 0;line-height:1.5}
 
@@ -217,8 +218,15 @@ html[data-bloqueado]{overflow:hidden}
     <div class="cand__t">Aitor <b>Meteo</b></div>
     <p class="cand__p">Tu código de 6 cifras</p>
     <div class="cand__puntos" id="candPuntos" aria-hidden="true"></div>
-    <input id="candEntrada" type="password" inputmode="numeric" pattern="[0-9]*"
-           maxlength="6" autocomplete="off" aria-label="Código de 6 cifras">
+    <!-- NO ES UN CAMPO DE CONTRASEÑA (10-10-2026). Suyo: «solo meto el 11 y
+         se abre la web, sin meter el código entero» · «me pasa mucho, ojo».
+         Era el navegador: con type="password" el llavero guardaba el código
+         y lo rellenaba solo al teclear las dos primeras cifras. Quien tenga
+         su móvil en la mano entraba igual. Ahora es un campo de texto que
+         se oculta con CSS, y se le dice a los gestores que no lo guarden. -->
+    <input id="candEntrada" type="text" inputmode="numeric" pattern="[0-9]*"
+           maxlength="6" autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false"
+           data-1p-ignore data-lpignore="true" data-bwignore aria-label="Código de 6 cifras">
     <p class="cand__err" id="candErr" hidden>No es ese. Vuelve a probar.</p>
     <p class="cand__n">Se vuelve a pedir cada 12 h. Funciona sin cobertura.</p>
   </div>
