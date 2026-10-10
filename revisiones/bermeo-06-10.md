@@ -144,3 +144,8 @@ claros») se acercan más ECMWF 25 km y GFS. Por mirar: Laredo a las 11-13 h (EC
 - **Ajo, 16:30, suyo:** «hay como resol». Bastante cubierto, pero con nube fina que deja pasar
   el sol y deslumbra. No es el cubierto gris y cerrado que se leería en un «100 % de nube baja»
   (ECMWF 9 km a las 15-16 h). El porcentaje dice cuánto cielo tapa, no cuánta luz quita.
+- **Ajo, sus dos fotos de las 16:30:** nubes blancas y grises claras en bancos (estratocúmulos),
+  con huecos de azul sobre los montes, y **sol directo**: sombras marcadas en el suelo y fachadas
+  iluminadas. Calculo un 70-80 % de cielo tapado, nube baja y fina, sin agua. Cuadra con lo que
+  dijo él («80 a 90 %», «resol»). ECMWF 9 km (baja al 99-100 %) e ICON (69-80 %) aciertan la nube;
+  el «100 %» se queda algo alto para un cielo con huecos y sol.
