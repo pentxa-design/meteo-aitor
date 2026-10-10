@@ -117,3 +117,9 @@ Total % (baja). **A las 09-10 aciertan ECMWF 9 km e ICON; ECMWF 25 km, el que ma
 de la app desde el 05-10, da 25-38 % con el cielo tapado.** A las 08 h («menos nubes, con
 claros») se acercan más ECMWF 25 km y GFS. Por mirar: Laredo a las 11-13 h (ECMWF 9 km da 37 ·
 20 · 27 %; ICON 53 · 83 · 89 %).
+- **11:37, Laredo, su foto desde el coche:** cielo azul con velo alto fino (cirros,
+  una estela) y nubes bajas solo en el horizonte, sobre los montes. Ni rastro de nube baja encima.
+  A las 11 h daban: ECMWF 9 km 37 % (23 baja) · ECMWF 25 km 16 % (25 baja) · ICON 53 % (22 baja)
+  · GFS 100 % (todo alta) · AROME HD baja 0, media y alta 100. **Aciertan ECMWF 9 y 25 km** (poca
+  nube, la que hay alta y fina). AROME y GFS lo tapan con nube media o alta que desde el suelo es
+  un velo. El mapa con ECMWF HRES y la rampa de las 08:43 lo pinta casi limpio, como Windy.
