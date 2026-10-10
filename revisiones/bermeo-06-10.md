@@ -141,3 +141,6 @@ claros») se acercan más ECMWF 25 km y GFS. Por mirar: Laredo a las 11-13 h (EC
   cinco modelos daban 0,0 mm de 13 a 17 h: **aciertan todos en el agua.** Nube blanca de buen
   tiempo con el cielo bastante tapado, que es justo como la pinta el mapa desde las 14:19 (blanca,
   sin el gris de las trazas).
+- **Ajo, 16:30, suyo:** «hay como resol». Bastante cubierto, pero con nube fina que deja pasar
+  el sol y deslumbra. No es el cubierto gris y cerrado que se leería en un «100 % de nube baja»
+  (ECMWF 9 km a las 15-16 h). El porcentaje dice cuánto cielo tapa, no cuánta luz quita.
