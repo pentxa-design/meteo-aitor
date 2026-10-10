@@ -2995,7 +2995,7 @@ ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan 
    lluvia se interpolan con cúbica MONÓTONA (no rebasa los nodos) y se
    funden entre cortes; el resto sigue en lineal hasta que se mida. */
 ok('las capas de lluvia piden interpolación monótona y el resto lineal',
-   /const INTERPOLACION_SUAVE = new Set\(\['lluvia', 'dbz', 'sombraLluvia', 'lluviaVerde', 'nieveAzul'\]\);/.test(mapsSrc)
+   /const INTERPOLACION_SUAVE = new Set\(\['lluvia', 'dbz', 'sombraLluvia', 'lluviaVerde', 'nieveAzul', 'nubes'\]\);/.test(mapsSrc)
    && /interpolation: interpolacionDe\(L_\)/.test(mapsSrc)
    && /if \(INTERPOLACION_SUAVE\.has\(L_\?\.escala\)\) return 'monotone';/.test(mapsSrc)
    && !/interpolation: 'cubic'/.test(mapsSrc),
@@ -3218,6 +3218,17 @@ grupo('Base y Tope convectivos: «sin nube» es −500 y no se pinta (27-09-2026
        f({ escala: 'basecv', minValido: 0 }) === 'nearest' && f({ escala: 'topecv', minValido: 0 }) === 'nearest');
     ok('la lluvia sigue en monotone y el resto en linear',
        f({ escala: 'lluvia' }) === 'monotone' && f({ escala: 'cape' }) === 'linear' && f(undefined) === 'linear');
+  }
+  /* LAS NUBES, SIN CUADROS (10-10-2026, suyo: «nubes pixeladas… lo llevo
+     diciendo hace mucho»). Con el conjunto DE VERDAD de maps.js, no con uno
+     copiado: la capa Nubes total (y bajas, medias y altas) pide monótona. */
+  {
+    const conj = (Mm.match(/const INTERPOLACION_SUAVE = (new Set\(\[[^\]]*\]\));/) || [])[1];
+    const capaNubes = (Mm.match(/\{ id:'clouds',[^}]*\}/) || [])[0] || '';
+    const fReal = iDe && conj ? new Function(`const INTERPOLACION_SUAVE = ${conj}; ${iDe}; return interpolacionDe;`)() : null;
+    ok('las capas de nubes piden interpolación monótona, como la lluvia: sin cuadros entre celdas',
+       !!fReal && /escala:'nubes'/.test(capaNubes) && fReal({ escala: 'nubes' }) === 'monotone' && fReal({ escala: 'cape' }) === 'linear',
+       conj || 'no encuentro INTERPOLACION_SUAVE');
   }
   ok('la leyenda del Tope dice los tres escalones (7.000 / 9.000 / Lekeitio)',
      /name:'Tope convectivo'[\s\S]{0,400}?7\.000[\s\S]{0,120}?9\.000[\s\S]{0,120}?Lekeitio/.test(Mm));

@@ -563,7 +563,16 @@ const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isoc
      0,3 · 1 · 4…) no son listones suyos, son la escala de intensidad. */
   'lluvia', 'lluviaVerde', 'nieveAzul']);
 /* Capas que se interpolan con cúbica monótona entre nodos (ver omUrl). */
-const INTERPOLACION_SUAVE = new Set(['lluvia', 'dbz', 'sombraLluvia', 'lluviaVerde', 'nieveAzul']);
+/* Y LAS NUBES (10-10-2026, suyo, con Windy al lado camino de Laredo: «nubes
+   pixeladas… total, lo llevo diciendo hace mucho» · «en precipitación se ve
+   muy bien»). Iban en lineal, que en las mallas regulares deja cuadrados
+   redondeados; la lluvia, que es la que él ve fina, va en monótona. Y el
+   aviso de abajo («en ECMWF HRES la librería ignora la interpolación») era
+   de la librería vieja: la 0.0.20 interpola también la malla gaussiana de
+   HRES (`getInterpolatedValue`: nearest, linear, cubic, monotone), mirado
+   en vendor/. La monótona no rebasa los nodos: no pinta más nube de la que
+   da el modelo. */
+const INTERPOLACION_SUAVE = new Set(['lluvia', 'dbz', 'sombraLluvia', 'lluviaVerde', 'nieveAzul', 'nubes']);
 /* Cómo se interpola la tesela de cada capa. En UNA función para poder
    probarla. Las capas con centinela de «no hay» (`minValido`: base y tope
    convectivos, donde ICON pone −500) van a `nearest`: mezclar un nodo en
