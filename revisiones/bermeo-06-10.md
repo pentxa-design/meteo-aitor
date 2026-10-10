@@ -127,3 +127,7 @@ claros») se acercan más ECMWF 25 km y GFS. Por mirar: Laredo a las 11-13 h (EC
   ECMWF 9 km 23 % (22 baja) · ECMWF 25 km 39 % (18 baja) · ICON 58 % (40 baja) · GFS 100 % (0
   baja, todo alta) · AROME HD baja 32 %. A las 11 h, AROME daba 100 % de nube baja: falló. **Otra
   vez acierta ECMWF 9 km.** Para la tarde, ECMWF 9 km sube la nube baja a 55-95 % desde las 13-15 h.
+- **Suyo: «solo Bermeo estaba con nube».** Laredo y Bilbao, azul con velo; Bermeo, tapado (09:50).
+  Para Bermeo de 10 a 12 h, ECMWF 9 km daba 71 · 100 · 100 % e ICON 60 · 73 · 96 %, frente al 23-41 %
+  de ECMWF 9 km en Bilbao y Laredo. **El contraste entre sitios lo vio ECMWF 9 km;** ECMWF 25 km
+  (25-44 % en Bermeo) no lo separó.
