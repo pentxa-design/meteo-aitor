@@ -168,3 +168,7 @@ claros») se acercan más ECMWF 25 km y GFS. Por mirar: Laredo a las 11-13 h (EC
   agua. Capas a las 18 h (baja-media-alta): **ECMWF 9 km 96-5-100** (la nube baja entrando a las
   18), AROME 67-100-98, GFS 54-0-100, ICON 60-21-100, ECMWF 25 km 48-0-100. **ECMWF 9 km acierta
   también la entrada de la nube baja por la tarde.**
+- **Ajo, 19:14, otra foto hacia el interior:** capas medias (altocúmulos y altostratos,
+  rosadas por la puesta) y bandas de estratocúmulo gris más abajo, con pocos huecos azules: un
+  85-90 % del cielo tapado, sin agua. Coincide con el 96-100 % que daban todos a las 18-19 h. La
+  nube baja la clavaba ECMWF 9 km.
