@@ -1753,8 +1753,14 @@ function escalasPropias() {
      Queda un gris muy ligero solo al 100 %, para distinguir el cerrado. */
   /* «Afínalo» (23:37): rampa aún más corta, nada hasta el 20 % y blanca
      del todo al 45 %, para que el borde de la nube sea borde. */
-  const nbc = [['#ffffff',0], ['#ffffff',0], ['#ffffff',.30], ['#ffffff',.90], ['#fdfdfd',.97],
-               ['#f6f6f6',.98], ['#eeeeee',.99], ['#e2e2e2',1]];
+  /* CORREGIDO el 10-10-2026 (suyo, Laredo: «despejado en la nuestra nada,
+     según mapa; y Windy hasta las 14 sí»): la rampa de anoche pintaba
+     blanco sólido desde el 40 %, y una costa al 44 % salía tapada mientras
+     Windy, con el 26-35 %, la pinta casi limpia. Los números eran iguales;
+     el blanco empezaba antes. Ahora: nada hasta el 25 %, calima leve al 40,
+     blanco de verdad del 70 % en adelante, como Windy. */
+  const nbc = [['#ffffff',0], ['#ffffff',0], ['#ffffff',0], ['#ffffff',.25], ['#ffffff',.55],
+               ['#fafafa',.85], ['#f2f2f2',.95], ['#e4e4e4',1]];
   const nubes = {
     scale: { type:'breakpoint', unit:'%', breakpoints: nbm, colors: nbc.map(([c,a]) => hexRGBA(c, a)) },
     eje: nbm, unidad: '%', pos: nbm.map((_, i) => i),
