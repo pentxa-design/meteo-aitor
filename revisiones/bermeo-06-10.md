@@ -137,3 +137,7 @@ claros») se acercan más ECMWF 25 km y GFS. Por mirar: Laredo a las 11-13 h (EC
   · 95 (baja 69-80) · GFS 54 · 1 · 6 · AROME HD baja 3 · 6 · 99. **Aciertan ECMWF 9 y 25 km e
   ICON** (entrada de nube baja a las 13-14 h). GFS y AROME la daban casi limpia hasta las 16 h.
   ECMWF 9 km ya lo daba esta mañana: «100 % de nube baja desde las 14 h».
+- **Ajo, más suyo:** «sin agua» · «nubes blancas, no grises» · «pero bastante cubierto». Los
+  cinco modelos daban 0,0 mm de 13 a 17 h: **aciertan todos en el agua.** Nube blanca de buen
+  tiempo con el cielo bastante tapado, que es justo como la pinta el mapa desde las 14:19 (blanca,
+  sin el gris de las trazas).
