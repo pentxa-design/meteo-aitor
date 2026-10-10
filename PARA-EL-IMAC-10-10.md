@@ -31,7 +31,7 @@ solo se publica desde aquí:
 - **Antes de cambiar:** repite `revisiones/medir-nubes.mjs` contra la máscara de EUMETSAT con los
   días hasta hoy. Si ECMWF 9 km sigue por detrás del de 25 km, díselo a él antes de cambiar.
 
-## 3. Pregunta suya sin contestar: el gris de las trazas encima de las nubes del mapa
+## 3. HECHO (14:19, suyo: «Quita»): fuera el gris de las trazas encima de las nubes del mapa
 La capa Nubes total lleva encima `sombraLluvia`, que pinta de gris oscuro 0,05-0,2 mm/h (lo pidió
 él el 15-09). ICON tiene trazas por todo el mar: el mapa sale gris y con rectángulos. Visto en el
 panel: sin esa capa, la nube sale blanca y limpia, como Windy. Le propuse quitar solo el gris de
@@ -42,3 +42,9 @@ guarda su petición del 15-09: cambiarla solo con su sí.
 - Desde la red del MacBook, Amazon S3 (us-west-2) servía los .om a 1 KB/s («Cargando… 118 s») y
   el proxy `/omtiles` de Vercel en 1,4 s. Si le pasa en el campo, la app podría cambiar sola al
   proxy cuando S3 vaya lento (cuesta Vercel). Se lo pregunté.
+
+**Actualización 14:19:** publicado 2026.10.10-1419. `slc` con alfa 0 en 0,05 y 0,15 mm/h; el azul
+desde 0,2 sigue igual. La prueba y la línea de NO-SE-TOCA están al día y la prueba se vio en rojo
+con el gris puesto. Visto en el panel (ICON-EU, 14:00): nube blanca y limpia, sin rectángulos, y
+el agua de verdad en azul con bordes suaves. Suyo: «que se vea como Windy, bien; eso sí, datos
+reales, nada inventando».

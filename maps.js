@@ -1798,8 +1798,14 @@ function escalasPropias() {
      claro donde llueve de verdad, azul más fuerte según cae más y azul
      casi negro con los chaparrones. Todo del mm/h del modelo de cada
      hora; nada fijo. */
+  /* SIN EL GRIS DE LAS TRAZAS (10-10-2026, suyo, con Windy al lado y el
+     antes y el después delante: «Quita»). Las trazas de 0,05-0,2 mm/h las
+     tiene ICON por todo el mar aunque no caiga nada, y pintaban de gris
+     toda la masa con rectángulos: ese día en Bermeo, «tapado, sin agua».
+     Sin ellas, la nube sale blanca y limpia como en Windy. El agua de
+     verdad (≥ 0,2 mm/h) sigue en azul, como la pidió el 15-09. */
   const slm = [0, 0.05, 0.15, 0.2, 1, 3, 8, 20, 40];
-  const slc = [['#5c636b',0], ['#4a515a',.35], ['#40474f',.5], ['#a9ecf6',.8], ['#5fd3f2',.88],
+  const slc = [['#5c636b',0], ['#4a515a',0], ['#40474f',0], ['#a9ecf6',.8], ['#5fd3f2',.88],
                ['#2fa6e6',.92], ['#1f6fd0',.94], ['#173f9c',.96], ['#0d1f4f',.97]];
   const sombraLluvia = {
     scale: { type:'breakpoint', unit:'mm/h', breakpoints: slm, colors: slc.map(([c,a]) => hexRGBA(c, a)) },

@@ -11222,11 +11222,15 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
   const oscuro = h => [0, 2, 4].every(i => parseInt(h.slice(i, i + 2), 16) < 0x90);
   /* 19:55, su captura de Meteored delante: «nubes: este marca agua en azul, que sería lo suyo». */
   const azul = h => parseInt(h.slice(4, 6), 16) > parseInt(h.slice(0, 2), 16) + 0x30 && parseInt(h.slice(4, 6), 16) >= parseInt(h.slice(2, 4), 16);
-  ok('Nubes total lleva la lluvia encima con su propia sombra: la nube se oscurece donde llueve y va a azul donde llueve de verdad (como Meteored)',
+  /* 10-10-2026, suyo («Quita»): las trazas (0,05-0,2 mm/h) ya NO pintan gris encima
+     de la nube —ensuciaban toda la masa con rectángulos donde no caía nada—; el agua
+     de verdad (≥ 0,2) sigue en azul y casi negra con los chaparrones. */
+  ok('Nubes total lleva la lluvia encima con su propia sombra: las trazas no pintan, y va a azul donde llueve de verdad (como Meteored)',
      /id:'clouds',[^\n]*encima:'precipitation', encimaEscala:'sombraLluvia'/.test(M)
      && /const sombraLluvia = \{/.test(M) && /sinColor, nubes, sombraLluvia,/.test(M)
-     && slAlfa.length >= 6 && slAlfa[0] === 0 && slAlfa[1] > 0 && slAlfa.every((a, i) => i === 0 || a >= slAlfa[i - 1])
-     && oscuro(slHex[1]) && oscuro(slHex[2]) && slHex.slice(3, 5).every(azul) && oscuro(slHex[slHex.length - 1]),
+     && slAlfa.length >= 6 && slAlfa[0] === 0 && slAlfa[1] === 0 && slAlfa[2] === 0 && slAlfa[3] > 0
+     && slAlfa.every((a, i) => i === 0 || a >= slAlfa[i - 1])
+     && slHex.slice(3, 5).every(azul) && oscuro(slHex[slHex.length - 1]),
      JSON.stringify({ slAlfa, slHex }));
   ok('las dos peticiones de la capa de encima (al montar y al mover la hora) llevan la escala de la sombra, no la de Precipitación',
      (M.match(/this\.omUrl\(L_\.encima, this\.t, [^,]+, [^,]+, L_\.encimaEscala \? \{ escala: L_\.encimaEscala \} : null\)/g) || []).length === 2,
