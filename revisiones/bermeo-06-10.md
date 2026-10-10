@@ -123,3 +123,7 @@ claros») se acercan más ECMWF 25 km y GFS. Por mirar: Laredo a las 11-13 h (EC
   · GFS 100 % (todo alta) · AROME HD baja 0, media y alta 100. **Aciertan ECMWF 9 y 25 km** (poca
   nube, la que hay alta y fina). AROME y GFS lo tapan con nube media o alta que desde el suelo es
   un velo. El mapa con ECMWF HRES y la rampa de las 08:43 lo pinta casi limpio, como Windy.
+- **12:14, Bilbao, suyo: «Bilbao igual»** (cielo azul con velo alto, como Laredo). A las 12 h daban:
+  ECMWF 9 km 23 % (22 baja) · ECMWF 25 km 39 % (18 baja) · ICON 58 % (40 baja) · GFS 100 % (0
+  baja, todo alta) · AROME HD baja 32 %. A las 11 h, AROME daba 100 % de nube baja: falló. **Otra
+  vez acierta ECMWF 9 km.** Para la tarde, ECMWF 9 km sube la nube baja a 55-95 % desde las 13-15 h.
