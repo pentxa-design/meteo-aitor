@@ -131,3 +131,9 @@ claros») se acercan más ECMWF 25 km y GFS. Por mirar: Laredo a las 11-13 h (EC
   Para Bermeo de 10 a 12 h, ECMWF 9 km daba 71 · 100 · 100 % e ICON 60 · 73 · 96 %, frente al 23-41 %
   de ECMWF 9 km en Bilbao y Laredo. **El contraste entre sitios lo vio ECMWF 9 km;** ECMWF 25 km
   (25-44 % en Bermeo) no lo separó.
+- **16:13, Ajo (Cantabria), suyo:** «hay más nubes desde hace 2 horas» · «diría que un 80 % de
+  nubes, a 90». O sea, nube desde las 14 h aproximadamente, al 80-90 %. Daban, de 14 a 16 h:
+  ECMWF 9 km 100 % (baja 76 · 99 · 100) · ECMWF 25 km 100 · 100 · 98 (baja 53-56) · ICON 87 · 97
+  · 95 (baja 69-80) · GFS 54 · 1 · 6 · AROME HD baja 3 · 6 · 99. **Aciertan ECMWF 9 y 25 km e
+  ICON** (entrada de nube baja a las 13-14 h). GFS y AROME la daban casi limpia hasta las 16 h.
+  ECMWF 9 km ya lo daba esta mañana: «100 % de nube baja desde las 14 h».
