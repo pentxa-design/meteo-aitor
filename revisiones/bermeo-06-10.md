@@ -162,3 +162,9 @@ claros») se acercan más ECMWF 25 km y GFS. Por mirar: Laredo a las 11-13 h (EC
 - **Ajo, 17:41, otra foto suya:** la misma capa de altocúmulos en bancos, unos 75-85 %
   con huecos azules y sol directo (casa iluminada, sombras en la calle). Sin agua. Confirma lo de
   las 17:30.
+- **Ajo, 19:14, foto suya hacia el mar:** un **banco de nube baja gris oscura**
+  (estratos o estratocúmulos) entra desde el mar y tapa el horizonte. Encima, un velo medio-alto
+  fino (altostratos o cirrostratos) cubre casi todo el cielo y ya no se ve el sol directo. Sin
+  agua. Capas a las 18 h (baja-media-alta): **ECMWF 9 km 96-5-100** (la nube baja entrando a las
+  18), AROME 67-100-98, GFS 54-0-100, ICON 60-21-100, ECMWF 25 km 48-0-100. **ECMWF 9 km acierta
+  también la entrada de la nube baja por la tarde.**
