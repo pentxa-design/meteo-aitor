@@ -159,3 +159,6 @@ claros») se acercan más ECMWF 25 km y GFS. Por mirar: Laredo a las 11-13 h (EC
   **Para el texto del cielo:** con media + baja ≥ 70, `codigoVotado` diría «Cubierto», y lo que
   hay es altocúmulo fino con sol. La nube media fina no quita la luz como la baja cerrada. Lo dejo
   apuntado para quien toque el cielo (ver PARA-EL-IMAC-10-10.md, punto 2).
+- **Ajo, 17:41, otra foto suya:** la misma capa de altocúmulos en bancos, unos 75-85 %
+  con huecos azules y sol directo (casa iluminada, sombras en la calle). Sin agua. Confirma lo de
+  las 17:30.
