@@ -12494,6 +12494,36 @@ grupo('La app abierta se refresca sola (03-10-2026)');
 ok('con la pantalla a la vista y los datos de más de 20 min, se vuelven a pedir cada minuto, no solo al volver a la app',
    /setInterval\(\(\) => \{\s*if \(!document\.hidden && S\.data && Date\.now\(\) - S\.data\.at > 20 \* 60e3 && S\.place\) go\(S\.place, \{ silent: true \}\);\s*\}, 60e3\);/.test(src));
 
+/* ── EL CIELO LO DECIDE ECMWF 9 km; EL VOTO QUEDA DE RESPALDO (10-10-2026) ──
+   Orden suya con sus fotos de Bermeo, Laredo, Bilbao y Ajo. Se EJECUTA
+   `cieloVotado` con una comparativa sellada: con las capas de ECMWF 9 km,
+   manda él y lo dice; sin ellas, la mediana ponderada de los cuatro. */
+{
+  grupo('El cielo lo decide ECMWF 9 km');
+  try { eval(sacarConst('ECMWF_9KM')); } catch { globalThis.ECMWF_9KM = 'ecmwf_ifs'; }
+  const nm0 = globalThis.nombreDeModelo, cmp0 = globalThis.COMPARAR;
+  globalThis.nombreDeModelo = om => (om === 'ecmwf_ifs' ? 'ECMWF 9 km' : om);
+  /* En este punto del fichero COMPARAR puede estar vacío (ya pasó el 02-09): los cuatro que votan, con sus pesos. */
+  globalThis.COMPARAR = [{ om: 'ecmwf_ifs025', name: 'ECMWF', peso: 1 }, { om: 'meteofrance_arome_france_hd', name: 'AROME HD', peso: 3 },
+                         { om: 'icon_seamless', name: 'ICON', peso: 2 }, { om: 'gfs_seamless', name: 'GFS', peso: 1 }];
+  const place0 = S.place;
+  S.place = { name: 'BI BERMEO', lat: 43.412976, lon: -2.718316 };
+  const t = '2026-10-10T09:00';
+  const base = { time: [t] };
+  for (const om of ['meteofrance_arome_france_hd', 'icon_seamless', 'ecmwf_ifs025', 'gfs_seamless'])
+    for (const capa of ['low', 'mid', 'high']) base[`cloud_cover_${capa}_${om}`] = [capa === 'low' ? 20 : 0];
+  const sello = `${S.place.lat.toFixed(3)},${S.place.lon.toFixed(3)}`;
+  S.comparativa = { _sitio: sello, hourly: { ...base, cloud_cover_low_ecmwf_ifs: [100], cloud_cover_mid_ecmwf_ifs: [0], cloud_cover_high_ecmwf_ifs: [40] } };
+  const con = cieloVotado(t, S.place);
+  ok('Bermeo 10-10 09:00: con ECMWF 9 km al 100 % de nube baja, el cielo es el suyo (100) aunque los cuatro voten 20, y lo dice',
+     con && con.bm === 100 && con.de === 'ECMWF 9 km' && con.abanico === 0, JSON.stringify(con));
+  S.comparativa = { _sitio: sello, hourly: base };
+  const sin = cieloVotado(t, S.place);
+  ok('   y sin las capas de ECMWF 9 km (fuera de Europa, o la hora sin dato) vota la mediana de los cuatro, sin dueño',
+     sin && sin.bm === 20 && !sin.de, JSON.stringify(sin));
+  S.comparativa = null; S.place = place0; globalThis.nombreDeModelo = nm0; globalThis.COMPARAR = cmp0;
+}
+
 grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const md = fs.readFileSync(path.join(__dirname, 'NO-SE-TOCA.md'), 'utf8');
@@ -12907,36 +12937,6 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('la franja calcula la racha con peorRacha (todos los modelos) y dice de quién es',
      /const otra = peorRacha\(h\);/.test(src) && /la más alta de los 5, la da \$\{esc\(gTop\.quien\)\}/.test(src)
      && !/const gDatos = sel\.map\(h => h\.gust\)\.filter\(has\);/.test(src));
-}
-
-/* ── EL CIELO LO DECIDE ECMWF 9 km; EL VOTO QUEDA DE RESPALDO (10-10-2026) ──
-   Orden suya con sus fotos de Bermeo, Laredo, Bilbao y Ajo. Se EJECUTA
-   `cieloVotado` con una comparativa sellada: con las capas de ECMWF 9 km,
-   manda él y lo dice; sin ellas, la mediana ponderada de los cuatro. */
-{
-  grupo('El cielo lo decide ECMWF 9 km');
-  try { eval(sacarConst('ECMWF_9KM')); } catch { globalThis.ECMWF_9KM = 'ecmwf_ifs'; }
-  const nm0 = globalThis.nombreDeModelo, cmp0 = globalThis.COMPARAR;
-  globalThis.nombreDeModelo = om => (om === 'ecmwf_ifs' ? 'ECMWF 9 km' : om);
-  /* En este punto del fichero COMPARAR puede estar vacío (ya pasó el 02-09): los cuatro que votan, con sus pesos. */
-  globalThis.COMPARAR = [{ om: 'ecmwf_ifs025', name: 'ECMWF', peso: 1 }, { om: 'meteofrance_arome_france_hd', name: 'AROME HD', peso: 3 },
-                         { om: 'icon_seamless', name: 'ICON', peso: 2 }, { om: 'gfs_seamless', name: 'GFS', peso: 1 }];
-  const place0 = S.place;
-  S.place = { name: 'BI BERMEO', lat: 43.412976, lon: -2.718316 };
-  const t = '2026-10-10T09:00';
-  const base = { time: [t] };
-  for (const om of ['meteofrance_arome_france_hd', 'icon_seamless', 'ecmwf_ifs025', 'gfs_seamless'])
-    for (const capa of ['low', 'mid', 'high']) base[`cloud_cover_${capa}_${om}`] = [capa === 'low' ? 20 : 0];
-  const sello = `${S.place.lat.toFixed(3)},${S.place.lon.toFixed(3)}`;
-  S.comparativa = { _sitio: sello, hourly: { ...base, cloud_cover_low_ecmwf_ifs: [100], cloud_cover_mid_ecmwf_ifs: [0], cloud_cover_high_ecmwf_ifs: [40] } };
-  const con = cieloVotado(t, S.place);
-  ok('Bermeo 10-10 09:00: con ECMWF 9 km al 100 % de nube baja, el cielo es el suyo (100) aunque los cuatro voten 20, y lo dice',
-     con && con.bm === 100 && con.de === 'ECMWF 9 km' && con.abanico === 0, JSON.stringify(con));
-  S.comparativa = { _sitio: sello, hourly: base };
-  const sin = cieloVotado(t, S.place);
-  ok('   y sin las capas de ECMWF 9 km (fuera de Europa, o la hora sin dato) vota la mediana de los cuatro, sin dueño',
-     sin && sin.bm === 20 && !sin.de, JSON.stringify(sin));
-  S.comparativa = null; S.place = place0; globalThis.nombreDeModelo = nm0; globalThis.COMPARAR = cmp0;
 }
 
 
