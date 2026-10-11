@@ -210,3 +210,4 @@ Altocúmulos en bancos (nube MEDIA) con huecos azules; un 65-75 % tapado, sin ag
 que es lo que hay. En cantidad se acercan más ECMWF 25 km, ICON y AROME (78-82); ECMWF 9 km (99) y
 GFS (100, y con baja 100) se pasan: hay claros. Misma lección que Ajo el 10-10: con capa media en
 bancos, el 99-100 % del 9 km es demasiado; «Cubierto» para un cielo con huecos.
+- 13:0x, Bakio mirando al OESTE (otra foto suya): hacia el oeste la capa media es más cerrada, gris y lisa (altostrato), con un 85-90 % tapado; el azul queda al este. O sea, lo que viene del oeste es más cerrado: el 99 % de ECMWF 9 km es lo que entra, no lo que hay encima.
