@@ -191,3 +191,10 @@ ven agua» (antes solo se exigía compañía al prestamista).
 **Pendiente de decidir con él (no tocado):** la nube MEDIA fina con sol (Ajo 17:30, altocúmulos al
 85-90 % y sol directo): `codigoVotado` suma baja+media y con ≥ 70 dice «Cubierto». Cambiarlo es un
 listón suyo; haría falta medirlo con más tardes así.
+
+## 11-10, 09:45 — Bermeo cubierto (foto suya)
+
+Cielo gris uniforme, cerrado, sin textura: altostrato (capa MEDIA, no baja), sin agua. Los cinco dan
+100 % de total a las 09 h, y todos lo ponen en la capa media (ECMWF 9 km baja 14 · media 90 · alta 99;
+ECMWF 25 km 2 · 100 · 92; ICON 33 · 82 · 100; AROME 0 · 100 · 51; GFS 100 · 72 · 100). **Aciertan todos.**
+Con ECMWF 9 km decidiendo: baja+media = 100 → «Cubierto», que es lo que hay. Lluvia 0 en todos.
