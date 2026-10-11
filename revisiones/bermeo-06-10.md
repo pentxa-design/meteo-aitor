@@ -194,7 +194,10 @@ listón suyo; haría falta medirlo con más tardes así.
 
 ## 11-10, 09:45 — Bermeo cubierto (foto suya)
 
-Cielo gris uniforme, cerrado, sin textura: altostrato (capa MEDIA, no baja), sin agua. Los cinco dan
+Cielo gris uniforme, cerrado, sin textura, sin agua. **Suyo: «yo diría que son altas más que medias,
+algunas medias también»** (cirrostrato espeso con algo de altostrato). Lo mío de «capa media» era una
+lectura de foto; la suya, desde debajo, vale más. Cuadra con los modelos: la ALTA al 92-100 % en todos
+y la media también alta (82-100), menos AROME (alta 51). Los cinco dan
 100 % de total a las 09 h, y todos lo ponen en la capa media (ECMWF 9 km baja 14 · media 90 · alta 99;
 ECMWF 25 km 2 · 100 · 92; ICON 33 · 82 · 100; AROME 0 · 100 · 51; GFS 100 · 72 · 100). **Aciertan todos.**
 Con ECMWF 9 km decidiendo: baja+media = 100 → «Cubierto», que es lo que hay. Lluvia 0 en todos.
