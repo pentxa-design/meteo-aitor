@@ -211,3 +211,4 @@ que es lo que hay. En cantidad se acercan más ECMWF 25 km, ICON y AROME (78-82)
 GFS (100, y con baja 100) se pasan: hay claros. Misma lección que Ajo el 10-10: con capa media en
 bancos, el 99-100 % del 9 km es demasiado; «Cubierto» para un cielo con huecos.
 - (La primera foto de Bakio, la de los claros, mira al NORTE, al mar.) 13:0x, Bakio mirando al OESTE (otra foto suya): hacia el oeste la capa media es más cerrada, gris y lisa (altostrato), con un 85-90 % tapado; el azul queda al este. O sea, lo que viene del oeste es más cerrado: el 99 % de ECMWF 9 km es lo que entra, no lo que hay encima.
+- Bakio mirando al ESTE (tercera foto, ~13:05): altocúmulos sueltos con mucho azul, un 50-60 % tapado y sol. Resumen de las tres: oeste cerrado (85-90), norte con claros (65-75), este abierto (50-60). Lo que hay encima a las 13 h ronda el 65-75 %, no el 99 del 9 km; lo cerrado viene por el oeste.
