@@ -139,7 +139,12 @@ html[data-bloqueado]{overflow:hidden}
   var HASH = 'd65347e656486b4830fdf47563164c8d3bfcc7d41bae311270e7086bc40253f7';
   var SAL = 'aitor-meteo:';
   var LLAVE = 'candado.hasta';
-  var DIA = 12 * 3600 * 1000;               // cada 12 h (suyo, 29-09-2026: «cada 12 horas que pida el código»)
+  /* 11-10-2026, suyo: «que solo se meta el código 1 vez al día; hoy he metido
+     ya 4 veces» · «aunque se actualice la app, solo 1 vez por día». El pase
+     vive en localStorage, que una actualización NO borra (solo se vacían
+     las cachés); lo que le hacía meterlo varias veces eran las 12 h y que
+     cada navegador o aparato guarda el suyo. */
+  var DIA = 24 * 3600 * 1000;               // cada 24 h (suyo, 11-10-2026: «solo 1 vez al día»)
   /* APAGADO HASTA NUEVA ORDEN (17-09-2026, 10:05). Suyo, en mayúsculas:
      «QUÍTALE LOS CÓDIGOS HASTA QUE TENGAMOS REMATADA LA APP» · «QUÍTALE
      EL CÓDIGO HASTA NUEVA ORDEN». Con APAGADO = true la app abre sin
@@ -148,7 +153,7 @@ html[data-bloqueado]{overflow:hidden}
      seguir vigilándolo. Para volver a ponerlo: APAGADO = false. */
   /* ENCENDIDO otra vez el 29-09-2026 por orden suya («ponle el código,
      una vez al día que lo pida»). El código es el mismo de siempre y NO
-     se escribe aquí: solo vive como huella SHA-256 con sal. Cada 12 h. */
+     se escribe aquí: solo vive como huella SHA-256 con sal. Cada 24 h (desde el 11-10-2026). */
   var APAGADO = false;
   if (APAGADO && !window.__probarCandado) return;
 
@@ -228,7 +233,7 @@ html[data-bloqueado]{overflow:hidden}
            maxlength="6" autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false"
            data-1p-ignore data-lpignore="true" data-bwignore aria-label="Código de 6 cifras">
     <p class="cand__err" id="candErr" hidden>No es ese. Vuelve a probar.</p>
-    <p class="cand__n">Se vuelve a pedir cada 12 h. Funciona sin cobertura.</p>
+    <p class="cand__n">Se vuelve a pedir una vez al día. Funciona sin cobertura.</p>
   </div>
 </div>
 

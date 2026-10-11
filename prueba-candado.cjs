@@ -118,17 +118,19 @@ console.log('\n  El código de seis cifras\n');
 
   const hasta = Number(a.guardado['candado.hasta']);
   const horas = (hasta - Date.now()) / 3600000;
-  ok('la sesión dura 12 h, que es lo que él pidió el 29-09-2026 («cada 12 horas que pida el código»)', horas > 11.9 && horas < 12.1,
+  /* 11-10-2026, suyo: «que solo se meta el código 1 vez al día; hoy he metido ya 4
+     veces» · «aunque se actualice la app, solo 1 vez por día». De 12 h a 24 h. */
+  ok('la sesión dura 24 h, que es lo que él pidió el 11-10-2026 («solo 1 vez al día»)', horas > 23.9 && horas < 24.1,
      `dura ${horas.toFixed(1)} h`);
 }
 
 console.log('\n  Y caduca de verdad\n');
 {
   const dentro = await correr({ hasta: Date.now() + 3600e3 });
-  ok('dentro de las 12 h no lo vuelve a pedir', !dentro.bloqueado());
+  ok('dentro de las 24 h no lo vuelve a pedir', !dentro.bloqueado());
 
   const fuera = await correr({ hasta: Date.now() - 1000 });
-  ok('pasadas las 12 h lo pide otra vez', fuera.bloqueado());
+  ok('pasadas las 24 h lo pide otra vez', fuera.bloqueado());
 }
 
 console.log('\n  El número no está escrito en la página\n');

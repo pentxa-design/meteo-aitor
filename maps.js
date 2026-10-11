@@ -1087,6 +1087,22 @@ function svgBarba(kt, gradosDesde) {
    en abrir cualquier capa»: no era la cola, eran los viajes.          */
 const BLOQUE_OM = 256 * 1024, BLOQUES_OM = 128;
 
+/* ── LOS MODELOS LIGEROS, DE SEIS EN SEIS (11-10-2026) ──────────────
+   Suyo, con GFS 25 km y la T850 avanzando días: «12 segundos» · «tarda
+   muuuuucho» · «intolerable». MEDIDO desde su iMac, 8 trozos de 256 KB del
+   fichero del domingo 18 (112 MB): de 2 en 2, 5,0 s; de 8 en 8, 1,4 s. El
+   mapa no espera a los bytes, espera a las vueltas (0,6-0,7 s cada una).
+   El 2 nació del susto de memoria de ECMWF HRES (6,6 millones de puntos);
+   GFS 25 km, ECMWF 25 km, ICON-EU o AROME tienen entre 1 y 3 millones y
+   nunca han faltado. HRES sigue a 2 en `topeAhora()`. Si hubo un corte de
+   memoria en las últimas 24 h, no se sube: manda la marcha atrás. */
+function teselasLigeras(nav = globalThis.navigator) {
+  try {
+    const movil = /Mobi|Android|iPhone|iPad/i.test(String(nav?.userAgent || ''));
+    return (!movil && Number(nav?.deviceMemory) >= 8) ? 6 : 3;
+  } catch { return 3; }
+}
+
 function teselasPorDefecto(nav = globalThis.navigator) {
   try {
     const movil = /Mobi|Android|iPhone|iPad/i.test(String(nav?.userAgent || ''));
@@ -1232,7 +1248,10 @@ const Peticiones = {
   /** El tope que rige AHORA: el de siempre, salvo con ECMWF HRES, que se
    *  queda en dos aunque el aparato aguante tres (OOM del 25-08-2026). */
   topeAhora(modelo = (typeof Maps !== 'undefined' ? Maps.model : null)) {
-    return modelo === 'ecmwf_ifs' ? Math.min(this.max, 2) : this.max;
+    if (modelo === 'ecmwf_ifs') return Math.min(this.max, 2);
+    let oomReciente = false;
+    try { oomReciente = Date.now() - (+localStorage.getItem('torre.oomCuando') || 0) < 24 * 3600e3; } catch { /* sin almacén: no hubo corte */ }
+    return oomReciente ? this.max : Math.max(this.max, teselasLigeras());   // ligeros de 6 en 6 (11-10-2026)
   },
   turno() {
     if (this.enCurso < this.topeAhora()) { this.enCurso++; return Promise.resolve(); }

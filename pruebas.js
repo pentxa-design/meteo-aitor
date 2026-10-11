@@ -7568,7 +7568,8 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
      que rige en cada turno y vale también para el modelo con el que arranca. */
   ok('los modelos ligeros descargan a lo del aparato; HRES sigue frenado a 2 en cada turno',
      /Peticiones\.max = \(g >= 1 && g <= 4\) \? g : teselasPorDefecto\(\);/.test(M)
-     && /return modelo === 'ecmwf_ifs' \? Math\.min\(this\.max, 2\) : this\.max;/.test(M)
+     && /if \(modelo === 'ecmwf_ifs'\) return Math\.min\(this\.max, 2\);/.test(M)
+     && /return oomReciente \? this\.max : Math\.max\(this\.max, teselasLigeras\(\)\);/.test(M)
      && /if \(this\.enCurso < this\.topeAhora\(\)\)/.test(M));
   /* Sus dos peticiones, las dos suyas: 25-08 «apenas se ve el relieve»
      (densas al 0,46) y 31-08 «el contraste, mapas apagados». Solución:
@@ -10634,10 +10635,18 @@ grupo('La marca de escala propia vale para TODAS las escalas, con mayúsculas y 
       const M = require('fs').readFileSync(${JSON.stringify(path.join(__dirname, 'maps.js'))}, 'utf8');
       const iF = M.indexOf('function teselasPorDefecto('); const iP = M.indexOf('const Peticiones = {');
       eval(M.slice(iF, M.indexOf('\\n}', iF) + 2));
+      const iL = M.indexOf('function teselasLigeras('); eval(M.slice(iL, M.indexOf('\\n}', iL) + 2));
       eval(M.slice(iP, M.indexOf('\\n};', iP) + 3).replace('const Peticiones', 'globalThis.Peticiones'));
       (async () => {
         const P = Peticiones, r = {};
         P.max = 3; r.hres = P.topeAhora('ecmwf_ifs'); r.icon = P.topeAhora('dwd_icon_eu');
+        /* 11-10-2026: en un Mac con memoria los ligeros van de 6 en 6; HRES sigue a 2; tras un corte de memoria reciente, no se sube. */
+        Object.defineProperty(globalThis, 'navigator', { value: { deviceMemory: 32, userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome' }, configurable: true });
+        r.iconMac = P.topeAhora('dwd_icon_eu'); r.hresMac = P.topeAhora('ecmwf_ifs');
+        globalThis.localStorage = { getItem: k => (k === 'torre.oomCuando' ? String(Date.now() - 3600e3) : null) };
+        r.iconTrasOOM = P.topeAhora('dwd_icon_eu'); delete globalThis.localStorage;
+        Object.defineProperty(globalThis, 'navigator', { value: { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari' }, configurable: true });
+        r.iconIphone = P.topeAhora('dwd_icon_eu');
         r.mac = teselasPorDefecto({ deviceMemory: 32, userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome' });
         r.iphone = teselasPorDefecto({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari' });
         r.android = teselasPorDefecto({ deviceMemory: 8, userAgent: 'Mozilla/5.0 (Linux; Android 14) Mobile' });
@@ -10657,6 +10666,9 @@ grupo('La marca de escala propia vale para TODAS las escalas, con mayúsculas y 
      JSON.stringify(r));
   ok('tres teselas a la vez en un Mac con memoria, dos en el móvil y en Safari, y dos siempre con ECMWF HRES',
      r.mac === 3 && r.iphone === 2 && r.android === 2 && r.safariMac === 2 && r.sinNav === 2 && r.hres === 2 && r.icon === 3,
+     JSON.stringify(r));
+  ok('y los modelos ligeros van de SEIS en seis en un Mac con memoria (11-10-2026, «intolerable»): HRES sigue a 2, tras un corte de memoria no se sube, y en el iPhone 3',
+     r.iconMac === 6 && r.hresMac === 2 && r.iconTrasOOM === 3 && r.iconIphone === 3,
      JSON.stringify(r));
 }
 
