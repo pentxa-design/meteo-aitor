@@ -212,3 +212,13 @@ GFS (100, y con baja 100) se pasan: hay claros. Misma lección que Ajo el 10-10:
 bancos, el 99-100 % del 9 km es demasiado; «Cubierto» para un cielo con huecos.
 - (La primera foto de Bakio, la de los claros, mira al NORTE, al mar.) 13:0x, Bakio mirando al OESTE (otra foto suya): hacia el oeste la capa media es más cerrada, gris y lisa (altostrato), con un 85-90 % tapado; el azul queda al este. O sea, lo que viene del oeste es más cerrado: el 99 % de ECMWF 9 km es lo que entra, no lo que hay encima.
 - Bakio mirando al ESTE (tercera foto, ~13:05): altocúmulos sueltos con mucho azul, un 50-60 % tapado y sol. Resumen de las tres: oeste cerrado (85-90), norte con claros (65-75), este abierto (50-60). Lo que hay encima a las 13 h ronda el 65-75 %, no el 99 del 9 km; lo cerrado viene por el oeste.
+
+## 11-10, 19:30 — Bermeo al atardecer (dos fotos suyas)
+
+Casi despejado: velo alto muy fino (cirros), azul por todas partes, sin nube baja ni media. Un 30-40 %
+de velo, nada más. Daban a las 19 h: **ECMWF 9 km 52 (baja 5 · media 1 · alta 49)** · ECMWF 25 km 47
+(5 · 27 · 59) · ICON 63 (3 · 27 · 41). **Aciertan los dos ECMWF**: solo velo alto, y en la cantidad
+justa; ICON mete media que no hay y a las 20 h pone 100 %. La pasada de la mañana del 9 km (71 a las
+17, 89 a las 19) se quedó vieja; Windy con la de las 08 (36 a las 18) iba más cerca de esto.
+**Balance del día en Bermeo:** mañana cerrada (todos), mediodía con claros (el 9 km se pasó al 99
+en Bakio), tarde abierta (ECMWF acierta, ICON no). Sin agua en todo el día, como daban los cinco.
