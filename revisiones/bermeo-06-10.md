@@ -201,3 +201,12 @@ y la media también alta (82-100), menos AROME (alta 51). Los cinco dan
 100 % de total a las 09 h, y todos lo ponen en la capa media (ECMWF 9 km baja 14 · media 90 · alta 99;
 ECMWF 25 km 2 · 100 · 92; ICON 33 · 82 · 100; AROME 0 · 100 · 51; GFS 100 · 72 · 100). **Aciertan todos.**
 Con ECMWF 9 km decidiendo: baja+media = 100 → «Cubierto», que es lo que hay. Lluvia 0 en todos.
+
+## 11-10, 13:00 — Bakio (foto suya): «se ven más claros»
+
+Altocúmulos en bancos (nube MEDIA) con huecos azules; un 65-75 % tapado, sin agua. A las 13 h daban
+(total / baja / media / alta): **ECMWF 9 km 99 / 4 / 99 / 0** · ECMWF 25 km 82 / 7 / 78 / 37 · ICON 82 /
+24 / 71 / 0 · AROME baja 0, media 79 · GFS 100 / 100 / 73 / 5. Todos ponen la nube en la capa MEDIA,
+que es lo que hay. En cantidad se acercan más ECMWF 25 km, ICON y AROME (78-82); ECMWF 9 km (99) y
+GFS (100, y con baja 100) se pasan: hay claros. Misma lección que Ajo el 10-10: con capa media en
+bancos, el 99-100 % del 9 km es demasiado; «Cubierto» para un cielo con huecos.
