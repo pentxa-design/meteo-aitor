@@ -1569,9 +1569,16 @@ function escalasPropias() {
      compara la nuestra y la de ellos, la de ráfaga y la de temp 850». La
      misma rampa que ellos, de −10 (morado) a 30 (rojo oscuro), continua
      (t850 está en ESCALAS_SUAVES). */
-  const t8m = [-10, -6, -2, 2, 6, 10, 14, 18, 22, 26, 30];
-  const t8c = [['#5b2a86',1], ['#2b4fb5',1], ['#1f8fd0',1], ['#2cb5b0',1], ['#4fc46a',1], ['#a9d64a',1],
-               ['#f2e63a',1], ['#f8b62d',1], ['#f0762b',1], ['#d63a2a',1], ['#8f1d1d',1]];
+  /* 11-10-2026, suyo con el mapa del 18 delante (5° en Bermeo, 0° en París,
+     −1° en Alemania, y todo en verde-amarillo): «debería estar en azul,
+     frío; con esas temperaturas, no en amarillo». La rampa de AguaceroWx
+     ponía el verde en 6-10 y el amarillo ya en 14, y una entrada fría de
+     octubre no se veía. Ahora el 0 va azul, 5 azul-verdoso, 10 verde, y
+     el amarillo empieza en 15, como en los mapas de masas de aire. Los
+     cortes del calor (22 naranja, 26 rojo, 30 granate) no se mueven. */
+  const t8m = [-10, -5, 0, 5, 10, 15, 18, 22, 26, 30, 34];
+  const t8c = [['#5b2a86',1], ['#2b4fb5',1], ['#1f8fd0',1], ['#2cb5b0',1], ['#4fc46a',1], ['#f2e63a',1],
+               ['#f8b62d',1], ['#f0762b',1], ['#d63a2a',1], ['#8f1d1d',1], ['#5a0b0b',1]];
   const t850 = {
     scale: { type:'breakpoint', unit:'°C', breakpoints: t8m,
              colors: t8c.map(([c,a]) => hexRGBA(c, a)) },

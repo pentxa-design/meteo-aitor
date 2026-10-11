@@ -7519,11 +7519,13 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
   /* 15-09-2026, con AguaceroWx al lado («y estas quiero como AguaceroWx»): la
      misma rampa que ellos, −10 morado → azul → verde → amarillo → naranja → rojo
      30, continua. */
-  ok('la T850 tiene su propia escala de masas, como la de AguaceroWx: morado −10 → rojo 30, continua',
-     /const t8m = \[-10, -6, -2, 2, 6, 10, 14, 18, 22, 26, 30\]/.test(M)
-     && /const t8c = \[\['#5b2a86',1\], \['#2b4fb5',1\]/.test(M) && /\['#d63a2a',1\], \['#8f1d1d',1\]\]/.test(M)
+  /* 11-10-2026 (suyo, el 18 con 5° en Bermeo en verde-amarillo: «debería estar
+     en azul, frío»): el 0 azul, 5 azul-verdoso, 10 verde, amarillo desde 15. */
+  ok('la T850 tiene su propia escala de masas: morado −10 → azul 0 → verde 10 → amarillo 15 → rojo 26, continua',
+     /const t8m = \[-10, -5, 0, 5, 10, 15, 18, 22, 26, 30, 34\]/.test(M)
+     && /const t8c = \[\['#5b2a86',1\], \['#2b4fb5',1\], \['#1f8fd0',1\]/.test(M) && /\['#d63a2a',1\], \['#8f1d1d',1\], \['#5a0b0b',1\]\]/.test(M)
      && /escala:'t850'/.test(M),
-     'la africana del viernes (26° a 850) tiene que salir roja, como en Meteored');
+     'una entrada fría de octubre (5° a 850) tiene que verse azul, y la africana (26°) roja');
   ok('y el rojo empieza donde quema: 34 rojo, 38 granate, 42 morado',
      /'#e11400'/.test(M) && /'#a80016'/.test(M) && /'#700024'/.test(M),
      'los colores de dia de aires sufriendo en las casetas');
