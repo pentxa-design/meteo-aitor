@@ -247,3 +247,4 @@ Lluvia 0 en todos. **Acierta el cielo ECMWF 9 km, que es el que manda desde el 1
   AROME baja 0, media 100, alta 2. **La foto de los altocúmulos la ven ICON y AROME (media 89-100); el 9 km la
   pierde (media 2).** Hacia el oeste y el mar hay azul, y ahí aciertan el 9 km y GFS (14-19). Dos cielos distintos
   a la vez: la capa media viene de otro lado.
+- 12-10, ~12:20, Sopelana, otra foto suya hacia el oeste (Punta Galea, el Abra): cirros y cirrostratos en bandas blancas sobre azul intenso, franja de nube alta fina en el horizonte; ~30-40 % tapado de nube ALTA, sin agua, sol y buena luz. Confirma las anteriores: lo que hay hacia el mar es alta fina; ECMWF 9 km (alta 6 a las 11, 68 a las 12) y el de 25 km (alta 86-92) la ven.
