@@ -222,3 +222,13 @@ justa; ICON mete media que no hay y a las 20 h pone 100 %. La pasada de la maña
 17, 89 a las 19) se quedó vieja; Windy con la de las 08 (36 a las 18) iba más cerca de esto.
 **Balance del día en Bermeo:** mañana cerrada (todos), mediodía con claros (el 9 km se pasó al 99
 en Bakio), tarde abierta (ECMWF acierta, ICON no). Sin agua en todo el día, como daban los cinco.
+
+## 12-10, 09:45 — Bermeo: cielo azul, muy pocas nubes (algodón)
+
+Suyo: «cielo azul prácticamente, con algunas nubes blancas de algodón» · «muy pocas». Un 10-20 % de
+cúmulos sueltos, sin agua. Daban a las 09 h (total · baja/media/alta): **ECMWF 9 km 40 (13/7/26)** ·
+ECMWF 25 km 70 (2/41/98) · ICON 93 (56/71/35) · GFS 97 (0/61/93) · AROME baja 1 (media 100, alta 100).
+**El más cercano a «muy pocas» es ECMWF 9 km (40, con la baja en 13);** los demás, 70-97, se pasan
+(ICON con la baja al 56 % dice nubes de algodón de sobra; GFS y los dos de la media/alta ven velo
+fino que desde abajo se confunde con azul). A las 10 h el 9 km sube a 62 (media 59): por mirar.
+Lluvia 0 en todos. **Acierta el cielo ECMWF 9 km, que es el que manda desde el 10-10.**
