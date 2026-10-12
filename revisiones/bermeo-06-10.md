@@ -249,3 +249,10 @@ Lluvia 0 en todos. **Acierta el cielo ECMWF 9 km, que es el que manda desde el 1
   a la vez: la capa media viene de otro lado.
 - 12-10, ~12:20, Sopelana, otra foto suya hacia el oeste (Punta Galea, el Abra): cirros y cirrostratos en bandas blancas sobre azul intenso, franja de nube alta fina en el horizonte; ~30-40 % tapado de nube ALTA, sin agua, sol y buena luz. Confirma las anteriores: lo que hay hacia el mar es alta fina; ECMWF 9 km (alta 6 a las 11, 68 a las 12) y el de 25 km (alta 86-92) la ven.
 - 12-10, ~12:25, Sopelana, hacia el INTERIOR (foto suya, sol alto de frente): altocúmulos finos en bancos cubriendo ~90 % con el sol brillando a través (el «resol»), huecos azules pequeños. Nube MEDIA en toda la vista. Confirma lo de la foto de antes: hacia el mar cirros y azul (~30 %), hacia el interior altocúmulos (~90 %). ICON (media 89) y AROME (media 100) la ven; ECMWF 9 km (media 2) no.
+- **12-10, 19:30, Bermeo, suyo:** «veo nubes ya, y grises». A las 19 h daban (total · baja/media/alta):
+  **ECMWF 9 km 2 (1/2/0)** · ECMWF 25 km 0 (15/6/1) · GFS 15 (0/5/5) · AROME baja 7, media 0 · **ICON 61
+  (10/54/0)**. A las 20 h: 9 km 2, 25 km 2, GFS 8, ICON 67; a las 21 h AROME media 92, ICON 75. **Solo ICON y,
+  a las 21 h, AROME ven nube; los dos ECMWF y GFS daban cielo despejado y se equivocan.** Hoy por la tarde
+  ECMWF 9 km (el que manda) bajó a 9-32 % de 14 a 17 h y a 2 % a las 19: se queda corto con la nube media.
+  Sin agua en todos. Tercer día seguido de fallo del 9 km con nube media (Ajo y Bakio de más, Sopelana y
+  Bermeo de menos).
