@@ -232,3 +232,10 @@ ECMWF 25 km 70 (2/41/98) · ICON 93 (56/71/35) · GFS 97 (0/61/93) · AROME baja
 (ICON con la baja al 56 % dice nubes de algodón de sobra; GFS y los dos de la media/alta ven velo
 fino que desde abajo se confunde con azul). A las 10 h el 9 km sube a 62 (media 59): por mirar.
 Lluvia 0 en todos. **Acierta el cielo ECMWF 9 km, que es el que manda desde el 10-10.**
+- **12-10, 12:10, Sopelana (foto suya, mirando al mar):** cielo azul con **cirrocúmulos y cirros en
+  bandas** (nube ALTA fina) hacia el cielo; en el horizonte, una franja baja y fina de nubes sobre el mar;
+  sin agua. Un 35-45 % tapado, mucho azul. Mar con olas largas y ordenadas. A las 12 h daban (total ·
+  baja/media/alta): **ECMWF 9 km 70 (4/11/68)** · ECMWF 25 km 11 (1/43/86) · ICON 94 (14/86/43) · GFS 19
+  (0/5/10) · AROME baja 0, media 100, alta 8. **Aciertan en capa el 9 km (alta 68, media 11, baja 4) y el de
+  25 km (alta 86)**: lo que hay es alta. En cantidad, 35-45 %: ni el 9 km (70) ni el de 25 km (11) clavan
+  el número; ICON (94) y AROME (media 100) fallan la capa. Por la mañana el 9 km (40 a las 9) iba mejor.
