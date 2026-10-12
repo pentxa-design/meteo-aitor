@@ -239,3 +239,11 @@ Lluvia 0 en todos. **Acierta el cielo ECMWF 9 km, que es el que manda desde el 1
   (0/5/10) · AROME baja 0, media 100, alta 8. **Aciertan en capa el 9 km (alta 68, media 11, baja 4) y el de
   25 km (alta 86)**: lo que hay es alta. En cantidad, 35-45 %: ni el 9 km (70) ni el de 25 km (11) clavan
   el número; ICON (94) y AROME (media 100) fallan la capa. Por la mañana el 9 km (40 a las 9) iba mejor.
+- **12-10, ~12:10-12:20, Sopelana (tres fotos suyas, sin hora ni rumbo en dos de ellas; reloj 12:11):**
+  una con altocúmulos en bancos finos cubriendo ~85-90 % con el sol asomando (hora y rumbo SIN confirmar);
+  otra mirando a la costa hacia el oeste (Punta Galea, el Abra, molinos de Punta Lucero): azul intenso con
+  cirros finos y una franja de nube alta baja en el horizonte, ~15-20 % tapado. A las 11 h daban (total ·
+  baja/media/alta): ECMWF 9 km 14 (5/2/6) · ECMWF 25 km 12 (5/42/92) · ICON 95 (22/89/31) · GFS 19 (0/10/5) ·
+  AROME baja 0, media 100, alta 2. **La foto de los altocúmulos la ven ICON y AROME (media 89-100); el 9 km la
+  pierde (media 2).** Hacia el oeste y el mar hay azul, y ahí aciertan el 9 km y GFS (14-19). Dos cielos distintos
+  a la vez: la capa media viene de otro lado.
