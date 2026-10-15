@@ -256,3 +256,9 @@ Lluvia 0 en todos. **Acierta el cielo ECMWF 9 km, que es el que manda desde el 1
   ECMWF 9 km (el que manda) bajó a 9-32 % de 14 a 17 h y a 2 % a las 19: se queda corto con la nube media.
   Sin agua en todos. Tercer día seguido de fallo del 9 km con nube media (Ajo y Bakio de más, Sopelana y
   Bermeo de menos).
+
+## 15-10 · 21:30 — Cantabria sur (Reinosa): ¿quién marcaba lluvia a las 20:00?
+
+- Suyo: «los europeos no marcan; AROME e ICON sí». Capturas del mapa a las 20:00: AROME HD una mancha de 0,6-1,3 mm/h al SO de Reinosa; ICON-EU celdas en Cantabria interior y León; ECMWF HRES y 25 km casi nada; GFS más en Rioja/Navarra. Euskadi seco en los cuatro y en el radar observado (21:03).
+- Pluviómetros AEMET a las 21:25 (por /estaciones): 0 mm de 16Z a 18Z en casi toda la zona; solo Bárcena Mayor-Toriz 4 mm a las 17Z. De las 18Z (20:00) aún no hay dato. Modelos a las 20:00: solo AROME da algo (1,1 mm en Nestares).
+- **PENDIENTE (mañana a primera hora, es lo que falta para puntuar):** releer Nestares, Aguilar de Campoo y Bárcena Mayor-Toriz de las 18Z y 19Z y decir quién acertó. Script: scratchpad quien-acierta-20h.mjs.
