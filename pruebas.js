@@ -12990,6 +12990,25 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      /\.omPop \.pa td\{[^}]*white-space:nowrap/.test(css));
 }
 
+/* ── LOS NÚMEROS DEL MAPA, CON COMA (15-10-2026) ─────────────────────
+   Su pantallazo de las 21:17: «1.0 mm/h» arriba y «1,0 litros» abajo en el
+   mismo popup. `toFixed` escribe con punto. Se EJECUTA `coma` y se exige que
+   el título del popup, la nota del paso y los números sobre las ciudades
+   pasen por ella. */
+{
+  grupo('Los números del mapa llevan coma');
+  const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const i = M.indexOf('const coma = ');
+  const coma = new Function(M.slice(i, M.indexOf(';', i) + 1) + '\nreturn coma;')();
+  ok('coma(1,1) = «1,0» · coma(19,0) = «19» · coma(7.6,1) = «7,6» · coma(-3.5,1) = «-3,5»',
+     coma(1, 1) === '1,0' && coma(19, 0) === '19' && coma(7.6, 1) === '7,6' && coma(-3.5, 1) === '-3,5',
+     [coma(1, 1), coma(19, 0), coma(7.6, 1), coma(-3.5, 1)].join(' · '));
+  ok('   y el título del popup, la nota del paso y los números sobre las ciudades usan coma, no toFixed a pelo',
+     /<b>\$\{coma\(val, Math\.abs\(val\) < 10 \? 1 : 0\)\} \$\{esc\(uTxt\)\}<\/b>/.test(M)
+     && /\$\{coma\(v, 1\)\} mm en un paso de/.test(M) && /\$\{coma\(txt, d\)\}\$\{simbolo\}/.test(M)
+     && !/\$\{val\.toFixed\(/.test(M) && !/\$\{txt\.toFixed\(d\)\}/.test(M));
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════
    EL RECUENTO VA EL ÚLTIMO. SIEMPRE.

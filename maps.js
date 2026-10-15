@@ -652,6 +652,11 @@ function horasDelPaso(T, t) {
   const h = (new Date(T[i]).getTime() - new Date(T[i - 1]).getTime()) / 3600e3;
   return Number.isFinite(h) && h >= 1 ? Math.round(h) : 1;
 }
+/** Un número con `d` decimales y COMA, como el resto de la app (15-10-2026: el
+ *  popup ponía «1.0 mm/h» arriba y «1,0 litros» abajo, en la misma ventana).
+ *  `toFixed` escribe con punto; los números del mapa pasan todos por aquí. */
+const coma = (n, d = 1) => Number(n).toFixed(d).replace('.', ',');
+
 /** Litros por metro cuadrado (mm) caídos en las últimas `n` horas, sumando las
  *  `n` últimas de la serie horaria `serie` (la hora de cada valor es la del
  *  FINAL de su hora, como las da Open-Meteo). null si falta cualquiera: una
@@ -4478,7 +4483,7 @@ const Maps = {
       if (e?.unidad === 'mm/h' && txt < 0.1) continue;
       imposible ||= fueraDeRango(L_, txt);
       const d = Math.abs(txt) >= 100 ? 0 : dec;
-      frag.push(`<span class="mval" style="left:${pt.x.toFixed(0)}px;top:${pt.y.toFixed(0)}px">${txt.toFixed(d)}${simbolo}</span>`);
+      frag.push(`<span class="mval" style="left:${pt.x.toFixed(0)}px;top:${pt.y.toFixed(0)}px">${coma(txt, d)}${simbolo}</span>`);
     }
     if (!vigente()) return;
     cap.innerHTML = frag.join('');
@@ -4738,7 +4743,7 @@ const Maps = {
       const val = e?.conv ? e.conv(vh) : vh * f;
       const uTxt = u;
       const delPaso = (h > 1 && esAcumulada(L_.v))
-        ? `<br><small>el modelo da ${v.toFixed(1)} mm en un paso de ${h} h: se enseña por hora</small>` : '';
+        ? `<br><small>el modelo da ${coma(v, 1)} mm en un paso de ${h} h: se enseña por hora</small>` : '';
       // Con los números apagados esta es la única lectura que hay, así
       // que el aviso de «esto no puede ser» va también aquí. Un número
       // imposible dado sin más se lee como un dato bueno.
@@ -4853,7 +4858,7 @@ const Maps = {
           }
         } catch { /* sin acumulado: se enseña la intensidad sola, que es verdad */ }
       }
-      pop.setHTML(`<b>${val.toFixed(Math.abs(val) < 10 ? 1 : 0)} ${esc(uTxt)}</b>${acum ? ' <span class="pa__r">ritmo a esa hora</span>' : ''}${deDonde}${delPaso}${acum}
+      pop.setHTML(`<b>${coma(val, Math.abs(val) < 10 ? 1 : 0)} ${esc(uTxt)}</b>${acum ? ' <span class="pa__r">ritmo a esa hora</span>' : ''}${deDonde}${delPaso}${acum}
          ${imposible ? `<small style="color:var(--no);font-weight:700">${esc(imposible)}</small>` : ''}
          <br><small>${esc(L_.name)} · ${esc(hora)}
          <br>${lngLat.lat.toFixed(3)}, ${lngLat.lng.toFixed(3)}
