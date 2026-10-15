@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.15-1623';
+const BUILD = '2026.10.15-2039';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -15175,6 +15175,30 @@ function renderNow() {
          significa lo que dice. */
       return dt('Próxima lluvia', 'no se espera',
         `${mmTxt(agua24)} mm en 24 h · ninguno de los modelos la ve`, 'go');
+    })(),
+
+    /* ── CUÁNTOS LITROS EN LOS PRÓXIMOS 3 DÍAS (15-10-2026) ─────────────
+       Suyo: «si me preguntan, ¿cuántos litros va a llover?, ¿tengo que ir a
+       AguaceroWx?». El total de agua (1 mm = 1 litro/m²) de las próximas 72
+       horas, por modelo, con el pico de una hora. Con los modelos
+       discrepando, se dice el rango y quién da el más alto; no se promedia.
+       Es la misma suma para las tres webs (ReglasTiempo.litrosPrevistos). */
+    (() => {
+      const Hc = deEsteSitio(S.comparativa)?.hourly;
+      if (!Hc?.time) return '';
+      const modelos = [...COMPARAR.filter(m => m.om !== 'best_match'), { om: ECMWF_9KM, name: nombreDeModelo(ECMWF_9KM) }]
+        .map(m => ({ om: m.om, nom: m.name }));
+      const L = ReglasTiempo.litrosPrevistos(Hc, Date.now() - 3600e3, 72, modelos);
+      if (L.length < 2) return '';
+      const alto = L[0], bajo = L[L.length - 1];
+      const lt = x => (x < 10 ? x.toFixed(1) : String(Math.round(x))).replace('.', ',');
+      if (alto.total < 1) return dt('Agua en 3 días', 'menos de 1 litro<small>/m²</small>', 'ninguno de los modelos da agua en las próximas 72 h', 'go');
+      const cuando = alto.hPico ? new Date(alto.hPico) : null;
+      const pico = cuando ? `pico de ${lt(alto.pico)} mm en una hora, ${diaSiNoEsHoy(cuando).trim() || 'hoy'} a las ${String(cuando.getHours()).padStart(2, '0')}:00` : '';
+      const v = alto.total - bajo.total < 3 ? `${lt(alto.total)}` : `${lt(bajo.total)}–${lt(alto.total)}`;
+      return dt('Agua en 3 días', `${v}<small> litros/m²</small>`,
+        `1 mm = 1 litro por metro cuadrado · lo más alto, <b>${esc(alto.nom)}</b> (${pico}) · lo más bajo, ${esc(bajo.nom)} ${lt(bajo.total)}`,
+        alto.total >= 50 ? 'no' : alto.total >= 15 ? 'warn' : '');
     })(),
 
     /* LA TORMENTA, TAMBIÉN AQUÍ. Estaba solo en las pantallas de trabajo

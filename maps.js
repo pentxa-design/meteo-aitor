@@ -4840,13 +4840,20 @@ const Maps = {
           const sr = d?.hourly?.precipitation;
           const a1 = acumuladoDe(sr, 1), a3 = acumuladoDe(sr, 3), a6 = acumuladoDe(sr, 6);
           if (d?.hourly?.time?.at(-1) === hIso && has(a3)) {
-            const f1 = x => (has(x) ? x.toFixed(x < 10 ? 1 : 0) : '—');
-            acum = `<br><small>agua caída hasta esa hora: <b>1 h ${f1(a1)}</b> · <b>3 h ${f1(a3)}</b> · <b>6 h ${f1(a6)}</b> mm `
-              + `(1 mm = 1 litro/m²) · de la API, ${esc(nombreModelo)}</small>`;
+            /* EN UNA TABLITA, QUE SE LEA DE UN TIRÓN (15-10-2026, suyo: «el texto
+               un poco más entendible, que lo pueda leer bien de un tirón»).
+               Antes iba en una sola línea, con letra pequeña y las cifras
+               pegadas: «1 h 29 · 3 h 71 · 6 h 150 mm». */
+            const f1 = x => (has(x) ? String(x.toFixed(x < 10 ? 1 : 0)).replace('.', ',') : '—');
+            acum = `<div class="pa"><div class="pa__t">Agua caída hasta esa hora</div>`
+              + `<table><tr><td>en la última hora</td><td><b>${f1(a1)}</b> litros</td></tr>`
+              + `<tr><td>en las últimas 3 horas</td><td><b>${f1(a3)}</b> litros</td></tr>`
+              + `<tr><td>en las últimas 6 horas</td><td><b>${f1(a6)}</b> litros</td></tr></table>`
+              + `<div class="pa__p">litros por metro cuadrado (1 mm = 1 litro) · ${esc(nombreModelo)}</div></div>`;
           }
         } catch { /* sin acumulado: se enseña la intensidad sola, que es verdad */ }
       }
-      pop.setHTML(`<b>${val.toFixed(Math.abs(val) < 10 ? 1 : 0)} ${esc(uTxt)}</b>${deDonde}${delPaso}${acum}
+      pop.setHTML(`<b>${val.toFixed(Math.abs(val) < 10 ? 1 : 0)} ${esc(uTxt)}</b>${acum ? ' <span class="pa__r">ritmo a esa hora</span>' : ''}${deDonde}${delPaso}${acum}
          ${imposible ? `<small style="color:var(--no);font-weight:700">${esc(imposible)}</small>` : ''}
          <br><small>${esc(L_.name)} · ${esc(hora)}
          <br>${lngLat.lat.toFixed(3)}, ${lngLat.lng.toFixed(3)}

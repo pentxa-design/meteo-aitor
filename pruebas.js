@@ -12968,8 +12968,11 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      f([4, null, 8, 12, 20, 24], 6) === null && f([4, 5.5, 8, 12, 20, NaN], 3) === null && f([1, 2], 6) === null && f(undefined, 3) === null);
   ok('   y el popup lo pide a la API del MISMO modelo, solo en la capa Precipitación (no en Reflectividad) y lo dice en litros',
      /if \(L_\.v === 'precipitation' && !L_\.dbz && hIso && modeloEnApi\(R\.modelo\)\)/.test(M)
-     && /models: modeloEnApi\(R\.modelo\), hourly: 'precipitation'/.test(M) && /\(1 mm = 1 litro\/m²\)/.test(M)
+     && /models: modeloEnApi\(R\.modelo\), hourly: 'precipitation'/.test(M) && /1 mm = 1 litro\) · \$\{esc\(nombreModelo\)\}/.test(M)
      && /\$\{deDonde\}\$\{delPaso\}\$\{acum\}/.test(M));
+  ok('   y va en una tablita de tres filas (última hora, 3 y 6 horas) en litros, no en una línea de letra pequeña (15-10-2026: «que lo pueda leer de un tirón»)',
+     /en la última hora<\/td>[\s\S]*en las últimas 3 horas<\/td>[\s\S]*en las últimas 6 horas<\/td>/.test(M)
+     && /\.omPop \.pa td\{[^}]*font-size:0\.9375rem/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8')));
 }
 
 

@@ -302,6 +302,37 @@ const ReglasTiempo = (() => {
     return { agua: false, k: 'nd', cieloSeco: codigoCielo };
   }
 
+  /* ── CUÁNTOS LITROS VA A LLOVER (15-10-2026) ─────────────────────────
+     Suyo, con las lluvias de Valencia en la tele: «si me preguntan, Aitor,
+     ¿cuántos litros va a llover?, ¿cómo calculo? ¿tengo que ir a
+     AguaceroWx para saber que serán 70 litros por hora?». Se suma, por
+     modelo, el agua de las `horas` siguientes a `desdeMs` y se dice el
+     pico de una hora. 1 mm = 1 litro por metro cuadrado.
+     `H` es el `hourly` con sufijos por modelo; `modelos` [{om, nom}].
+     Un modelo cuyas horas no llegan al 75 % de la ventana no cuenta: una
+     suma con huecos sale más baja de lo que es y se leería como calma.
+     Devuelve [{om, nom, total, pico, hPico, n}] del que más al que menos. */
+  function litrosPrevistos(H, desdeMs, horas, modelos) {
+    const out = [];
+    if (!H?.time?.length) return out;
+    for (const m of modelos || []) {
+      const serie = H[`precipitation_${m.om}`];
+      if (!Array.isArray(serie)) continue;
+      let total = 0, n = 0, pico = 0, hPico = null;
+      for (let i = 0; i < H.time.length; i++) {
+        const t = new Date(H.time[i]).getTime();
+        if (!(t > desdeMs && t <= desdeMs + horas * 3600e3)) continue;
+        const v = serie[i];
+        if (!has(v)) continue;
+        n++; total += v;
+        if (v > pico) { pico = v; hPico = H.time[i]; }
+      }
+      if (n < horas * 0.75) continue;
+      out.push({ om: m.om, nom: m.nom, total, pico, hPico, n });
+    }
+    return out.sort((a, b) => b.total - a.total);
+  }
+
   /* El dibujo de una FRANJA a partir del de cada hora: el agua manda (el
      sirimiri también, aunque sea una hora de ocho); si no hay agua, el
      cielo que más se repite, y en empate el más tapado (el 4, sol velado,
@@ -782,7 +813,7 @@ const ReglasTiempo = (() => {
     has, LISTON, DUENO_AGUA, AGUA_ACUERDO, RELLENO_AGUA, CIELO_PRESTADO, ECMWF_9KM,
     MODELOS_TORMENTA, NOMBRES, nombreDe, mojaEsaHora, lluviaDeUnSitio, lloviznaAcompanadaEn, AGUA_ACOMPANA,
     HAY_AGUA, AGUA_FUERTE, WMO, wmoText, esLlovizna, isStormCode, mmRedonda,
-    palabraLluvia, palabraDeLaVentana, comoLlueve, iconoDeAgua, codigoConAgua, codigoDeVarias, tramosDeCodigos,
+    palabraLluvia, palabraDeLaVentana, comoLlueve, litrosPrevistos, iconoDeAgua, codigoConAgua, codigoDeVarias, tramosDeCodigos,
     RAYO_ENCIMA, RAYO_CERCA, RAYO_RADIO, RAYO_VIGENTE, kmEntre, loQueAunCuenta, lectorDeRayos,
     rayosConCache, vetaRayo, textoRayos,
     CAPE_COMBINACION, TAPA_ROMPE, MODELOS_RAYO, rayoDelModelo, otrosDelAgua, rayoEnHoras,
