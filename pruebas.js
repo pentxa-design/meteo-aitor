@@ -12971,8 +12971,23 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /models: modeloEnApi\(R\.modelo\), hourly: 'precipitation'/.test(M) && /1 mm = 1 litro\) · \$\{esc\(nombreModelo\)\}/.test(M)
      && /\$\{deDonde\}\$\{delPaso\}\$\{acum\}/.test(M));
   ok('   y va en una tablita de tres filas (última hora, 3 y 6 horas) en litros, no en una línea de letra pequeña (15-10-2026: «que lo pueda leer de un tirón»)',
-     /en la última hora<\/td>[\s\S]*en las últimas 3 horas<\/td>[\s\S]*en las últimas 6 horas<\/td>/.test(M)
+     /última hora<\/td>[\s\S]*últimas 3 horas<\/td>[\s\S]*últimas 6 horas<\/td>/.test(M)
      && /\.omPop \.pa td\{[^}]*font-size:0\.9375rem/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8')));
+}
+
+/* ── EL POPUP DEL MAPA, SIEMPRE POR ENCIMA DE LOS NÚMEROS (15-10-2026) ──
+   Su pantallazo de las 21:03: «0,6» de una ciudad pisando el título de la
+   tablita. La capa de números (.mvals) lleva z-index:4; el popup no llevaba
+   ninguno. Se compara el número de las dos reglas del CSS de verdad. */
+{
+  grupo('El popup del mapa va por encima de los números');
+  const css = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+  const z = sel => { const m = css.match(new RegExp(sel.replace(/[.]/g, '\\.') + '\\{[^}]*?z-index:\\s*(\\d+)')); return m ? +m[1] : null; };
+  const zNums = z('.mvals'), zPop = z('.omPop');
+  ok('.omPop tiene z-index y es MAYOR que el de .mvals (los números de las ciudades no pisan el popup)',
+     zNums !== null && zPop !== null && zPop > zNums, `.mvals ${zNums} · .omPop ${zPop}`);
+  ok('   y las filas de la tablita no se parten en dos líneas (nowrap en las celdas)',
+     /\.omPop \.pa td\{[^}]*white-space:nowrap/.test(css));
 }
 
 

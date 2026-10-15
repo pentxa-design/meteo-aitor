@@ -4846,9 +4846,9 @@ const Maps = {
                pegadas: «1 h 29 · 3 h 71 · 6 h 150 mm». */
             const f1 = x => (has(x) ? String(x.toFixed(x < 10 ? 1 : 0)).replace('.', ',') : '—');
             acum = `<div class="pa"><div class="pa__t">Agua caída hasta esa hora</div>`
-              + `<table><tr><td>en la última hora</td><td><b>${f1(a1)}</b> litros</td></tr>`
-              + `<tr><td>en las últimas 3 horas</td><td><b>${f1(a3)}</b> litros</td></tr>`
-              + `<tr><td>en las últimas 6 horas</td><td><b>${f1(a6)}</b> litros</td></tr></table>`
+              + `<table><tr><td>última hora</td><td><b>${f1(a1)}</b> litros</td></tr>`
+              + `<tr><td>últimas 3 horas</td><td><b>${f1(a3)}</b> litros</td></tr>`
+              + `<tr><td>últimas 6 horas</td><td><b>${f1(a6)}</b> litros</td></tr></table>`
               + `<div class="pa__p">litros por metro cuadrado (1 mm = 1 litro) · ${esc(nombreModelo)}</div></div>`;
           }
         } catch { /* sin acumulado: se enseña la intensidad sola, que es verdad */ }
