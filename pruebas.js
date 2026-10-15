@@ -12953,6 +12953,25 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && !/const gDatos = sel\.map\(h => h\.gust\)\.filter\(has\);/.test(src));
 }
 
+/* ── PRECIPITACIÓN ACUMULADA AL PULSAR: 1, 3 Y 6 HORAS (15-10-2026) ──
+   Suyo, con AguaceroWx al lado: 73 mm en 3 horas frente a nuestros 17-19
+   mm/h del mismo punto. El mapa da intensidad; al pulsar, además, el total. */
+{
+  grupo('El total de agua al pulsar el mapa');
+  const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const i = M.indexOf('function acumuladoDe(');
+  const f = new Function(M.slice(i, M.indexOf('\n}', i) + 2) + '\nreturn acumuladoDe;')();
+  const sr = [4, 5.5, 8, 12, 20, 24];   // las seis horas que terminan a las 23:00
+  ok('3 horas = las tres últimas sumadas (12 + 20 + 24 = 56), 1 hora = la última (24), 6 horas = todas (73,5)',
+     f(sr, 3) === 56 && f(sr, 1) === 24 && Math.abs(f(sr, 6) - 73.5) < 1e-9, [f(sr, 1), f(sr, 3), f(sr, 6)].join(' · '));
+  ok('   con un hueco en la serie no se suma: null, no un total más bajo',
+     f([4, null, 8, 12, 20, 24], 6) === null && f([4, 5.5, 8, 12, 20, NaN], 3) === null && f([1, 2], 6) === null && f(undefined, 3) === null);
+  ok('   y el popup lo pide a la API del MISMO modelo, solo en la capa Precipitación (no en Reflectividad) y lo dice en litros',
+     /if \(L_\.v === 'precipitation' && !L_\.dbz && hIso && modeloEnApi\(R\.modelo\)\)/.test(M)
+     && /models: modeloEnApi\(R\.modelo\), hourly: 'precipitation'/.test(M) && /\(1 mm = 1 litro\/m²\)/.test(M)
+     && /\$\{deDonde\}\$\{delPaso\}\$\{acum\}/.test(M));
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════
    EL RECUENTO VA EL ÚLTIMO. SIEMPRE.

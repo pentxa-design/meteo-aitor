@@ -652,6 +652,16 @@ function horasDelPaso(T, t) {
   const h = (new Date(T[i]).getTime() - new Date(T[i - 1]).getTime()) / 3600e3;
   return Number.isFinite(h) && h >= 1 ? Math.round(h) : 1;
 }
+/** Litros por metro cuadrado (mm) caídos en las últimas `n` horas, sumando las
+ *  `n` últimas de la serie horaria `serie` (la hora de cada valor es la del
+ *  FINAL de su hora, como las da Open-Meteo). null si falta cualquiera: una
+ *  suma con huecos no es una suma (11-10-2026, suyo con AguaceroWx al lado:
+ *  «precipitación en 3 horas… ¿litros?»). */
+function acumuladoDe(serie, n) {
+  if (!Array.isArray(serie) || n < 1 || serie.length < n) return null;
+  const t = serie.slice(serie.length - n);
+  return t.every(v => Number.isFinite(v)) ? t.reduce((a, b) => a + b, 0) : null;
+}
 /** El valor de la tesela pasado a «por hora» si la variable es una suma. */
 const porHora = (v, variable, h) => (esAcumulada(variable) && h > 1 && Number.isFinite(v)) ? v / h : v;
 /** La misma escala con los cortes multiplicados por las horas del paso. */
@@ -4813,7 +4823,30 @@ const Maps = {
           }
         } catch { /* sin dirección: se enseña la altura sola */ }
       }
-      pop.setHTML(`<b>${val.toFixed(Math.abs(val) < 10 ? 1 : 0)} ${esc(uTxt)}</b>${deDonde}${delPaso}
+      /* ── CUÁNTA AGUA HA CAÍDO: 1, 3 y 6 HORAS HASTA ESA HORA ─────────────
+         Suyo, 15-10-2026, con AguaceroWx al lado («precipitación en 3
+         horas, 73 mm» frente a nuestros 17-19 mm/h del mismo punto): el
+         mapa da INTENSIDAD (mm/h) y él necesita el TOTAL. Se pide a la API
+         del MISMO modelo, las seis horas que terminan a la hora del mapa, y
+         se suman; con un hueco, no se pone nada (acumuladoDe). 1 mm = 1
+         litro por metro cuadrado, y se dice. */
+      let acum = '';
+      if (L_.v === 'precipitation' && !L_.dbz && hIso && modeloEnApi(R.modelo)) {
+        try {
+          const fin = new Date(hIso + ':00Z').getTime();
+          const ini = new Date(fin - 5 * 3600e3).toISOString().slice(0, 13) + ':00';
+          const d = await jget(API.fc, { latitude: lngLat.lat.toFixed(4), longitude: lngLat.lng.toFixed(4),
+            timezone: 'UTC', models: modeloEnApi(R.modelo), hourly: 'precipitation', start_hour: ini, end_hour: hIso }, { timeout: 9000 });
+          const sr = d?.hourly?.precipitation;
+          const a1 = acumuladoDe(sr, 1), a3 = acumuladoDe(sr, 3), a6 = acumuladoDe(sr, 6);
+          if (d?.hourly?.time?.at(-1) === hIso && has(a3)) {
+            const f1 = x => (has(x) ? x.toFixed(x < 10 ? 1 : 0) : '—');
+            acum = `<br><small>agua caída hasta esa hora: <b>1 h ${f1(a1)}</b> · <b>3 h ${f1(a3)}</b> · <b>6 h ${f1(a6)}</b> mm `
+              + `(1 mm = 1 litro/m²) · de la API, ${esc(nombreModelo)}</small>`;
+          }
+        } catch { /* sin acumulado: se enseña la intensidad sola, que es verdad */ }
+      }
+      pop.setHTML(`<b>${val.toFixed(Math.abs(val) < 10 ? 1 : 0)} ${esc(uTxt)}</b>${deDonde}${delPaso}${acum}
          ${imposible ? `<small style="color:var(--no);font-weight:700">${esc(imposible)}</small>` : ''}
          <br><small>${esc(L_.name)} · ${esc(hora)}
          <br>${lngLat.lat.toFixed(3)}, ${lngLat.lng.toFixed(3)}

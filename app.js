@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.11-2312';
+const BUILD = '2026.10.15-1623';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -3578,6 +3578,7 @@ const COBERTURA = {
     "meteofrance_arome_france_hd",
     "icon_seamless",
     "meteofrance_arpege_europe",
+    "ecmwf_ifs025",
     "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
@@ -3587,6 +3588,7 @@ const COBERTURA = {
     "best_match",
     "icon_seamless",
     "meteofrance_arpege_europe",
+    "ecmwf_ifs025",
     "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",
@@ -3615,6 +3617,7 @@ const COBERTURA = {
     "meteofrance_arome_france_hd",
     "icon_seamless",
     "meteofrance_arpege_europe",
+    "ecmwf_ifs025",
     "ecmwf_ifs",
     "knmi_harmonie_arome_europe",
     "gem_seamless",

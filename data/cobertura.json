@@ -1,5 +1,5 @@
 {
-  "cuando": "2026-10-11T21:11:25.847Z",
+  "cuando": "2026-10-15T14:22:11.204Z",
   "sitios": [
     "Bermeo",
     "Calpe"
@@ -145,6 +145,7 @@
       "meteofrance_arome_france_hd",
       "icon_seamless",
       "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
       "ecmwf_ifs",
       "knmi_harmonie_arome_europe",
       "gem_seamless",
@@ -154,6 +155,7 @@
       "best_match",
       "icon_seamless",
       "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
       "ecmwf_ifs",
       "knmi_harmonie_arome_europe",
       "gem_seamless",
@@ -182,6 +184,7 @@
       "meteofrance_arome_france_hd",
       "icon_seamless",
       "meteofrance_arpege_europe",
+      "ecmwf_ifs025",
       "ecmwf_ifs",
       "knmi_harmonie_arome_europe",
       "gem_seamless",
