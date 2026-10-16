@@ -13045,8 +13045,8 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      colorAcum(0.9, bp, cols) === null && colorAcum(NaN, bp, cols) === null
      && JSON.stringify(colorAcum(5, bp, cols)) === JSON.stringify([...cols[3].slice(0, 3), 255]) && JSON.stringify(colorAcum(400, bp, cols)) === JSON.stringify([...cols[10].slice(0, 3), 255])
      && colorAcum(35, bp, cols)[0] > cols[5][0] && colorAcum(35, bp, cols)[0] < cols[6][0]);
-  ok('la capa existe en el grupo Lluvia, sin teselas (apply la desvía), con selector de horas y se quita con las demás capas de datos',
-     /\{ id:'acum', g:'Lluvia', name:'Lluvia acumulada', v:'precipitation', unit:'mm', acum:true, escala:'acum'/.test(M)
+  ok('la capa acumulada está RETIRADA del selector (suyo, 17-10: «chapuza de manchón»), una capa guardada que no existe cae a Precipitación, y el código de rehacerla sigue (desvío en apply, selector de horas, se quita con las demás)',
+     /CAPA RETIRADA el 17-10-2026/.test(M) && !/^\s*\{ id:'acum'/m.test(M) && /guardada = LS\.get\('tlayer', 'precipitation'\);\s*\n\s*this\.layer = TLAYERS\.some\(l => l\.id === guardada\) \? guardada : 'precipitation';/.test(M)
      && /if \(L_\.acum\) \{[\s\S]{0,400}?await this\.pintarAcum\(L_, R\);/.test(M)
      && /'aemetLayer', 'acumLayer'/.test(M) && /'aemetSrc', 'acumSrc'/.test(M)
      && /L_\.sat \|\| L_\.acum \|\| !this\.usando/.test(M) && /data-ta="\$\{h\}"/.test(M)

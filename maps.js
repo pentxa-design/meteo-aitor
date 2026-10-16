@@ -319,8 +319,12 @@ const TLAYERS = [
      de cada paso), así que se SUMA: una rejilla de ~400 puntos pedida a la API
      (una sola petición) con la lluvia de las N horas que terminan a la hora del
      mapa, suavizada en una imagen. Litros por metro cuadrado, 1 mm = 1 litro. */
-  { id:'acum', g:'Lluvia', name:'Lluvia acumulada', v:'precipitation', unit:'mm', acum:true, escala:'acum',
-    desc:'Litros por metro cuadrado caídos en las últimas 6, 12, 24, 48 o 72 horas hasta la hora del mapa: la suma de la previsión del modelo, como la «Acumulación de lluvia» de Windy' },
+  /* CAPA RETIRADA el 17-10-2026 (suyo, viéndola: «esto chapuza de manchón de color, no?» · «luego reparas»): una
+     rejilla de ~150 puntos de la API no da el detalle por píxel de Windy (manchas de cientos de km al alejar) y gasta
+     el cupo por minuto de Open-Meteo que comparte la ficha. NO se puede elegir; el código (apply, pintarAcum,
+     rejillaAcum, escala `acum`) se queda para REHACERLA bien (por teselas, sin cupo). Entrada tal cual: */
+  // { id:'acum', g:'Lluvia', name:'Lluvia acumulada', v:'precipitation', unit:'mm', acum:true, escala:'acum',
+  //   desc:'Litros por metro cuadrado caídos en las últimas 6, 12, 24, 48 o 72 horas hasta la hora del mapa: la suma de la previsión del modelo, como la «Acumulación de lluvia» de Windy' },
   { id:'snow_depth', g:'Lluvia', name:'Espesor de nieve', v:'snow_depth', unit:'m',
     desc:'Nieve acumulada en el suelo' },
   /* Suyo, 14-09-2026: «esta capa debe de estar en lluvia». Y con escala
@@ -2051,7 +2055,9 @@ const Maps = {
       LS.set('tmodelLimpio0609', true);
     }
     this.model = LS.get('tmodel', 'dwd_icon_eu');
-    this.layer = LS.get('tlayer', 'precipitation');
+    /* Una capa guardada que ya no existe (la acumulada se retiró el 17-10-2026) no puede romper el mapa: cae a Precipitación. */
+    const guardada = LS.get('tlayer', 'precipitation');
+    this.layer = TLAYERS.some(l => l.id === guardada) ? guardada : 'precipitation';
     this.base  = LS.get('tbase',  'claro');
     this.terrain = LS.get('tterrain', true);
     this.pasoHoras = LS.get('tpaso', 3);
