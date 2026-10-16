@@ -13038,8 +13038,8 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   /* 16-10-2026: la imagen salió TRANSPARENTE (alfa 0-1 escrito en un canal 0-255) y la prueba pasaba porque
      usaba colores inventados con alfa 255. Ahora se prueba con la escala de verdad. */
   const opaco = v => (colorAcum(v, bpReal, colsReales) || [0, 0, 0, 0])[3];
-  ok('con la escala REAL, 50 litros y 200 litros se pintan opacos (alfa > 240 de 255), 1,5 litros se ve flojo (entre 60 y 200) y 0,5 no se pinta',
-     opaco(50) > 240 && opaco(200) > 240 && opaco(1.5) > 60 && opaco(1.5) < 200 && colorAcum(0.5, bpReal, colsReales) === null);
+  ok('con la escala REAL, 50 y 200 litros se pintan opacos (alfa > 240 de 255), ya 1,5 litros se ve con contraste (alfa > 200) y 0,5 no se pinta',
+     opaco(50) > 240 && opaco(200) > 240 && opaco(1.5) > 200 && colorAcum(0.5, bpReal, colsReales) === null);
   const cols = bp.map((_, i) => [i * 20, 100, 200 - i * 10, 1]);
   ok('el color: por debajo de 1 litro, nada (transparente); 5 litros = el color del corte; 400 litros = el último; 35 está entre el de 20 y el de 50',
      colorAcum(0.9, bp, cols) === null && colorAcum(NaN, bp, cols) === null
@@ -13047,7 +13047,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && colorAcum(35, bp, cols)[0] > cols[5][0] && colorAcum(35, bp, cols)[0] < cols[6][0]);
   ok('la capa existe en el grupo Lluvia, sin teselas (apply la desvía), con selector de horas y se quita con las demás capas de datos',
      /\{ id:'acum', g:'Lluvia', name:'Lluvia acumulada', v:'precipitation', unit:'mm', acum:true, escala:'acum'/.test(M)
-     && /if \(L_\.acum\) \{\s*await this\.pintarAcum\(L_, R\);/.test(M)
+     && /if \(L_\.acum\) \{[\s\S]{0,400}?await this\.pintarAcum\(L_, R\);/.test(M)
      && /'aemetLayer', 'acumLayer'/.test(M) && /'aemetSrc', 'acumSrc'/.test(M)
      && /L_\.sat \|\| L_\.acum \|\| !this\.usando/.test(M) && /data-ta="\$\{h\}"/.test(M)
      && /Maps\.setAcumHoras\(\+b\.dataset\.ta\)/.test(fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8')));
@@ -13066,11 +13066,11 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && acumDeSerie(serie, h0, h0 + 10 * 3600e3, 24) === null && acumDeSerie(undefined, h0, h0, 6) === null);
   const cuerpo = M.slice(M.indexOf('  async rejillaAcum(R, fin, n) {'), M.indexOf('  async pintarAcum(L_, R) {'));
   const montarRejilla = (jgetFalso) => {
-    const f = new Function('modeloEnApi', 'mercY', 'latDeMerc', 'ACUM_PUNTOS', 'acumDeSerie', 'jget', 'API', 'TLAYERS',
+    const f = new Function('modeloEnApi', 'mercY', 'latDeMerc', 'ACUM_PUNTOS', 'acumDeSerie', 'jget', 'API', 'TLAYERS', 'ACUM_RESPALDO',
       'const o = { ' + cuerpo.replace(/^\s*async rejillaAcum/, 'rejillaAcum: async function') + ' }; return o.rejillaAcum;');
     const rad = g => g * Math.PI / 180;
     const mercY = l => Math.log(Math.tan(Math.PI / 4 + rad(l) / 2)), latDeMerc = mm => 2 * Math.atan(Math.exp(mm)) * 180 / Math.PI - 90;
-    return f(x => x, mercY, latDeMerc, 150, acumDeSerie, jgetFalso, { fc: 'fc' }, [{ id: 'acum', acum: true }]);
+    return f(x => x, mercY, latDeMerc, 150, acumDeSerie, jgetFalso, { fc: 'fc' }, [{ id: 'acum', acum: true }], 'ecmwf_ifs');
   };
   const caja = { getBounds: () => ({ getNorth: () => 43.4, getSouth: () => 37.9, getWest: () => -2.3, getEast: () => 1.1 }) };
   const hora = i => new Date(h0 + 72 * 3600e3 + i * 3600e3).toISOString();
@@ -13087,6 +13087,20 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
        llamadas === 1 && puntos <= 150 && puntos >= 60 && G1.val.every(v => Math.abs(v - 12) < 1e-9),
        `peticiones ${llamadas}, puntos ${puntos}, primer valor ${G1.val[0]}`);
   })());
+  /* 16-10-2026, medido en su panel: con AROME HD (su modelo por defecto) la API contestó 400 «No data is available
+     for this location» (un punto fuera del dominio rechaza TODA la petición) y la capa quedó vacía y reintentando. */
+  (globalThis.__pendientes ||= []).push((async () => {
+    const modelos = [];
+    const jg = async (u, par) => { modelos.push(par.models); if (par.models === 'meteofrance_arome_france_hd') throw new Error('HTTP 400');
+      return Array.from({ length: par.latitude.split(',').length }, () => ({ hourly: { precipitation: Array(200).fill(0.5) } })); };
+    const rej = montarRejilla(jg); const este = { map: caja, layer: 'acum', apply() {} };
+    const R400 = { modelo: 'meteofrance_arome_france_hd', meta: { valid_times: [hora(0), hora(200)] } };
+    const G = await rej.call(este, R400, hora(10), 24);
+    await rej.call(este, R400, hora(12), 24);
+    ok('AROME HD da 400 (no cubre toda la zona): la capa suma con ECMWF 9 km, lo marca como sustituido y NO repite la petición fallida al cambiar de hora',
+       modelos.join() === 'meteofrance_arome_france_hd,ecmwf_ifs' && G.sustituido === 'ecmwf_ifs' && G.om === 'ecmwf_ifs' && G.val.every(v => Math.abs(v - 12) < 1e-9),
+       'modelos pedidos: ' + modelos.join());
+  })());
   (globalThis.__pendientes ||= []).push((async () => {
     let llamadas = 0;
     const jg = async () => { llamadas++; throw new Error('HTTP 429'); };
@@ -13101,23 +13115,32 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   /* El parpadeo: repintar con la imagen ya puesta cambia la FOTO; nunca quita y vuelve a montar la capa. */
   const cuerpoP = M.slice(M.indexOf('  async pintarAcum(L_, R) {'), M.indexOf('  /** Al pulsar: lo caído en ese punto'));
   const montarPintar = () => {
-    const f = new Function('imagenAcum', 'escalasPropias', 'coma', 'esc', 'TMODELS',
+    const f = new Function('imagenAcum', 'escalasPropias', 'coma', 'esc', 'TMODELS', 'VIVOS',
       'const o = { ' + cuerpoP.replace(/^\s*async pintarAcum/, 'pintarAcum: async function') + ' }; return o.pintarAcum;');
     return f(() => 'data:image/png;base64,AAAA', () => ({ acum: { scale: { breakpoints: [0, 1], colors: [[0, 0, 0, 0], [0, 0, 0, 1]] } } }),
-      (n) => String(n), x => x, []);
+      (n) => String(n), x => x, [], { 'raster-saturation': 0.5 });
   };
   (globalThis.__pendientes ||= []).push((async () => {
-    const reg = []; const fuentes = {}, capas = new Set();
+    const reg = [], estados = []; const fuentes = {}, capas = new Set();
     const mapa = { getSource: id => fuentes[id] ? { updateImage: o => reg.push('updateImage') } : undefined, getLayer: id => capas.has(id) ? {} : undefined,
       addSource: (id) => { fuentes[id] = 1; reg.push('addSource'); }, removeSource: id => { delete fuentes[id]; reg.push('removeSource'); },
       addLayer: o => { capas.add(o.id); reg.push('addLayer:' + o.id); }, removeLayer: id => { capas.delete(id); reg.push('removeLayer'); } };
-    const este = { map: mapa, acumHoras: 24, t: 0, layer: 'acum', opacity: 0.75, _acumN: 0, status() {}, firstLabelLayer: () => 'rotulos', sueloParaLluvia() { capas.add('sueloLluviaLayer'); reg.push('suelo'); },
-      rejillaAcum: async () => ({ nx: 2, ny: 2, val: [1, 2, 3, 4], lat0: 1, lat1: 0, lon0: 0, lon1: 1 }), usando: {} };
+    const este = { map: mapa, acumHoras: 24, t: 0, layer: 'acum', opacity: 0.75, _acumN: 0, status(t) { estados.push(t); }, firstLabelLayer: () => 'rotulos', sueloParaLluvia() { capas.add('sueloLluviaLayer'); reg.push('suelo'); },
+      rejillaAcum: async () => ({ nx: 2, ny: 2, val: [1, 2, 3, 4], lat0: 1, lat1: 0, lon0: 0, lon1: 1, om: 'ecmwf_ifs', sustituido: 'ecmwf_ifs' }), usando: {} };
     const pintar = montarPintar();
     const L_ = { id: 'acum' }, R_ = { modelo: 'x', meta: { valid_times: ['2026-10-17T11:00:00Z'] } };
     await pintar.call(este, L_, R_);
     const primera = reg.slice(); reg.length = 0;
     await pintar.call(este, L_, R_); await pintar.call(este, L_, R_);
+    ok('el popup pregunta al MISMO modelo con que se pintó la imagen (si se sustituyó, el sustituto), no al elegido: se guarda en _acumUsado',
+       este._acumUsado?.om === 'ecmwf_ifs' && este._acumUsado?.sustituido === 'ecmwf_ifs',
+       JSON.stringify(este._acumUsado));
+    ok('consultarAcum usa _acumUsado.om antes que el modelo elegido',
+       /const om = this\._acumUsado\?\.om \|\| modeloEnApi\(R\.modelo\);/.test(M));
+    ok('la barra final dice con qué modelo se SUMÓ (no el elegido): «no cubre toda esta zona: sumado con …» y nunca «paso de 3 h» ni «AROME HD · pasada»',
+       /no cubre toda esta zona: sumado con ecmwf_ifs/.test(estados.at(-1) || '') && !/pasada de las/.test(estados.at(-1) || ''), String(estados.at(-1)).slice(0, 200));
+    ok('apply() escribe la hora y la leyenda ANTES de pintar la acumulada, para que stamp() no pise el mensaje con el modelo equivocado',
+       /this\.stamp\(\); this\.legend\(\);\s*await this\.pintarAcum\(L_, R\);/.test(M));
     ok('repintar la lluvia acumulada (cambio de hora) cambia la foto con updateImage: ni quita ni vuelve a montar la capa ni el suelo (así no parpadea)',
        primera.includes('addLayer:acumLayer') && reg.join() === 'updateImage,updateImage',
        'repintado: ' + reg.join());
@@ -13125,11 +13148,18 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('apply() no borra la imagen de la lluvia acumulada al repintarla: quitarCapasDeDatos(true) conserva acumLayer, acumSrc y el suelo',
      /quitarCapasDeDatos\(conservarAcum = false\)/.test(M) && /this\.quitarCapasDeDatos\(!!TLAYERS\.find\(l => l\.id === this\.layer\)\?\.acum\);/.test(M)
      && /if \(conservarAcum && id === 'acumLayer'\) return;/.test(M) && /if \(conservarAcum && id === 'acumSrc'\) return;/.test(M));
-  ok('la rampa es AZUL (suyo, 16-10): de 1 a 20 litros, azules (el canal azul manda sobre el rojo y el verde); y el rojo/naranja solo a partir de 150',
+  ok('las capas de datos van más vivas (suyo, 16-10: «sosos»): el modelo y la acumulada llevan raster-saturation y raster-contrast, y las nubes blancas quedan fuera',
+     /const VIVOS = \{ 'raster-saturation': 0\.[3-9]\d*, 'raster-contrast': 0\.\d+ \};/.test(M)
+     && /\.\.\.\(L_\.escala === 'nubes' \? \{\} : VIVOS\)/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
+  ok('la rampa es EXACTAMENTE la «Acumulación de lluvia» de Windy (tabla leída de windy.com/colors el 16-10-2026): cortes 0·1·5·10·30·50·80·120·200·320·600 y sus once colores, todos opacos desde 5 litros',
      (() => { const t = M.slice(M.indexOf('const acc = ['), M.indexOf('];', M.indexOf('const acc = [')));
-       const hx = [...t.matchAll(/'#([0-9a-f]{6})'/g)].map(x => x[1]);
-       const az = h => parseInt(h.slice(4, 6), 16) > parseInt(h.slice(0, 2), 16) + 0x30 && parseInt(h.slice(4, 6), 16) >= parseInt(h.slice(2, 4), 16);
-       return hx.length === 11 && hx.slice(0, 6).every(az) && parseInt(hx[9].slice(0, 2), 16) > 0xc0; })());
+       const hx = [...t.matchAll(/'#([0-9a-f]{6})',(\.?\d+)/g)];
+       return JSON.stringify(bpReal) === JSON.stringify([0, 1, 5, 10, 30, 50, 80, 120, 200, 320, 600])
+         && hx.map(x => x[1]).join() === '4040a3,4040a3,466ae3,29bbec,31f199,a3fd3d,edd03b,fb8022,d23104,7a0403,300000'
+         && hx.slice(2).every(x => Number(x[2]) === 1); })());
+  ok('si el modelo no cubre toda la zona (400 de la API) la capa NO se queda en blanco: suma con el modelo global y lo dice en la barra y en el popup',
+     /const ACUM_RESPALDO = 'ecmwf_ifs';/.test(M) && /if \(!\/400\/\.test\(String\(e\.message\)\) \|\| !alt \|\| alt === om\) throw e;/.test(M)
+     && /no cubre toda esta zona: sumado con/.test(M) && /no llega a este punto/.test(M));
 }
 
 
