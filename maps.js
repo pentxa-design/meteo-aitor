@@ -677,7 +677,7 @@ function acumuladoDe(serie, n) {
 }
 /* ── LLUVIA ACUMULADA: HELPERS (16-10-2026) ── */
 const ACUM_HORAS = [6, 12, 24, 48, 72];
-const ACUM_PUNTOS = 250;                      // una sola petición; la cuota gratuita de la API cuenta por puntos y días, y moviendo el mapa se repite
+const ACUM_PUNTOS = 150;                      // la cuota de la API es POR MINUTO y cuenta cada punto: con 250 y una petición por cambio de hora saltó el 429 (16-10-2026) y se llevó por delante a la ficha
 const mercY = lat => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI / 180) / 2));
 const latDeMerc = y => (2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180 / Math.PI;
 /** Suma de la serie horaria; null si falta más de una cuarta parte de las horas: una suma con huecos sale baja y se lee como calma. */
@@ -685,6 +685,13 @@ function sumaAcum(serie, n) {
   if (!Array.isArray(serie) || !serie.length) return null;
   const v = serie.filter(Number.isFinite);
   return v.length >= Math.ceil(n * 0.75) ? v.reduce((a, b) => a + b, 0) : null;
+}
+/** La suma de las `n` horas que terminan en `finMs` dentro de una serie horaria guardada que empieza en `t0Ms`. Sin red. */
+function acumDeSerie(serie, t0Ms, finMs, n) {
+  if (!Array.isArray(serie)) return null;
+  const i1 = Math.round((finMs - t0Ms) / 3600e3), i0 = i1 - n + 1;
+  if (i0 < 0 || i1 >= serie.length) return null;                   // fuera de lo guardado: no se inventa
+  return sumaAcum(serie.slice(i0, i1 + 1), n);
 }
 /** El color de un total (mm) en la escala: continuo entre cortes; null por debajo del primer corte. */
 function colorAcum(v, bp, cols) {
@@ -1670,11 +1677,11 @@ function escalasPropias() {
     eje: t8m.slice(0, -1), unidad: '°C', pos: t8m.slice(0, -1).map((_, i) => i),
   };
 
-  /* Lluvia acumulada, en litros por m²: verde flojo → amarillo → rojo → morado, la
-     rampa de la «Acumulación de lluvia» de Windy. Por debajo de 1 litro no se pinta. */
+  /* Lluvia acumulada, en litros por m²: AZUL (suyo, 16-10-2026: «la lluvia o el agua, color azul mejor»),
+     más oscuro cuanto más cae, y violeta → rojo → naranja solo para los extremos. Por debajo de 1 litro no se pinta. */
   const acm = [0, 1, 2, 5, 10, 20, 50, 100, 150, 200, 300];
-  const acc = [['#2bb673',0], ['#2bb673',.55], ['#6cc644',.8], ['#b8d83a',.9], ['#f2e63a',1], ['#f5a623',1],
-               ['#e8452b',1], ['#b3122b',1], ['#8e1a8e',1], ['#b44dff',1], ['#f0a0ff',1]];
+  const acc = [['#8fd3ff',0], ['#8fd3ff',.55], ['#5ab2ff',.75], ['#2f86f0',.9], ['#1f5fd6',1], ['#2a3fb8',1],
+               ['#5a2db0',1], ['#9b1fa0',1], ['#d0267b',1], ['#f0483e',1], ['#ffb347',1]];
   const acum = {
     scale: { type:'breakpoint', unit:'mm', breakpoints: acm, colors: acc.map(([c,a]) => hexRGBA(c, a)) },
     eje: acm.slice(), unidad: 'litros/m²', pos: acm.slice(),
@@ -2859,7 +2866,7 @@ const Maps = {
     // que es otra vez el rótulo diciendo una cosa y la pantalla otra.
     clearInterval(this._relojCarga);
     this.cargando(false);
-    this.quitarCapasDeDatos();
+    this.quitarCapasDeDatos(!!TLAYERS.find(l => l.id === this.layer)?.acum);
     // Y los números de la capa ANTERIOR se borran ya. Si no, mientras
     // carga la nueva se quedan en pantalla bajo el nombre de la nueva:
     // el 24-08-2026 el mapa ponía «Humedad» con los 1013, 1012 de la
@@ -3193,34 +3200,51 @@ const Maps = {
     const om = modeloEnApi(R.modelo);
     if (!om) throw new Error('este modelo no se puede acumular: elige otro en la barra de modelos');
     const b = this.map.getBounds();
-    const N = Math.max(b.getNorth(), b.getSouth()), S = Math.min(b.getNorth(), b.getSouth());
-    const lat0 = Math.min(85, N), lat1 = Math.max(-85, S), lon0 = b.getWest(), lon1 = b.getEast();
-    const cuenta = ACUM_PUNTOS;
+    /* La caja se ajusta HACIA FUERA a grados enteros: mover el mapa un poco o cambiar de hora da la MISMA petición
+       y no se vuelve a pedir nada. Pedir de nuevo en cada gesto agotó el cupo por minuto (429) y la capa se quedó vacía. */
+    const lat0 = Math.min(85, Math.ceil(Math.max(b.getNorth(), b.getSouth()))), lat1 = Math.max(-85, Math.floor(Math.min(b.getNorth(), b.getSouth())));
+    const lon0 = Math.floor(b.getWest()), lon1 = Math.ceil(b.getEast());
     const ancho = lon1 - lon0, m0 = mercY(lat0), m1 = mercY(lat1);
     const prop = Math.abs(m0 - m1) / (ancho * Math.PI / 180) || 1;
-    let nx = Math.round(Math.sqrt(cuenta / prop)); nx = Math.max(6, Math.min(40, nx));
-    let ny = Math.round(nx * prop);               ny = Math.max(6, Math.min(40, ny));
-    while (nx * ny > cuenta) { if (nx >= ny) nx--; else ny--; }
-    const lats = [], lons = [];
-    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-      lats.push(latDeMerc(m0 + (m1 - m0) * (j / (ny - 1))).toFixed(3));
-      lons.push((lon0 + ancho * (i / (nx - 1))).toFixed(3));
-    }
-    const fin_ = new Date(fin), ini_ = new Date(fin_.getTime() - (n - 1) * 3600e3);
-    const hh = d => d.toISOString().slice(0, 13) + ':00';
-    /* La misma petición no se repite: memoria de las últimas 12 (modelo, hora, horas y caja redondeada a medio grado). */
-    const r5 = x => (Math.round(x * 2) / 2).toFixed(1);
-    const clave = [om, hh(fin_), n, r5(lat0), r5(lat1), r5(lon0), r5(lon1), nx, ny].join('|');
+    let nx = Math.round(Math.sqrt(ACUM_PUNTOS / prop)); nx = Math.max(6, Math.min(40, nx));
+    let ny = Math.round(nx * prop);                     ny = Math.max(6, Math.min(40, ny));
+    while (nx * ny > ACUM_PUNTOS) { if (nx >= ny) nx--; else ny--; }
+    const finMs = new Date(fin).getTime();
+    const clave = [om, lat0, lat1, lon0, lon1, nx, ny].join('|');   // SIN la hora: la serie guardada vale para cualquier hora que cubra
     this._acumMem ??= new Map();
-    if (this._acumMem.has(clave)) return this._acumMem.get(clave);
-    const d = await jget(API.fc, { latitude: lats.join(','), longitude: lons.join(','), models: om, hourly: 'precipitation',
-      timezone: 'UTC', start_hour: hh(ini_), end_hour: hh(fin_) }, { timeout: 20000 });
-    const L = Array.isArray(d) ? d : [d];
-    const val = L.map(p => sumaAcum(p?.hourly?.precipitation, n));
-    const G = { nx, ny, val, lat0, lat1, lon0, lon1, om, n, hh: hh(fin_) };
-    this._acumMem.set(clave, G);
-    if (this._acumMem.size > 12) this._acumMem.delete(this._acumMem.keys().next().value);
-    return G;
+    let E = this._acumMem.get(clave);
+    if (!(E && finMs - (n - 1) * 3600e3 >= E.t0 && finMs <= E.t1)) {
+      if (this._acumFrio && Date.now() < this._acumFrio) throw new Error('Open-Meteo pide esperar un minuto; se reintenta solo');
+      const lats = [], lons = [];
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+        lats.push(latDeMerc(m0 + (m1 - m0) * (j / (ny - 1))).toFixed(3));
+        lons.push((lon0 + ancho * (i / (nx - 1))).toFixed(3));
+      }
+      const hh = d => d.toISOString().slice(0, 13) + ':00';
+      /* Una sola petición para 72 h hacia atrás y 96 hacia delante (tope: la última hora del modelo): el peso por punto
+         no cambia hasta 14 días, así que cuanto más cubra, menos veces se pide. */
+      const ultimo = new Date(R.meta?.valid_times?.at(-1) || fin).getTime();
+      const t0 = finMs - 71 * 3600e3, t1 = Math.max(finMs, Math.min(ultimo, finMs + 96 * 3600e3));
+      let d;
+      try {
+        d = await jget(API.fc, { latitude: lats.join(','), longitude: lons.join(','), models: om, hourly: 'precipitation',
+          timezone: 'UTC', start_hour: hh(new Date(t0)), end_hour: hh(new Date(t1)) }, { timeout: 20000 });
+      } catch (e) {
+        if (/429/.test(String(e.message))) {
+          this._acumFrio = Date.now() + 61000;
+          clearTimeout(this._acumReint);
+          this._acumReint = setTimeout(() => { if (TLAYERS.find(l => l.id === this.layer)?.acum) this.apply(); }, 62000);
+          throw new Error('Open-Meteo ha pedido esperar un minuto (límite por minuto); se reintenta solo');
+        }
+        throw e;
+      }
+      const L = Array.isArray(d) ? d : [d];
+      E = { t0, t1, series: L.map(p => p?.hourly?.precipitation) };
+      this._acumMem.set(clave, E);
+      if (this._acumMem.size > 4) this._acumMem.delete(this._acumMem.keys().next().value);
+    }
+    const val = E.series.map(s => acumDeSerie(s, E.t0, finMs, n));
+    return { nx, ny, val, lat0, lat1, lon0, lon1, om, n };
   },
   async pintarAcum(L_, R) {
     const fin = R.meta?.valid_times?.[this.t];
@@ -3241,14 +3265,19 @@ const Maps = {
     if (pedido !== this._acumN || this.layer !== L_.id) return;       // llegó tarde
     const E = escalasPropias().acum;
     const url = imagenAcum(G, E.scale.breakpoints, E.scale.colors);
-    ['acumLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
-    ['acumSrc'].forEach(id => { if (this.map.getSource(id)) this.map.removeSource(id); });
-    this.map.addSource('acumSrc', { type: 'image', url,
-      coordinates: [[G.lon0, G.lat0], [G.lon1, G.lat0], [G.lon1, G.lat1], [G.lon0, G.lat1]] });
-    this.map.addLayer({ id: 'acumLayer', type: 'raster', source: 'acumSrc',
-      paint: { 'raster-opacity': Math.max(this.opacity, 0.9), 'raster-fade-duration': 0, 'raster-resampling': 'linear' } },
-      this.firstLabelLayer());
-    this.sueloParaLluvia(true);
+    const coords = [[G.lon0, G.lat0], [G.lon1, G.lat0], [G.lon1, G.lat1], [G.lon0, G.lat1]];
+    /* SIN PARPADEO: si la imagen ya está puesta se le CAMBIA la foto; nunca se quita y se vuelve a montar
+       (eso dejaba el mapa en blanco un instante en cada cambio de hora). */
+    const src = this.map.getSource('acumSrc');
+    if (src && this.map.getLayer('acumLayer')) src.updateImage({ url, coordinates: coords });
+    else {
+      if (src) this.map.removeSource('acumSrc');
+      this.map.addSource('acumSrc', { type: 'image', url, coordinates: coords });
+      this.map.addLayer({ id: 'acumLayer', type: 'raster', source: 'acumSrc',
+        paint: { 'raster-opacity': Math.max(this.opacity, 0.9), 'raster-fade-duration': 0, 'raster-resampling': 'linear' } },
+        this.firstLabelLayer());
+    }
+    if (!this.map.getLayer('sueloLluviaLayer')) this.sueloParaLluvia(true);
     const validos = G.val.filter(Number.isFinite), maxv = validos.length ? Math.max(...validos) : null;
     const nombre = TMODELS.find(m => m.id === R.modelo)?.name || R.modelo;
     this.status(`Lluvia acumulada · litros por m² (1 mm = 1 litro) en las ${n} h hasta la hora del mapa · suma de la previsión de ${esc(nombre)}`
@@ -3531,13 +3560,14 @@ const Maps = {
      enseñaba el eco del radar sobre el satélite mientras la leyenda
      ponía «Ráfagas · kt» y las ráfagas quedaban debajo, tapadas. Leer
      una capa creyendo que es otra es peor que no tener mapa. */
-  quitarCapasDeDatos() {
+  quitarCapasDeDatos(conservarAcum = false) {
     const CAPAS  = ['omLayer', 'omLayer2', 'radarLayer', 'satLayer', 'aemetLayer', 'acumLayer',
                     'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'];
     const FUENTES = ['omSrc', 'omSrc2', 'radarSrc', 'satSrc', 'aemetSrc', 'acumSrc', 'isoSrc'];
-    CAPAS.forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
-    ['sueloLluviaLayer', 'marLluviaLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
-    FUENTES.forEach(id => { if (this.map.getSource(id)) this.map.removeSource(id); });
+    /* Repintando la lluvia acumulada NO se quita su imagen ni su suelo: se le cambia la foto encima (sin parpadeo). */
+    CAPAS.forEach(id => { if (conservarAcum && id === 'acumLayer') return; if (this.map.getLayer(id)) this.map.removeLayer(id); });
+    if (!conservarAcum) ['sueloLluviaLayer', 'marLluviaLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
+    FUENTES.forEach(id => { if (conservarAcum && id === 'acumSrc') return; if (this.map.getSource(id)) this.map.removeSource(id); });
   },
 
   /* ── EL SUELO EN TONO TIERRA BAJO LAS NUBES (15-09-2026) ─────────────

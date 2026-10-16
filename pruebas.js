@@ -13051,8 +13051,85 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /'aemetLayer', 'acumLayer'/.test(M) && /'aemetSrc', 'acumSrc'/.test(M)
      && /L_\.sat \|\| L_\.acum \|\| !this\.usando/.test(M) && /data-ta="\$\{h\}"/.test(M)
      && /Maps\.setAcumHoras\(\+b\.dataset\.ta\)/.test(fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8')));
-  ok('   y no pide más de 250 puntos por petición ni repite la misma (memoria), para no gastar la cuota de la API',
-     /const ACUM_PUNTOS = 250;/.test(M) && /this\._acumMem\.has\(clave\)/.test(M));
+  ok('   y no pide más de 150 puntos por petición (la cuota de la API es por minuto y por punto)',
+     /const ACUM_PUNTOS = 150;/.test(M));
+
+  /* 16-10-2026, suyo: «tarda mucho y parpadea, y la lluvia en azul». La causa de lo primero: una petición de 250
+     puntos por CADA cambio de hora o gesto en el mapa → 429 «Minutely API request limit» → mapa vacío, y de
+     paso se le acababa el cupo a la ficha. Se EJECUTA rejillaAcum con la red de mentira. */
+  const acumDeSerie = new Function(M.slice(M.indexOf('function sumaAcum('), M.indexOf('\n}', M.indexOf('function sumaAcum(')) + 2) + '\n'
+    + M.slice(M.indexOf('function acumDeSerie('), M.indexOf('\n}', M.indexOf('function acumDeSerie(')) + 2) + '\nreturn acumDeSerie;')();
+  const h0 = Date.parse('2026-10-14T00:00:00Z');
+  const serie = Array(150).fill(1);
+  ok('una serie guardada se suma sin red: 24 h dentro = 24 litros; una hora fuera de lo guardado da null (no se inventa)',
+     acumDeSerie(serie, h0, h0 + 100 * 3600e3, 24) === 24 && acumDeSerie(serie, h0, h0 + 200 * 3600e3, 24) === null
+     && acumDeSerie(serie, h0, h0 + 10 * 3600e3, 24) === null && acumDeSerie(undefined, h0, h0, 6) === null);
+  const cuerpo = M.slice(M.indexOf('  async rejillaAcum(R, fin, n) {'), M.indexOf('  async pintarAcum(L_, R) {'));
+  const montarRejilla = (jgetFalso) => {
+    const f = new Function('modeloEnApi', 'mercY', 'latDeMerc', 'ACUM_PUNTOS', 'acumDeSerie', 'jget', 'API', 'TLAYERS',
+      'const o = { ' + cuerpo.replace(/^\s*async rejillaAcum/, 'rejillaAcum: async function') + ' }; return o.rejillaAcum;');
+    const rad = g => g * Math.PI / 180;
+    const mercY = l => Math.log(Math.tan(Math.PI / 4 + rad(l) / 2)), latDeMerc = mm => 2 * Math.atan(Math.exp(mm)) * 180 / Math.PI - 90;
+    return f(x => x, mercY, latDeMerc, 150, acumDeSerie, jgetFalso, { fc: 'fc' }, [{ id: 'acum', acum: true }]);
+  };
+  const caja = { getBounds: () => ({ getNorth: () => 43.4, getSouth: () => 37.9, getWest: () => -2.3, getEast: () => 1.1 }) };
+  const hora = i => new Date(h0 + 72 * 3600e3 + i * 3600e3).toISOString();
+  const Rf = { modelo: 'ecmwf_ifs025', meta: { valid_times: [hora(0), hora(200)] } };
+  (globalThis.__pendientes ||= []).push((async () => {
+    let llamadas = 0, puntos = 0;
+    const jg = async (u, par) => { llamadas++; const n = par.latitude.split(',').length; puntos = n; return Array.from({ length: n }, () => ({ hourly: { precipitation: Array(200).fill(0.5) } })); };
+    const rej = montarRejilla(jg); const este = { map: caja, layer: 'acum', apply() {} };
+    const G1 = await rej.call(este, Rf, hora(10), 24);
+    await rej.call(este, Rf, hora(14), 24);                    // otra hora, misma ventana
+    await rej.call(este, Rf, hora(20), 6);                     // otro periodo
+    await rej.call({ ...este, _acumMem: este._acumMem, map: { getBounds: () => ({ getNorth: () => 43.1, getSouth: () => 37.2, getWest: () => -2.9, getEast: () => 1.5 }) } }, Rf, hora(12), 24); // mover un poco: misma caja a grados enteros
+    ok('cambiar de hora, de periodo o mover un poco el mapa NO repite la petición: 1 sola para las cuatro lecturas, de ≤ 150 puntos',
+       llamadas === 1 && puntos <= 150 && puntos >= 60 && G1.val.every(v => Math.abs(v - 12) < 1e-9),
+       `peticiones ${llamadas}, puntos ${puntos}, primer valor ${G1.val[0]}`);
+  })());
+  (globalThis.__pendientes ||= []).push((async () => {
+    let llamadas = 0;
+    const jg = async () => { llamadas++; throw new Error('HTTP 429'); };
+    const rej = montarRejilla(jg); const este = { map: caja, layer: 'acum', apply() {} };
+    let m1 = '', m2 = '';
+    try { await rej.call(este, Rf, hora(10), 24); } catch (e) { m1 = e.message; }
+    try { await rej.call(este, Rf, hora(11), 24); } catch (e) { m2 = e.message; }
+    clearTimeout(este._acumReint);
+    ok('ante un 429 la capa DICE que espera un minuto, no martillea la API (la 2.ª vez no hay petición) y deja programado el reintento',
+       llamadas === 1 && /esperar un minuto/.test(m1) && /esperar un minuto/.test(m2) && este._acumFrio > Date.now() + 50000 && !!este._acumReint);
+  })());
+  /* El parpadeo: repintar con la imagen ya puesta cambia la FOTO; nunca quita y vuelve a montar la capa. */
+  const cuerpoP = M.slice(M.indexOf('  async pintarAcum(L_, R) {'), M.indexOf('  /** Al pulsar: lo caído en ese punto'));
+  const montarPintar = () => {
+    const f = new Function('imagenAcum', 'escalasPropias', 'coma', 'esc', 'TMODELS',
+      'const o = { ' + cuerpoP.replace(/^\s*async pintarAcum/, 'pintarAcum: async function') + ' }; return o.pintarAcum;');
+    return f(() => 'data:image/png;base64,AAAA', () => ({ acum: { scale: { breakpoints: [0, 1], colors: [[0, 0, 0, 0], [0, 0, 0, 1]] } } }),
+      (n) => String(n), x => x, []);
+  };
+  (globalThis.__pendientes ||= []).push((async () => {
+    const reg = []; const fuentes = {}, capas = new Set();
+    const mapa = { getSource: id => fuentes[id] ? { updateImage: o => reg.push('updateImage') } : undefined, getLayer: id => capas.has(id) ? {} : undefined,
+      addSource: (id) => { fuentes[id] = 1; reg.push('addSource'); }, removeSource: id => { delete fuentes[id]; reg.push('removeSource'); },
+      addLayer: o => { capas.add(o.id); reg.push('addLayer:' + o.id); }, removeLayer: id => { capas.delete(id); reg.push('removeLayer'); } };
+    const este = { map: mapa, acumHoras: 24, t: 0, layer: 'acum', opacity: 0.75, _acumN: 0, status() {}, firstLabelLayer: () => 'rotulos', sueloParaLluvia() { capas.add('sueloLluviaLayer'); reg.push('suelo'); },
+      rejillaAcum: async () => ({ nx: 2, ny: 2, val: [1, 2, 3, 4], lat0: 1, lat1: 0, lon0: 0, lon1: 1 }), usando: {} };
+    const pintar = montarPintar();
+    const L_ = { id: 'acum' }, R_ = { modelo: 'x', meta: { valid_times: ['2026-10-17T11:00:00Z'] } };
+    await pintar.call(este, L_, R_);
+    const primera = reg.slice(); reg.length = 0;
+    await pintar.call(este, L_, R_); await pintar.call(este, L_, R_);
+    ok('repintar la lluvia acumulada (cambio de hora) cambia la foto con updateImage: ni quita ni vuelve a montar la capa ni el suelo (así no parpadea)',
+       primera.includes('addLayer:acumLayer') && reg.join() === 'updateImage,updateImage',
+       'repintado: ' + reg.join());
+  })());
+  ok('apply() no borra la imagen de la lluvia acumulada al repintarla: quitarCapasDeDatos(true) conserva acumLayer, acumSrc y el suelo',
+     /quitarCapasDeDatos\(conservarAcum = false\)/.test(M) && /this\.quitarCapasDeDatos\(!!TLAYERS\.find\(l => l\.id === this\.layer\)\?\.acum\);/.test(M)
+     && /if \(conservarAcum && id === 'acumLayer'\) return;/.test(M) && /if \(conservarAcum && id === 'acumSrc'\) return;/.test(M));
+  ok('la rampa es AZUL (suyo, 16-10): de 1 a 20 litros, azules (el canal azul manda sobre el rojo y el verde); y el rojo/naranja solo a partir de 150',
+     (() => { const t = M.slice(M.indexOf('const acc = ['), M.indexOf('];', M.indexOf('const acc = [')));
+       const hx = [...t.matchAll(/'#([0-9a-f]{6})'/g)].map(x => x[1]);
+       const az = h => parseInt(h.slice(4, 6), 16) > parseInt(h.slice(0, 2), 16) + 0x30 && parseInt(h.slice(4, 6), 16) >= parseInt(h.slice(2, 4), 16);
+       return hx.length === 11 && hx.slice(0, 6).every(az) && parseInt(hx[9].slice(0, 2), 16) > 0xc0; })());
 }
 
 
