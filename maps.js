@@ -313,6 +313,14 @@ const puedeLeerse = v => !!v && !NO_LAS_SABE_DAR.test(v);
 const TLAYERS = [
   { id:'precipitation', g:'Lluvia', name:'Precipitación', v:'precipitation', unit:'mm/h', escala:'lluvia',
     desc:'Intensidad de lluvia prevista' },
+  /* LLUVIA ACUMULADA (16-10-2026). Suyo, con la «Acumulación de lluvia» de Windy
+     (Valencia en morado, 100-300 mm): «mira qué bien se ve en Windy». No existe
+     ninguna variable acumulada en los datos del mapa (medido: solo `precipitation`
+     de cada paso), así que se SUMA: una rejilla de ~400 puntos pedida a la API
+     (una sola petición) con la lluvia de las N horas que terminan a la hora del
+     mapa, suavizada en una imagen. Litros por metro cuadrado, 1 mm = 1 litro. */
+  { id:'acum', g:'Lluvia', name:'Lluvia acumulada', v:'precipitation', unit:'mm', acum:true, escala:'acum',
+    desc:'Litros por metro cuadrado caídos en las últimas 6, 12, 24, 48 o 72 horas hasta la hora del mapa: la suma de la previsión del modelo, como la «Acumulación de lluvia» de Windy' },
   { id:'snow_depth', g:'Lluvia', name:'Espesor de nieve', v:'snow_depth', unit:'m',
     desc:'Nieve acumulada en el suelo' },
   /* Suyo, 14-09-2026: «esta capa debe de estar en lluvia». Y con escala
@@ -666,6 +674,49 @@ function acumuladoDe(serie, n) {
   if (!Array.isArray(serie) || n < 1 || serie.length < n) return null;
   const t = serie.slice(serie.length - n);
   return t.every(v => Number.isFinite(v)) ? t.reduce((a, b) => a + b, 0) : null;
+}
+/* ── LLUVIA ACUMULADA: HELPERS (16-10-2026) ── */
+const ACUM_HORAS = [6, 12, 24, 48, 72];
+const ACUM_PUNTOS = 250;                      // una sola petición; la cuota gratuita de la API cuenta por puntos y días, y moviendo el mapa se repite
+const mercY = lat => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI / 180) / 2));
+const latDeMerc = y => (2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180 / Math.PI;
+/** Suma de la serie horaria; null si falta más de una cuarta parte de las horas: una suma con huecos sale baja y se lee como calma. */
+function sumaAcum(serie, n) {
+  if (!Array.isArray(serie) || !serie.length) return null;
+  const v = serie.filter(Number.isFinite);
+  return v.length >= Math.ceil(n * 0.75) ? v.reduce((a, b) => a + b, 0) : null;
+}
+/** El color de un total (mm) en la escala: continuo entre cortes; null por debajo del primer corte. */
+function colorAcum(v, bp, cols) {
+  if (!Number.isFinite(v) || v < bp[1]) return null;
+  let k = bp.length - 2;
+  for (let i = 1; i < bp.length; i++) if (v < bp[i]) { k = i - 1; break; }
+  const t = Math.max(0, Math.min(1, (v - bp[k]) / ((bp[k + 1] - bp[k]) || 1)));
+  const a = cols[Math.min(k, cols.length - 1)], b = cols[Math.min(k + 1, cols.length - 1)];
+  const rgb = [0, 1, 2].map(i => Math.round(a[i] + (b[i] - a[i]) * t));
+  /* El alfa de la escala va en 0-1 (hexRGBA); el lienzo lo quiere en 0-255. Sin esto la imagen salía
+     con alfa 0 o 1 de 255: invisible, y un mapa en blanco se lee como «no llueve». */
+  return [...rgb, Math.round((a[3] + (b[3] - a[3]) * t) * 255)];
+}
+/** La rejilla suavizada (bilineal) a una imagen PNG en data URL, con los píxeles sin lluvia transparentes. */
+function imagenAcum(G, bp, cols, ancho = 320) {
+  const alto = Math.max(1, Math.round(ancho * (G.ny - 1) / (G.nx - 1) * 0.75));
+  const cv = document.createElement('canvas'); cv.width = ancho; cv.height = alto;
+  const ctx = cv.getContext('2d'), im = ctx.createImageData(ancho, alto);
+  for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) {
+    const fx = x / (ancho - 1) * (G.nx - 1), fy = y / (alto - 1) * (G.ny - 1);
+    const i0 = Math.min(G.nx - 2, Math.floor(fx)), j0 = Math.min(G.ny - 2, Math.floor(fy));
+    const tx = fx - i0, ty = fy - j0;
+    const p = (i, j) => G.val[j * G.nx + i];
+    const q = [p(i0, j0), p(i0 + 1, j0), p(i0, j0 + 1), p(i0 + 1, j0 + 1)];
+    if (q.some(v => !Number.isFinite(v))) continue;                  // sin dato en la esquina: transparente, no un cero
+    const v = (q[0] * (1 - tx) + q[1] * tx) * (1 - ty) + (q[2] * (1 - tx) + q[3] * tx) * ty;
+    const c = colorAcum(v, bp, cols);
+    if (!c) continue;
+    const o = (y * ancho + x) * 4; im.data[o] = c[0]; im.data[o + 1] = c[1]; im.data[o + 2] = c[2]; im.data[o + 3] = c[3];
+  }
+  ctx.putImageData(im, 0, 0);
+  return cv.toDataURL('image/png');
 }
 /** El valor de la tesela pasado a «por hora» si la variable es una suma. */
 const porHora = (v, variable, h) => (esAcumulada(variable) && h > 1 && Number.isFinite(v)) ? v / h : v;
@@ -1619,6 +1670,16 @@ function escalasPropias() {
     eje: t8m.slice(0, -1), unidad: '°C', pos: t8m.slice(0, -1).map((_, i) => i),
   };
 
+  /* Lluvia acumulada, en litros por m²: verde flojo → amarillo → rojo → morado, la
+     rampa de la «Acumulación de lluvia» de Windy. Por debajo de 1 litro no se pinta. */
+  const acm = [0, 1, 2, 5, 10, 20, 50, 100, 150, 200, 300];
+  const acc = [['#2bb673',0], ['#2bb673',.55], ['#6cc644',.8], ['#b8d83a',.9], ['#f2e63a',1], ['#f5a623',1],
+               ['#e8452b',1], ['#b3122b',1], ['#8e1a8e',1], ['#b44dff',1], ['#f0a0ff',1]];
+  const acum = {
+    scale: { type:'breakpoint', unit:'mm', breakpoints: acm, colors: acc.map(([c,a]) => hexRGBA(c, a)) },
+    eje: acm.slice(), unidad: 'litros/m²', pos: acm.slice(),
+  };
+
   const humedad = {
     scale: { type:'breakpoint', unit:'%', breakpoints: hm,
              colors: hc.map(([c,a]) => hexRGBA(c, a)) },
@@ -1888,7 +1949,7 @@ function escalasPropias() {
     dbz: { scale: ESCALA_DBZ, eje: DBZ, unidad: 'dBZ',
            conv: v => v > 0 ? 10 * Math.log10(200 * Math.pow(v, 1.6)) : 0 },
     presion, visibilidad, tempc, t850, rafagas, capeE, tapa, agua, isocero, sinColor, nubes, sombraLluvia,
-    ola, periodo,
+    ola, periodo, acum,
   };
   return _escalas;
 }
@@ -1980,6 +2041,7 @@ const Maps = {
     this.base  = LS.get('tbase',  'claro');
     this.terrain = LS.get('tterrain', true);
     this.pasoHoras = LS.get('tpaso', 3);
+    this.acumHoras = ACUM_HORAS.includes(+LS.get('tacum', 24)) ? +LS.get('tacum', 24) : 24;
     this.verValores = LS.get('tvals', true);
     /* Claves NUEVAS el 29-09-2026: las viejas podían guardar el «apagado»
        de cuando las flechas mentían, y entonces no volverían nunca. */
@@ -2081,7 +2143,7 @@ const Maps = {
       // Al mover o ampliar el mapa se sigue precargando, y si estaba
       // reproduciéndose NO se detiene: solo se piden las teselas de la
       // nueva vista.
-      this.map.on('moveend', () => { this.precargar(this._dir ?? 1); this.trasPintar(() => { this.valores(); this.barbas(); }); this.rayosPronto(); });
+      this.map.on('moveend', () => { this.precargar(this._dir ?? 1); this.trasPintar(() => { this.valores(); this.barbas(); }); this.rayosPronto(); this.acumPronto(); });
       this.map.on('move', () => { this.limpiarValores(); this.limpiarBarbas(); });
       this.map.on('zoomend', () => { this._pedidas = new Set(); this.precargar(this._dir ?? 1); this.reaplicarPorZoom(); });
       this.map.on('click', e => this.consultar(e.lngLat));
@@ -2859,6 +2921,14 @@ const Maps = {
     // Una sola capa, sin fotogramas superpuestos. El sistema de mantener
     // varias horas montadas a la vez se probó y dejaba el mapa en blanco:
     // más vale una capa que se ve que un truco de velocidad que no pinta.
+    /* La lluvia acumulada no usa teselas: se suma sobre una rejilla de la API. */
+    if (L_.acum) {
+      await this.pintarAcum(L_, R);
+      this.stamp(); this.legend();
+      this.trasPintar(() => { this.rayos(); });
+      return;
+    }
+
     const url = this.omUrl(L_.v, this.t, R.modelo, R.meta);
     if (!url) { this.status('sin hora válida para esta capa'); return; }
 
@@ -3103,6 +3173,113 @@ const Maps = {
       this.status(`No se ha podido traer el satélite (${String(err.message || err).slice(0, 70)}). `
         + `No se pinta nada: un mapa sin nubes NO significa que el cielo esté despejado.`);
       this._satCat = null;      // que se reintente al volver a entrar
+    }
+  },
+
+  /* ── LLUVIA ACUMULADA: LA REJILLA, LA SUMA Y LA IMAGEN (16-10-2026) ───── */
+  acumPronto() {
+    if (!TLAYERS.find(l => l.id === this.layer)?.acum) return;
+    clearTimeout(this._acumDeb);
+    this._acumDeb = setTimeout(() => this.apply(), 700);
+  },
+  setAcumHoras(h) {
+    if (!ACUM_HORAS.includes(h) || h === this.acumHoras) return;
+    this.acumHoras = h; LS.set('tacum', h);
+    this.ui();
+    if (TLAYERS.find(l => l.id === this.layer)?.acum) this.apply();
+  },
+  /** Pide la lluvia de las `n` horas que terminan en `fin` a una rejilla que cubre lo que se ve, y la suma. */
+  async rejillaAcum(R, fin, n) {
+    const om = modeloEnApi(R.modelo);
+    if (!om) throw new Error('este modelo no se puede acumular: elige otro en la barra de modelos');
+    const b = this.map.getBounds();
+    const N = Math.max(b.getNorth(), b.getSouth()), S = Math.min(b.getNorth(), b.getSouth());
+    const lat0 = Math.min(85, N), lat1 = Math.max(-85, S), lon0 = b.getWest(), lon1 = b.getEast();
+    const cuenta = ACUM_PUNTOS;
+    const ancho = lon1 - lon0, m0 = mercY(lat0), m1 = mercY(lat1);
+    const prop = Math.abs(m0 - m1) / (ancho * Math.PI / 180) || 1;
+    let nx = Math.round(Math.sqrt(cuenta / prop)); nx = Math.max(6, Math.min(40, nx));
+    let ny = Math.round(nx * prop);               ny = Math.max(6, Math.min(40, ny));
+    while (nx * ny > cuenta) { if (nx >= ny) nx--; else ny--; }
+    const lats = [], lons = [];
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      lats.push(latDeMerc(m0 + (m1 - m0) * (j / (ny - 1))).toFixed(3));
+      lons.push((lon0 + ancho * (i / (nx - 1))).toFixed(3));
+    }
+    const fin_ = new Date(fin), ini_ = new Date(fin_.getTime() - (n - 1) * 3600e3);
+    const hh = d => d.toISOString().slice(0, 13) + ':00';
+    /* La misma petición no se repite: memoria de las últimas 12 (modelo, hora, horas y caja redondeada a medio grado). */
+    const r5 = x => (Math.round(x * 2) / 2).toFixed(1);
+    const clave = [om, hh(fin_), n, r5(lat0), r5(lat1), r5(lon0), r5(lon1), nx, ny].join('|');
+    this._acumMem ??= new Map();
+    if (this._acumMem.has(clave)) return this._acumMem.get(clave);
+    const d = await jget(API.fc, { latitude: lats.join(','), longitude: lons.join(','), models: om, hourly: 'precipitation',
+      timezone: 'UTC', start_hour: hh(ini_), end_hour: hh(fin_) }, { timeout: 20000 });
+    const L = Array.isArray(d) ? d : [d];
+    const val = L.map(p => sumaAcum(p?.hourly?.precipitation, n));
+    const G = { nx, ny, val, lat0, lat1, lon0, lon1, om, n, hh: hh(fin_) };
+    this._acumMem.set(clave, G);
+    if (this._acumMem.size > 12) this._acumMem.delete(this._acumMem.keys().next().value);
+    return G;
+  },
+  async pintarAcum(L_, R) {
+    const fin = R.meta?.valid_times?.[this.t];
+    const n = this.acumHoras;
+    if (!fin) { this.status('sin hora válida para esta capa'); return; }
+    this.status(`Sumando la lluvia de las ${n} horas hasta la hora del mapa…`);
+    const pedido = this._acumN = (this._acumN || 0) + 1;
+    let G;
+    try { G = await this.rejillaAcum(R, fin, n); }
+    catch (e) {
+      if (pedido !== this._acumN) return;
+      ['acumLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
+      ['acumSrc'].forEach(id => { if (this.map.getSource(id)) this.map.removeSource(id); });
+      this.status(`Lluvia acumulada: no se ha podido calcular (${String(e.message || e).slice(0, 80)}). `
+        + `No se pinta nada: un mapa en blanco no significa que no llueva.`);
+      return;
+    }
+    if (pedido !== this._acumN || this.layer !== L_.id) return;       // llegó tarde
+    const E = escalasPropias().acum;
+    const url = imagenAcum(G, E.scale.breakpoints, E.scale.colors);
+    ['acumLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
+    ['acumSrc'].forEach(id => { if (this.map.getSource(id)) this.map.removeSource(id); });
+    this.map.addSource('acumSrc', { type: 'image', url,
+      coordinates: [[G.lon0, G.lat0], [G.lon1, G.lat0], [G.lon1, G.lat1], [G.lon0, G.lat1]] });
+    this.map.addLayer({ id: 'acumLayer', type: 'raster', source: 'acumSrc',
+      paint: { 'raster-opacity': Math.max(this.opacity, 0.9), 'raster-fade-duration': 0, 'raster-resampling': 'linear' } },
+      this.firstLabelLayer());
+    this.sueloParaLluvia(true);
+    const validos = G.val.filter(Number.isFinite), maxv = validos.length ? Math.max(...validos) : null;
+    const nombre = TMODELS.find(m => m.id === R.modelo)?.name || R.modelo;
+    this.status(`Lluvia acumulada · litros por m² (1 mm = 1 litro) en las ${n} h hasta la hora del mapa · suma de la previsión de ${esc(nombre)}`
+      + ` en una rejilla de ${G.nx}×${G.ny} puntos${maxv !== null ? ` · lo más alto de lo que se ve: ${coma(maxv, maxv < 10 ? 1 : 0)}` : ''}`);
+  },
+  /** Al pulsar: lo caído en ese punto en 6, 12, 24, 48 y 72 horas hasta la hora del mapa. */
+  async consultarAcum(lngLat) {
+    const R = this.usando;
+    if (!R?.meta) return;
+    const fin = R.meta.valid_times[this.t];
+    const nombre = TMODELS.find(m => m.id === R.modelo)?.name || R.modelo;
+    this.cerrarPopups();
+    const pop = new maplibregl.Popup({ offset: 10, closeButton: true, className: 'omPop' })
+      .setLngLat(lngLat).setHTML('<b>Sumando la lluvia…</b>').addTo(this.map);
+    (this._pops ||= []).push(pop);
+    try {
+      const om = modeloEnApi(R.modelo);
+      if (!om) throw new Error('este modelo no se puede acumular');
+      const f = new Date(fin), i = new Date(f.getTime() - 71 * 3600e3);
+      const hh = d => d.toISOString().slice(0, 13) + ':00';
+      const d = await jget(API.fc, { latitude: lngLat.lat.toFixed(4), longitude: lngLat.lng.toFixed(4), models: om,
+        hourly: 'precipitation', timezone: 'UTC', start_hour: hh(i), end_hour: hh(f) }, { timeout: 12000 });
+      const sr = d?.hourly?.precipitation;
+      const filas = ACUM_HORAS.map(h => [h, sumaAcum(Array.isArray(sr) ? sr.slice(sr.length - h) : null, h)]);
+      const cuando = f.toLocaleString('es', { weekday:'short', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+      pop.setHTML(`<b>Lluvia acumulada</b> <span class="pa__r">hasta ${esc(cuando)}</span>`
+        + `<div class="pa"><table>${filas.map(([h, v]) => `<tr><td${h === this.acumHoras ? ' class="pa__on"' : ''}>últimas ${h} horas</td>`
+          + `<td><b>${Number.isFinite(v) ? coma(v, v < 10 ? 1 : 0) : '—'}</b> litros</td></tr>`).join('')}</table>`
+        + `<div class="pa__p">litros por metro cuadrado (1 mm = 1 litro) · ${esc(nombre)}<br>${lngLat.lat.toFixed(3)}, ${lngLat.lng.toFixed(3)}</div></div>`);
+    } catch (e) {
+      pop.setHTML(`<b>No se ha podido sumar</b><br><small>${esc(String(e.message || e).slice(0, 90))}</small>`);
     }
   },
 
@@ -3355,9 +3532,9 @@ const Maps = {
      ponía «Ráfagas · kt» y las ráfagas quedaban debajo, tapadas. Leer
      una capa creyendo que es otra es peor que no tener mapa. */
   quitarCapasDeDatos() {
-    const CAPAS  = ['omLayer', 'omLayer2', 'radarLayer', 'satLayer', 'aemetLayer',
+    const CAPAS  = ['omLayer', 'omLayer2', 'radarLayer', 'satLayer', 'aemetLayer', 'acumLayer',
                     'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'];
-    const FUENTES = ['omSrc', 'omSrc2', 'radarSrc', 'satSrc', 'aemetSrc', 'isoSrc'];
+    const FUENTES = ['omSrc', 'omSrc2', 'radarSrc', 'satSrc', 'aemetSrc', 'acumSrc', 'isoSrc'];
     CAPAS.forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
     ['sueloLluviaLayer', 'marLluviaLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
     FUENTES.forEach(id => { if (this.map.getSource(id)) this.map.removeSource(id); });
@@ -3510,7 +3687,7 @@ const Maps = {
 
   firstLabelLayer(porEncimaDeLasPropias = false) {
     const ls = this.map.getStyle()?.layers || [];
-    const PROPIAS = /^(omLayer2?|satLayer|radarLayer|aemetLayer|hillLayer)$/;
+    const PROPIAS = /^(omLayer2?|satLayer|radarLayer|aemetLayer|acumLayer|hillLayer)$/;
     const RELLENO = new Set(['background', 'fill', 'fill-extrusion', 'raster']);
     let ultimo = -1;
     ls.forEach((x, i) => { if (!PROPIAS.test(x.id) && RELLENO.has(x.type)) ultimo = i; });
@@ -4187,7 +4364,7 @@ const Maps = {
    *  saturar la conexión.                                              */
   precargar(dir = 1) {
     const L_ = TLAYERS.find(l => l.id === this.layer);
-    if (!L_?.v || !this.usando || !this.map) return;
+    if (!L_?.v || L_.acum || !this.usando || !this.map) return;
     clearTimeout(this._pre);
     this._pre = setTimeout(() => {
       const R = this.usando;
@@ -4368,7 +4545,7 @@ const Maps = {
   async valores() {
     if (!this.map || !this.meta || !this.verValores) { this.limpiarValores(); return; }
     const L_ = TLAYERS.find(l => l.id === this.layer);
-    if (!L_?.v || L_.id === 'radar') { this.limpiarValores(); return; }
+    if (!L_?.v || L_.id === 'radar' || L_.acum) { this.limpiarValores(); return; }
     // Con «Peor 12 h» los números son los de la peor racha: nunca dos juegos a la vez.
     if (L_?.vientoApi && this.verPeor) { this.limpiarValores(); return; }
     const R = this.usando;
@@ -4683,6 +4860,7 @@ const Maps = {
    *  tesela concreta y solo se dice "sin dato" cuando de verdad no lo hay.
    */
   async consultar(lngLat) {
+    if (TLAYERS.find(l => l.id === this.layer)?.acum) return this.consultarAcum(lngLat);
     const L_ = TLAYERS.find(l => l.id === this.layer);
     // SIEMPRE el modelo que está pintando, no el que está seleccionado.
     // En una capa sustituida no son el mismo, y preguntar al seleccionado
@@ -5508,6 +5686,10 @@ const Maps = {
         + `<button class="mbtn${this.verPeor ? ' is-on' : ''}" data-tpr="1" title="En cada punto, la racha MÁS FUERTE de las 12 horas siguientes a la hora del mapa, con su hora y el color de tus listones (como la «Acumulación de viento» de Windy)">Peor 12 h</button>`
         : '') +
       `<button class="mbtn${this.verRayos && this.rayosProceden() ? ' is-on' : ''}" data-tl="1" title="Descargas detectadas por AEMET en las dos últimas horas publicadas, encima del mapa. Solo en las capas de lluvia, radar, satélite y tormenta">⚡ Rayos</button>` +
+      (TLAYERS.find(l => l.id === this.layer)?.acum
+        ? `<span class="msel__k" style="margin-left:12px">Acumulado</span>`
+          + ACUM_HORAS.map(h => `<button class="mbtn${h === this.acumHoras ? ' is-on' : ''}" data-ta="${h}"
+              title="Litros por m² caídos en las ${h} horas que terminan a la hora del mapa">${h} h</button>`).join('') : '') +
       `<span class="msel__k" style="margin-left:12px">Paso</span>` +
       [1,3,6].map(h => `<button class="mbtn${h === this.pasoHoras ? ' is-on' : ''}" data-tp="${h}"
          title="${h === 3 ? 'Como Windy y Ventusky: fluido' : h === 1 ? 'Máximo detalle, más lento' : 'Muy fluido, menos detalle'}">${h} h</button>`).join('');
@@ -5771,7 +5953,7 @@ const Maps = {
 
     // Radar + previsión: solo cambia el fotograma, sin rehacer la capa.
     if (L_?.id === 'radarprev' && this._mixta?.length) { this.frameMixta(this.t); return; }
-    if (!L_ || L_.id === 'radar' || L_.id === 'aemet' || L_.sat || !this.usando || !this.map?.getSource('omSrc')) {
+    if (!L_ || L_.id === 'radar' || L_.id === 'aemet' || L_.sat || L_.acum || !this.usando || !this.map?.getSource('omSrc')) {
       this.apply(); return;
     }
     const url = this.omUrl(L_.v, this.t, this.usando.modelo, this.usando.meta);

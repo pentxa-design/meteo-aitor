@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.15-2120';
+const BUILD = '2026.10.16-1610';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -19023,6 +19023,7 @@ function bind() {
     if (b.dataset.tr) Maps.setTerrain(!Maps.terrain);
     if (b.dataset.tv) Maps.setValores(!Maps.verValores);
     if (b.dataset.tp) Maps.setPaso(+b.dataset.tp);
+    if (b.dataset.ta) Maps.setAcumHoras(+b.dataset.ta);          // lluvia acumulada: 6 · 12 · 24 · 48 · 72 h
     /* Flechas, Movimiento y Peor 12 h: vuelven el 29-09-2026 con el rumbo
        traído de la API de pronóstico (se quitaron el 21-09 porque la
        librería de teselas no sabe dar la componente norte-sur). */

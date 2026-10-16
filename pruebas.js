@@ -11243,7 +11243,7 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
   ok('apply() pone el suelo ANTES de montar la capa y solo para la escala «nubes», con la nube casi opaca (≥ 0,92); quitarCapasDeDatos() lo quita con las demás',
      iSuelo > iApply && iSuelo < iOm
      && /const op = L_\.escala === 'nubes' \? Math\.max\(this\.opacity, 0\.92\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? Math\.max\(this\.opacity, 0\.95\)\s*: this\.opacity;/.test(M)
-     && /const CAPAS  = \['omLayer', 'omLayer2', 'radarLayer', 'satLayer', 'aemetLayer',\s*'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'\];/.test(M),
+     && /const CAPAS  = \['omLayer', 'omLayer2', 'radarLayer', 'satLayer', 'aemetLayer', 'acumLayer',\s*'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'\];/.test(M),
      'si se quedara puesto, la siguiente capa (temperatura, ráfagas) saldría sobre tierra ocre sin motivo');
   /* 17:52, con Windy al lado otra vez: «blancas, negras donde pinta agua», «verde donde lloverá», «así quiero». */
   const sl = ((M.match(/const slc = \[([\s\S]*?)\];/) || [])[1] || '').match(/\['#([0-9a-f]{6})',\s*([0-9.]+)\]/g) || [];
@@ -12615,7 +12615,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('las escalas de ola (m) y periodo (s) existen, van fundidas pero en lineal (la monótona hacía polígonos en la costa), y tienen rango de cordura',
      /const ola = \{\s*scale: \{ type:'breakpoint', unit:'m', breakpoints: om_/.test(M)
      && /const periodo = \{\s*scale: \{ type:'breakpoint', unit:'s', breakpoints: pm_/.test(M)
-     && /nubes, sombraLluvia,\s*ola, periodo,\s*\};/.test(M)
+     && /nubes, sombraLluvia,\s*ola, periodo, acum,\s*\};/.test(M)
      && /const ESCALAS_SUAVES = new Set\(\[[^\]]*'ola', 'periodo',[^\]]*\]\);/.test(M)
      && !/const INTERPOLACION_SUAVE = new Set\(\[[^\]]*'ola'/.test(M)
      && /ola:\s+\[0, 30, 'm'\]/.test(M) && /periodo: \[0, 30, 's'\]/.test(M));
@@ -13007,6 +13007,52 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      /<b>\$\{coma\(val, Math\.abs\(val\) < 10 \? 1 : 0\)\} \$\{esc\(uTxt\)\}<\/b>/.test(M)
      && /\$\{coma\(v, 1\)\} mm en un paso de/.test(M) && /\$\{coma\(txt, d\)\}\$\{simbolo\}/.test(M)
      && !/\$\{val\.toFixed\(/.test(M) && !/\$\{txt\.toFixed\(d\)\}/.test(M));
+}
+
+/* ── LLUVIA ACUMULADA, COMO LA «ACUMULACIÓN DE LLUVIA» DE WINDY (16-10-2026) ──
+   Suyo: «mira qué bien se ve en Windy». No hay variable acumulada en los datos
+   del mapa (medido); se suma la previsión hora a hora sobre una rejilla. Se
+   EJECUTAN la suma, el color y el cambio de coordenadas; lo demás se ve en el
+   navegador antes de publicar. */
+{
+  grupo('La lluvia acumulada suma de verdad');
+  const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const tomar = (ini, fin) => { const i = M.indexOf(ini); return M.slice(i, M.indexOf(fin, i) + fin.length); };
+  const codigo = tomar('const mercY = ', ';') + '\n' + tomar('const latDeMerc = ', ';') + '\n'
+    + M.slice(M.indexOf('function sumaAcum('), M.indexOf('\n}', M.indexOf('function sumaAcum(')) + 2) + '\n'
+    + M.slice(M.indexOf('function colorAcum('), M.indexOf('\n}', M.indexOf('function colorAcum(')) + 2)
+    + '\nreturn { mercY, latDeMerc, sumaAcum, colorAcum };';
+  const { mercY, latDeMerc, sumaAcum, colorAcum } = new Function(codigo)();
+  ok('la suma: 24 horas de 1,5 mm = 36 litros; con 5 horas sin dato de 24 (79 % cubierto) aún suma; con 7 sin dato (< 75 %) NO suma (null)',
+     Math.abs(sumaAcum(Array(24).fill(1.5), 24) - 36) < 1e-9
+     && sumaAcum([...Array(19).fill(1), ...Array(5).fill(null)], 24) === 19
+     && sumaAcum([...Array(17).fill(1), ...Array(7).fill(null)], 24) === null
+     && sumaAcum(undefined, 24) === null && sumaAcum([], 24) === null);
+  ok('el cambio de latitud a Mercator y vuelta es exacto (43,4° y -33°)',
+     Math.abs(latDeMerc(mercY(43.4)) - 43.4) < 1e-9 && Math.abs(latDeMerc(mercY(-33)) + 33) < 1e-9);
+  const bp = [0, 1, 2, 5, 10, 20, 50, 100, 150, 200, 300];
+  const hexRGBA = new Function(M.slice(M.indexOf('const hexRGBA ='), M.indexOf('};', M.indexOf('const hexRGBA =')) + 2) + '\nreturn hexRGBA;')();
+  const trozoAcc = M.slice(M.indexOf('const acc = ['), M.indexOf('];', M.indexOf('const acc = [')) + 2);
+  const colsReales = new Function('hexRGBA', trozoAcc + '\nreturn acc.map(([c, a]) => hexRGBA(c, a));')(hexRGBA);
+  const bpReal = new Function(M.slice(M.indexOf('const acm = ['), M.indexOf('];', M.indexOf('const acm = [')) + 2) + '\nreturn acm;')();
+  /* 16-10-2026: la imagen salió TRANSPARENTE (alfa 0-1 escrito en un canal 0-255) y la prueba pasaba porque
+     usaba colores inventados con alfa 255. Ahora se prueba con la escala de verdad. */
+  const opaco = v => (colorAcum(v, bpReal, colsReales) || [0, 0, 0, 0])[3];
+  ok('con la escala REAL, 50 litros y 200 litros se pintan opacos (alfa > 240 de 255), 1,5 litros se ve flojo (entre 60 y 200) y 0,5 no se pinta',
+     opaco(50) > 240 && opaco(200) > 240 && opaco(1.5) > 60 && opaco(1.5) < 200 && colorAcum(0.5, bpReal, colsReales) === null);
+  const cols = bp.map((_, i) => [i * 20, 100, 200 - i * 10, 1]);
+  ok('el color: por debajo de 1 litro, nada (transparente); 5 litros = el color del corte; 400 litros = el último; 35 está entre el de 20 y el de 50',
+     colorAcum(0.9, bp, cols) === null && colorAcum(NaN, bp, cols) === null
+     && JSON.stringify(colorAcum(5, bp, cols)) === JSON.stringify([...cols[3].slice(0, 3), 255]) && JSON.stringify(colorAcum(400, bp, cols)) === JSON.stringify([...cols[10].slice(0, 3), 255])
+     && colorAcum(35, bp, cols)[0] > cols[5][0] && colorAcum(35, bp, cols)[0] < cols[6][0]);
+  ok('la capa existe en el grupo Lluvia, sin teselas (apply la desvía), con selector de horas y se quita con las demás capas de datos',
+     /\{ id:'acum', g:'Lluvia', name:'Lluvia acumulada', v:'precipitation', unit:'mm', acum:true, escala:'acum'/.test(M)
+     && /if \(L_\.acum\) \{\s*await this\.pintarAcum\(L_, R\);/.test(M)
+     && /'aemetLayer', 'acumLayer'/.test(M) && /'aemetSrc', 'acumSrc'/.test(M)
+     && /L_\.sat \|\| L_\.acum \|\| !this\.usando/.test(M) && /data-ta="\$\{h\}"/.test(M)
+     && /Maps\.setAcumHoras\(\+b\.dataset\.ta\)/.test(fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8')));
+  ok('   y no pide más de 250 puntos por petición ni repite la misma (memoria), para no gastar la cuota de la API',
+     /const ACUM_PUNTOS = 250;/.test(M) && /this\._acumMem\.has\(clave\)/.test(M));
 }
 
 

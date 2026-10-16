@@ -701,6 +701,7 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;
 .omPop .pa td b{font-size:1.125rem}
 .omPop .pa__p{margin-top:4px;font-size:0.75rem;color:var(--dim);line-height:1.35}
 .omPop .pa__r{font-size:0.8125rem;color:var(--dim)}
+.omPop .pa td.pa__on{font-weight:700;color:var(--ink)}
 .omPop .maplibregl-popup-tip{border-top-color:#0e1626;border-bottom-color:#0e1626}
 .omPop .maplibregl-popup-close-button{color:var(--dim);font-size:1.0625rem}
 @media(max-width:560px){
