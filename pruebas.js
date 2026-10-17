@@ -2985,7 +2985,7 @@ ok('«Valores» no rotula por debajo de 5 dBZ (pero el pulsar el punto sigue dan
 ok('bajo la lluvia, en mm/h y en dBZ, el suelo va negro como en AguaceroWx',
    /const CON_SUELO_NEGRO = new Set\(\['lluvia', 'lluviaVerde', 'dbz'\]\);/.test(mapsSrc)
    && /sueloParaLluvia\(CON_SUELO_NEGRO\.has\(L_\.escala\)\)/.test(mapsSrc)
-   && /setPaintProperty\('hillLayer', 'raster-opacity', \(CON_SUELO_NEGRO\.has\(L_\.escala\) \|\| L_\.escala === 'nubes'\) \? 0 : 0\.32\)/.test(mapsSrc)
+   && /setPaintProperty\('hillLayer', 'raster-opacity', \(CON_SUELO_NEGRO\.has\(L_\.escala\) \|\| ESCALAS_BLANCAS\.has\(L_\.escala\)\) \? 0 : 0\.32\)/.test(mapsSrc)
    && /const tono = \{ tierra: '#1b1d21'[^}]*mar: '#0b0c0f'/.test(mapsSrc)
    && !/#5a5f66/.test(mapsSrc),
    'suyo: «y si es de lluvia prefiero en mm»: misma pintada negra, leyendo milímetros');
@@ -3021,15 +3021,97 @@ ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan 
   const hacer = (desde, a, modelo) => {
     const M = { layer: desde, model: modelo, horaMirada() {}, cerrarPopups() {}, cancelarPrecarga() {}, soltarMemoria() {},
       pause() {}, ui() {}, apply() {}, avisoAlcance() {}, setModel(m) { pedidos.push(m); return { then() {} }; } };
-    const TL = [{ id: 'rain', escala: 'lluvia' }, { id: 'tipo', escala: 'lluviaVerde' }, { id: 'cape', escala: 'cape' }];
-    const f = new Function('TLAYERS', 'LS', 'MODELO_LLUVIA', 'CAPAS_LLUVIA_AROME', 'TMODELS', 'esc', `return function(id) ${cuerpo}`)(
-      TL, { set() {} }, 'meteofrance_arome_france_hd', new Set(['lluvia', 'lluviaVerde']), [], x => x);
+    const TL = [{ id: 'rain', escala: 'lluvia' }, { id: 'tipo', escala: 'lluviaVerde' }, { id: 'cape', escala: 'cape' },
+                { id: 'niebla', escala: 'niebla' }];
+    const f = new Function('TLAYERS', 'LS', 'MODELO_LLUVIA', 'CAPAS_LLUVIA_AROME', 'MODELO_NIEBLA', 'CON_VISIBILIDAD', 'TMODELS', 'esc',
+      `return function(id) ${cuerpo}`)(
+      TL, { set() {} }, 'meteofrance_arome_france_hd', new Set(['lluvia', 'lluviaVerde']),
+      'dwd_icon_eu', new Set(['dwd_icon_eu', 'dwd_icon_d2', 'ecmwf_ifs']), [], x => x);
     pedidos.length = 0; f.call(M, a); return [...pedidos];
   };
   ok('al entrar en Precipitación desde CAPE con ICON-EU, el mapa pide AROME HD',
      !!cuerpo && JSON.stringify(hacer('cape', 'rain', 'dwd_icon_eu')) === '["meteofrance_arome_france_hd"]');
   ok('pero de Precipitación a Tipo de precipitación no lo vuelve a forzar (manda lo que él eligió), ni si ya está en AROME HD',
      !!cuerpo && hacer('rain', 'tipo', 'dwd_icon_eu').length === 0 && hacer('cape', 'rain', 'meteofrance_arome_france_hd').length === 0);
+  /* LA NIEBLA, COMO WINDY (17-10-2026, suyo: «la capa de niebla no esperes hazlo»).
+     AROME HD no trae visibilidad en los mapas: entrar en Niebla desde AROME pide ICON-EU;
+     con ECMWF 9 km o ICON-D2, que sí la traen, se respeta lo que él tenía. */
+  ok('al entrar en Niebla con AROME HD el mapa pide ICON-EU (AROME no trae visibilidad); con ECMWF 9 km o ICON-D2 no toca el modelo',
+     !!cuerpo && JSON.stringify(hacer('rain', 'niebla', 'meteofrance_arome_france_hd')) === '["dwd_icon_eu"]'
+     && hacer('cape', 'niebla', 'ecmwf_ifs').length === 0 && hacer('cape', 'niebla', 'dwd_icon_d2').length === 0);
+}
+/* NADA BLANCO ENCIMA DE LA NUBE NI DE LA NIEBLA (17-10-2026): al estrenar la Niebla,
+   la frontera de CARTO (#f3efed, ancha) salía sobre el ocre como una banda blanca
+   siguiendo el Pirineo desde Hendaia, igualita a una niebla. Se ejecuta rayasParaNubes()
+   de verdad con los colores del estilo Claro: puesto el suelo, ninguna raya de frontera,
+   carretera ni río queda clara; quitado, vuelve cada una a su color; y con un estilo
+   nuevo (cambio de fondo) no se le pegan los colores del anterior. */
+{
+  const iS = mapsSrc.indexOf('  rayasParaNubes(on) {'), iF = mapsSrc.indexOf('\n  },', iS);
+  const cuerpo = iS > 0 ? mapsSrc.slice(iS + '  rayasParaNubes(on) '.length, iF + 4) : null;
+  const capas = [
+    { id: 'waterway', type: 'line', source: 'carto', 'source-layer': 'waterway', c: '#d1dbdf' },
+    { id: 'boundary_state', type: 'line', source: 'carto', 'source-layer': 'boundary', c: { stops: [[4, '#ead5d7'], [6, '#e1c5c7']] } },
+    { id: 'road_pri_case_noramp', type: 'line', source: 'carto', 'source-layer': 'transportation', c: '#ddd' },
+    { id: 'road_mot_fill_noramp', type: 'line', source: 'carto', 'source-layer': 'transportation', c: '#fff' },
+    { id: 'costaLayer', type: 'line', source: 'carto', 'source-layer': 'water', c: 'rgba(18,38,66,0.85)' },
+    { id: 'boundary_country_outline', type: 'line', source: 'carto', 'source-layer': 'boundary', c: '#f3efed' },
+    { id: 'water', type: 'fill', source: 'carto', 'source-layer': 'water', c: '#a9cfe6' },
+    { id: 'water_shadow', type: 'fill', source: 'carto', 'source-layer': 'water', c: '#a9cfe6' },
+    { id: 'building-top', type: 'fill', source: 'carto', 'source-layer': 'building', c: '#ededed' },
+    { id: 'marLayer', type: 'fill', source: 'carto', 'source-layer': 'water', c: '#7a6932' },
+    { id: 'marLluviaLayer', type: 'fill', source: 'carto', 'source-layer': 'water', c: '#0b0c0f' },
+  ];
+  const NUESTRAS = ['costaLayer', 'marLayer', 'marLluviaLayer'];
+  // el fondo «Color» trae otros colores: lo que se devuelva tiene que ser lo SUYO
+  const deColor = { boundary_country_outline: '#e9e2d0', road_mot_fill_noramp: '#fbe7b5', waterway: '#a9cfe0' };
+  const nuevoMapa = (otro = false) => {
+    const pintura = Object.fromEntries(capas.map(l => [l.id, (otro && deColor[l.id]) || l.c]));
+    return { style: {}, pintura, getStyle: () => ({ layers: capas }), getPaintProperty: (id) => pintura[id],
+      setPaintProperty: (id, k, v) => { if (k === (capas.find(l => l.id === id).type === 'fill' ? 'fill-color' : 'line-color')) pintura[id] = v; } };
+  };
+  // claro = luminosidad percibida ≥ 170 (el azul de los lagos, #a9cfe6, da 198; el ocre del suelo, 116)
+  const claro = c => { const m = typeof c === 'string' && c.match(/^#([0-9a-f]{6})$/i); if (!m) return true;
+    const [r, g, b] = [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)); return 0.299 * r + 0.587 * g + 0.114 * b >= 170; };
+  const corre = (M, on) => { try { new Function(`return function(on) ${cuerpo}`)().call(M, on); return true; } catch { return false; } };
+  const M = { map: nuevoMapa() };
+  const ok1 = !!cuerpo && corre(M, true);
+  const puestas = { ...M.map.pintura };
+  corre(M, false);
+  const quitadas = { ...M.map.pintura };
+  // cambio de fondo con el suelo puesto: llega un estilo nuevo y luego se quita
+  corre(M, true); M.map = nuevoMapa(true); corre(M, false);
+  const trasCambio = { ...M.map.pintura };
+  ok('con el suelo ocre puesto (Nubes, Niebla) ninguna frontera, carretera ni río va en blanco: la frontera ya no parece una niebla',
+     ok1 && capas.filter(l => !NUESTRAS.includes(l.id)).every(l => !claro(puestas[l.id]))
+     && NUESTRAS.every(id => puestas[id] === capas.find(l => l.id === id).c),
+     JSON.stringify(puestas));
+  ok('y al quitar el suelo cada raya vuelve a su color, también tras cambiar de fondo',
+     capas.every(l => JSON.stringify(quitadas[l.id]) === JSON.stringify(l.c))
+     && capas.every(l => JSON.stringify(trasCambio[l.id]) === JSON.stringify(deColor[l.id] || l.c)),
+     JSON.stringify({ quitadas, trasCambio }));
+  ok('el suelo de las nubes pone las rayas oscuras y quitarlo (o quitar las capas de datos) las devuelve',
+     /this\.rayasParaNubes\(true\);\s*\} catch \(e\) \{ console\.warn\('suelo para nubes/.test(mapsSrc)
+     && /const quitar = \(\) => \{ \['sueloLayer', 'marLayer'\][^\n]*this\.rayasParaNubes\(false\); \};/.test(mapsSrc)
+     && /removeSource\(id\); \}\);\s*this\.rayasParaNubes\(false\);/.test(mapsSrc));
+}
+/* LA ESCALA DE LA NIEBLA: con los cortes y alfas de verdad de maps.js, por encima de
+   2 km de visibilidad no pinta nada (el mapa se ve limpio, como Windy); por debajo de
+   200 m es blanco casi opaco; y entre medias, más opaco cuanto más cerrada. */
+{
+  const capa = (mapsSrc.match(/\{ id:'niebla',[^\n]*/) || [])[0] || '';
+  const cortes = ((mapsSrc.match(/const nim = \[([^\]]+)\]/) || [])[1] || '').split(',').map(Number);
+  const nic = (((mapsSrc.match(/const nic = \[([\s\S]*?)\];/) || [])[1] || '')
+    .match(/\['#([0-9a-f]{6})',\s*([0-9.]+)\]/g) || []).map(x => ({ hex: x.match(/#([0-9a-f]{6})/)[1], a: Number(x.match(/,\s*([0-9.]+)\]/)[1]) }));
+  const alfaDe = m => { let k = 0; for (let i = 0; i < cortes.length; i++) if (m >= cortes[i]) k = i; return nic[k]?.a; };
+  const blanco = h => [0, 2, 4].every(i => parseInt(h.slice(i, i + 2), 16) >= 0xe8);
+  ok('la capa Niebla existe y pinta la visibilidad (variable visibility)',
+     /v:'visibility'/.test(capa) && /escala:'niebla'/.test(capa), capa);
+  ok('niebla: transparente desde 2 km, blanca casi opaca por debajo de 200 m, y más opaca cuanto más cerrada',
+     cortes.length === nic.length && nic.every(c => blanco(c.hex))
+     && alfaDe(2000) === 0 && alfaDe(10000) === 0 && alfaDe(100) >= 0.85
+     && alfaDe(100) > alfaDe(300) && alfaDe(300) > alfaDe(700) && alfaDe(700) > alfaDe(1500) && alfaDe(1500) > 0,
+     JSON.stringify({ cortes, nic }));
 }
 /* COMO WINDY (17-10-2026, suyo: «Windy pinta en rojo y el nuestro en amarillo»):
    con los cortes de verdad de maps.js, el rojo entra en 7 mm/h (20 mm en 3 h de
@@ -3063,7 +3145,7 @@ ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan 
    lluvia se interpolan con cúbica MONÓTONA (no rebasa los nodos) y se
    funden entre cortes; el resto sigue en lineal hasta que se mida. */
 ok('las capas de lluvia piden interpolación monótona y el resto lineal',
-   /const INTERPOLACION_SUAVE = new Set\(\['lluvia', 'dbz', 'sombraLluvia', 'lluviaVerde', 'nieveAzul', 'nubes'\]\);/.test(mapsSrc)
+   /const INTERPOLACION_SUAVE = new Set\(\['lluvia', 'dbz', 'sombraLluvia', 'lluviaVerde', 'nieveAzul', 'nubes', 'niebla'\]\);/.test(mapsSrc)
    && /interpolation: interpolacionDe\(L_\)/.test(mapsSrc)
    && /if \(INTERPOLACION_SUAVE\.has\(L_\?\.escala\)\) return 'monotone';/.test(mapsSrc)
    && !/interpolation: 'cubic'/.test(mapsSrc),
@@ -7640,9 +7722,9 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
      truco de Meteored. Ya no se elige entre relieve y color. */
   ok('el color va pleno y la sombra del terreno se dibuja encima, rebajada',
      /* 15-09-2026: las capas de nubes suben a ≥ 0,92 (nube blanca lavada sobre el mar azul acero); el resto sigue al valor del deslizador, nunca por debajo. */
-     /const op = L_\.escala === 'nubes' \? Math\.max\(this\.opacity, 0\.92\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? Math\.max\(this\.opacity, 0\.95\)\s*: this\.opacity;/.test(M)
+     /const op = ESCALAS_BLANCAS\.has\(L_\.escala\) \? Math\.max\(this\.opacity, 0\.92\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? Math\.max\(this\.opacity, 0\.95\)\s*: this\.opacity;/.test(M)
      && /moveLayer\('hillLayer', this\.firstLabelLayer\(\)\)/.test(M)
-     && /'raster-opacity', \(CON_SUELO_NEGRO\.has\(L_\.escala\) \|\| L_\.escala === 'nubes'\) \? 0 : 0\.32/.test(M),
+     && /'raster-opacity', \(CON_SUELO_NEGRO\.has\(L_\.escala\) \|\| ESCALAS_BLANCAS\.has\(L_\.escala\)\) \? 0 : 0\.32/.test(M),
      'sus dos peticiones a la vez: relieve visible y mapa sin lavar (y bajo la lluvia, sombra apagada: 18-09-2026)');
   ok('la T850 vive en el grupo AIRE, al lado de Temperatura 2 m',
      (() => { const i = M.indexOf("id:'temp'"); const j = M.indexOf("id:'t850'");
@@ -7724,7 +7806,7 @@ grupo('RÁFAGAS: colores vivos y con SUS listones (01-09-2026)');
        `el pie dice: «${pieRafagas}»`);
   }
   ok('está registrada, si no la capa se queda sin color',
-     /presion, visibilidad, tempc, t850, rafagas,/.test(M));
+     /presion, visibilidad, niebla, tempc, t850, rafagas,/.test(M));
   /* 15-09-2026 19:55 (portátil): la tesela trae la racha en m/s. Con la escala propia se
      perdió la conversión y el mapa marcaba «7» en Madrid con 27 km/h en la API: los
      cortes en m/s y el número por `conv`, como presión y visibilidad. */
@@ -11229,7 +11311,7 @@ grupo('El mapa se ve debajo del color: costa por encima, opacidad 0,75 y el «no
      && cp.length >= 12 && cp[0] === 0 && cp[1] > 0 && cp[1] < cp[2] && cp[3] >= 0.9 && cp[4] === 1,
      JSON.stringify({ rf, cp }));
   ok('la reflectividad pide color_blend=true: degradado continuo, no bandas estrechas que dibujan la malla',
-     /const ESCALAS_SUAVES = new Set\(\['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'sombraLluvia', 'tempc', 't850', 'rafagas',[\s\S]{0,400}?'lluvia', 'lluviaVerde', 'nieveAzul'\]\);/.test(M)
+     /const ESCALAS_SUAVES = new Set\(\['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'niebla', 'sombraLluvia', 'tempc', 't850', 'rafagas',[\s\S]{0,400}?'lluvia', 'lluviaVerde', 'nieveAzul'\]\);/.test(M)
      && /if \(ESCALAS_SUAVES\.has\(L_\?\.escala\)\) q\.set\('color_blend', 'true'\);/.test(M),
      'con bandas de 5 dBZ cada celda del modelo se veía como un cuadro; ráfagas, CAPE y presión siguen a saltos (listones e isobaras). 15-09: temperatura y T850 también en degradado, como Windy («mira capa temperatura 2m qué bien se ve»); sus cortes de 30/34/38 siguen en la escala, solo se funden entre sí');
 }
@@ -11323,7 +11405,7 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
     && canales(hexDe(nb[7])).every(v => v <= 0xe6 && v >= 0xd0);
   ok('la escala «nubes» va de transparente (0 %) a blanco casi opaco (100 %): blanca como Windy, un gris ligero solo cerrada, y neutra, no azul',
      alfa.length >= 6 && alfa[0] === 0 && alfa[alfa.length - 1] >= 0.9 && alfa.every((a, i) => i === 0 || a >= alfa[i - 1]) && clara
-     && /const nubes = \{/.test(M) && /presion, visibilidad, tempc, t850, rafagas, capeE, tapa, agua, isocero, sinColor, nubes,/.test(M),
+     && /const nubes = \{/.test(M) && /presion, visibilidad, niebla, tempc, t850, rafagas, capeE, tapa, agua, isocero, sinColor, nubes,/.test(M),
      JSON.stringify({ alfa, clara }));
   ok('las nubes piden degradado continuo (color_blend), como la reflectividad',
      /const ESCALAS_SUAVES = new Set\(\[[^\]]*'nubes'[^\]]*\]\);/.test(M));
@@ -11332,10 +11414,10 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
      && /id:'sueloLayer', type:'background'/.test(M) && /id:'marLayer', type:'fill', source:'carto', 'source-layer':'water'/.test(M),
      'una nube blanca sobre tierra blanca (#fafaf8) no existe');
   const iApply = M.indexOf('async apply() {'), iOm = M.indexOf("id:'omLayer', type:'raster', source:'omSrc'", iApply);
-  const iSuelo = M.indexOf("this.sueloParaNubes(L_.escala === 'nubes');", iApply);
-  ok('apply() pone el suelo ANTES de montar la capa y solo para la escala «nubes», con la nube casi opaca (≥ 0,92); quitarCapasDeDatos() lo quita con las demás',
+  const iSuelo = M.indexOf("this.sueloParaNubes(ESCALAS_BLANCAS.has(L_.escala));", iApply);
+  ok('apply() pone el suelo ANTES de montar la capa y solo para las escalas blancas (nubes, niebla), con la nube casi opaca (≥ 0,92); quitarCapasDeDatos() lo quita con las demás',
      iSuelo > iApply && iSuelo < iOm
-     && /const op = L_\.escala === 'nubes' \? Math\.max\(this\.opacity, 0\.92\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? Math\.max\(this\.opacity, 0\.95\)\s*: this\.opacity;/.test(M)
+     && /const op = ESCALAS_BLANCAS\.has\(L_\.escala\) \? Math\.max\(this\.opacity, 0\.92\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? Math\.max\(this\.opacity, 0\.95\)\s*: this\.opacity;/.test(M)
      && /const CAPAS  = \['omLayer', 'omLayer2', 'radarLayer', 'satLayer', 'aemetLayer', 'acumLayer',\s*'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'\];/.test(M),
      'si se quedara puesto, la siguiente capa (temperatura, ráfagas) saldría sobre tierra ocre sin motivo');
   /* 17:52, con Windy al lado otra vez: «blancas, negras donde pinta agua», «verde donde lloverá», «así quiero». */
@@ -13239,7 +13321,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /if \(conservarAcum && id === 'acumLayer'\) return;/.test(M) && /if \(conservarAcum && id === 'acumSrc'\) return;/.test(M));
   ok('las capas de datos van más vivas (suyo, 16-10: «sosos»): el modelo y la acumulada llevan raster-saturation y raster-contrast, y las nubes blancas quedan fuera',
      /const VIVOS = \{ 'raster-saturation': 0\.[3-9]\d*, 'raster-contrast': 0\.\d+ \};/.test(M)
-     && /\.\.\.\(L_\.escala === 'nubes' \? \{\} : VIVOS\)/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
+     && /\.\.\.\(ESCALAS_BLANCAS\.has\(L_\.escala\) \? \{\} : VIVOS\)/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
   ok('la rampa es EXACTAMENTE la «Acumulación de lluvia» de Windy (tabla leída de windy.com/colors el 16-10-2026): cortes 0·1·5·10·30·50·80·120·200·320·600 y sus once colores, todos opacos desde 5 litros',
      (() => { const t = M.slice(M.indexOf('const acc = ['), M.indexOf('];', M.indexOf('const acc = [')));
        const hx = [...t.matchAll(/'#([0-9a-f]{6})',(\.?\d+)/g)];

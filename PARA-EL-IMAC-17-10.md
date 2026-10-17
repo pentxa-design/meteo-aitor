@@ -28,12 +28,36 @@
 - Velocidad de T850 y viento: él los nota lentos; en el MacBook no se reprodujo (≈2 s). Pedirle captura con el
   «Cargando… N s» y el aparato.
 - ECMWF de 9 km con el mapa más alejado (hoy desde zoom 6), como Windy: hay que medir la memoria en el Ulefone.
-- La niebla de Windy («está top») frente a nuestra capa Visibilidad, y lo que se pueda aprender de Windy.
+- Lo que se pueda seguir aprendiendo de Windy.
 
 ## 4. Añadido a las 13:45
 - Publicado 2026.10.17-1340: la costa del mapa en dos tramos (CARTO desde zoom 7; Natural Earth 1:10M por
   debajo, `data/costa.geojson`), porque con el mapa alejado se pintaban los cortes de tesela como una raya
   recta en el mar junto a Bermeo.
 - Investigado en su Windy Pro: la niebla de Windy son manchas blancas (ICON). Se puede hacer una capa
-  «Niebla» igual con la `visibility` de ICON-D2/ICON-EU (Open-Meteo la publica); pendiente de su sí.
+  «Niebla» igual con la `visibility` de ICON-D2/ICON-EU (Open-Meteo la publica). Hecha: ver §5.
   La densidad de rayos prevista de Windy no está en los mapas de Open-Meteo.
+
+## 5. Añadido por la tarde: la capa Niebla (suyo: «la capa de niebla no esperes, hazlo, ni preguntes más»)
+- **Capa «Niebla»** (grupo Cielo, junto a Visibilidad): la `visibility` del modelo pintada como Windy, blanca
+  donde baja de 2 km y más opaca cuanto más cerrada (200 m o menos, casi opaca); por encima, nada. Lleva el
+  suelo ocre de las nubes. AROME HD no trae visibilidad en los mapas: al entrar desde AROME el mapa se pone en
+  ICON-EU (ECMWF 9 km e ICON-D2 sí la traen y se respetan). Ojo: las pasadas de 03/09/15/21 UTC de ICON-EU
+  solo llegan a 30 h; para más lejos, ECMWF 9 km.
+- **Nada blanco encima de la nube ni de la niebla** (`rayasParaNubes`): al estrenarla, la frontera de CARTO
+  (casi blanca y ancha) salía como una banda de niebla siguiendo el Pirineo desde Hendaia, y la sombra de los
+  embalses asomaba en azul claro como motas. Con el suelo ocre puesto (Nubes y Niebla), fronteras, carreteras,
+  ríos, agua y edificios van en ocres oscuros; al salir recuperan su color (guardado por estilo). En
+  Precipitación no se toca.
+- Mirado en el panel: el domingo 18 a las 08:00 ICON-EU solo da niebla en las cumbres de Picos y del Pirineo;
+  el lunes 19 a las 09:00 da 500-760 m en Vitoria y Miranda (fuera de la pasada corta; con la siguiente larga
+  se verá).
+- **Medidor de cobertura (`medir-cobertura.cjs`), tres agujeros cerrados.** Publicando esto, con Open-Meteo dando
+  503 («The service is overloaded»), la medida dio a ECMWF 9 km y HARMONIE como si dejaran de publicar 24 campos
+  y lo escribió en `data/cobertura.json` y en el bloque de app.js. Lo paró la prueba «las cuatro piezas del agua
+  van juntas». Restaurado de git. Causas: (1) el modelo que no contesta decía «se queda como estaba» pero no se
+  apuntaba en `sinMedir`; (2) el medido a medias (un sitio con 503) podía perder campos; (3) un 503 en Miami
+  quitaba «llega fuera de Europa» (GEM). Prueba en `pruebas-servidor.cjs` que ejecuta el medidor con un
+  Open-Meteo de mentira.
+- Su pregunta de la tarde («la lluvia, ¿dónde la veo mejor: europeo, ICON o AROME?»): AROME HD, por el
+  registro (53 % frente a 49 % y 45 %); más allá de 48 h, ICON.

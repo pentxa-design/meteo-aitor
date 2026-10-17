@@ -119,6 +119,8 @@ async function medir() {
   for (const c of CAMPOS) cobertura[c] = [];
   const globales = [];
   const sinMedir = [];
+  const aMedias = [];          // contestó en algún sitio, no en todos
+  const globalSinMedir = [];   // no se pudo preguntar en Miami
 
   for (const [om, nombre] of MODELOS) {
     /* Un modelo que falla NO se apunta como «no publica nada»: eso sería
@@ -130,7 +132,14 @@ async function medir() {
       catch (e) { console.log(`  · ${nombre} en ${s.n}: ${e.message}`); }
       await dormir(150);
     }
-    if (!porSitio.length) { console.log(`  ⚠ ${nombre}: no ha contestado, se queda como estaba`); continue; }
+    /* ── «SE QUEDA COMO ESTABA» TIENE QUE SER VERDAD (17-10-2026) ──────
+       Lo decía y no lo hacía: el modelo que no contesta en ningún sitio
+       se saltaba sin apuntarlo en `sinMedir`, y al escribir se le borraba
+       de la tabla. Ese día, con Open-Meteo dando 503, ECMWF 9 km y
+       HARMONIE salieron «dejan de publicar» 24 campos y se escribió así
+       en app.js. Lo paró una prueba de pantalla. */
+    if (!porSitio.length) { console.log(`  ⚠ ${nombre}: no ha contestado, se queda como estaba`); sinMedir.push(om); continue; }
+    if (porSitio.length < SITIOS.length) aMedias.push(om);
 
     for (const c of CAMPOS) {
       /* Publica el campo si lo da en ALGÚN sitio medido con al menos la
@@ -169,17 +178,20 @@ async function medir() {
     /* ¿Llega fuera de Europa? Se mira un campo que publica TODO el
        mundo —la temperatura—: si ahí no da nada, es que el modelo no
        cubre el punto, no que le falte ese dato. */
-    let global = false;
+    /* Si en Miami NO CONTESTA, no se sabe: se queda como estaba (el 17-10
+       un 503 ahí borró «GEM llega fuera de Europa»). */
+    let global = null;
     try {
       const h = await pedir(om, FUERA);
       global = (h.temperature_2m || []).some(v => v !== null && v !== undefined);
-    } catch { global = false; }
+    } catch { globalSinMedir.push(om); }
     if (global) globales.push(om);
 
     console.log(`  ${nombre.padEnd(10)} publica ${String(n).padStart(2)} de ${CAMPOS.length}`
-              + `  ·  ${global ? 'llega a ' + FUERA.n : 'solo Europa'}`);
+              + `  ·  ${global === null ? FUERA.n + ' no contesta' : global ? 'llega a ' + FUERA.n : 'solo Europa'}`
+              + (porSitio.length < SITIOS.length ? '  ·  medido a medias' : ''));
   }
-  return { cobertura, globales, sinMedir };
+  return { cobertura, globales, sinMedir, aMedias, globalSinMedir };
 }
 
 /** Lo que cambia respecto a la última medida. Es el aviso que él pidió. */
@@ -202,7 +214,7 @@ function comparar(antes, ahora) {
 
 (async () => {
   console.log('\n▸ Midiendo qué publica cada modelo…');
-  const { cobertura, globales, sinMedir } = await medir();
+  const { cobertura, globales, sinMedir, aMedias, globalSinMedir } = await medir();
 
   const publican = CAMPOS.filter(c => cobertura[c].length);
   if (publican.length < CAMPOS.length / 2) {
@@ -231,6 +243,19 @@ function comparar(antes, ahora) {
       if ((antes.globales || []).includes(om) && !globales.includes(om)) globales.push(om);
     }
     console.log(`\n  ⚠ conservado de la medida anterior: ${sinMedir.join(', ')}`);
+  }
+  /* Lo medido A MEDIAS (un sitio contestó y otro dio 503) puede SUMAR
+     campos, no quitarlos: con Bermeo caído, AROME HD medido solo en Calpe
+     —fuera de su malla— «dejaría» de publicar lo que sí publica aquí. */
+  if (antes?.cobertura) {
+    for (const om of aMedias) for (const c of CAMPOS) {
+      if ((antes.cobertura[c] || []).includes(om) && !cobertura[c].includes(om)) cobertura[c].push(om);
+    }
+    for (const om of globalSinMedir) {
+      if ((antes.globales || []).includes(om) && !globales.includes(om)) globales.push(om);
+    }
+    if (aMedias.length) console.log(`  ⚠ medido a medias, solo puede sumar: ${aMedias.join(', ')}`);
+    if (globalSinMedir.length) console.log(`  ⚠ sin respuesta en ${FUERA.n}, se queda como estaba: ${globalSinMedir.join(', ')}`);
   }
 
   const cambios = comparar(antes, { ...cobertura, globales });

@@ -1425,6 +1425,47 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
      && /mejor la de ayer que una en blanco/.test(M),
      'son dos redes distintas: ésta mira el total, la nueva mira modelo a modelo');
 
+  /* ── CON OPEN-METEO DANDO 503 NO SE BORRA NADA (17-10-2026) ──────────
+     Pasó publicando la capa Niebla: con la API saturada, ECMWF 9 km y
+     HARMONIE no contestaron en ningún sitio y el medidor, que decía «se
+     queda como estaba», los borró de 24 campos (en el fichero y en app.js);
+     un 503 en Miami le quitó a GEM «llega fuera de Europa». Se ejecuta el
+     medidor DE VERDAD con un Open-Meteo de mentira que contesta lo de la
+     tabla de hoy, salvo: ECMWF 9 km y HARMONIE, 503 en todo; AROME HD, 503
+     en Bermeo y a medias en Calpe; GEM, 503 en Miami. Sin --escribir, no
+     toca ningún fichero. */
+  {
+    const guion = `
+      const fs = require('fs'), path = require('path');
+      const T = JSON.parse(fs.readFileSync(path.join(${JSON.stringify(__dirname)}, 'data', 'cobertura.json'), 'utf8'));
+      const st = global.setTimeout; global.setTimeout = (f, ms, ...a) => st(f, ms === 150 ? 0 : ms, ...a);
+      const caidos = ['ecmwf_ifs', 'knmi_harmonie_arome_europe'];
+      global.fetch = async (u) => {
+        const q = new URL(u).searchParams, om = q.get('models'), lat = +q.get('latitude');
+        const no = { ok: false, status: 503, json: async () => ({ error: true, reason: 'The service is overloaded' }) };
+        if (caidos.includes(om)) return no;
+        if (om === 'meteofrance_arome_france_hd' && lat > 43) return no;
+        if (om === 'gem_seamless' && lat < 30) return no;
+        const campos = q.get('hourly').split(',');
+        let suyos = campos.filter(c => (T.cobertura[c] || []).includes(om));
+        if (om === 'meteofrance_arome_france_hd') suyos = suyos.slice(0, Math.ceil(suyos.length / 2));
+        if (lat < 30) suyos = (T.globales || []).includes(om) ? ['temperature_2m'] : [];
+        const hourly = { time: Array.from({ length: 48 }, (_, i) => String(i)) };
+        for (const c of campos) hourly[c] = Array(48).fill(suyos.includes(c) ? 1 : null);
+        return { ok: true, status: 200, json: async () => ({ hourly }) };
+      };
+      require(${JSON.stringify(path.join(__dirname, 'medir-cobertura.cjs'))});`;
+    const r = require('child_process').spawnSync(process.execPath, ['-e', guion], { encoding: 'utf8', timeout: 30000 });
+    const sal = r.stdout || '';
+    ok('con Open-Meteo dando 503, un modelo que no contesta NO «deja de publicar» nada (ECMWF 9 km y HARMONIE, 17-10-2026)',
+       /ECMWF 9 km: no ha contestado/.test(sal) && !/(ECMWF 9 km|HARMONIE) DEJA de publicar/.test(sal),
+       sal.split('\n').filter(l => /DEJA|✗|contestado/.test(l)).slice(0, 4).join(' | ') || (r.stderr || '').slice(0, 200));
+    ok('ni el medido a medias (AROME HD con Bermeo caído) pierde campos, ni un 503 en Miami quita «llega fuera de Europa»',
+       /medido a medias/.test(sal) && !/AROME HD DEJA de publicar/.test(sal) && !/YA NO llega fuera de Europa/.test(sal)
+       && r.status === 0,
+       `salida ${r.status}: ` + sal.split('\n').filter(l => /DEJA|YA NO|✗/.test(l)).slice(0, 4).join(' | '));
+  }
+
   /* Y que la tabla que hay AHORA no tenga ningún campo huérfano: si esto
      salta, es que se coló una medida mala y hay que restaurarla de git. */
   const T = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'cobertura.json'), 'utf8'));
