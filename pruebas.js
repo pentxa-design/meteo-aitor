@@ -11368,8 +11368,19 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
      'con firstLabelLayer() la segunda capa quedaba debajo de la primera');
   ok('la costa va por encima de TODAS las capas propias (nube, sombra, relieve), no solo del fondo',
      /firstLabelLayer\(porEncimaDeLasPropias = false\) \{/.test(M)
-     && /costaLayer', this\.firstLabelLayer\(true\)\)/.test(M) && /paint \}, this\.firstLabelLayer\(true\)\);/.test(M),
+     && /for \(const id of \['costaLayer', 'costaLayerNE'\]\)[\s\S]{0,250}this\.map\.moveLayer\(id, this\.firstLabelLayer\(true\)\)/.test(M)
+     && (M.match(/paint \}, this\.firstLabelLayer\(true\)\);/g) || []).length >= 2,
      'una nube blanca casi opaca tapaba la línea de costa');
+  /* 17-10-2026: con el mapa alejado, la costa de CARTO pintaba los cortes de tesela
+     como rayas en el mar. CARTO solo desde zoom 7; por debajo, Natural Earth. */
+  const costa = (() => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'costa.geojson'), 'utf8')); } catch { return null; } })();
+  const nLineas = costa?.features?.[0]?.geometry?.coordinates?.length ?? 0;
+  ok('sin rayas de tesela en el mar: la costa de CARTO solo desde zoom 7 y, por debajo, la de Natural Earth (data/costa.geojson, en la caché del móvil)',
+     /const COSTA_DETALLE_DESDE = 7;/.test(M)
+     && /source: 'carto', 'source-layer': 'water',\s*minzoom: COSTA_DETALLE_DESDE/.test(M)
+     && /id: 'costaLayerNE', type: 'line', source: 'costaNE',\s*maxzoom: COSTA_DETALLE_DESDE/.test(M)
+     && nLineas > 50 && /'\.\/data\/costa\.geojson'/.test(fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf8')),
+     `líneas de costa: ${nLineas}`);
 }
 
 grupo('El chip de Horas dice cuánta agua ve el otro modelo (15-09-2026, 23:53)');

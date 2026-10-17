@@ -603,6 +603,9 @@ const CON_SUELO_NEGRO = new Set(['lluvia', 'lluviaVerde', 'dbz']);
    la lluvia en sus sitios (17-10-2026, ver setLayer). */
 const MODELO_LLUVIA = 'meteofrance_arome_france_hd';
 const CAPAS_LLUVIA_AROME = new Set(['lluvia', 'lluviaVerde']);
+/* Desde qué zoom la costa es la detallada de CARTO; por debajo, Natural Earth
+   (ver costaEncima: los cortes de tesela de CARTO salían como rayas). */
+const COSTA_DETALLE_DESDE = 7;
 const HRES_ZOOM_MIN = 6;
 function hresDeLejos(modelo, zoom) {
   return modelo === 'ecmwf_ifs' && Number.isFinite(zoom) && zoom < HRES_ZOOM_MIN;
@@ -3779,14 +3782,30 @@ const Maps = {
       'line-color': oscuro ? 'rgba(225,235,245,0.9)' : 'rgba(18,38,66,0.85)',
       'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.7, 7, 1.2, 10, 1.9],
     };
+    /* ── SIN LAS RAYAS DE LOS CORTES DE TESELA (17-10-2026) ──────────────
+       Con el mapa alejado (zoom ≤ 6) salía una raya recta en el mar, de la
+       costa hacia arriba (sus capturas del 10-10 y del 17-10, junto a
+       Bermeo). La costa era el borde de los polígonos de agua de CARTO, y a
+       esos zooms vienen cortados por los bordes de tesela sin margen: el
+       corte se pintaba como costa. Desde zoom 7 los polígonos ya no traen
+       ese corte (medido a 7, 8 y 9). Así que la costa va en dos tramos: la
+       de CARTO desde zoom 7, detallada, y por debajo la de Natural Earth
+       1:10M (dominio público, data/costa.geojson), que a esa escala sobra
+       y no tiene cortes. */
     try {
-      if (this.map.getLayer('costaLayer')) {
-        for (const k of Object.keys(paint)) this.map.setPaintProperty('costaLayer', k, paint[k]);
-        this.map.moveLayer('costaLayer', this.firstLabelLayer(true));
-        return;
+      if (!this.map.getSource('costaNE'))
+        this.map.addSource('costaNE', { type: 'geojson', data: 'data/costa.geojson' });
+      for (const id of ['costaLayer', 'costaLayerNE']) {
+        if (this.map.getLayer(id)) {
+          for (const k of Object.keys(paint)) this.map.setPaintProperty(id, k, paint[k]);
+          this.map.moveLayer(id, this.firstLabelLayer(true));
+        }
       }
+      if (this.map.getLayer('costaLayer')) return;
       this.map.addLayer({ id: 'costaLayer', type: 'line', source: 'carto', 'source-layer': 'water',
-        paint }, this.firstLabelLayer(true));
+        minzoom: COSTA_DETALLE_DESDE, paint }, this.firstLabelLayer(true));
+      this.map.addLayer({ id: 'costaLayerNE', type: 'line', source: 'costaNE',
+        maxzoom: COSTA_DETALLE_DESDE, paint }, this.firstLabelLayer(true));
     } catch (e) { console.warn('costa: no se ha podido poner encima', e); }
   },
 
