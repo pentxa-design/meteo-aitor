@@ -13179,10 +13179,10 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /Lo que caería desde el \$\{diaDe\(ini\)\} a las \$\{hhmm\(ini\)\}/.test(M)
      && !/Agua caída hasta esa hora/.test(M) && /1 mm = 1 litro\) · \$\{esc\(nombreModelo\)\}/.test(M)
      && /\$\{deDonde\}\$\{delPaso\}\$\{acum\}/.test(M));
-  ok('   en una tablita de cuatro filas en litros, cada una con su «hasta las…» al lado (15-10-2026: «que lo pueda leer de un tirón»)',
+  ok('   en una tablita de cuatro filas en litros, cada una con su «hasta las…» debajo de la etiqueta (15-10-2026: «que lo pueda leer de un tirón»; debajo desde el 17-10 para que quepa en la tarjeta)',
      /<tr><td>en \$\{f\.n === 1 \? '1 hora' : f\.n \+ ' horas'\}<small\$\{f\.corta \? ' class="pa__c"' : ''\}>/.test(M)
      && /\.omPop \.pa td\{[^}]*font-size:0\.9375rem/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8'))
-     && /\.omPop \.pa td small\{display:inline;/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8')));
+     && /\.omPop \.pa td small\{display:block;/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8')));
 }
 
 /* ── LOS NÚMEROS DEL MAPA, CON COMA (15-10-2026) ─────────────────────
@@ -13356,6 +13356,19 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      /const ACUM_RESPALDO = 'ecmwf_ifs';/.test(M) && /if \(!\/400\/\.test\(String\(e\.message\)\) \|\| !alt \|\| alt === om\) throw e;/.test(M)
      && /no cubre toda esta zona: sumado con/.test(M) && /no llega a este punto/.test(M));
 }
+/* ── LA VENTANITA DE LA LLUVIA: LOS LITROS NO SALEN DE LA TARJETA (17-10-2026) ──
+   Medido en su panel: «hasta las 18:00» iba EN LÍNEA junto a «en 1 hora» dentro de una celda sin saltos, la tabla
+   medía 293 px y la caja 240 (el máximo en línea de MapLibre): los litros salían 67 px por fuera de la tarjeta. El
+   diseño no se puede medir en node; esto fija las dos cosas que lo arreglan (se midió a mano: la tabla pasa a 272 px
+   dentro de una caja de 300). */
+{
+  const CSS = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+  grupo('La ventanita de la lluvia cabe en su tarjeta');
+  ok('el «hasta las…» va DEBAJO de la etiqueta (bloque) y la ventanita admite 300 px (o el 88 % de la pantalla) en vez de los 240 de MapLibre',
+     /\.omPop \.pa td small\{display:block;margin:0;/.test(CSS)
+     && /\.omPop\{z-index:8;max-width:min\(300px,88vw\) !important\}/.test(CSS));
+}
+
 
 
 /* ═══════════════════════════════════════════════════════════════════
