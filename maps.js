@@ -1738,8 +1738,16 @@ function escalasPropias() {
      75 % y cada celda de 25 km con 0,1 salía como un cuadro azul macizo.
      Ahora la llovizna entra como un velo (40 %) y va subiendo: la celda
      sigue ahí —es lo que da el modelo— pero no se lee como un mosaico. */
-  const cc = [['#4a7fd8',0], ['#4a7fd8',.55], ['#3f9fe0',.8], ['#2fb8d8',.92],
-              ['#2fc9b0',1], ['#3fcf6a',1], ['#8fd83a',1], ['#e0e03a',1],
+  /* ── LO FLOJO, COMO VELO; EL COLOR, DESDE 1 mm/h (17-10-2026) ──────────
+     Suyo, con Windy al lado a las 11:00: «los mapas de lluvia pintan
+     demasiado, a ver si me los afinas». ICON-EU daba 0,1-0,6 mm/h por medio
+     norte peninsular (0,6 litros en 6 h frente a Lekeitio) y el mapa lo
+     pintaba de azul fuerte; Windy, con lo mismo, casi no pinta. El dato no
+     se toca —al pulsar sale el número exacto—: lo que cambia es el peso de
+     lo poco. 0,1 al 18 %, 0,3 al 35 %, 0,6 al 60 %; de 1 mm/h para arriba,
+     el color pleno de siempre. */
+  const cc = [['#4a7fd8',0], ['#4a7fd8',.18], ['#3f9fe0',.35], ['#2fb8d8',.6],
+              ['#2fc9b0',.85], ['#3fcf6a',1], ['#8fd83a',1], ['#e0e03a',1],
               ['#f2a72a',1], ['#e04a2a',1], ['#b0308f',1], ['#6a1b9a',1]];
   /* ── CORTE SECO EN 0,1 (18-09-2026, 14:24, su captura de Tipo de
      precipitación a las 14:00 del sábado: «se satura bien a lo primero y
@@ -1769,8 +1777,9 @@ function escalasPropias() {
      y de 7 mm/h para arriba amarillo, naranja, rojo y morado, que es la
      rampa de radar de AguaceroWx pasada a mm/h; la NIEVE en azules. Mismos
      cortes que `mm`, y nada por debajo de 0,1. */
-  const lvc = [['#9be3a0',0], ['#9be3a0',.85], ['#6fd46a',.92], ['#46c04a',1],
-               ['#22a63a',1], ['#128a34',1], ['#0c6e2c',1], ['#d9dd2a',1],
+  /* Y aquí lo mismo (17-10-2026): lo flojo, como velo. */
+  const lvc = [['#9be3a0',0], ['#9be3a0',.18], ['#6fd46a',.35], ['#46c04a',.6],
+               ['#22a63a',.85], ['#128a34',1], ['#0c6e2c',1], ['#d9dd2a',1],
                ['#f2b12a',1], ['#ea6a2a',1], ['#d4232f',1], ['#b0308f',1]];
   const lluviaVerde = {
     scale: { type:'breakpoint', unit:'mm/h', ...corteSeco(mm, lvc.map(([c,a]) => hexRGBA(c, a))) },
@@ -2078,6 +2087,20 @@ const Maps = {
     this.verRayos   = LS.get('trayos2', false);
 
     const el = document.querySelector('#mapc');
+    /* ── LOS NÚMEROS, DENTRO DEL MAPA (17-10-2026) ──────────────────────
+       Su pantallazo de las 10:21: «0,5» y «0» pisando la ventanita de la
+       lluvia, otra vez. El arreglo del 15-10 (.omPop z-index 8 > .mvals 4)
+       no podía funcionar: `.mapc` lleva `z-index:1`, que hace caja propia,
+       y la ventanita vive DENTRO de esa caja mientras los números iban
+       FUERA, encima de la caja entera. Ahora las tres capas de encima
+       (partículas, números y barbas) se meten dentro del contenedor del
+       mapa al crearlo, y ahí el 8 de la ventanita sí gana al 4. Antes de
+       vaciar el contenedor se aparcan fuera, para no borrarlas. */
+    const CAPAS_ENCIMA = ['mapParticulas', 'mapVals', 'mapBarbs'];
+    for (const id of CAPAS_ENCIMA) {
+      const n = document.getElementById(id);
+      if (n && n.parentElement === el) el.parentElement.insertBefore(n, el.nextSibling);
+    }
     el.innerHTML = `<div class="radar__ph">Cargando cartografía…</div>`;
     try {
       await this.libs();
@@ -2127,6 +2150,7 @@ const Maps = {
         style: (BASEMAPS.find(b => b.id === this.base) || BASEMAPS[0]).url,
         center: [p.lon, p.lat], zoom: 5.2, attributionControl: false,
       });
+      for (const id of CAPAS_ENCIMA) { const n = document.getElementById(id); if (n) el.appendChild(n); }
       this.map.addControl(new maplibregl.NavigationControl({ showCompass:false }), 'top-left');
       this.map.addControl(new maplibregl.AttributionControl({ compact:true }), 'bottom-right');
       /* En el móvil MapLibre abre la atribución compacta al cargar y se

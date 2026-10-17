@@ -2993,10 +2993,23 @@ ok('y no hay lista de «capas oscuras» que se quede vieja',
    !/capasOscuras|LAYERS_OSCURAS/.test(mapsSrc),
    'la Inhibición no pasa por el suelo de la lluvia y también es oscura: una lista se queda corta');
 ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan un decimal',
-   /\['#4a7fd8',0\], \['#4a7fd8',\.55\], \['#3f9fe0',\.8\]/.test(mapsSrc)
+   /\['#4a7fd8',0\], \['#4a7fd8',\.18\]/.test(mapsSrc)
    && /if \(e\?\.unidad === 'mm\/h' && txt < 0\.1\) continue;/.test(mapsSrc)
    && /e\?\.unidad === 'mm\/h'\) \? 1 : 0;/.test(mapsSrc),
    'un «0» encima de una mancha azul de 0,3 mm/h es un número que miente');
+/* LO FLOJO COMO VELO (17-10-2026, suyo: «los mapas de lluvia pintan demasiado»).
+   Se leen los alfas de las dos escalas de lluvia del propio maps.js: de 0,1 a 0,6
+   mm/h, velo que sube (≤ 0,6); de 1 mm/h para arriba, color fuerte (≥ 0,85). */
+{
+  const alfas = nombre => (((mapsSrc.match(new RegExp(`const ${nombre} = \\[([\\s\\S]*?)\\];`)) || [])[1] || '')
+    .match(/\['#[0-9a-f]{6}',\s*([0-9.]+)\]/g) || []).map(x => Number(x.match(/,\s*([0-9.]+)\]/)[1]));
+  for (const nombre of ['cc', 'lvc']) {
+    const a = alfas(nombre);   // cortes: 0 · 0,1 · 0,3 · 0,6 · 1 · 2 …
+    ok(`lluvia (${nombre}): de 0,1 a 0,6 mm/h es un velo que sube, y de 1 mm/h para arriba el color es fuerte`,
+       a.length >= 6 && a[0] === 0 && a[1] > 0 && a[1] <= 0.25 && a[1] < a[2] && a[2] < a[3] && a[3] <= 0.6
+       && a[4] >= 0.85 && a.slice(5).every(x => x === 1), JSON.stringify(a));
+  }
+}
 
 /* ── SIN CUADRADOS (17-09-2026) ──────────────────────────────────────
    Suyo: «más fino» · «no en cuadrados» · «si puedes». Las capas de
@@ -3024,7 +3037,8 @@ ok('y la lluvia en mm/h va fundida entre cortes (color_blend), como la reflectiv
 ok('la capa «Tipo de precipitación» apila la nieve (agua equivalente) sobre la lluvia, del mismo modelo',
    /\{ id:'tipo', g:'Lluvia', name:'Tipo de precipitación', v:'precipitation', unit:'mm\/h', escala:'lluviaVerde',\s*encima:'snowfall_water_equivalent', encimaEscala:'nieveAzul',/.test(mapsSrc));
 ok('la lluvia va en verdes por intensidad y la nieve en azules, y nada por debajo de 0,1',
-   /const lvc = \[\['#9be3a0',0\], \['#9be3a0',\.85\]/.test(mapsSrc)
+   /* 17-10-2026: lo flojo de la lluvia, como velo (ver la prueba de `cc`/`lvc`). */
+   /const lvc = \[\['#9be3a0',0\], \['#9be3a0',\.18\]/.test(mapsSrc)
    && /const nvc = \[\['#a9c8ff',0\], \['#a9c8ff',\.85\]/.test(mapsSrc)
    && /lluvia, lluviaVerde, nieveAzul,/.test(mapsSrc));
 ok('la capa de encima solo se pide si ESE modelo publica la variable, y si no, se dice',
@@ -9670,6 +9684,38 @@ grupo('Los tres del mapa: el clic del viento, el cartel pegado y el «Ahora» (2
      'que se note que es lo mirado y no «las últimas», que se lee como si fuera todo');
 }
 
+/* ── EL POPUP DEL MAPA, SIEMPRE POR ENCIMA DE LOS NÚMEROS (15-10-2026) ──
+   Su pantallazo de las 21:03: «0,6» de una ciudad pisando el título de la
+   tablita. La capa de números (.mvals) lleva z-index:4; el popup no llevaba
+   ninguno. Se compara el número de las dos reglas del CSS de verdad. */
+{
+  grupo('El popup del mapa va por encima de los números');
+  const css = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+  const z = sel => { const m = css.match(new RegExp(sel.replace(/[.]/g, '\\.') + '\\{[^}]*?z-index:\\s*(\\d+)')); return m ? +m[1] : null; };
+  const zNums = z('.mvals'), zPop = z('.omPop');
+  ok('.omPop tiene z-index y es MAYOR que el de .mvals (los números de las ciudades no pisan el popup)',
+     zNums !== null && zPop !== null && zPop > zNums, `.mvals ${zNums} · .omPop ${zPop}`);
+  /* 17-10-2026: comparar los dos números NO bastaba. `.mapc` lleva z-index, que
+     hace caja propia: el popup (dentro) nunca podía pasar a los números (fuera),
+     y volvió a salir en su pantallazo de las 10:21. Lo que hace falta es que las
+     capas de números vivan DENTRO del contenedor del mapa: se comprueba en maps.js
+     que se meten ahí justo después de crear el mapa, y que se aparcan antes de
+     vaciarlo. */
+  const Mz = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const iMapa = Mz.indexOf('this.map = new maplibregl.Map({');
+  const iMeter = Mz.indexOf("for (const id of CAPAS_ENCIMA) { const n = document.getElementById(id); if (n) el.appendChild(n); }");
+  const iAparcar = Mz.indexOf('if (n && n.parentElement === el) el.parentElement.insertBefore(n, el.nextSibling);');
+  const iVaciar = Mz.indexOf("el.innerHTML = `<div class=\"radar__ph\">Cargando cartografía…</div>`;");
+  const zMapc = z('.mapc');
+  ok('como .mapc hace caja propia (z-index), los números, barbas y partículas se meten DENTRO del mapa al crearlo, y se aparcan antes de vaciarlo',
+     /const CAPAS_ENCIMA = \['mapParticulas', 'mapVals', 'mapBarbs'\];/.test(Mz)
+     && iMapa > 0 && iMeter > iMapa && iMeter - iMapa < 600
+     && iAparcar > 0 && iVaciar > iAparcar && iVaciar - iAparcar < 300,
+     `.mapc z-index ${zMapc} · crear ${iMapa} · meter ${iMeter} · aparcar ${iAparcar} · vaciar ${iVaciar}`);
+  ok('   y las filas de la tablita no se parten en dos líneas (nowrap en las celdas)',
+     /\.omPop \.pa td\{[^}]*white-space:nowrap/.test(css));
+}
+
 /* El guardia de NO-SE-TOCA.md corre AL FINAL, justo antes del recuento:
    necesita haber visto ejecutarse TODAS las pruebas, y las de después del
    30-08 quedaban fuera (05-09-2026). */
@@ -12973,21 +13019,6 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('   y va en una tablita de tres filas (última hora, 3 y 6 horas) en litros, no en una línea de letra pequeña (15-10-2026: «que lo pueda leer de un tirón»)',
      /última hora<\/td>[\s\S]*últimas 3 horas<\/td>[\s\S]*últimas 6 horas<\/td>/.test(M)
      && /\.omPop \.pa td\{[^}]*font-size:0\.9375rem/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8')));
-}
-
-/* ── EL POPUP DEL MAPA, SIEMPRE POR ENCIMA DE LOS NÚMEROS (15-10-2026) ──
-   Su pantallazo de las 21:03: «0,6» de una ciudad pisando el título de la
-   tablita. La capa de números (.mvals) lleva z-index:4; el popup no llevaba
-   ninguno. Se compara el número de las dos reglas del CSS de verdad. */
-{
-  grupo('El popup del mapa va por encima de los números');
-  const css = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
-  const z = sel => { const m = css.match(new RegExp(sel.replace(/[.]/g, '\\.') + '\\{[^}]*?z-index:\\s*(\\d+)')); return m ? +m[1] : null; };
-  const zNums = z('.mvals'), zPop = z('.omPop');
-  ok('.omPop tiene z-index y es MAYOR que el de .mvals (los números de las ciudades no pisan el popup)',
-     zNums !== null && zPop !== null && zPop > zNums, `.mvals ${zNums} · .omPop ${zPop}`);
-  ok('   y las filas de la tablita no se parten en dos líneas (nowrap en las celdas)',
-     /\.omPop \.pa td\{[^}]*white-space:nowrap/.test(css));
 }
 
 /* ── LOS NÚMEROS DEL MAPA, CON COMA (15-10-2026) ─────────────────────
