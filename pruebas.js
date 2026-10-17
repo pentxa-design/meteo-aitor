@@ -3011,6 +3011,26 @@ ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan 
    && /if \(e\?\.unidad === 'mm\/h' && txt < 0\.1\) continue;/.test(mapsSrc)
    && /e\?\.unidad === 'mm\/h'\) \? 1 : 0;/.test(mapsSrc),
    'un «0» encima de una mancha azul de 0,3 mm/h es un número que miente');
+/* LA LLUVIA, CON EL QUE MEJOR LA ACIERTA (17-10-2026, suyo: «lo más preciso quiero»).
+   Se ejecuta setLayer() de verdad con un Maps de mentira: entrar en Precipitación
+   desde otra capa pide AROME HD; cambiar entre capas de lluvia o ya estar en AROME, no. */
+{
+  const iS = mapsSrc.indexOf('  setLayer(id) {'), iF = mapsSrc.indexOf('\n  },', iS);
+  const cuerpo = iS > 0 ? mapsSrc.slice(iS + '  setLayer(id) '.length, iF + 4) : null;
+  const pedidos = [];
+  const hacer = (desde, a, modelo) => {
+    const M = { layer: desde, model: modelo, horaMirada() {}, cerrarPopups() {}, cancelarPrecarga() {}, soltarMemoria() {},
+      pause() {}, ui() {}, apply() {}, avisoAlcance() {}, setModel(m) { pedidos.push(m); return { then() {} }; } };
+    const TL = [{ id: 'rain', escala: 'lluvia' }, { id: 'tipo', escala: 'lluviaVerde' }, { id: 'cape', escala: 'cape' }];
+    const f = new Function('TLAYERS', 'LS', 'MODELO_LLUVIA', 'CAPAS_LLUVIA_AROME', 'TMODELS', 'esc', `return function(id) ${cuerpo}`)(
+      TL, { set() {} }, 'meteofrance_arome_france_hd', new Set(['lluvia', 'lluviaVerde']), [], x => x);
+    pedidos.length = 0; f.call(M, a); return [...pedidos];
+  };
+  ok('al entrar en Precipitación desde CAPE con ICON-EU, el mapa pide AROME HD',
+     !!cuerpo && JSON.stringify(hacer('cape', 'rain', 'dwd_icon_eu')) === '["meteofrance_arome_france_hd"]');
+  ok('pero de Precipitación a Tipo de precipitación no lo vuelve a forzar (manda lo que él eligió), ni si ya está en AROME HD',
+     !!cuerpo && hacer('rain', 'tipo', 'dwd_icon_eu').length === 0 && hacer('cape', 'rain', 'meteofrance_arome_france_hd').length === 0);
+}
 /* COMO WINDY (17-10-2026, suyo: «Windy pinta en rojo y el nuestro en amarillo»):
    con los cortes de verdad de maps.js, el rojo entra en 7 mm/h (20 mm en 3 h de
    Windy) y el magenta en 10; Valencia el domingo (ECMWF 25 km 7,8 mm/h) sale roja. */

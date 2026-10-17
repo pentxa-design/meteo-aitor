@@ -599,6 +599,10 @@ function interpolacionDe(L_) {
    sombra del relieve encima (18-09-2026: al 32 % dejaba la tierra gris). */
 const CON_SUELO_NEGRO = new Set(['lluvia', 'lluviaVerde', 'dbz']);
 
+/* Las capas de lluvia que al entrar se ponen en el modelo que mejor acierta
+   la lluvia en sus sitios (17-10-2026, ver setLayer). */
+const MODELO_LLUVIA = 'meteofrance_arome_france_hd';
+const CAPAS_LLUVIA_AROME = new Set(['lluvia', 'lluviaVerde']);
 const HRES_ZOOM_MIN = 6;
 function hresDeLejos(modelo, zoom) {
   return modelo === 'ecmwf_ifs' && Number.isFinite(zoom) && zoom < HRES_ZOOM_MIN;
@@ -5883,8 +5887,31 @@ const Maps = {
        proyecto tiene medido como la causa de que el mapa vaya lento. */
     this.cancelarPrecarga();
     this.soltarMemoria();
+    const anterior = this.layer;
     this.layer = id; LS.set('tlayer', id);
     this.pause();
+    /* ── LA LLUVIA, CON EL QUE MEJOR LA ACIERTA (17-10-2026) ─────────────
+       Suyo: «lo más importante, saber con exactitud que va a llover, dónde
+       y cuánto» · «a vuestro criterio, lo más preciso quiero». El registro
+       de aciertos del vigilante (16 días, 11.054 horas en sus sitios contra
+       AEMET): AROME HD 53 % y caza la mitad de la lluvia fuerte; ICON 49 %
+       (26 % de la fuerte), GFS y ECMWF 45 %, y ECMWF pinta agua en 3 de cada
+       4 horas secas. Su captura de la mañana estaba en ICON-EU sin saberlo.
+       Al ENTRAR en una capa de lluvia el mapa se pone en AROME HD y lo dice;
+       si luego él cambia de modelo, manda él (no se vuelve a forzar hasta
+       que salga de la lluvia y vuelva). Donde AROME no llega, el mapa ya
+       enseña ECMWF y lo avisa. */
+    const esLluvia = l => CAPAS_LLUVIA_AROME.has(TLAYERS.find(x => x.id === l)?.escala);
+    if (esLluvia(id) && !esLluvia(anterior) && this.model !== MODELO_LLUVIA) {
+      this.ui();
+      this.setModel(MODELO_LLUVIA).then(() => {
+        this.ui(); this.apply();
+        const nom = TMODELS.find(m => m.id === MODELO_LLUVIA)?.name || MODELO_LLUVIA;
+        this.avisoAlcance(`<b>Lluvia con ${esc(nom)}</b>: es el que mejor acierta los litros en tus sitios
+          (el registro de aciertos, en Avisos). Si quieres otro modelo, cámbialo arriba.`);
+      });
+      return;
+    }
     this.ui(); this.apply();
   },
 
