@@ -699,6 +699,8 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;
 .omPop .pa td{padding:2px 0;font-size:0.9375rem;white-space:nowrap}
 .omPop .pa td:last-child{text-align:right;white-space:nowrap;padding-left:14px}
 .omPop .pa td b{font-size:1.125rem}
+.omPop .pa td small{display:inline;margin:0 0 0 5px;font-size:0.75rem;color:var(--dim)}
+.omPop .pa td small.pa__c{display:block;margin-left:0;white-space:normal;line-height:1.25}
 .omPop .pa__p{margin-top:4px;font-size:0.75rem;color:var(--dim);line-height:1.35}
 .omPop .pa__r{font-size:0.8125rem;color:var(--dim)}
 .omPop .pa td.pa__on{font-weight:700;color:var(--ink)}

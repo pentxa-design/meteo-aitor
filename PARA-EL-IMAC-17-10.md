@@ -61,3 +61,12 @@
   Open-Meteo de mentira.
 - Su pregunta de la tarde («la lluvia, ¿dónde la veo mejor: europeo, ICON o AROME?»): AROME HD, por el
   registro (53 % frente a 49 % y 45 %); más allá de 48 h, ICON.
+- **Publicado 2026.10.17-1456 — la ventanita de la lluvia, «lo que caería»** (suyo, mirando el domingo de la DANA
+  desde el sábado: «agua caída hasta esa hora… un poco lioso» · «yo quiero saber lo que daría en 1 h, 3 h, 6 h
+  y 24 h»). Ahora: «Lo que caería desde el dom a las 11:00» con 1, 3, 6 y 24 horas, cada una con su «hasta las…»;
+  si el modelo no llega a 24 h lo dice («AROME HD solo llega hasta el lun a las 08:00») y suma solo lo que hay.
+  `aguaQueCaeria()` en maps.js (sustituye a `acumuladoDe`). Y el aviso «X no llega hasta lo que estás mirando»
+  vuelve a leer, con la tesela cargada, antes de afirmarlo (salió falso encima de Gandia en rojo).
+- La DANA del 18-10 (lo que dan los modelos, pedido por él): AROME HD 173 l en Gandia, 100 en Valencia, 58 en
+  Castellón el domingo; en malla, 311 a 15 km frente a Valencia y 36 puntos ≥ 100. ECMWF 9 km, máx. 151; GFS
+  154-170; ICON 132 en Gandia.

@@ -13027,7 +13027,9 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
                      TM: globalThis.TMODELS, lm: globalThis.limpiarMarca, esc: globalThis.esc };
     globalThis.document = { querySelector: () => el };
     globalThis.S = { place: { lat: 43.413, lon: -2.7183, name: 'BI BERMEO' } };
-    globalThis.OMWeatherMapLayer = { getValueFromLatLong: async () => ({ value: NaN }) };
+    let lecturas = [];   // lo que devuelve cada lectura, por orden; vacío = NaN siempre
+    globalThis.OMWeatherMapLayer = { getValueFromLatLong: async () => ({ value: lecturas.length ? lecturas.shift() : NaN }),
+                                     omProtocol: async () => {} };
     globalThis.TMODELS = [{ id: 'ncep_gfs013', name: 'GFS' }];
     globalThis.limpiarMarca = u => u;
     globalThis.esc = x => String(x);
@@ -13038,10 +13040,14 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
                                  await fn.call(yo, L_); return el.hidden ? 'calla' : el.innerHTML; };
     const capaVieja = await prueba({ id: 'precipitation', v: 'precipitation' });
     const capaDeAhora = await prueba({ id: 'clouds', v: 'cloud_cover' });
+    lecturas = [NaN, 100];   // 17-10, la DANA: la 1ª lectura vacía y, cargada la tesela, el dato
+    const vaciaYLuegoDato = await prueba({ id: 'clouds', v: 'cloud_cover' });
     Object.assign(globalThis, { document: viejos.document, S: viejos.S, OMWeatherMapLayer: viejos.OM,
                                 TMODELS: viejos.TM, limpiarMarca: viejos.lm, esc: viejos.esc });
     ok('una lectura de la capa ANTERIOR con hueco no dice «GFS no llega» (Bermeo, 06-10 19:16)',
        capaVieja === 'calla', capaVieja.slice(0, 80));
+    ok('   ni una primera lectura vacía: carga la tesela, vuelve a leer y, si hay dato, se calla («AROME HD no llega» encima de Gandia en rojo, 17-10-2026)',
+       vaciaYLuegoDato === 'calla', vaciaYLuegoDato.slice(0, 80));
     ok('   y con la capa de ahora sin dato SÍ avisa (el ICON-D2 en Euskadi del 26-08)',
        /GFS<\/?b?>? ?no llega hasta BI BERMEO|GFS no llega hasta BI BERMEO/.test(capaDeAhora), capaDeAhora.slice(0, 80));
   })());
@@ -13139,26 +13145,44 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && !/const gDatos = sel\.map\(h => h\.gust\)\.filter\(has\);/.test(src));
 }
 
-/* ── PRECIPITACIÓN ACUMULADA AL PULSAR: 1, 3 Y 6 HORAS (15-10-2026) ──
-   Suyo, con AguaceroWx al lado: 73 mm en 3 horas frente a nuestros 17-19
-   mm/h del mismo punto. El mapa da intensidad; al pulsar, además, el total. */
+/* ── AL PULSAR LA LLUVIA: LO QUE CAERÍA EN 1, 3, 6 Y 24 HORAS (17-10-2026) ──
+   Antes (15-10, con AguaceroWx al lado) era «agua caída hasta esa hora». Suyo, el
+   17-10 mirando el domingo de la DANA desde el sábado: «un poco lioso» · «yo quiero
+   saber lo que daría en 1 h, 3 h, 6 h y 24 h, el agua que caería». Se EJECUTA
+   aguaQueCaeria() de maps.js con series de verdad. */
 {
-  grupo('El total de agua al pulsar el mapa');
+  grupo('Lo que caería, al pulsar el mapa');
   const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
-  const i = M.indexOf('function acumuladoDe(');
-  const f = new Function(M.slice(i, M.indexOf('\n}', i) + 2) + '\nreturn acumuladoDe;')();
-  const sr = [4, 5.5, 8, 12, 20, 24];   // las seis horas que terminan a las 23:00
-  ok('3 horas = las tres últimas sumadas (12 + 20 + 24 = 56), 1 hora = la última (24), 6 horas = todas (73,5)',
-     f(sr, 3) === 56 && f(sr, 1) === 24 && Math.abs(f(sr, 6) - 73.5) < 1e-9, [f(sr, 1), f(sr, 3), f(sr, 6)].join(' · '));
-  ok('   con un hueco en la serie no se suma: null, no un total más bajo',
-     f([4, null, 8, 12, 20, 24], 6) === null && f([4, 5.5, 8, 12, 20, NaN], 3) === null && f([1, 2], 6) === null && f(undefined, 3) === null);
-  ok('   y el popup lo pide a la API del MISMO modelo, solo en la capa Precipitación (no en Reflectividad) y lo dice en litros',
+  const i = M.indexOf('function aguaQueCaeria(');
+  const f = i > 0 ? new Function(M.slice(i, M.indexOf('\n}', i) + 2) + '\nreturn aguaQueCaeria;')() : () => [];
+  const ini = Date.UTC(2026, 9, 18, 9);   // dom 18, 11:00 en Gandia
+  const H = 3600e3;
+  const sr = [2, 4, 6, 10, 12, 14, ...Array(18).fill(5)];   // las 24 horas que siguen
+  const r = f(sr, ini);
+  ok('1 hora = la siguiente (2), 3 horas = 2 + 4 + 6 = 12, 6 horas = 48, 24 horas = 138, y cada una dice hasta qué hora va',
+     r.length === 4 && r[0].litros === 2 && r[1].litros === 12 && r[2].litros === 48 && r[3].litros === 138
+     && r[0].hasta === ini + H && r[1].hasta === ini + 3 * H && r[2].hasta === ini + 6 * H && r[3].hasta === ini + 24 * H
+     && r.every(x => !x.corta), JSON.stringify(r.map(x => [x.n, x.litros, x.corta])));
+  const corto = f([3, 3, 3, 3, 3, 3, 3, 3, 3, 3, null, null, null], ini);   // el modelo se acaba a las 10 h
+  ok('   si el modelo se acaba antes de 24 h, suma lo que hay y dice hasta dónde llega (no estira nada)',
+     corto[2].litros === 18 && !corto[2].corta && corto[3].corta && corto[3].litros === 30 && corto[3].hasta === ini + 10 * H,
+     JSON.stringify(corto));
+  const hueco = f([3, null, 3, 3, 3, 3, 3], ini);
+  ok('   con un hueco en medio no se suma: «sin dato», no un total más bajo',
+     hueco[0].litros === 3 && hueco[1].litros === null && hueco[2].litros === null && hueco[3].litros === null
+     && f([], ini)[0].litros === null && f(undefined, ini)[0].litros === null, JSON.stringify(hueco));
+  ok('   y el popup pide a la API del MISMO modelo la hora del mapa y las 24 siguientes, solo en Precipitación, y lo titula «Lo que caería desde…»',
      /if \(L_\.v === 'precipitation' && !L_\.dbz && hIso && modeloEnApi\(R\.modelo\)\)/.test(M)
-     && /models: modeloEnApi\(R\.modelo\), hourly: 'precipitation'/.test(M) && /1 mm = 1 litro\) · \$\{esc\(nombreModelo\)\}/.test(M)
+     && /const fin = new Date\(ini \+ 24 \* 3600e3\)/.test(M)
+     && /hourly: 'precipitation', start_hour: hIso, end_hour: fin/.test(M)
+     && /aguaQueCaeria\(\(d\.hourly\.precipitation \|\| \[\]\)\.slice\(1\), ini\)/.test(M)
+     && /Lo que caería desde el \$\{diaDe\(ini\)\} a las \$\{hhmm\(ini\)\}/.test(M)
+     && !/Agua caída hasta esa hora/.test(M) && /1 mm = 1 litro\) · \$\{esc\(nombreModelo\)\}/.test(M)
      && /\$\{deDonde\}\$\{delPaso\}\$\{acum\}/.test(M));
-  ok('   y va en una tablita de tres filas (última hora, 3 y 6 horas) en litros, no en una línea de letra pequeña (15-10-2026: «que lo pueda leer de un tirón»)',
-     /última hora<\/td>[\s\S]*últimas 3 horas<\/td>[\s\S]*últimas 6 horas<\/td>/.test(M)
-     && /\.omPop \.pa td\{[^}]*font-size:0\.9375rem/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8')));
+  ok('   en una tablita de cuatro filas en litros, cada una con su «hasta las…» al lado (15-10-2026: «que lo pueda leer de un tirón»)',
+     /<tr><td>en \$\{f\.n === 1 \? '1 hora' : f\.n \+ ' horas'\}<small\$\{f\.corta \? ' class="pa__c"' : ''\}>/.test(M)
+     && /\.omPop \.pa td\{[^}]*font-size:0\.9375rem/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8'))
+     && /\.omPop \.pa td small\{display:inline;/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8')));
 }
 
 /* ── LOS NÚMEROS DEL MAPA, CON COMA (15-10-2026) ─────────────────────

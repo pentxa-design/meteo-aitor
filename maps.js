@@ -689,15 +689,24 @@ function horasDelPaso(T, t) {
  *  `toFixed` escribe con punto; los números del mapa pasan todos por aquí. */
 const coma = (n, d = 1) => Number(n).toFixed(d).replace('.', ',');
 
-/** Litros por metro cuadrado (mm) caídos en las últimas `n` horas, sumando las
- *  `n` últimas de la serie horaria `serie` (la hora de cada valor es la del
- *  FINAL de su hora, como las da Open-Meteo). null si falta cualquiera: una
- *  suma con huecos no es una suma (11-10-2026, suyo con AguaceroWx al lado:
- *  «precipitación en 3 horas… ¿litros?»). */
-function acumuladoDe(serie, n) {
-  if (!Array.isArray(serie) || n < 1 || serie.length < n) return null;
-  const t = serie.slice(serie.length - n);
-  return t.every(v => Number.isFinite(v)) ? t.reduce((a, b) => a + b, 0) : null;
+/** Lo que caería en la 1, 3, 6 y 24 horas que SIGUEN a la hora del mapa, sumando
+ *  la serie de después de esa hora (cada valor es el agua de la hora que acaba en
+ *  él, como lo da Open-Meteo). Cada fila lleva `hasta`, la hora en que acaba. Si
+ *  el modelo se termina antes (AROME HD llega a dos días), la fila suma lo que hay
+ *  y va `corta`, con su hora final de verdad; con un hueco en medio, `litros: null`
+ *  (17-10-2026, suyo: «lo que daría en 1 h, 3 h, 6 h y 24 h, el agua que caería»). */
+function aguaQueCaeria(despues, iniMs) {
+  const s = Array.isArray(despues) ? despues : [];
+  const suma = t => t.reduce((a, b) => a + b, 0);
+  return [1, 3, 6, 24].map(n => {
+    const tramo = s.slice(0, n);
+    let k = tramo.findIndex(v => !Number.isFinite(v));
+    if (k === -1 && tramo.length === n) return { n, hasta: iniMs + n * 3600e3, litros: suma(tramo), corta: false };
+    if (k === -1) k = tramo.length;
+    // Sin nada, o con dato DESPUÉS del hueco (es un hueco, no el final del modelo): no se suma.
+    if (k === 0 || s.slice(k).some(v => Number.isFinite(v))) return { n, hasta: null, litros: null, corta: false };
+    return { n, hasta: iniMs + k * 3600e3, litros: suma(tramo.slice(0, k)), corta: true };
+  });
 }
 /* ── LLUVIA ACUMULADA: HELPERS (16-10-2026) ── */
 const ACUM_HORAS = [6, 12, 24, 48, 72];
@@ -3993,7 +4002,15 @@ const Maps = {
     // es el mismo fallo por el otro lado.
     const leer = () => OMWeatherMapLayer.getValueFromLatLong(punto.lat, punto.lon, limpiarMarca(url));
     let r = null;
-    try { r = await leer(); } catch {
+    try { r = await leer(); } catch { /* sin abrir: se carga su tesela aquí abajo */ }
+    /* ── UNA LECTURA VACÍA TAMPOCO ES «NO LLEGA» SIN MIRAR BIEN (17-10-2026) ──
+       Con la DANA delante: «AROME HD no llega hasta lo que estás mirando»
+       encima de Gandia pintada de rojo, con 3,4 mm/h al pulsar. Recargando
+       la capa ya no salía: la primera lectura, justo al llegar las teselas
+       (con S3 lento), volvió vacía aunque había dato. Antes de afirmar un
+       hueco se carga la tesela del punto y se vuelve a leer, igual que
+       cuando la lectura falla. */
+    if (!Number.isFinite(r?.value)) {
       const z = Math.min(12, Math.max(0, Math.round(this.map.getZoom())));
       const n = 2 ** z;
       const x = Math.floor((punto.lon + 180) / 360 * n);
@@ -5197,32 +5214,37 @@ const Maps = {
           }
         } catch { /* sin dirección: se enseña la altura sola */ }
       }
-      /* ── CUÁNTA AGUA HA CAÍDO: 1, 3 y 6 HORAS HASTA ESA HORA ─────────────
-         Suyo, 15-10-2026, con AguaceroWx al lado («precipitación en 3
-         horas, 73 mm» frente a nuestros 17-19 mm/h del mismo punto): el
-         mapa da INTENSIDAD (mm/h) y él necesita el TOTAL. Se pide a la API
-         del MISMO modelo, las seis horas que terminan a la hora del mapa, y
-         se suman; con un hueco, no se pone nada (acumuladoDe). 1 mm = 1
-         litro por metro cuadrado, y se dice. */
+      /* ── LO QUE CAERÍA: 1, 3, 6 Y 24 HORAS DESDE ESA HORA (17-10-2026) ────
+         Suyo, mirando el domingo de la DANA desde el sábado: «eso de agua
+         caída hasta esa hora no lo tengo claro, si es domingo y ahora es
+         sábado, un poco lioso» · «yo quiero saber lo que daría en 1 h, 3 h,
+         6 h y 24 h, el agua que caería». Antes (15-10, con AguaceroWx al lado)
+         eran 1, 3 y 6 horas HASTA esa hora. Ahora se pide a la API del MISMO
+         modelo la hora del mapa y las 24 siguientes, y se suman con
+         aguaQueCaeria(); cada fila dice hasta qué hora va, y donde el modelo
+         no llega se dice hasta dónde llega. 1 mm = 1 litro por m², y se dice. */
       let acum = '';
       if (L_.v === 'precipitation' && !L_.dbz && hIso && modeloEnApi(R.modelo)) {
         try {
-          const fin = new Date(hIso + ':00Z').getTime();
-          const ini = new Date(fin - 5 * 3600e3).toISOString().slice(0, 13) + ':00';
+          const ini = new Date(hIso + ':00Z').getTime();
+          const fin = new Date(ini + 24 * 3600e3).toISOString().slice(0, 13) + ':00';
           const d = await jget(API.fc, { latitude: lngLat.lat.toFixed(4), longitude: lngLat.lng.toFixed(4),
-            timezone: 'UTC', models: modeloEnApi(R.modelo), hourly: 'precipitation', start_hour: ini, end_hour: hIso }, { timeout: 9000 });
-          const sr = d?.hourly?.precipitation;
-          const a1 = acumuladoDe(sr, 1), a3 = acumuladoDe(sr, 3), a6 = acumuladoDe(sr, 6);
-          if (d?.hourly?.time?.at(-1) === hIso && has(a3)) {
+            timezone: 'UTC', models: modeloEnApi(R.modelo), hourly: 'precipitation', start_hour: hIso, end_hour: fin }, { timeout: 9000 });
+          const filas = d?.hourly?.time?.[0] === hIso ? aguaQueCaeria((d.hourly.precipitation || []).slice(1), ini) : [];
+          if (has(filas[0]?.litros)) {
             /* EN UNA TABLITA, QUE SE LEA DE UN TIRÓN (15-10-2026, suyo: «el texto
-               un poco más entendible, que lo pueda leer bien de un tirón»).
-               Antes iba en una sola línea, con letra pequeña y las cifras
-               pegadas: «1 h 29 · 3 h 71 · 6 h 150 mm». */
+               un poco más entendible, que lo pueda leer bien de un tirón»). */
             const f1 = x => (has(x) ? String(x.toFixed(x < 10 ? 1 : 0)).replace('.', ',') : '—');
-            acum = `<div class="pa"><div class="pa__t">Agua caída hasta esa hora</div>`
-              + `<table><tr><td>última hora</td><td><b>${f1(a1)}</b> litros</td></tr>`
-              + `<tr><td>últimas 3 horas</td><td><b>${f1(a3)}</b> litros</td></tr>`
-              + `<tr><td>últimas 6 horas</td><td><b>${f1(a6)}</b> litros</td></tr></table>`
+            const dia0 = new Date(ini).toDateString();
+            const hhmm = ms => new Date(ms).toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' });
+            const diaDe = ms => new Date(ms).toLocaleDateString('es', { weekday:'short' });
+            const cuando = ms => new Date(ms).toDateString() === dia0 ? `las ${hhmm(ms)}` : `el ${diaDe(ms)} a las ${hhmm(ms)}`;
+            const fila = f => `<tr><td>en ${f.n === 1 ? '1 hora' : f.n + ' horas'}<small${f.corta ? ' class="pa__c"' : ''}>${
+                !has(f.litros) ? 'sin dato'
+                : f.corta ? `${esc(nombreModelo)} solo llega hasta ${cuando(f.hasta)}`
+                : `hasta ${cuando(f.hasta)}`}</small></td><td><b>${f1(f.litros)}</b> litros</td></tr>`;
+            acum = `<div class="pa"><div class="pa__t">Lo que caería desde el ${diaDe(ini)} a las ${hhmm(ini)}</div>`
+              + `<table>${filas.map(fila).join('')}</table>`
               + `<div class="pa__p">litros por metro cuadrado (1 mm = 1 litro) · ${esc(nombreModelo)}</div></div>`;
           }
         } catch { /* sin acumulado: se enseña la intensidad sola, que es verdad */ }
