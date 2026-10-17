@@ -29,3 +29,11 @@
   «Cargando… N s» y el aparato.
 - ECMWF de 9 km con el mapa más alejado (hoy desde zoom 6), como Windy: hay que medir la memoria en el Ulefone.
 - La niebla de Windy («está top») frente a nuestra capa Visibilidad, y lo que se pueda aprender de Windy.
+
+## 4. Añadido a las 13:45
+- Publicado 2026.10.17-1340: la costa del mapa en dos tramos (CARTO desde zoom 7; Natural Earth 1:10M por
+  debajo, `data/costa.geojson`), porque con el mapa alejado se pintaban los cortes de tesela como una raya
+  recta en el mar junto a Bermeo.
+- Investigado en su Windy Pro: la niebla de Windy son manchas blancas (ICON). Se puede hacer una capa
+  «Niebla» igual con la `visibility` de ICON-D2/ICON-EU (Open-Meteo la publica); pendiente de su sí.
+  La densidad de rayos prevista de Windy no está en los mapas de Open-Meteo.
