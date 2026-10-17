@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.17-1046';
+const BUILD = '2026.10.17-1116';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -4681,11 +4681,21 @@ function conAhora(h, C) {
     const tH = h.date.getTime();
     if (!Number.isFinite(tC) || tC < tH || tC >= tH + 3600e3) return h;
   }
-  if (has(C.weather_code))     h.code        = C.weather_code;
-  if (has(C.cloud_cover))      h.cloud       = C.cloud_cover;
-  if (has(C.cloud_cover_low))  h.nubesBajas  = C.cloud_cover_low;
-  if (has(C.cloud_cover_mid))  h.nubesMedias = C.cloud_cover_mid;
-  if (has(C.cloud_cover_high)) h.nubesAltas  = C.cloud_cover_high;
+  /* ── Y SOLO SI EL CIELO ES DEL MODELO CARGADO (17-10-2026) ──────────
+     `current` es del modelo cargado. Con AROME HD —que NO publica el código
+     del cielo— Open-Meteo se lo FABRICA a partir de las nubes: ese día en
+     Bermeo, a las 10:45, «3 = cubierto», mientras ECMWF 9 km —el dueño del
+     cielo desde el 10-10— daba llovizna (51) y la agenda pintaba llovizna.
+     La hora en curso salía con otro cielo que el resto y que la agenda.
+     Si el cielo de la hora es prestado, `current` no lo pisa: el cielo
+     entero es de un solo dueño, también ahora. */
+  if (!h.codigoAjeno) {
+    if (has(C.weather_code))     h.code        = C.weather_code;
+    if (has(C.cloud_cover))      h.cloud       = C.cloud_cover;
+    if (has(C.cloud_cover_low))  h.nubesBajas  = C.cloud_cover_low;
+    if (has(C.cloud_cover_mid))  h.nubesMedias = C.cloud_cover_mid;
+    if (has(C.cloud_cover_high)) h.nubesAltas  = C.cloud_cover_high;
+  }
   /* ── Y SI ES DE DÍA O DE NOCHE, TAMBIÉN (21-09-2026) ───────────────
      Suyo, desde Bermeo a las 20:25, con la foto del cielo rosa: el sol se
      había puesto a las **20:10** y la app seguía diciendo «Sol velado»,
@@ -14273,7 +14283,12 @@ function renderNow() {
      Aquí se le engancha: no se cambia el símbolo, que es el de su
      modelo, se le pone al lado lo que ven los demás. */
   $('#nowDesc').className = has(wmoText(codVisto)) ? '' : 'dim';
-  $('#nowDesc').innerHTML = esc(textoCielo(codVisto, V.dia)) + avisoCielo(C.cloud_cover);
+  /* La nube de la nota, la de la HORA EN CURSO (`c`), no la cruda de `current`
+     (17-10-2026): con el cielo prestado, `current` es del modelo cargado y no
+     del dueño del cielo, y la nota salía con otro número que el icono y que la
+     tarjeta de Mis estaciones. `conAhora` ya mete en `c` lo de `current` cuando
+     el cielo es propio. */
+  $('#nowDesc').innerHTML = esc(textoCielo(codVisto, V.dia)) + avisoCielo(c.cloud);
   /* ── EL NÚMERO GRANDE ES EL AIRE, Y LA SENSACIÓN SOLO SI APORTA ────
      Suyo, 01-09-2026 con la cabecera delante: *«¿por qué pone sensación?
      yo quiero la temperatura real»*. Y llevaba razón en lo que se lee:

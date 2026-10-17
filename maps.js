@@ -1746,9 +1746,22 @@ function escalasPropias() {
      se toca —al pulsar sale el número exacto—: lo que cambia es el peso de
      lo poco. 0,1 al 18 %, 0,3 al 35 %, 0,6 al 60 %; de 1 mm/h para arriba,
      el color pleno de siempre. */
-  const cc = [['#4a7fd8',0], ['#4a7fd8',.18], ['#3f9fe0',.35], ['#2fb8d8',.6],
-              ['#2fc9b0',.85], ['#3fcf6a',1], ['#8fd83a',1], ['#e0e03a',1],
-              ['#f2a72a',1], ['#e04a2a',1], ['#b0308f',1], ['#6a1b9a',1]];
+  /* ── LOS CORTES DE WINDY, EN mm/h (17-10-2026) ────────────────────────
+     Suyo, con Windy al lado, domingo 18 a las 11:00 en el Mediterráneo:
+     «Windy pinta en rojo y el nuestro en amarillo, está mal» · «quiero como
+     Windy» · «AEMET también da ese aviso». Windy pinta lo que cae EN EL PASO
+     (3 h con ECMWF): rojo con 20 mm en 3 h, magenta con 30. Aquí el dato es
+     mm/h, así que sus cortes van entre 3: azul 0,5 · cian 1 · verde 2 ·
+     amarillo 3,5 · ROJO 7 · magenta 10 · y morado con los chaparrones de
+     20-40. Valencia ese día: ECMWF 25 km 7,8 mm/h (rojo) y ECMWF 9 km
+     10,9-13,1 mm/h (magenta), como Windy; con la escala vieja, amarillo.
+     Lo flojo sigue como velo (0,1 al 18 %, 0,3 al 35 %). Las PALABRAS de los
+     avisos siguen con la escala de AEMET (fuerte desde 15 mm/h): esto es el
+     color del mapa. */
+  const mmW = [0, 0.1, 0.3, 0.5, 1, 2, 3.5, 7, 10, 20, 40];
+  const cc = [['#4a7fd8',0], ['#4a7fd8',.18], ['#3f9fe0',.35], ['#3a86e0',.6],
+              ['#2fb8c8',.9], ['#3fcf4a',1], ['#d6dc2a',1], ['#e8482a',1],
+              ['#c0309a',1], ['#7a1fa0',1], ['#4a1270',1]];
   /* ── CORTE SECO EN 0,1 (18-09-2026, 14:24, su captura de Tipo de
      precipitación a las 14:00 del sábado: «se satura bien a lo primero y
      se desatura después»). Al pasar estas escalas a color_blend, el
@@ -1763,14 +1776,14 @@ function escalasPropias() {
     colors: [cols[0], cols[0], ...cols.slice(1)],
   });
   const lluvia = {
-    scale: { type:'breakpoint', unit:'mm/h', ...corteSeco(mm, cc.map(([c,a]) => hexRGBA(c, a))) },
+    scale: { type:'breakpoint', unit:'mm/h', ...corteSeco(mmW, cc.map(([c,a]) => hexRGBA(c, a))) },
     desde: 1,
-    eje: mm, unidad: 'mm/h',
+    eje: mmW, unidad: 'mm/h',
     // Los saltos de lluvia no son regulares (0,1 · 0,3 · 1 · 4 · 20 · 60).
     // Repartidos en milímetros lineales, media barra se la comen los 60 mm
     // y los valores normales quedan amontonados a la izquierda, ilegibles.
     // Se reparten por tramos, que es como se lee una escala de lluvia.
-    pos: mm.map((_, i) => i),
+    pos: mmW.map((_, i) => i),
   };
 
   /* Tipo de precipitación (17-09-2026): la LLUVIA en verdes por intensidad

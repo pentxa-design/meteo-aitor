@@ -1647,6 +1647,18 @@ grupo('El ocaso: de noche es de noche en cuanto se pone el sol (21-09-2026)');
      h3.day === 1 && h3.code === 4 && h3.cloud === 60,
      'sin cobertura en el monte, la copia trae un current viejo: el sol de las 08:10 no puede pisar las 14:00');
 
+  /* EL CIELO PRESTADO NO LO PISA EL `current` DEL CARGADO (17-10-2026): con AROME
+     HD (sin código propio) Open-Meteo fabrica un «3 = cubierto» en `current`; la
+     hora llevaba la llovizna (51) de ECMWF 9 km, el dueño del cielo. */
+  const h5 = { ...hora('2026-10-17T10:00', 1), code: 51, codigoAjeno: true, cieloDe: 'ECMWF 9 km' };
+  conAhora(h5, { time: '2026-10-17T10:45', is_day: 1, weather_code: 3, cloud_cover: 99, cloud_cover_low: 49 });
+  ok('con el cielo prestado (AROME sin código), lo de ahora del modelo cargado no pisa el cielo de la hora en curso',
+     h5.code === 51 && h5.cloud === 60 && h5.nubesBajas === 0 && h5.day === 1, JSON.stringify(h5));
+  const h6 = hora('2026-10-17T10:00', 1);
+  conAhora(h6, { time: '2026-10-17T10:45', is_day: 1, weather_code: 61, cloud_cover: 90 });
+  ok('y con el cielo propio, sí: la hora en curso lleva lo más fresco del modelo',
+     h6.code === 61 && h6.cloud === 90);
+
   /* Y sin `is_day` en `current` —modelo que no lo publica— se queda el de
      la hora, que es lo que había antes. */
   const h4 = hora('2026-09-21T20:00', 1);
@@ -2997,6 +3009,19 @@ ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan 
    && /if \(e\?\.unidad === 'mm\/h' && txt < 0\.1\) continue;/.test(mapsSrc)
    && /e\?\.unidad === 'mm\/h'\) \? 1 : 0;/.test(mapsSrc),
    'un «0» encima de una mancha azul de 0,3 mm/h es un número que miente');
+/* COMO WINDY (17-10-2026, suyo: «Windy pinta en rojo y el nuestro en amarillo»):
+   con los cortes de verdad de maps.js, el rojo entra en 7 mm/h (20 mm en 3 h de
+   Windy) y el magenta en 10; Valencia el domingo (ECMWF 25 km 7,8 mm/h) sale roja. */
+{
+  const corte = (mapsSrc.match(/const mmW = \[([^\]]+)\]/) || [])[1];
+  const ejes = corte ? corte.split(',').map(Number) : [];
+  const cols = ((mapsSrc.match(/const cc = \[([\s\S]*?)\];/) || [])[1] || '').match(/#[0-9a-f]{6}/g) || [];
+  const colorDe = v => { let k = 0; for (let i = 0; i < ejes.length; i++) if (v >= ejes[i]) k = i; return cols[k]; };
+  const rojo = h => { const r = parseInt(h.slice(1, 3), 16), g = parseInt(h.slice(3, 5), 16), b = parseInt(h.slice(5, 7), 16); return r > 0xc0 && g < 0x80 && b < 0x80; };
+  ok('lluvia como Windy: 7 mm/h ya es rojo (20 mm en 3 h), 7,8 mm/h de Valencia sale rojo, y 3 mm/h todavía no',
+     ejes.length === cols.length && ejes.includes(7) && rojo(colorDe(7)) && rojo(colorDe(7.8)) && !rojo(colorDe(3)),
+     JSON.stringify({ ejes, c7: colorDe(7), c78: colorDe(7.8), c3: colorDe(3) }));
+}
 /* LO FLOJO COMO VELO (17-10-2026, suyo: «los mapas de lluvia pintan demasiado»).
    Se leen los alfas de las dos escalas de lluvia del propio maps.js: de 0,1 a 0,6
    mm/h, velo que sube (≤ 0,6); de 1 mm/h para arriba, color fuerte (≥ 0,85). */
@@ -3023,7 +3048,7 @@ ok('las capas de lluvia piden interpolación monótona y el resto lineal',
    'cúbica monótona: redondea sin pintar más agua de la que dan los nodos');
 ok('las escalas fundidas de lluvia y nieve llevan corte seco en 0,1: de 0 a 0,099 no se pinta nada',
    /const corteSeco = \(bp, cols\) => \(\{\s*breakpoints: \[bp\[0\], bp\[1\] - 1e-3, \.\.\.bp\.slice\(1\)\],\s*colors: \[cols\[0\], cols\[0\], \.\.\.cols\.slice\(1\)\],\s*\}\);/.test(mapsSrc)
-   && (mapsSrc.match(/\.\.\.corteSeco\((mm|nvm), /g) || []).length === 3
+   && (mapsSrc.match(/\.\.\.corteSeco\((mm|mmW|nvm), /g) || []).length === 3
    && (mapsSrc.match(/\n    desde: 1,\n/g) || []).length === 3,
    'suyo, 18-09 14:24: «se satura bien a lo primero y se desatura después» — el velo era el fundido de 0 a 0,1 sobre las trazas del global');
 ok('y la lluvia en mm/h va fundida entre cortes (color_blend), como la reflectividad',

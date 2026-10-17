@@ -886,10 +886,19 @@ async function unaHora(hh) {
          ven 10 %»), que solo sale si el propio es otro. */
       const port = txt(doc, '#nowDesc') || '';
       const pct = Number((tTxt.match(/(\d+) % nubes/) || [])[1]);
-      if (pct !== 90)
-        falla(`Mis estaciones no lee la nubosidad de la observación de ahora (90 %): la tarjeta dice «${(tTxt.match(/\d+ % nubes[^·]*/) || ['nada'])[0]}»`);
-      if (!/los otros ven 10 %/.test(port))
-        falla(`Ahora no lee la nubosidad de la observación de ahora (90 %, con los otros en 10): dice «${port}»`);
+      /* 17-10-2026: si el cielo del cargado es PRESTADO (AROME no publica el
+         código), `current` es del cargado y no del dueño del cielo: ninguna de
+         las dos pantallas puede imprimir su 90, y las dos dicen lo mismo. */
+      const cieloPrestado = (A.S.data?.fc?.prestadosDe || []).some(x => x.k === 'weather_code');
+      if (cieloPrestado) {
+        if (pct === 90 || /los otros ven/.test(port))
+          falla(`Con el cielo prestado, una pantalla lee la nube de \`current\` del cargado (90 %): tarjeta «${(tTxt.match(/\d+ % nubes[^·]*/) || ['nada'])[0]}» · Ahora «${port}»`);
+      } else {
+        if (pct !== 90)
+          falla(`Mis estaciones no lee la nubosidad de la observación de ahora (90 %): la tarjeta dice «${(tTxt.match(/\d+ % nubes[^·]*/) || ['nada'])[0]}»`);
+        if (!/los otros ven 10 %/.test(port))
+          falla(`Ahora no lee la nubosidad de la observación de ahora (90 %, con los otros en 10): dice «${port}»`);
+      }
     }
     /* ── Y LA LÍNEA ROJA NO PUEDE ESTAR MUDA DONDE HAY ALGO HOY ────────
        «sin aviso» == «sin aviso» pasaba el cruce con la función muerta
