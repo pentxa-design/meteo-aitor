@@ -348,8 +348,9 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
   const P = await pasada({ hora: '07:30', antes: tranquilo('07:30', 10, { parteDe: AYER, parte2De: AYER }),
                            esc: { racha: [{ k: 0, dia: 'hoy', horas: [16], v: 75 }] } });
   const cp = cuerpoDe(P.b, /parte de hoy/i);
-  ok('07:30 · el parte de la mañana sale, con la racha de 70+ de BERMEO por delante, y el recuento dice «sitio», no un número que se lee como hora',
-     !P.reventó && /racha de 70\+ en 1 sitio:/.test(cp) && /BERMEO/.test(cp) && !/en 1:/.test(cp), cp || resumen(P));
+  /* El listón es 60 desde el 17-10-2026 («sí, 60»): «racha de 60+». */
+  ok('07:30 · el parte de la mañana sale, con la racha de 60+ de BERMEO por delante, y el recuento dice «sitio», no un número que se lee como hora',
+     !P.reventó && /racha de 60\+ en 1 sitio:/.test(cp) && /BERMEO/.test(cp) && !/en 1:/.test(cp), cp || resumen(P));
   ok('   y su resumen guarda el NOMBRE del sitio con racha, con la fecha de hoy',
      P.estado?.parteResumen?.fecha === HOY && Array.isArray(P.estado?.parteResumen?.racha)
      && P.estado.parteResumen.racha.includes('BERMEO'), JSON.stringify(P.estado?.parteResumen));
@@ -363,8 +364,8 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      !PA.reventó && /lo más fuerte BERMEO 3 mm\/h a las 11h \(AROME HD\)/.test(cpa), cpa || resumen(PA));
   const P0 = await pasada({ hora: '07:30', antes: tranquilo('07:30', 10, { parteDe: AYER, parte2De: AYER }) });
   const cp0 = cuerpoDe(P0.b, /parte de hoy/i);
-  ok('07:30 · un día limpio lo dice con SUS listones (0,3 mm/h y 70 km/h), no con números a mano',
-     /sin agua de 0,3 mm\/h para arriba y sin rachas de 70\./.test(cp0), cp0 || resumen(P0));
+  ok('07:30 · un día limpio lo dice con SUS listones (0,3 mm/h y 60 km/h), no con números a mano',
+     /sin agua de 0,3 mm\/h para arriba y sin rachas de 60\./.test(cp0), cp0 || resumen(P0));
 
   /* DEUSTO II ES CRÍTICO (suyo, 03-10-2026): si no se puede mirar, suena
      aunque sea ella sola y el día esté en verde. */
@@ -596,12 +597,12 @@ console.log('\n  el vigilante, arrancado con reloj de mentira\n');
      !B1.reventó && /BERMEO: AROME HD ve racha de 75 km\/h a las 15h/.test(b1?.cuerpo || '') && !/110/.test(b1?.cuerpo || '')
      && /^💨 Próximas 3 h/.test(b1?.titulo || ''), (b1 && `${b1.titulo} — ${b1.cuerpo}`) || resumen(B1));
   const B2 = await pasada({ hora: '14:00', antes: null,
-                            esc: { racha: [{ k: 0, dia: 'hoy', horas: [8], v: 72 }, { k: 0, dia: 'hoy', horas: [16], v: 95 }, { k: 1, dia: 'hoy', horas: [17], v: 65 }],
+                            esc: { racha: [{ k: 0, dia: 'hoy', horas: [8], v: 72 }, { k: 0, dia: 'hoy', horas: [16], v: 95 }, { k: 1, dia: 'hoy', horas: [17], v: 55 }],
                                    agua: [{ k: 2, dia: 'hoy', horas: [18], mm: 1.5 }] } });
   const cb2 = (B2.b.cambios || []).join(' | ');
   ok('14:00 sin estado («no he podido mirar»): «racha 95 km/h a las 16h», el pico con SU hora y solo lo que queda (no «a las 08h»)',
      !B2.reventó && /BERMEO racha 95 km\/h a las 16h/.test(cb2) && !/08h/.test(cb2), cb2 || resumen(B2));
-  ok('y solo lo gordo, por SUS listones: la racha de 65 (ORDUNA) y el agua de 1,5 (MUNGIA) no entran',
+  ok('y solo lo gordo, por SUS listones: la racha de 55 (ORDUNA, por debajo de su 60) y el agua de 1,5 (MUNGIA) no entran',
      !B2.reventó && /BERMEO/.test(cb2) && !/ORDUNA|MUNGIA/.test(cb2), cb2 || resumen(B2));
 }
 

@@ -190,7 +190,9 @@ const AGUA_MODELOS = 2;
    Lo escribió como «kts», pero 70 nudos son 130 km/h y ese no es ningún
    listón suyo. Se toma en km/h, que es como pide siempre sus números, y
    se le dijo al contestarle. */
-const RACHA_TOPE = 70;
+/* 60 desde el 17-10-2026 (suyo: «cuando superen rachas de 60 me preocuparé» ·
+   «sí, 60»): el amarillo de AEMET en el litoral. Antes, 70. */
+const RACHA_TOPE = 60;
 
 /* Dos puntos a menos de 300 m son el mismo emplazamiento: sirve para
    arrastrar la marca de «crítico» a la lista que viene de la app, que no

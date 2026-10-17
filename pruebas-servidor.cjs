@@ -371,10 +371,12 @@ ok('el agua se avisa desde 0,3 mm/h, no desde 0,1',
    `0,1 salía 47 horas de 48 en un día de sol; está en el comentario`);
 ok('y «fuerte» es el mismo 2,0 que usa el semáforo de la app',
    numVig('AGUA_FUERTE') === 2.0);
-ok('la racha del viaje es 70 km/h, la suya del 4x4',
-   numVig('RACHA_TOPE') === 70);
+/* 17-10-2026, suyo: «cuando superen rachas de 60 me preocuparé» · «sí, 60». El 70
+   del 4x4 (TOPE_ACCESO, el del viaje) sigue en la app, aparte. */
+ok('la racha que avisa es 60 km/h, el amarillo de AEMET en el litoral',
+   numVig('RACHA_TOPE') === 60);
 ok('y NO se ha tocado el listón de la torre, que es otro',
-   !/const RACHA_TORRE/.test(vig) && numVig('RACHA_TOPE') !== 60);
+   !/const RACHA_TORRE/.test(vig));
 
 ok('se pide la lluvia y la racha en la MISMA consulta, sin llamadas nuevas',
    /hourly=cape,convective_inhibition,precipitation,wind_gusts_10m/.test(vig));

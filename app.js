@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.17-1116';
+const BUILD = '2026.10.17-1132';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -199,7 +199,10 @@ const PERFILES = {
        La tabla por zonas del apartado 4.5 va como MAPA y no se puede
        citar del texto; los números de arriba son los de la tabla 3.15,
        que sí es texto. */
-    vientoManda: false, rafagaAviso: 70, rafagaBestia: 90,
+    /* AVISO A 60 (17-10-2026, suyo: «viento vale, cuando superen rachas de 60
+       me preocuparé» · «sí, 60»). Es el amarillo de AEMET en el litoral (tabla
+       de galerna de arriba: > 60). El rojo sigue en 90. */
+    vientoManda: false, rafagaAviso: 60, rafagaBestia: 90,
     lluviaManda: false,
     alturaImporta: false,
     // El sirimiri moja el poste, la escalera, la trampilla y el armario
@@ -215,7 +218,7 @@ const PERFILES = {
     /* El ámbar escrito, como en caseta y poste (suyo, 27-09-2026): sin él
        salía en 63, el 70 % del tope, y el mismo número tiene que ser el
        mismo en toda la app. */
-    vientoManda: false, rafagaAviso: 70, rafagaBestia: 90,
+    vientoManda: false, rafagaAviso: 60, rafagaBestia: 90,   // 60 desde el 17-10-2026, como caseta y poste
     lluviaManda: false,
     alturaImporta: false,
     // Bajo techo el sirimiri no pinta nada. Solo la acometida de fachada,
@@ -19649,7 +19652,7 @@ async function montarAvisos() {
        + `<br>⚡ <b>rayo</b> — el <b>medido</b> por la red de AEMET: descargas a menos de ${ReglasTiempo.RAYO_ENCIMA} km de un sitio tuyo en la última hora y media`
        + '<br>⚡ <b>mucho CAPE</b> — 2.000 o más con la tapa abierta en dos modelos a la vez. El resto del rayo que prevén los modelos no suena: lo ves aquí'
        + '<br>🌧 <b>agua</b> — solo mucha: 15 mm/h o más (lluvia fuerte), prevista con otro modelo de acuerdo o <b>medida</b> por una estación de Euskalmet. El sirimiri no suena: sale en rojo en Mis estaciones'
-       + '<br>💨 <b>racha</b> — por encima de 70 km/h, la que te hace no salir'
+       + '<br>💨 <b>racha</b> — por encima de 60 km/h, la que te hace no salir'
        + '<br>Cada cosa suena una vez: si ya te lo dijo, no lo repite. '
        + 'Pruébalo con el botón de al lado: si no suena, hay que verlo <b>ahora</b>, no el día de la tormenta.');
   } else {

@@ -165,7 +165,7 @@ eval(sacar('function comoLlueve('));
 eval(sacar('function mmDelQuePresta('));
 eval(sacar('function lloviznaAcompanada('));   // ¿otro modelo ve agua en esa hora? (04-10-2026)
 eval(sacarConst('CIELO_PRESTADO')); eval(sacarConst('AGUA_ACUERDO'));
-globalThis.PERFILES = { hierro: { et: 'x', vientoManda: false, rafagaAviso: 70, rafagaBestia: 90,
+globalThis.PERFILES = { hierro: { et: 'x', vientoManda: false, rafagaAviso: 60, rafagaBestia: 90,
   lluviaManda: false, alturaImporta: false, sirimiriImporta: true } };
 globalThis.perfil = () => PERFILES.hierro;
 globalThis.S = { perfil: 'hierro' };
@@ -481,8 +481,8 @@ grupo('El color de la racha se decide con el número que se ve (25-09-2026)');
   {
     const codigo = src.replace(/\/\*[\s\S]*?\*\//g, '');
     ok('su perfil lleva SUS dos listones, escritos y no calculados',
-       /rafagaAviso: 70, rafagaBestia: 90/.test(codigo),
-       'el ámbar en 70 y el rojo en 90; antes eran 49 y 70');
+       /rafagaAviso: 60, rafagaBestia: 90/.test(codigo),
+       'el ámbar en 60 (17-10-2026, «sí, 60») y el rojo en 90; antes 70/90 y, hasta el 25-09, 49/70');
     ok('y son EXACTAMENTE los dos amarillos oficiales de sus provincias',
        /su ámbar,  70  =  el AMARILLO de Álava/.test(src)
        && /su rojo,   90  =  el AMARILLO de Bizkaia/.test(src),
@@ -499,10 +499,10 @@ grupo('El color de la racha se decide con el número que se ve (25-09-2026)');
     /* Suyo, 27-09-2026 («adelante» a la duda 1): el perfil «dentro» no
        traía ámbar propio y salía en 63 (el 70 % de 90). El mismo 70 en
        toda la app. */
-    ok('el perfil «dentro» lleva el mismo ámbar de 70 que caseta y poste, no un 63 calculado',
+    ok('el perfil «dentro» lleva el mismo ámbar que caseta y poste (60), no un 63 calculado',
        (() => { try { eval(sacarConst('PERFILES')); } catch { return false; }
                 const P = globalThis.PERFILES.dentro;
-                return (P.rafagaAviso ?? Math.round(P.rafagaBestia * 0.7)) === 70 && P.rafagaAviso === 70; })());
+                return (P.rafagaAviso ?? Math.round(P.rafagaBestia * 0.7)) === 60 && P.rafagaAviso === 60; })());
     ok('todo perfil con tope de racha lleva también su ámbar escrito',
        (() => { try { eval(sacarConst('PERFILES')); } catch { return false; }
                 return Object.values(PERFILES).every(P => !has(P.rafagaBestia) || has(P.rafagaAviso)); })());
@@ -910,8 +910,10 @@ grupo('Lo que viene hoy: en rojo si lo hay, NADA si no, y SOLO de hoy (26-09-202
      aviso(null, hoyY((n, esHoy) => ({ ...CALMA, gust10: esHoy && n === 16 ? 55 : 20 }))) === '');
   /* Entre el 60 de siempre y su 70 (27-09-2026, el adversario lo rompió
      con un `g >= 60` a pelo y nada se puso rojo). */
-  ok('una racha de 65 —por debajo de su ámbar de 70— tampoco',
-     aviso(null, hoyY((n, esHoy) => ({ ...CALMA, gust10: esHoy && n === 16 ? 65 : 20 }))) === '',
+  /* 17-10-2026: su ámbar baja a 60 («cuando superen rachas de 60 me preocuparé»).
+     Una de 65 ya es aviso; una de 55, no (la de arriba). */
+  ok('una racha de 65 —por encima de su ámbar de 60— sí es aviso',
+     /RACHA 65 km\/h/.test(aviso(null, hoyY((n, esHoy) => ({ ...CALMA, gust10: esHoy && n === 16 ? 65 : 20 })))),
      aviso(null, hoyY((n, esHoy) => ({ ...CALMA, gust10: esHoy && n === 16 ? 65 : 20 }))));
   {
     /* `nivelRacha` vive en el ámbito del módulo (sale de un `eval` de
@@ -7990,7 +7992,7 @@ grupo('La racha que la tarjeta de 10 días te escondía (01-09-2026)');
      que esta prueba prueba: que salta cuando OTRO cruza y la tarjeta no.
      El número del listón se comprueba en su sitio. */
   ok('salta cuando otro modelo cruza su listón y la tarjeta no',
-     !!R && Math.round(R.peor.v) === 75 && R.listón === 70,
+     !!R && Math.round(R.peor.v) === 75 && R.listón === 60,
      R ? `${R.peor.nom} ${R.peor.v} · listón ${R?.listón}` : 'no saltó — el domingo 6 se leería como día tranquilo');
 
   /* Y NO salta cuando todos están del mismo lado: un aviso que sale
@@ -8008,10 +8010,10 @@ grupo('La racha que la tarjeta de 10 días te escondía (01-09-2026)');
   S.diariaMulti = { clave: `${S.place.lat.toFixed(3)},${S.place.lon.toFixed(3)}`, time: [dia],
     wind_gusts_10m_max: [50],
     wind_gusts_10m_max_ecmwf_ifs025: [50],
-    wind_gusts_10m_max_icon_seamless: [72] };
+    wind_gusts_10m_max_icon_seamless: [95] };
   const T = rachaDelDiaQueNoVesTu(dia);
   ok('y si otro cruza su TOPE, se dice con el tope',
-     !!T && T.listón === 70, T ? `listón ${T.listón}` : 'no saltó');
+     !!T && T.listón === 90, T ? `listón ${T.listón}` : 'no saltó');
 
   S.thr = antesThr; S.diariaMulti = antesD;
   ok('la tarjeta pinta ese aviso',
@@ -9792,7 +9794,7 @@ eval(sacar('function rachaQueNoVesTu(racha10) {'));
      prueba sigue siendo lo mismo —que se dice QUÉ listón cruza—, y el
      valor de los listones se comprueba en su sitio. */
   ok('y se dice QUÉ listón cruza, con sus números',
-     sollube && sollube.limite === 70, JSON.stringify(sollube));
+     sollube && sollube.limite === 60, JSON.stringify(sollube));
 
   const orduna = racha(38, [35, 95, 14, 24, 37]);
   ok('BI VIRGEN ORDUÑA 30-08 15:00: otro cruza tu tope de 90 y se dice ese listón',
@@ -11730,8 +11732,8 @@ grupo('QUE NO VUELVA A PASAR · las tres guardias de clase (20-09-2026)');
   ];
   const EXCUSAS = {
     'const CAPE_COMBINACION = 700': 'aquí vive el número',
-    'const RACHA_TOPE = 70': 'el del vigilante, que no comparte código con la app',
-    'rafagaAviso: 70, rafagaBestia: 90': 'la tabla de perfiles: aquí viven SUS dos listones',
+    'const RACHA_TOPE = 60': 'el del vigilante, que no comparte código con la app',
+    'rafagaAviso: 60, rafagaBestia: 90': 'la tabla de perfiles: aquí viven SUS dos listones',
     'rafagaBestia: 90': 'la tabla de perfiles',
     'hace falta ${CAPE_COMBINACION} con la tapa': 'texto que YA usa la constante',
   };
