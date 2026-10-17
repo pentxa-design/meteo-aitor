@@ -13356,6 +13356,40 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      /const ACUM_RESPALDO = 'ecmwf_ifs';/.test(M) && /if \(!\/400\/\.test\(String\(e\.message\)\) \|\| !alt \|\| alt === om\) throw e;/.test(M)
      && /no cubre toda esta zona: sumado con/.test(M) && /no llega a este punto/.test(M));
 }
+/* ── AL ENTRAR EN LLUVIA SE PONE AROME, SIN CARTEL ROJO (17-10-2026) ──
+   Suyo, mirando el mapa: «el aviso rojo sobra» (el de abajo). El modelo elegido ya se ve marcado arriba. */
+{
+  const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  grupo('Entrar en lluvia: AROME sin cartel');
+  ok('al entrar en una capa de lluvia el mapa se pone en AROME HD (setModel(MODELO_LLUVIA)) y NO saca el cartel «Lluvia con AROME HD: es el que mejor acierta…»',
+     /this\.setModel\(MODELO_LLUVIA\)\.then\(\(\) => \{ this\.ui\(\); this\.apply\(\); \}\);/.test(Mx) && !/es el que mejor acierta los litros en tus sitios/.test(Mx));
+}
+
+/* ── «⚡ RAYOS» SIN RAYOS: EL MOTIVO, DENTRO DEL MAPA (17-10-2026) ──
+   Suyo, con el domingo en pantalla: «la opción de rayos en el mapa de lluvia, ¿no va?». Iba; el motivo estaba abajo,
+   fuera de su pantalla. Se EJECUTA pastillaRayos con un contenedor de mentira. */
+{
+  const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const cuerpo = Mx.slice(Mx.indexOf('  pastillaRayos(txt) {'), Mx.indexOf('  rayosPronto() {'));
+  const hijos = [];
+  const cont = { querySelector: () => hijos[0] || null, appendChild: el => { hijos.push(el); el.remove = () => hijos.splice(hijos.indexOf(el), 1); } };
+  const doc = { createElement: () => ({ className: '', textContent: '' }) };
+  const f = new Function('document', 'const o = { ' + cuerpo.replace(/^\s*pastillaRayos/, 'pastillaRayos: function') + ' }; return o.pastillaRayos;');
+  const pastilla = f(doc);
+  const yo = { map: { getContainer: () => cont } };
+  pastilla.call(yo, '⚡ Los rayos son MEDIDOS y llegan hasta las 18:00');
+  const puesta = hijos.length === 1 && /18:00/.test(hijos[0].textContent);
+  pastilla.call(yo, '⚡ otro texto'); pastilla.call(yo, '⚡ otro texto');
+  const una = hijos.length === 1 && hijos[0].textContent === '⚡ otro texto';
+  pastilla.call(yo, '');
+  grupo('Rayos sin rayos: el motivo se ve');
+  ok('la pastilla del mapa se pone con el motivo, no se duplica y se quita al pintar rayos (texto vacío)',
+     puesta && una && hijos.length === 0);
+  ok('rayos() la pone cuando la hora no encaja con lo medido, la quita al pintar y limpiarRayos() también la quita',
+     /this\.pastillaRayos\(fuera\);\s*return;/.test(Mx) && /this\.pastillaRayos\(''\);\s*const hasta = marcos/.test(Mx)
+     && /if \(el\) el\.textContent = '';\s*this\.pastillaRayos\(''\);/.test(Mx));
+}
+
 /* ── LA VENTANITA DE LA LLUVIA: LOS LITROS NO SALEN DE LA TARJETA (17-10-2026) ──
    Medido en su panel: «hasta las 18:00» iba EN LÍNEA junto a «en 1 hora» dentro de una celda sin saltos, la tabla
    medía 293 px y la caja 240 (el máximo en línea de MapLibre): los litros salían 67 px por fuera de la tarjeta. El

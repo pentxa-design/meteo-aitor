@@ -5721,6 +5721,7 @@ const Maps = {
     for (const id of ['rayosLayer', 'rayosHalo']) if (this.map.getLayer(id)) this.map.removeLayer(id);
     if (this.map.getSource('rayosSrc')) this.map.removeSource('rayosSrc');
     const el = document.querySelector('#mapRayos'); if (el) el.textContent = '';
+    this.pastillaRayos('');
   },
   /* ── LOS RAYOS MEDIDOS NO SE PINTAN EN OTRA HORA (06-10-2026) ──────
      Suyo, 20:57, con AROME en CAPE a las 11:00 de MAÑANA y el mapa lleno
@@ -5739,6 +5740,17 @@ const Maps = {
     return `⚡ Los rayos son MEDIDOS y llegan hasta las ${hh}: no se pintan sobre otra hora. `
       + (t > fin ? 'Nadie mide los rayos del futuro: para lo que puede venir, mira CAPE y tapa.'
                  : 'Para los de entonces, la pestaña Rayos y su «por dónde pasó».');
+  },
+  /* La razón de que NO haya rayos, DENTRO del mapa (17-10-2026). Suyo, mirando el domingo con «⚡ Rayos» puesto y el mapa
+     limpio: «la opción de rayos en el mapa de lluvia, ¿no va?». Iba: el texto «los rayos son MEDIDOS y llegan hasta las
+     18:00» estaba en la franja de abajo, fuera de su pantalla. Un mapa sin rayos sin decir por qué se lee como «no cae
+     ninguno». */
+  pastillaRayos(txt) {
+    const cont = this.map?.getContainer?.(); if (!cont) return;
+    let p = cont.querySelector('.mapRayosPill');
+    if (!txt) { if (p) p.remove(); return; }
+    if (!p) { p = document.createElement('div'); p.className = 'mapRayosPill'; cont.appendChild(p); }
+    p.textContent = txt;
   },
   rayosPronto() {
     clearTimeout(this._rayosDeb);
@@ -5778,6 +5790,7 @@ const Maps = {
         for (const id of ['rayosLayer', 'rayosHalo']) if (this.map.getLayer(id)) this.map.removeLayer(id);
         if (this.map.getSource('rayosSrc')) this.map.removeSource('rayosSrc');
         if (el) el.textContent = fuera;
+        this.pastillaRayos(fuera);
         return;
       }
       const feats = [];
@@ -5801,6 +5814,7 @@ const Maps = {
                    'circle-stroke-color': ['case', ['==', ['get', 'pos'], 1], '#ffffff', '#1a1a1a'],
                    'circle-stroke-width': 1.2, 'circle-opacity': 0.95 } });
       }
+      this.pastillaRayos('');
       const hasta = marcos[marcos.length - 1]?.hasta;
       const hh = hasta && typeof horaHM === 'function' ? horaHM(hasta) : '—';
       if (el) el.textContent = feats.length
@@ -6018,12 +6032,9 @@ const Maps = {
     }
     if (esLluvia(id) && !esLluvia(anterior) && this.model !== MODELO_LLUVIA) {
       this.ui();
-      this.setModel(MODELO_LLUVIA).then(() => {
-        this.ui(); this.apply();
-        const nom = TMODELS.find(m => m.id === MODELO_LLUVIA)?.name || MODELO_LLUVIA;
-        this.avisoAlcance(`<b>Lluvia con ${esc(nom)}</b>: es el que mejor acierta los litros en tus sitios
-          (el registro de aciertos, en Avisos). Si quieres otro modelo, cámbialo arriba.`);
-      });
+      /* Sin cartel (suyo, 17-10: «el aviso rojo sobra»): el modelo elegido ya se ve marcado arriba, así que no se
+         elige en silencio. */
+      this.setModel(MODELO_LLUVIA).then(() => { this.ui(); this.apply(); });
       return;
     }
     this.ui(); this.apply();
