@@ -3023,16 +3023,26 @@ ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan 
       pause() {}, ui() {}, apply() {}, avisoAlcance() {}, setModel(m) { pedidos.push(m); return { then() {} }; } };
     const TL = [{ id: 'rain', escala: 'lluvia' }, { id: 'tipo', escala: 'lluviaVerde' }, { id: 'cape', escala: 'cape' },
                 { id: 'niebla', escala: 'niebla' }];
-    const f = new Function('TLAYERS', 'LS', 'MODELO_LLUVIA', 'CAPAS_LLUVIA_AROME', 'MODELO_NIEBLA', 'CON_VISIBILIDAD', 'TMODELS', 'esc',
+    const f = new Function('TLAYERS', 'LS', 'MODELO_LLUVIA', 'CAPAS_LLUVIA_AROME', 'MODELO_NIEBLA', 'CON_VISIBILIDAD', 'TMODELS', 'esc', 'MODELO_TIPO', 'CON_NIEVE',
       `return function(id) ${cuerpo}`)(
-      TL, { set() {} }, 'meteofrance_arome_france_hd', new Set(['lluvia', 'lluviaVerde']),
-      'dwd_icon_eu', new Set(['dwd_icon_eu', 'dwd_icon_d2', 'ecmwf_ifs']), [], x => x);
+      TL, { set() {} }, 'meteofrance_arome_france_hd', new Set(['lluvia']),
+      'dwd_icon_eu', new Set(['dwd_icon_eu', 'dwd_icon_d2', 'ecmwf_ifs']), [], x => x,
+      'dwd_icon_eu', new Set(['dwd_icon_eu', 'dwd_icon_d2', 'ecmwf_ifs', 'ecmwf_ifs025', 'meteofrance_arpege_europe', 'knmi_harmonie_arome_europe', 'dwd_icon']));
     pedidos.length = 0; f.call(M, a); return [...pedidos];
   };
   ok('al entrar en Precipitación desde CAPE con ICON-EU, el mapa pide AROME HD',
      !!cuerpo && JSON.stringify(hacer('cape', 'rain', 'dwd_icon_eu')) === '["meteofrance_arome_france_hd"]');
-  ok('pero de Precipitación a Tipo de precipitación no lo vuelve a forzar (manda lo que él eligió), ni si ya está en AROME HD',
+  ok('de Precipitación a Tipo de precipitación con ICON-EU no lo vuelve a forzar (manda lo que él eligió), ni si ya está en AROME HD en Precipitación',
      !!cuerpo && hacer('rain', 'tipo', 'dwd_icon_eu').length === 0 && hacer('cape', 'rain', 'meteofrance_arome_france_hd').length === 0);
+  /* TIPO DE PRECIPITACIÓN CON NIEVE (18-10-2026, suyo: «se que han dado algo de nieve en altas montañas del Pirineo o
+     Alpes y no lo veo»): AROME HD no publica nieve en los mapas, así que esa capa arrancaba en un modelo que no la podía
+     pintar. Entrar en ella con un modelo sin nieve pide ICON-EU; con uno que la publica, se respeta. */
+  ok('al entrar en Tipo de precipitación con AROME HD o GFS (sin nieve) el mapa pide ICON-EU; con ECMWF 9 km, ICON-D2 o ICON-EU no toca el modelo',
+     !!cuerpo && JSON.stringify(hacer('cape', 'tipo', 'meteofrance_arome_france_hd')) === '["dwd_icon_eu"]'
+     && JSON.stringify(hacer('rain', 'tipo', 'meteofrance_arome_france_hd')) === '["dwd_icon_eu"]'
+     && JSON.stringify(hacer('cape', 'tipo', 'ncep_gfs025')) === '["dwd_icon_eu"]'
+     && hacer('cape', 'tipo', 'ecmwf_ifs').length === 0 && hacer('cape', 'tipo', 'dwd_icon_d2').length === 0
+     && hacer('cape', 'tipo', 'dwd_icon_eu').length === 0);
   /* LA NIEBLA, COMO WINDY (17-10-2026, suyo: «la capa de niebla no esperes hazlo»).
      AROME HD no trae visibilidad en los mapas: entrar en Niebla desde AROME pide ICON-EU;
      con ECMWF 9 km o ICON-D2, que sí la traen, se respeta lo que él tenía. */

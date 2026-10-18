@@ -607,7 +607,13 @@ const CON_SUELO_NEGRO = new Set(['lluvia', 'lluviaVerde', 'dbz']);
 /* Las capas de lluvia que al entrar se ponen en el modelo que mejor acierta
    la lluvia en sus sitios (17-10-2026, ver setLayer). */
 const MODELO_LLUVIA = 'meteofrance_arome_france_hd';
-const CAPAS_LLUVIA_AROME = new Set(['lluvia', 'lluviaVerde']);
+const CAPAS_LLUVIA_AROME = new Set(['lluvia']);
+/* «Tipo de precipitación» pinta la lluvia en verde y la NIEVE en azul, y AROME HD no publica nieve en los mapas (medido el
+   18-10-2026): con él todo salía verde y no se veía la nieve del Pirineo y los Alpes («se que han dado algo de nieve y no
+   lo veo»). Al entrar en esa capa con un modelo sin nieve se pone ICON-EU (7 km); los que la publican se respetan. */
+const MODELO_TIPO = 'dwd_icon_eu';
+const CON_NIEVE = new Set(['dwd_icon_eu', 'dwd_icon_d2', 'ecmwf_ifs', 'ecmwf_ifs025', 'meteofrance_arpege_europe',
+                           'knmi_harmonie_arome_europe', 'dwd_icon']);
 /* La niebla sale de la visibilidad, y AROME HD no la publica: al entrar en
    Niebla con un modelo sin visibilidad, ICON-EU (el de la niebla de Windy,
    y cubre toda España); ICON-D2 y ECMWF HRES se respetan (17-10-2026). */
@@ -6025,9 +6031,15 @@ const Maps = {
        enseña ECMWF y lo avisa. */
     const esLluvia = l => CAPAS_LLUVIA_AROME.has(TLAYERS.find(x => x.id === l)?.escala);
     const esNiebla = l => TLAYERS.find(x => x.id === l)?.escala === 'niebla';
+    const esTipo = l => TLAYERS.find(x => x.id === l)?.escala === 'lluviaVerde';
     if (esNiebla(id) && !esNiebla(anterior) && !CON_VISIBILIDAD.has(this.model)) {
       this.ui();
       this.setModel(MODELO_NIEBLA).then(() => { this.ui(); this.apply(); });
+      return;
+    }
+    if (esTipo(id) && !esTipo(anterior) && !CON_NIEVE.has(this.model)) {
+      this.ui();
+      this.setModel(MODELO_TIPO).then(() => { this.ui(); this.apply(); });
       return;
     }
     if (esLluvia(id) && !esLluvia(anterior) && this.model !== MODELO_LLUVIA) {
