@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.18-1333';
+const BUILD = '2026.10.18-1417';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -66,6 +66,7 @@ const API = {
   get mar() { return via('marine'); },
   get aq()  { return via('aq'); },
   get rain(){ return via('rain'); },
+  get ens() { return via('ens'); },
   rev  : 'https://api.bigdatacloud.net/data/reverse-geocode-client',
   // Catálogo de pasadas de satélite de EUMETSAT (lo lee el servidor).
   // Absoluta, como las demás: jget hace new URL() y una ruta relativa

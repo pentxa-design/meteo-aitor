@@ -23,6 +23,9 @@ const PERMITIDOS = {
   aq:     'https://air-quality-api.open-meteo.com/v1/air-quality',
   marine: 'https://marine-api.open-meteo.com/v1/marine',
   geo:    'https://geocoding-api.open-meteo.com/v1/search',
+  /* `ens` — el ENSEMBLE (51 miembros de ECMWF, 31 de GFS…): da la probabilidad de que llueva más de X, no un solo número. Añadido el
+     18-10-2026 para la ventanita de la lluvia (suyo: «saca provecho de lo que puedas»). Mismo plan gratuito; ~9 KB y 270 ms por punto. */
+  ens:    'https://ensemble-api.open-meteo.com/v1/ensemble',
   elev:   'https://api.open-meteo.com/v1/elevation',
 
   /* ── LOS DOS QUE HACEN FALTA PARA SABER QUIÉN ACIERTA ──────────────
@@ -66,7 +69,7 @@ const PERMITIDOS = {
 // RainViewer saca un fotograma cada 10 min (medido el 05-09-2026 en su
 // catálogo: marcas de 600 en 600 s): 5 min de CDN no atrasan nada.
 const CACHE = { fc: 600, aq: 900, marine: 900, geo: 86400, elev: 2592000,
-                hist: 86400, arch: 86400, rain: 300 };   // segundos
+                hist: 86400, arch: 86400, rain: 300, ens: 1800 };   // segundos
 
 export default async (request) => {
   const entrada = new URL(request.url);

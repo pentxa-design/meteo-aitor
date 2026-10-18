@@ -3026,3 +3026,8 @@ body.sin-scroll{overflow:hidden}
 
 /* La razón de que no haya rayos, dentro del mapa (17-10-2026): abajo quedaba fuera de su pantalla. */
 .mapRayosPill{position:absolute;left:10px;bottom:36px;max-width:min(430px,calc(100% - 20px));background:rgba(14,22,38,.94);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:0.75rem;line-height:1.35;z-index:5;pointer-events:none}
+
+/* Probabilidad del ensemble en la ventanita de la lluvia (18-10-2026): cuatro cifras en una fila que se parte si no cabe. */
+.omPop .pa__e{margin-top:7px;padding-top:6px;border-top:1px solid var(--line)}
+.omPop .pa__e > span{display:inline-block;margin:0 10px 2px 0;font-size:0.8125rem;color:var(--dim)}
+.omPop .pa__e > span b{font-size:0.9375rem;color:var(--ink)}

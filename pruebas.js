@@ -13368,6 +13368,52 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      /const ACUM_RESPALDO = 'ecmwf_ifs';/.test(M) && /if \(!\/400\/\.test\(String\(e\.message\)\) \|\| !alt \|\| alt === om\) throw e;/.test(M)
      && /no cubre toda esta zona: sumado con/.test(M) && /no llega a este punto/.test(M));
 }
+/* ── LA PROBABILIDAD DEL ENSEMBLE EN LA VENTANITA DE LA LLUVIA (18-10-2026) ──
+   Suyo, con WXCharts y Meteologix delante: «saca provecho de lo que puedas». Se EJECUTA probEnsemble con miembros de
+   verdad (el control más 50, como los da Open-Meteo): las probabilidades salen de contar miembros, y con pocos o con
+   huecos no se dice nada (null) en vez de inventar un porcentaje. */
+{
+  const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const i = Mx.indexOf('function probEnsemble('), j = Mx.indexOf('\n}\n', i) + 3;
+  const probEnsemble = i > 0 ? new Function(Mx.slice(i, j) + '\nreturn probEnsemble;')() : null;
+  const horas = 24, hourly = { time: Array(horas).fill('x') };
+  // 51 miembros: el control y 50 con 1, 2, 3 … 50 litros en total (cada uno reparte su agua en 24 horas iguales)
+  hourly.precipitation = Array(horas).fill(0.5);                                   // control: 12 l
+  for (let k = 1; k <= 50; k++) hourly['precipitation_member' + String(k).padStart(2, '0')] = Array(horas).fill(k / horas);
+  grupo('Ensemble: probabilidades por miembros');
+  const r = probEnsemble ? probEnsemble(hourly, [10, 30, 50]) : null;
+  // sumas: 12 (control) y 1..50 → ≥10: 41 miembros (10..50) + control = 42 de 51 → 82 %; ≥30: 21 de 51 → 41 %; ≥50: 1 de 51 → 2 %
+  ok('51 miembros: ≥ 10 litros → 82 %, ≥ 30 → 41 %, ≥ 50 → 2 %; mediana 25 l, de 1 a 50 l',
+     !!r && r.n === 51 && JSON.stringify(r.probs) === '[[10,82],[30,41],[50,2]]' && Math.round(r.mediana) === 25 && Math.round(r.min) === 1 && Math.round(r.max) === 50,
+     JSON.stringify(r));
+  const pocos = { precipitation: Array(24).fill(1), precipitation_member01: Array(24).fill(2) };
+  const huecos = { ...hourly }; for (const k of Object.keys(huecos)) if (/member/.test(k)) huecos[k] = Array(24).fill(null);
+  ok('con menos de 10 miembros, o con todos sin dato, NO se dice ninguna probabilidad (null): un hueco no es «0 %»',
+     !!probEnsemble && probEnsemble(pocos) === null && probEnsemble(huecos) === null && probEnsemble(undefined) === null);
+  ok('la ventanita lo pide por el intermediario (`ens`, con 30 min de CDN), a las 24 h siguientes a la hora del mapa, y lo dice: miembros y modelo del ensemble',
+     /ens:\s+'https:\/\/ensemble-api\.open-meteo\.com\/v1\/ensemble'/.test(fs.readFileSync(path.join(__dirname, 'netlify', 'functions', 'om.js'), 'utf8'))
+     && /ens: 1800 \}/.test(fs.readFileSync(path.join(__dirname, 'netlify', 'functions', 'om.js'), 'utf8'))
+     && /get ens\(\) \{ return via\('ens'\); \}/.test(fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8'))
+     && /jget\(API\.ens, \{[^}]*models: ENSEMBLE_MODELO/.test(Mx) && /miembros del ensemble de \$\{esc\(nomE\)\}/.test(Mx));
+}
+
+/* ── «HASTA EL MAR A LAS 05:00» (18-10-2026) ──
+   Sus capturas del lunes: la ventanita de la lluvia decía «en 24 horas hasta el mar a las 05:00». Era martes abreviado.
+   Se EJECUTAN las dos líneas que escriben el día y se exige el nombre completo. */
+{
+  const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const i = Mx.indexOf("const diaDe = ms =>"), j = Mx.indexOf('\n', Mx.indexOf('const cuando = ms =>', i));
+  const lineas = i > 0 ? Mx.slice(i, j) : '';
+  const f = new Function('hhmm', 'dia0', lineas + '\nreturn { diaDe, cuando };');
+  const dia0 = new Date(2026, 9, 19, 12).toDateString();
+  const { diaDe, cuando } = f(ms => '05:00', dia0);
+  const martes = cuando(new Date(2026, 9, 20, 12).getTime()), lunes = cuando(new Date(2026, 9, 19, 12).getTime());
+  grupo('El día de «hasta…» se lee entero');
+  ok('mañana (martes) sale «el martes a las 05:00», no «el mar»; el mismo día, solo la hora',
+     lineas !== '' && /^el martes a las 05:00$/.test(martes) && lunes === 'las 05:00' && diaDe(new Date(2026, 9, 25, 12).getTime()) === 'domingo',
+     `martes=${martes} · lunes=${lunes}`);
+}
+
 /* ── AL ENTRAR EN LLUVIA SE PONE AROME, SIN CARTEL ROJO (17-10-2026) ──
    Suyo, mirando el mapa: «el aviso rojo sobra» (el de abajo). El modelo elegido ya se ve marcado arriba. */
 {

@@ -701,6 +701,23 @@ const coma = (n, d = 1) => Number(n).toFixed(d).replace('.', ',');
  *  el modelo se termina antes (AROME HD llega a dos días), la fila suma lo que hay
  *  y va `corta`, con su hora final de verdad; con un hueco en medio, `litros: null`
  *  (17-10-2026, suyo: «lo que daría en 1 h, 3 h, 6 h y 24 h, el agua que caería»). */
+/** Probabilidad de que caiga más de cada umbral (mm) en las horas pedidas, contando los miembros del ensemble (18-10-2026).
+    `hourly` es la respuesta del ensemble: `precipitation` (control) y `precipitation_memberNN`. Un miembro con más de un cuarto de
+    horas sin dato no cuenta; con menos de 10 miembros válidos no se dice nada (null), no se inventa una probabilidad. */
+function probEnsemble(hourly, umbrales = [10, 30, 50, 100]) {
+  if (!hourly) return null;
+  const claves = Object.keys(hourly).filter(k => k === 'precipitation' || /^precipitation_member\d+$/.test(k));
+  const sumas = claves.map(k => {
+    const s = hourly[k]; if (!Array.isArray(s) || !s.length) return null;
+    const v = s.filter(Number.isFinite);
+    return v.length >= 0.75 * s.length ? v.reduce((a, b) => a + b, 0) : null;
+  }).filter(x => x !== null).sort((a, b) => a - b);
+  if (sumas.length < 10) return null;
+  return { n: sumas.length, mediana: sumas[sumas.length >> 1], min: sumas[0], max: sumas.at(-1),
+           probs: umbrales.map(u => [u, Math.round(100 * sumas.filter(x => x >= u).length / sumas.length)]) };
+}
+/** Modelo del ensemble que se pregunta (51 miembros). */
+const ENSEMBLE_MODELO = 'ecmwf_ifs025';
 function aguaQueCaeria(despues, iniMs) {
   const s = Array.isArray(despues) ? despues : [];
   const suma = t => t.reduce((a, b) => a + b, 0);
@@ -5246,15 +5263,31 @@ const Maps = {
             const f1 = x => (has(x) ? String(x.toFixed(x < 10 ? 1 : 0)).replace('.', ',') : '—');
             const dia0 = new Date(ini).toDateString();
             const hhmm = ms => new Date(ms).toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' });
-            const diaDe = ms => new Date(ms).toLocaleDateString('es', { weekday:'short' });
+            /* Día COMPLETO («martes»), no «mar»: «hasta el mar a las 05:00» se leía como el mar (18-10-2026, sus capturas del lunes). */
+            const diaDe = ms => new Date(ms).toLocaleDateString('es', { weekday:'long' });
             const cuando = ms => new Date(ms).toDateString() === dia0 ? `las ${hhmm(ms)}` : `el ${diaDe(ms)} a las ${hhmm(ms)}`;
             const fila = f => `<tr><td>en ${f.n === 1 ? '1 hora' : f.n + ' horas'}<small${f.corta ? ' class="pa__c"' : ''}>${
                 !has(f.litros) ? 'sin dato'
                 : f.corta ? `${esc(nombreModelo)} solo llega hasta ${cuando(f.hasta)}`
                 : `hasta ${cuando(f.hasta)}`}</small></td><td><b>${f1(f.litros)}</b> litros</td></tr>`;
+            /* ENSEMBLE (18-10-2026, suyo, tras ver WXCharts y Meteologix: «saca provecho de lo que puedas»): no un número, la
+               probabilidad de que lo que caiga en esas 24 h pase de 10, 30, 50 y 100 litros, contando los miembros del ensemble. */
+            let ens = '';
+            try {
+              const dE = await jget(API.ens, { latitude: lngLat.lat.toFixed(4), longitude: lngLat.lng.toFixed(4), timezone: 'UTC',
+                models: ENSEMBLE_MODELO, hourly: 'precipitation', start_hour: new Date(ini + 3600e3).toISOString().slice(0, 13) + ':00', end_hour: fin }, { timeout: 8000 });
+              const pe = probEnsemble(dE?.hourly);
+              if (pe) {
+                const nomE = TMODELS.find(x => x.id === ENSEMBLE_MODELO)?.name || ENSEMBLE_MODELO;
+                const nE = x => String(x.toFixed(x < 10 ? 1 : 0)).replace('.', ',');
+                ens = `<div class="pa__e"><div class="pa__t">Probabilidad en esas 24 h</div>`
+                  + pe.probs.map(([u, p]) => `<span><b>${p} %</b> más de ${u}</span>`).join('')
+                  + `<div class="pa__p">${pe.n} miembros del ensemble de ${esc(nomE)}: lo más probable ${nE(pe.mediana)} litros (de ${nE(pe.min)} a ${nE(pe.max)})</div></div>`;
+              }
+            } catch { /* sin ensemble: se enseña lo demás, que es verdad */ }
             acum = `<div class="pa"><div class="pa__t">Lo que caería desde el ${diaDe(ini)} a las ${hhmm(ini)}</div>`
               + `<table>${filas.map(fila).join('')}</table>`
-              + `<div class="pa__p">litros por metro cuadrado (1 mm = 1 litro) · ${esc(nombreModelo)}</div></div>`;
+              + `<div class="pa__p">litros por metro cuadrado (1 mm = 1 litro) · ${esc(nombreModelo)}</div>${ens}</div>`;
           }
         } catch { /* sin acumulado: se enseña la intensidad sola, que es verdad */ }
       }
