@@ -325,13 +325,15 @@ const TLAYERS = [
      rejillaAcum, escala `acum`) se queda para REHACERLA bien (por teselas, sin cupo). Entrada tal cual: */
   // { id:'acum', g:'Lluvia', name:'Lluvia acumulada', v:'precipitation', unit:'mm', acum:true, escala:'acum',
   //   desc:'Litros por metro cuadrado caídos en las últimas 6, 12, 24, 48 o 72 horas hasta la hora del mapa: la suma de la previsión del modelo, como la «Acumulación de lluvia» de Windy' },
-  { id:'snow_depth', g:'Lluvia', name:'Espesor de nieve', v:'snow_depth', unit:'m',
+  { id:'snow_depth', g:'Nieve', name:'Espesor de nieve', v:'snow_depth', unit:'m',
     desc:'Nieve acumulada en el suelo' },
+  /* GRUPOS «NIEVE» Y «VIENTO» (18-10-2026, suyo: «en rayos están CAPE, inhibición… pues en viento las 2, en nieve las 2»): cada tema
+     con su grupo en la barra, como Tormenta y Cielo. Antes la nieve iba dentro de Lluvia y las rachas en un grupo «Torre» solo. */
   /* NIEVE QUE CAE (18-10-2026, suyo: «muy importante, me hará falta alguna capa de NIEVE… en los montes de aquí habrá nieve
      enseguida, las pistas para subir a las torres»). La nieve de «Tipo de precipitación» iba apilada sobre la lluvia y sin
      capa propia; «Espesor de nieve» es lo que ya hay en el suelo. Esta es la que CAE: `snowfall_water_equivalent`, en agua
      equivalente (mm/h; 1 mm ≈ 1 cm de nieve fresca), sobre fondo oscuro. */
-  { id:'nieve', g:'Lluvia', name:'Nieve que cae', v:'snowfall_water_equivalent', unit:'mm/h', escala:'nieveAzul',
+  { id:'nieve', g:'Nieve', name:'Nieve que cae', v:'snowfall_water_equivalent', unit:'mm/h', escala:'nieveAzul',
     desc:'Nieve prevista, en agua equivalente (mm/h): 1 mm ≈ 1 cm de nieve fresca. Del azul claro al azul marino según intensidad. Solo algunos modelos la publican: al entrar, el mapa pasa solo a uno que la tenga. Al pulsar, la nieve que caería en 1, 3, 6 y 24 horas en centímetros' },
   /* Suyo, 14-09-2026: «esta capa debe de estar en lluvia». Y con escala
      propia: la de fábrica era un azul oscuro plano en el que «no se
@@ -373,14 +375,14 @@ const TLAYERS = [
   { id:'sat_vis', g:'Satélite', name:'Visible', v:null, unit:'', sat:'visible', sol:true,
     desc:'Meteosat en visible de alta resolución — la foto tal cual. Solo de día' },
 
-  { id:'gusts',  g:'Torre', name:'Ráfagas', v:'wind_gusts_10m', unit:'km/h', vientoApi: true,
+  { id:'gusts',  g:'Viento', name:'Ráfagas', v:'wind_gusts_10m', unit:'km/h', vientoApi: true,
     escala:'rafagas', rumbo: true,
     /* SIN NÚMEROS ESCRITOS AQUÍ (26-09-2026): decía «naranja a los 45,
        rojo a los 60» con los listones en 49/70, y esta misma mañana
        pasaron a 70/90. Un pie con cifras se queda viejo sin avisar; la
        barra de la leyenda ya enseña los cortes de verdad. */
     desc:'Racha máxima — la capa que decide el ascenso. El color cambia en TUS listones: naranja en tu aviso, rojo en tu límite. Al pinchar, también de dónde viene el viento' },
-  { id:'viento10', g:'Torre', name:'Viento 10 m', v:'wind_speed_10m', unit:'km/h', vientoApi: true, escala:'viento', rumbo: true,
+  { id:'viento10', g:'Viento', name:'Viento 10 m', v:'wind_speed_10m', unit:'km/h', vientoApi: true, escala:'viento', rumbo: true,
     desc:'Viento MEDIO a 10 m, en km/h, con las flechas de dónde viene (↗ Flechas) y el movimiento. A 40 m de torre pega más fuerte, y la ráfaga más todavía: para decidir si se sube, mira Ráfagas' },
   /* ── LAS CUATRO CAPAS DE BARBAS, RETIRADAS EL 21-09-2026 ────────────
      Eran `wind_u_component_10m/20m/50m/100m`. El color ya se apagó el

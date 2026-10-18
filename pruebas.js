@@ -13453,11 +13453,13 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 {
   const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
   grupo('Capas de nieve y de viento medio');
-  ok('«Nieve que cae»: en el grupo Lluvia, con la nieve (agua equivalente) y la escala azul de nieve, y sobre suelo negro',
-     /\{ id:'nieve', g:'Lluvia', name:'Nieve que cae', v:'snowfall_water_equivalent', unit:'mm\/h', escala:'nieveAzul'/.test(Mx)
+  ok('«Nieve que cae»: en el grupo Nieve (con «Espesor de nieve»), con la nieve (agua equivalente) y la escala azul de nieve, y sobre suelo negro',
+     /\{ id:'snow_depth', g:'Nieve', name:'Espesor de nieve'/.test(Mx)
+     && /\{ id:'nieve', g:'Nieve', name:'Nieve que cae', v:'snowfall_water_equivalent', unit:'mm\/h', escala:'nieveAzul'/.test(Mx)
      && /new Set\(\['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul'\]\)/.test(Mx));
-  ok('«Viento 10 m»: en el grupo Torre, con la velocidad media, las flechas y el rumbo por la API (vientoApi, rumbo) y escala propia en km/h',
-     /\{ id:'viento10', g:'Torre', name:'Viento 10 m', v:'wind_speed_10m', unit:'km\/h', vientoApi: true, escala:'viento', rumbo: true/.test(Mx));
+  ok('«Viento 10 m»: en el grupo Viento (con «Ráfagas»), con la velocidad media, las flechas y el rumbo por la API (vientoApi, rumbo) y escala propia en km/h',
+     /\{ id:'gusts',  g:'Viento', name:'Ráfagas'/.test(Mx)
+     && /\{ id:'viento10', g:'Viento', name:'Viento 10 m', v:'wind_speed_10m', unit:'km\/h', vientoApi: true, escala:'viento', rumbo: true/.test(Mx));
   const vkm = JSON.parse((/const vkm = (\[[^\]]*\]);/.exec(Mx) || [])[1] || 'null');
   const vcc = [...((/const vcc = \[([\s\S]*?)\];/.exec(Mx) || [])[1] || '').matchAll(/'#[0-9a-f]{6}',([0-9.]+)/g)].map(x => Number(x[1]));
   ok('la escala del viento medio: 11 cortes de Beaufort en km/h, crecientes, desde 0; la tesela viene en m/s y se convierte (km/h = m/s × 3,6); el primer tramo suave y el resto opaco',

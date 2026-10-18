@@ -902,7 +902,8 @@ canvas.mvals{width:100%;height:100%;display:block}
 
 /* ══════════ Color por familia de capas ══════════ */
 .lgrp[data-g=lluvia]     { --gc:#4da3ff; }   /* azul   */
-.lgrp[data-g=torre]      { --gc:#2fd07a; }   /* verde  */
+.lgrp[data-g=viento]     { --gc:#2fd07a; }   /* verde  */
+.lgrp[data-g=nieve]      { --gc:#bfe3ff; }   /* hielo  */
 .lgrp[data-g=tormenta]   { --gc:#ff5d4d; }   /* rojo   */
 .lgrp[data-g=cielo]      { --gc:#b9a6ff; }   /* lila   */
 .lgrp[data-g=aire]       { --gc:#ffc14d; }   /* ámbar  */
@@ -1129,7 +1130,8 @@ canvas.mvals{width:100%;height:100%;display:block}
 .hoja__k{display:block;font-size:0.8125rem;font-weight:800;letter-spacing:.09em;
   text-transform:uppercase;color:var(--faint);padding:2px 4px 7px}
 .hoja__g[data-g=lluvia]   .hoja__k{color:#5db8f5}
-.hoja__g[data-g=torre]    .hoja__k{color:#2fd07a}
+.hoja__g[data-g=viento]   .hoja__k{color:#2fd07a}
+.hoja__g[data-g=nieve]    .hoja__k{color:#bfe3ff}
 .hoja__g[data-g=tormenta] .hoja__k{color:#ff5c6b}
 .hoja__g[data-g=cielo]    .hoja__k{color:#b39af0}
 .hoja__g[data-g=aire]     .hoja__k{color:#ffb02e}
@@ -1252,7 +1254,8 @@ canvas.mvals{width:100%;height:100%;display:block}
 .pasos li{font-size:0.9062rem;line-height:1.65;color:var(--dim);margin-bottom:7px}
 .pasos li b{color:var(--fg)}
 .ch--g[data-g=lluvia]  {color:#5db8f5}
-.ch--g[data-g=torre]   {color:#2fd07a}
+.ch--g[data-g=viento]  {color:#2fd07a}
+.ch--g[data-g=nieve]   {color:#bfe3ff}
 .ch--g[data-g=tormenta]{color:#ff5c6b}
 .ch--g[data-g=cielo]   {color:#b39af0}
 .q{padding:14px 0;border-bottom:1px solid var(--line)}
