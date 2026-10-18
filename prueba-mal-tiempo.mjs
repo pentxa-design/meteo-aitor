@@ -92,9 +92,13 @@ for (const s of SITIOS) {
 
   for (const [dia, d] of dias) {
     console.log(`      ⚡ ${dia} · CAPE ${d.cape} · ${txt(d.tramos)} · lo ve ${d.quien}`);
-    ok(`${dia}: el CAPE que se enseña es un número, no un hueco`,
-       Number.isFinite(d.cape) && d.cape >= 700,
-       `cape=${d.cape} — por debajo de 700 no debería estar aquí`);
+    /* Desde el 04-10-2026 un día de rayo puede ser SOLO por código de tormenta (la pareja CAPE+tapa sola se quita): entonces el CAPE
+       sigue siendo un número pero puede ser bajo (Miami el 18-10-2026: ECMWF 9 km dio código de tormenta con CAPE 0). Lo que no
+       puede pasar es un día de rayo sin ninguna de las dos cosas: CAPE ≥ 700 o un código de tormenta. Igual que en Bermeo. */
+    const porCodigo = Object.values(d.porHora || {}).some(x => x?.codigo);
+    ok(`${dia}: el CAPE que se enseña es un número, no un hueco, y el rayo lo respalda el CAPE o un código de tormenta`,
+       Number.isFinite(d.cape) && (d.cape >= 700 || porCodigo),
+       `cape=${d.cape} · por código: ${porCodigo} — sin CAPE ≥ 700 ni código de tormenta no debería estar aquí`);
     ok(`${dia}: dice QUIÉN lo ve, no «los modelos»`,
        typeof d.quien === 'string' && d.quien.length > 1);
     /* Las horas seguidas se juntan: «14:00-19:00», no doce horas

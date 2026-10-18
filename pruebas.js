@@ -13368,6 +13368,25 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      /const ACUM_RESPALDO = 'ecmwf_ifs';/.test(M) && /if \(!\/400\/\.test\(String\(e\.message\)\) \|\| !alt \|\| alt === om\) throw e;/.test(M)
      && /no cubre toda esta zona: sumado con/.test(M) && /no llega a este punto/.test(M));
 }
+/* ── «SI PINCHO EN AZUL (NIEVE), ¿POR QUÉ LEE COMO AGUA?» (18-10-2026) ──
+   «Tipo de precipitación» apila la nieve sobre la lluvia y el popup solo leía la capa de abajo (precipitación total), rotulada
+   como agua. Se EJECUTA tipoDePrecipitacion y se comprueba que la lectura se hace SOLO donde se apila nieve. */
+{
+  const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const i = Mx.indexOf('function tipoDePrecipitacion('), j = Mx.indexOf('\n}\n', i) + 3;
+  const tipo = i > 0 ? new Function(Mx.slice(i, j) + '\nreturn tipoDePrecipitacion;')() : null;
+  grupo('El popup dice qué cae: nieve, aguanieve o lluvia');
+  const T = (a, b) => (tipo ? tipo(a, b) : null);
+  ok('todo nieve → «nieve»; parte nieve y parte lluvia → «aguanieve»; sin nieve → «lluvia»; por debajo de 0,1 mm/h → «nada»',
+     !!tipo && T(0.4, 0.4).tipo === 'nieve' && T(1.0, 0.4).tipo === 'aguanieve' && T(0.8, 0).tipo === 'lluvia' && T(0.05, 0).tipo === 'nada'
+     && Math.abs(T(1.0, 0.4).lluvia - 0.6) < 1e-9);
+  ok('sin dato de nieve (null/NaN) o sin total NO se afirma el tipo (null): no se dice «lluvia» por defecto',
+     !!tipo && T(0.8, null) === null && T(0.8, NaN) === null && T(NaN, 0.2) === null && T(0.3, 5).nieve === 0.3);
+  ok('el popup lee la nieve SOLO en la capa que apila nieve sobre precipitación (no en Nubes total, donde «encima» es la lluvia y el valor es un % de nubes) y lo rotula «Nieve · … mm/h» con su equivalente en cm',
+     /L_\.v === 'precipitation' && L_\.encima === 'snowfall_water_equivalent' && !this\._sinEncima/.test(Mx)
+     && /Nieve · \$\{coma\(tipoP\.nieve, 1\)\} mm\/h/.test(Mx) && /1 litro ≈ 1 cm de nieve fresca/.test(Mx));
+}
+
 /* ── LA PROBABILIDAD DEL ENSEMBLE EN LA VENTANITA DE LA LLUVIA (18-10-2026) ──
    Suyo, con WXCharts y Meteologix delante: «saca provecho de lo que puedas». Se EJECUTA probEnsemble con miembros de
    verdad (el control más 50, como los da Open-Meteo): las probabilidades salen de contar miembros, y con pocos o con

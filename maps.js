@@ -701,6 +701,17 @@ const coma = (n, d = 1) => Number(n).toFixed(d).replace('.', ',');
  *  el modelo se termina antes (AROME HD llega a dos días), la fila suma lo que hay
  *  y va `corta`, con su hora final de verdad; con un hueco en medio, `litros: null`
  *  (17-10-2026, suyo: «lo que daría en 1 h, 3 h, 6 h y 24 h, el agua que caería»). */
+/** Qué cae en un punto de «Tipo de precipitación» (18-10-2026). `total` es la precipitación por hora (agua) y `nieve` la parte que cae
+    como nieve (agua equivalente, mm/h); la lluvia es lo que queda. Desde 0,1 mm/h cuenta (el mismo corte seco del mapa). Sin dato de
+    nieve (null) NO se dice «lluvia»: se queda en null, que el popup no afirma nada de qué tipo es. */
+function tipoDePrecipitacion(total, nieve, corte = 0.1) {
+  if (!Number.isFinite(total)) return null;
+  if (!Number.isFinite(nieve)) return null;
+  const n = Math.max(0, Math.min(nieve, total)), l = Math.max(0, total - n);
+  const hayN = n >= corte, hayL = l >= corte;
+  if (!hayN && !hayL) return { tipo: 'nada', nieve: n, lluvia: l };
+  return { tipo: hayN && hayL ? 'aguanieve' : hayN ? 'nieve' : 'lluvia', nieve: n, lluvia: l };
+}
 /** Probabilidad de que caiga más de cada umbral (mm) en las horas pedidas, contando los miembros del ensemble (18-10-2026).
     `hourly` es la respuesta del ensemble: `precipitation` (control) y `precipitation_memberNN`. Un miembro con más de un cuarto de
     horas sin dato no cuenta; con menos de 10 miembros válidos no se dice nada (null), no se inventa una probabilidad. */
@@ -5152,6 +5163,29 @@ const Maps = {
       // La lluvia de un paso de 3 h, por hora ANTES de convertir (ACUMULADAS).
       const h = horasDelPaso(R.meta?.valid_times, this.t);
       const vh = porHora(v, L_.v, h);
+      /* «Tipo de precipitación» apila la nieve (azul) sobre la lluvia (verde). Pulsar sobre azul leía solo la precipitación TOTAL
+         y la rotulaba como agua (suyo, 18-10-2026: «si pincho en azul nieve, ¿por qué lee como agua?»). Se lee también la nieve en
+         el mismo punto, hora y modelo, y el popup dice qué cae. */
+      let tipoP = null;
+      if (L_.v === 'precipitation' && L_.encima === 'snowfall_water_equivalent' && !this._sinEncima) {   // solo la capa que apila NIEVE sobre lluvia (en Nubes total la «encima» es la lluvia y el valor es un % de nubes)
+        const urlN = this.omUrl(L_.encima, this.t, R.modelo, R.meta);
+        if (urlN) {
+          const leerN = async () => (await OMWeatherMapLayer.getValueFromLatLong(lngLat.lat, lngLat.lng, limpiarMarca(urlN)))?.value;
+          let vn = null;
+          try { vn = await leerN(); } catch {}
+          if (!has(vn)) {
+            try {
+              const z = Math.min(12, Math.max(0, Math.round(this.map.getZoom()))), n2 = 2 ** z;
+              const x = Math.floor((lngLat.lng + 180) / 360 * n2);
+              const y = Math.floor((1 - Math.asinh(Math.tan(lngLat.lat * Math.PI / 180)) / Math.PI) / 2 * n2);
+              await OMWeatherMapLayer.omProtocol({ url: `${urlN}/${z}/${x}/${y}`, type: 'image' }, new AbortController());
+              vn = await leerN();
+            } catch {}
+          }
+          tipoP = tipoDePrecipitacion(vh, has(vn) ? porHora(vn, L_.encima, h) : null);
+        }
+      }
+      const nieveAqui = tipoP && (tipoP.tipo === 'nieve' || tipoP.tipo === 'aguanieve');
       const val = e?.conv ? e.conv(vh) : vh * f;
       const uTxt = u;
       const delPaso = (h > 1 && esAcumulada(L_.v))
@@ -5287,11 +5321,20 @@ const Maps = {
             } catch { /* sin ensemble: se enseña lo demás, que es verdad */ }
             acum = `<div class="pa"><div class="pa__t">Lo que caería desde el ${diaDe(ini)} a las ${hhmm(ini)}</div>`
               + `<table>${filas.map(fila).join('')}</table>`
-              + `<div class="pa__p">litros por metro cuadrado (1 mm = 1 litro) · ${esc(nombreModelo)}</div>${ens}</div>`;
+              + `<div class="pa__p">litros por metro cuadrado (1 mm = 1 litro) · ${esc(nombreModelo)}${nieveAqui ? '. En nieve cuenta su agua: 1 litro ≈ 1 cm de nieve fresca' : ''}</div>${ens}</div>`;
           }
         } catch { /* sin acumulado: se enseña la intensidad sola, que es verdad */ }
       }
-      pop.setHTML(`<b>${coma(val, Math.abs(val) < 10 ? 1 : 0)} ${esc(uTxt)}</b>${acum ? ' <span class="pa__r">ritmo a esa hora</span>' : ''}${deDonde}${delPaso}${acum}
+      /* Qué cae aquí, con palabras (solo en «Tipo de precipitación»): nieve con su equivalente en centímetros (1 mm de agua ≈ 1 cm
+         de nieve fresca), aguanieve con las dos partes, lluvia. Sin dato de nieve del modelo, no se afirma el tipo. */
+      let tituloP = `<b>${coma(val, Math.abs(val) < 10 ? 1 : 0)} ${esc(uTxt)}</b>`;
+      if (tipoP && tipoP.tipo === 'nieve')
+        tituloP = `<b>Nieve · ${coma(tipoP.nieve, 1)} mm/h</b> <span class="pa__r">de agua (≈ ${coma(tipoP.nieve, 1)} cm de nieve por hora)</span>`;
+      else if (tipoP && tipoP.tipo === 'aguanieve')
+        tituloP = `<b>Aguanieve · ${coma(tipoP.nieve + tipoP.lluvia, 1)} mm/h</b> <span class="pa__r">(${coma(tipoP.nieve, 1)} de nieve y ${coma(tipoP.lluvia, 1)} de lluvia)</span>`;
+      else if (tipoP && tipoP.tipo === 'lluvia')
+        tituloP = `<b>Lluvia · ${coma(val, Math.abs(val) < 10 ? 1 : 0)} ${esc(uTxt)}</b>`;
+      pop.setHTML(`${tituloP}${acum && !(tipoP && ['nieve', 'aguanieve'].includes(tipoP.tipo)) ? ' <span class="pa__r">ritmo a esa hora</span>' : ''}${deDonde}${delPaso}${acum}
          ${imposible ? `<small style="color:var(--no);font-weight:700">${esc(imposible)}</small>` : ''}
          <br><small>${esc(L_.name)} · ${esc(hora)}
          <br>${lngLat.lat.toFixed(3)}, ${lngLat.lng.toFixed(3)}
