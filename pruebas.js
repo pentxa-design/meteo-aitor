@@ -2983,7 +2983,7 @@ ok('«Valores» no rotula por debajo de 5 dBZ (pero el pulsar el punto sigue dan
    /if \(e\?\.unidad === 'dBZ' && txt < DBZ_SIN_ECO\) continue;/.test(mapsSrc)
    && !/if \(e\?\.unidad === 'dBZ'[^\n]*\n[^\n]*pop\.setHTML/.test(mapsSrc));
 ok('bajo la lluvia, en mm/h y en dBZ, el suelo va negro como en AguaceroWx',
-   /const CON_SUELO_NEGRO = new Set\(\['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul'\]\);/.test(mapsSrc)
+   /const CON_SUELO_NEGRO = new Set\(\['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul', 'espesor'\]\);/.test(mapsSrc)
    && /sueloParaLluvia\(CON_SUELO_NEGRO\.has\(L_\.escala\)\)/.test(mapsSrc)
    && /setPaintProperty\('hillLayer', 'raster-opacity', \(CON_SUELO_NEGRO\.has\(L_\.escala\) \|\| ESCALAS_BLANCAS\.has\(L_\.escala\)\) \? 0 : 0\.32\)/.test(mapsSrc)
    && /const tono = \{ tierra: '#1b1d21'[^}]*mar: '#0b0c0f'/.test(mapsSrc)
@@ -3173,7 +3173,7 @@ ok('las escalas fundidas de lluvia y nieve llevan corte seco en 0,1: de 0 a 0,09
    && (mapsSrc.match(/\n    desde: 1,\n/g) || []).length === 3,
    'suyo, 18-09 14:24: «se satura bien a lo primero y se desatura después» — el velo era el fundido de 0 a 0,1 sobre las trazas del global');
 ok('y la lluvia en mm/h va fundida entre cortes (color_blend), como la reflectividad',
-   /const ESCALAS_SUAVES = new Set\(\[[^\]]*'lluvia', 'lluviaVerde', 'nieveAzul'\]\);/.test(mapsSrc));
+   /const ESCALAS_SUAVES = new Set\(\[[^\]]*'lluvia', 'lluviaVerde', 'nieveAzul'(?:,[^\]]*)?\]\);/.test(mapsSrc));
 
 /* ── TIPO DE PRECIPITACIÓN, SEGÚN INTENSIDAD (17-09-2026) ───────────
    Suyo, con la capa de AguaceroWx: «mira cómo combina los colores» ·
@@ -11328,7 +11328,7 @@ grupo('El mapa se ve debajo del color: costa por encima, opacidad 0,75 y el «no
      && cp.length >= 12 && cp[0] === 0 && cp[1] > 0 && cp[1] < cp[2] && cp[3] >= 0.9 && cp[4] === 1,
      JSON.stringify({ rf, cp }));
   ok('la reflectividad pide color_blend=true: degradado continuo, no bandas estrechas que dibujan la malla',
-     /const ESCALAS_SUAVES = new Set\(\['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'niebla', 'sombraLluvia', 'tempc', 't850', 'rafagas',[\s\S]{0,400}?'lluvia', 'lluviaVerde', 'nieveAzul'\]\);/.test(M)
+     /const ESCALAS_SUAVES = new Set\(\['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'niebla', 'sombraLluvia', 'tempc', 't850', 'rafagas',[\s\S]{0,400}?'lluvia', 'lluviaVerde', 'nieveAzul'(?:,[^\]]*)?\]\);/.test(M)
      && /if \(ESCALAS_SUAVES\.has\(L_\?\.escala\)\) q\.set\('color_blend', 'true'\);/.test(M),
      'con bandas de 5 dBZ cada celda del modelo se veía como un cuadro; ráfagas, CAPE y presión siguen a saltos (listones e isobaras). 15-09: temperatura y T850 también en degradado, como Windy («mira capa temperatura 2m qué bien se ve»); sus cortes de 30/34/38 siguen en la escala, solo se funden entre sí');
 }
@@ -11422,7 +11422,7 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
     && canales(hexDe(nb[7])).every(v => v <= 0xe6 && v >= 0xd0);
   ok('la escala «nubes» va de transparente (0 %) a blanco casi opaco (100 %): blanca como Windy, un gris ligero solo cerrada, y neutra, no azul',
      alfa.length >= 6 && alfa[0] === 0 && alfa[alfa.length - 1] >= 0.9 && alfa.every((a, i) => i === 0 || a >= alfa[i - 1]) && clara
-     && /const nubes = \{/.test(M) && /presion, visibilidad, niebla, tempc, t850, rafagas, viento, capeE, tapa, agua, isocero, sinColor, nubes,/.test(M),
+     && /const nubes = \{/.test(M) && /presion, visibilidad, niebla, tempc, t850, rafagas, viento, espesor, capeE, tapa, agua, isocero, sinColor, nubes,/.test(M),
      JSON.stringify({ alfa, clara }));
   ok('las nubes piden degradado continuo (color_blend), como la reflectividad',
      /const ESCALAS_SUAVES = new Set\(\[[^\]]*'nubes'[^\]]*\]\);/.test(M));
@@ -13456,7 +13456,20 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('«Nieve que cae»: en el grupo Nieve (con «Espesor de nieve»), con la nieve (agua equivalente) y la escala azul de nieve, y sobre suelo negro',
      /\{ id:'snow_depth', g:'Nieve', name:'Espesor de nieve'/.test(Mx)
      && /\{ id:'nieve', g:'Nieve', name:'Nieve que cae', v:'snowfall_water_equivalent', unit:'mm\/h', escala:'nieveAzul'/.test(Mx)
-     && /new Set\(\['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul'\]\)/.test(Mx));
+     && /new Set\(\['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul', 'espesor'\]\)/.test(Mx));
+  const esm = JSON.parse((/const esm = (\[[^\]]*\]);/.exec(Mx) || [])[1] || 'null');
+  const esa = [...((/const esc2 = \[([\s\S]*?)\];/.exec(Mx) || [])[1] || '').matchAll(/'#[0-9a-f]{6}',([0-9.]+)/g)].map(x => Number(x[1]));
+  ok('«Espesor de nieve» en centímetros: cortes crecientes de 0 a 150 cm (la tesela viene en metros y se lee ×100), transparente en 0 y opaco desde 10 cm; sin color ni número bajo 1 cm, y con rango de cordura',
+     Array.isArray(esm) && esm.length === 8 && esm[0] === 0 && esm[1] === 0.01 && esm.at(-1) === 1.5 && esm.every((v, i) => i === 0 || v > esm[i - 1])
+     && esa.length === 8 && esa[0] === 0 && esa.slice(3).every(a => a === 1)
+     && /conv: v => v \* 100,\s+\/\/ m → cm en pantalla/.test(Mx)
+     && /\{ id:'snow_depth', g:'Nieve', name:'Espesor de nieve', v:'snow_depth', unit:'cm', escala:'espesor'/.test(Mx)
+     && /if \(e\?\.unidad === 'cm' && txt < 1\) continue;/.test(Mx) && /snow_depth: \[0, 2000, 'cm'\]/.test(Mx) && /'nieveAzul', 'espesor'\]\)/.test(Mx));
+  ok('en la capa «Viento 10 m» el popup NO repite una segunda velocidad junto al rumbo (el número de arriba ya es el viento medio); en Ráfagas sí, que es el viento medio junto a la racha',
+     /\(has\(vel\) && L_\.v !== 'wind_speed_10m' \? `, \$\{Math\.round\(vel\)\} km\/h` : ''\)/.test(Mx));
+  ok('el grupo Nieve lleva también el «Isocero 0 °C» (la cota de nieve): misma variable y escala que el de Tormenta, que sigue donde estaba',
+     /\{ id:'frznieve', g:'Nieve', name:'Isocero 0 °C', v:'freezing_level_height', unit:'m', escala:'isocero'/.test(Mx)
+     && /\{ id:'frz',  g:'Tormenta', name:'Isocero', v:'freezing_level_height'/.test(Mx));
   ok('«Viento 10 m»: en el grupo Viento (con «Ráfagas»), con la velocidad media, las flechas y el rumbo por la API (vientoApi, rumbo) y escala propia en km/h',
      /\{ id:'gusts',  g:'Viento', name:'Ráfagas'/.test(Mx)
      && /\{ id:'viento10', g:'Viento', name:'Viento 10 m', v:'wind_speed_10m', unit:'km\/h', vientoApi: true, escala:'viento', rumbo: true/.test(Mx));

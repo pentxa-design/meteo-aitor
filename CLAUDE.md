@@ -9,6 +9,15 @@ mismo» · y sobre el reparto del gasto entre apps: «mandas tú sobre ellas».
 Así que en esta app:
 - **Solo lo que él pida y los fallos.** Nada de mejoras en cadena ni revisiones
   grandes por iniciativa propia; nada de agentes.
+  **MATIZ SUYO, 18-10-2026 (manda sobre lo de arriba):** «y mejoras, como son, ni
+  preguntes ni esperes que te conteste: lo haces y punto» · «lo que tiene sentido
+  común lo haces». Las MEJORAS PEQUEÑAS que encajan con lo que acaba de pedir
+  (otra capa del mismo tema, un nombre claro, un cartel que sobra, una escala que
+  no se lee, su prueba) se hacen, se prueban, se publican y se le dicen en una
+  línea; **no se le pregunta ni se espera a que conteste**. Se sigue sin hacer
+  mejoras grandes en cadena, sin agentes y mirando el consumo antes de trabajo
+  largo. Solo se le pregunta cuando cambia algo suyo (umbrales, baterías,
+  criticidad) o cuesta de verdad (rehacer una capa entera).
 - **Nunca proponer encender el uso extra de pago.**
 - Antes de trabajo largo, mira el consumo (mcp__ccd_session_mgmt__get_usage).
   Si el semanal pasa del 80 %, haz solo lo urgente y díselo: el margen que

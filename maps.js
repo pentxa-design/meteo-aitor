@@ -325,8 +325,8 @@ const TLAYERS = [
      rejillaAcum, escala `acum`) se queda para REHACERLA bien (por teselas, sin cupo). Entrada tal cual: */
   // { id:'acum', g:'Lluvia', name:'Lluvia acumulada', v:'precipitation', unit:'mm', acum:true, escala:'acum',
   //   desc:'Litros por metro cuadrado caídos en las últimas 6, 12, 24, 48 o 72 horas hasta la hora del mapa: la suma de la previsión del modelo, como la «Acumulación de lluvia» de Windy' },
-  { id:'snow_depth', g:'Nieve', name:'Espesor de nieve', v:'snow_depth', unit:'m',
-    desc:'Nieve acumulada en el suelo' },
+  { id:'snow_depth', g:'Nieve', name:'Espesor de nieve', v:'snow_depth', unit:'cm', escala:'espesor',
+    desc:'Nieve que hay YA en el suelo, en centímetros (la que viene, en «Nieve que cae»). Sin color ni número por debajo de 1 cm: del blanco azulado a 1-5 cm al violeta de más de un metro. Si el modelo no la publica, se dice' },
   /* GRUPOS «NIEVE» Y «VIENTO» (18-10-2026, suyo: «en rayos están CAPE, inhibición… pues en viento las 2, en nieve las 2»): cada tema
      con su grupo en la barra, como Tormenta y Cielo. Antes la nieve iba dentro de Lluvia y las rachas en un grupo «Torre» solo. */
   /* NIEVE QUE CAE (18-10-2026, suyo: «muy importante, me hará falta alguna capa de NIEVE… en los montes de aquí habrá nieve
@@ -430,6 +430,11 @@ const TLAYERS = [
     desc:'Altura a la que EMPIEZA la nube de tormenta. Compárala con la cota del emplazamiento: si la base baja de esa altura, la torre está dentro de la nube' },
   { id:'frz',  g:'Tormenta', name:'Isocero', v:'freezing_level_height', unit:'m', escala:'isocero',
     desc:'Altura de la cota de 0 °C — por debajo, riesgo de hielo en la estructura. ROJO es isocero BAJO (hielo cerca de la torre); lo alto va pálido' },
+  /* La COTA DE NIEVE (18-10-2026, suyo: «ponlo claro»): el mismo isocero, también en el grupo Nieve y con nombre que se entienda. Dónde
+     queda 0 °C decide hasta dónde llega la nieve en los montes y las pistas de las torres; la nieve suele quedarse unos cientos de metros
+     por debajo. En Tormenta sigue como estaba (hielo en la estructura). */
+  { id:'frznieve', g:'Nieve', name:'Isocero 0 °C', v:'freezing_level_height', unit:'m', escala:'isocero',
+    desc:'Altura a la que la temperatura baja a 0 °C: por encima de ella, lluvia; por debajo, nieve o hielo. La nieve llega algo más abajo, unos cientos de metros. Compárala con la cota de la pista y de la torre. ROJO es isocero BAJO (nieve y hielo cerca); lo alto va pálido' },
   { id:'li',   g:'Tormenta', name:'Índice de elevación', v:'lifted_index', unit:'°C', escala:'elevacion',
     desc:'Lifted Index, en °C. NEGATIVO es malo: de −2 a −5 tormentas probables, '
        + 'por debajo de −5 tormenta fuerte. Positivo, aire estable' },
@@ -581,14 +586,16 @@ const LENTOS = new Set(['ecmwf_ifs', 'ecmwf_ifs025', 'ncep_gfs013', 'ncep_gfs025
 /* 15-09-2026, con Windy delante: «mira capa temperatura 2m qué bien se ve». Temperatura
    y T850 pasan a degradado continuo; los cortes (30 naranja, 34 rojo, 38 granate)
    siguen siendo los suyos, solo se funden entre sí en vez de verse a bandas. */
-const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'niebla', 'sombraLluvia', 'tempc', 't850', 'rafagas', 'viento',
+const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'niebla', 'sombraLluvia', 'tempc', 't850', 'rafagas',
   /* 19-09-2026: olas y periodo fundidos, como Ventusky (pero en lineal:
      la monótona hacía polígonos junto a la costa; ver TMODELS). */
   'ola', 'periodo',
   /* 17-09-2026: la lluvia en mm/h también fundida entre cortes, como
      AguaceroWx («colores de interpolación» marcado). Sus cortes (0,1 ·
      0,3 · 1 · 4…) no son listones suyos, son la escala de intensidad. */
-  'lluvia', 'lluviaVerde', 'nieveAzul']);
+  'lluvia', 'lluviaVerde', 'nieveAzul',
+  /* 18-10-2026: el viento medio y el espesor de nieve, también con degradado continuo. */
+  'viento', 'espesor']);
 /* Capas que se interpolan con cúbica monótona entre nodos (ver omUrl). */
 /* Y LAS NUBES (10-10-2026, suyo, con Windy al lado camino de Laredo: «nubes
    pixeladas… total, lo llevo diciendo hace mucho» · «en precipitación se ve
@@ -612,7 +619,7 @@ function interpolacionDe(L_) {
 }
 /* Capas de lluvia que van sobre suelo negro (como AguaceroWx) y sin la
    sombra del relieve encima (18-09-2026: al 32 % dejaba la tierra gris). */
-const CON_SUELO_NEGRO = new Set(['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul']);   // nieveAzul: la capa «Nieve que cae» sola (apilada va sobre el suelo de la lluvia)
+const CON_SUELO_NEGRO = new Set(['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul', 'espesor']);   // nieveAzul: la capa «Nieve que cae» sola (apilada va sobre el suelo de la lluvia)
 
 /* Las capas de lluvia que al entrar se ponen en el modelo que mejor acierta
    la lluvia en sus sitios (17-10-2026, ver setLayer). */
@@ -652,6 +659,7 @@ const RANGOS = {
   vis:   [0, 100, 'km'],
   niebla: [0, 100, 'km'],   // la misma visibilidad, pintada como Windy (17-10-2026)
   gusts: [0, 400, 'km/h'],
+  snow_depth: [0, 2000, 'cm'],   // 20 m de nieve no existe ni en el Himalaya medido por un modelo: si sale, la unidad ha cambiado
   ola:   [0, 30, 'm'],     // la ola más alta medida en el mundo ronda los 30 m
   fondo: [0, 30, 'm'],
   marviento: [0, 30, 'm'],
@@ -1664,6 +1672,18 @@ function escalasPropias() {
     eje: vkm, unidad: 'km/h', pos: vkm.map((_, i) => i),
   };
 
+  /* ── ESPESOR DE NIEVE EN CENTÍMETROS (18-10-2026: mejora suya sin pedirla, «lo que tiene sentido común lo haces») ──
+     La capa iba con la escala de fábrica (0,05-5 m en metros, un verde-rojo de calor) y rotulaba «0,0» en cada punto del mapa; en su
+     captura del lunes solo se veían dos motas verdes en el Pirineo. Ahora: la tesela viene en metros y se pinta y se lee en cm (conv),
+     transparente por debajo de 1 cm, y de ahí del blanco azulado al azul y al violeta a más de 1 m. */
+  const esm = [0, 0.01, 0.05, 0.1, 0.2, 0.4, 0.8, 1.5];                     // metros en la tesela = 0 · 1 · 5 · 10 · 20 · 40 · 80 · 150 cm
+  const esc2 = [['#d8ecff',0], ['#d8ecff',.75], ['#a9d3ff',.9], ['#5aa7ff',1], ['#2f78e8',1], ['#6a4de0',1], ['#b04ad0',1], ['#f06ab0',1]];
+  const espesor = {
+    scale: { type:'breakpoint', unit:'cm', breakpoints: esm, colors: esc2.map(([c,a2]) => hexRGBA(c, a2)) },
+    conv: v => v * 100,                                                       // m → cm en pantalla
+    eje: esm.map(v => v * 100), unidad: 'cm', pos: esm.map((_, i) => i),
+  };
+
   /* ── CAPE: LA GASOLINA, CON LOS CORTES QUE ÉL USA ──────────────────
      La segunda de las tres con las que decide, y también iba con la
      escala de fábrica. Los cortes NO son de manual, son los suyos y los
@@ -2091,7 +2111,7 @@ function escalasPropias() {
     // la misma cuenta de Marshall-Palmer con la que está hecha la escala.
     dbz: { scale: ESCALA_DBZ, eje: DBZ, unidad: 'dBZ',
            conv: v => v > 0 ? 10 * Math.log10(200 * Math.pow(v, 1.6)) : 0 },
-    presion, visibilidad, niebla, tempc, t850, rafagas, viento, capeE, tapa, agua, isocero, sinColor, nubes, sombraLluvia,
+    presion, visibilidad, niebla, tempc, t850, rafagas, viento, espesor, capeE, tapa, agua, isocero, sinColor, nubes, sombraLluvia,
     ola, periodo, acum,
   };
   return _escalas;
@@ -4930,6 +4950,7 @@ const Maps = {
       /* Y en mm/h, donde no se pinta (menos de 0,1) tampoco se rotula un
          «0,0» en cada punto del mar. Al pulsar sigue saliendo el número. */
       if (e?.unidad === 'mm/h' && txt < 0.1) continue;
+      if (e?.unidad === 'cm' && txt < 1) continue;                  // espesor de nieve: bajo 1 cm no se pinta y no se rotula un «0,0»
       imposible ||= fueraDeRango(L_, txt);
       const d = Math.abs(txt) >= 100 ? 0 : dec;
       frag.push(`<span class="mval" style="left:${pt.x.toFixed(0)}px;top:${pt.y.toFixed(0)}px">${coma(txt, d)}${simbolo}</span>`);
@@ -5261,7 +5282,7 @@ const Maps = {
           if (has(gr) && d?.hourly?.time?.[0] === hIso) {
             const r2 = typeof rumboLargo === 'function' ? rumboLargo(gr) : null;
             deDonde = ` · viento <b>del ${r2 ? esc(r2) + ' ' : ''}(${Math.round(gr)}°)</b>`
-              + (has(vel) ? `, ${Math.round(vel)} km/h` : '')
+              + (has(vel) && L_.v !== 'wind_speed_10m' ? `, ${Math.round(vel)} km/h` : '')   // en «Viento 10 m» el número de arriba YA es el viento medio: dos velocidades en la misma frase (7,2 y 5) confundían (18-10-2026)
               + ` <small>a 10 m, ${esc(nombreRumbo)}</small>`;
           }
         } catch { /* sin rumbo: antes eso que uno inventado */ }
