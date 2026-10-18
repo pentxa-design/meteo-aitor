@@ -1216,6 +1216,7 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
     ];
     const resp = SITIOS.map(s => ({ latitude: s.lat, longitude: s.lon, hourly: { time: ['x'], quien: s.n } }));
     const APP = 'x', MODELOS_AGUA = ['a'], MODELOS_PEDIDOS = ['a'];
+    const ReglasTiempo = require(${JSON.stringify(require('path').join(__dirname, 'reglas-tiempo.js'))});
     ${(V.match(/const selloTanda = [^\n]+/) || ['const selloTanda = () => "";'])[0]}
     ${(V.match(/const TOPE_S = [^\n]+/) || ['const TOPE_S = 15;'])[0]}
     let DEVUELVE = resp;
@@ -1229,6 +1230,10 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
       DEVUELVE = [resp[0], resp[1]];
       try { await pedirTanda(SITIOS, 'land'); out.corta = 'NO REVENTO'; }
       catch (e) { out.corta = 'reventó'; }
+      /* Pedida el sábado con +2, la hora del domingo desde el cambio (04:00 etiquetada) es la 03:00 del reloj. */
+      DEVUELVE = SITIOS.map(s => ({ latitude: s.lat, longitude: s.lon, utc_offset_seconds: 7200, timezone: 'Europe/Madrid',
+                                    hourly: { time: ['2026-10-25T04:00'], quien: s.n } }));
+      out.hora = (await pedirTanda(SITIOS, 'land'))[0].time[0];
       console.log(JSON.stringify(out));
     })();`;
   let R = {};
@@ -1245,6 +1250,8 @@ ok('y ya no queda el patrón viejo que se tragaba el resultado',
   ok('si contesta menos puntos de los que se piden, no se reparte a ciegas',
      R.corta === 'reventó',
      'emparejar por posición con la lista incompleta desplaza TODOS los sitios');
+  ok('y las horas que trae pedidas el sábado (+2) llegan al reloj de Madrid: la 04:00 del domingo 25 es la 03:00 (cambio de hora, 18-10-2026)',
+     R.hora === '2026-10-25T03:00', String(R.hora));
 
   ok('el vigilante pide los emplazamientos en UNA tanda por celda, no dos por sitio',
      /latitude=\$\{sitios\.map\(s => s\.lat\)\.join\(','\)\}/.test(V)

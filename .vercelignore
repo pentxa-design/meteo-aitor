@@ -46,3 +46,5 @@ pantallas.cjs
 PARA-EL-*.md
 sincronizar-reglas.mjs
 reglas-iguales.mjs
+*.md
+revisiones/

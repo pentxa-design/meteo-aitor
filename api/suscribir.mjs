@@ -21,6 +21,23 @@ const CAJON = 'avisos/moviles.json';
 /* Cada aparato suyo es una fila. Si vuelve a dar permiso desde el mismo
    móvil, se pisa la suya y no se duplica: dos filas iguales serían dos
    notificaciones para el mismo teléfono. */
+/** Cuántos aparatos como máximo. Él tiene dos o tres; 30 es «alguien está llenando esto». */
+const TOPE_APARATOS = 30;
+
+const SERVICIOS_PUSH = [
+  /^fcm\.googleapis\.com$/,                      // Chrome, Android, Edge
+  /^updates\.push\.services\.mozilla\.com$/,     // Firefox
+  /^[a-z0-9-]+\.push\.apple\.com$/,              // Safari e iOS (web.push.apple.com)
+  /^[a-z0-9.-]+\.notify\.windows\.com$/,         // Windows
+];
+export function endpointDePushValido(endpoint) {
+  try {
+    const u = new URL(String(endpoint));
+    return u.protocol === 'https:' && !u.port && !u.username && !u.password
+      && SERVICIOS_PUSH.some(r => r.test(u.hostname));
+  } catch { return false; }
+}
+
 export default async function handler(req, res) {
   /* Con GET devuelve la clave pública de firma. La app la necesita para
      pedir el permiso, y tiene que ser LA MISMA con la que luego se firma
@@ -66,8 +83,20 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'suscripción incompleta' });
   }
 
+  /* El endpoint es una URL a la que el servidor mandará un POST cuando
+     avise. Esta ruta no lleva clave, así que cualquiera podía apuntar ahí
+     una dirección ajena (o interna) y hacer que el servidor la llamara
+     (revisión del 18-10-2026). Solo se admiten los servicios de push de
+     verdad: Chrome/Android, Firefox, Safari/iOS y Edge. */
+  if (!endpointDePushValido(s.endpoint)) {
+    return res.status(400).json({ error: 'endpoint no válido' });
+  }
+
   try {
     const previas = await leer();
+    if (previas.length >= TOPE_APARATOS && !previas.some(x => x.endpoint === s.endpoint)) {
+      return res.status(429).json({ error: 'demasiados aparatos apuntados' });
+    }
     const otras = previas.filter(x => x.endpoint !== s.endpoint);
     const fila = {
       endpoint: s.endpoint,

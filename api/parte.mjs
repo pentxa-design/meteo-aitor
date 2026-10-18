@@ -23,6 +23,7 @@
 
 import webpush from 'web-push';
 import { leer, guardar } from './suscribir.mjs';
+import { ReglasTiempo } from '../lib/reglas.mjs';
 
 /* Sus 14 emplazamientos, con las coordenadas que mandó ÉL el 26-08-2026
    con el pin puesto en la caseta. En el mismo orden que ve en la app: de
@@ -123,7 +124,7 @@ async function unSitio(s) {
           + `&models=${MODELOS.join(',')}`;
   const r = await fetch(u);
   if (!r.ok) throw new Error(`${s.n}: la app contesta ${r.status}`);
-  const H = (await r.json()).hourly;
+  const H = ReglasTiempo.horasAlReloj(await r.json()).hourly;   // el 25-10 corre una hora (18-10-2026)
   if (!H?.time) throw new Error(`${s.n}: sin datos`);
 
   /* SE PIDEN DOS DÍAS PARA PODER MIRAR UNO.

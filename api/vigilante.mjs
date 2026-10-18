@@ -504,7 +504,7 @@ async function pedirTanda(sitios, cel) {
      entera hasta el límite de Vercel, sin estado y sin aviso. */
   const r = await fetch(u, { signal: AbortSignal.timeout(TOPE_S * 1000) });
   if (!r.ok) throw new Error(`la app contesta ${r.status}`);
-  const j = await r.json();
+  const j = ReglasTiempo.horasAlReloj(await r.json());   // el desfase de Open-Meteo es único: el 25-10 corre una hora (18-10-2026)
   const lista = Array.isArray(j) ? j : [j];
   if (lista.length !== sitios.length) {
     throw new Error(`pedí ${sitios.length} y contestó ${lista.length}`);
@@ -546,7 +546,7 @@ async function pedirContraste(desde) {
           + `&timezone=auto&hourly=precipitation&forecast_days=2&cell_selection=land&models=${MODELOS_AGUA.join(',')}${selloTanda()}`;
   const r = await fetch(u, { signal: AbortSignal.timeout(TOPE_S * 1000) });
   if (!r.ok) throw new Error(`la app contesta ${r.status}`);
-  const j = await r.json(); const L = Array.isArray(j) ? j : [j];
+  const j = ReglasTiempo.horasAlReloj(await r.json()); const L = Array.isArray(j) ? j : [j];
   if (L.length !== PUNTOS_CONTRASTE.length) throw new Error(`pedí ${PUNTOS_CONTRASTE.length} puntos de contraste y contestó ${L.length}`);
   // Todos, también los que hoy no tienen lluvia prevista: hay que poder pedir lo MEDIDO para comparar lo apuntado antes.
   return PUNTOS_CONTRASTE.map((x, i) => ({ n: x.n, lat: x.lat, lon: x.lon, zona: 'ref', pv: pvDe(L[i]?.hourly, desde) ?? {} }));
@@ -562,7 +562,7 @@ async function unSitio(s, previo = null, reloj = null) {
             + `&cell_selection=${cel}&models=${MODELOS_PEDIDOS.join(',')}${selloTanda()}`;
     const r = await fetch(u, { signal: AbortSignal.timeout(TOPE_S * 1000) });
     if (!r.ok) throw new Error(`la app contesta ${r.status}`);
-    return (await r.json()).hourly;
+    return ReglasTiempo.horasAlReloj(await r.json()).hourly;
   };
   const H = previo?.H?.time ? previo.H : await pide('land');
   if (!H?.time) throw new Error('sin datos');
@@ -1129,7 +1129,7 @@ async function apuntarEnElMarcador(sitios, leido = null) {
              + `&timezone=Europe%2FMadrid&hourly=wind_gusts_10m,precipitation,temperature_2m&forecast_days=1`
              + `&cell_selection=land&models=${MODELOS_MARCADOR.map(m => m[1]).join(',')}`;
     const r8 = await fetch(u8, { signal: AbortSignal.timeout(15000) });
-    if (r8.ok) { const j8 = await r8.json(); lista = Array.isArray(j8) ? j8 : [j8]; }
+    if (r8.ok) { const j8 = ReglasTiempo.horasAlReloj(await r8.json()); lista = Array.isArray(j8) ? j8 : [j8]; }
   } catch { lista = []; }
   for (const [k, e] of ocho.entries()) {
     /* Los modelos EN LA ESTACIÓN, no en el emplazamiento: comparar el

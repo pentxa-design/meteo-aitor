@@ -37,6 +37,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 import { leerJSON, fallo, guardarJSON } from '../lib/almacen.mjs';
+import { ReglasTiempo } from '../lib/reglas.mjs';
 
 const LIBRO = 'avisos/calibrado.json';
 const APP = 'https://weather-app-ochre-one-76.vercel.app';
@@ -143,7 +144,7 @@ async function loQueHabia(lat, lon, horaL) {
           + `&past_days=${atras}&cell_selection=land&models=${MODELOS.join(',')}`;
   const r = await fetch(u);
   if (!r.ok) throw new Error(`om ${r.status}`);
-  const H = (await r.json()).hourly;
+  const H = ReglasTiempo.horasAlReloj(await r.json()).hourly;   // el 25-10 corre una hora (18-10-2026)
   if (!H?.time) throw new Error('sin horas');
 
   /* Se compara TEXTO contra la hora local que devuelve Open-Meteo, y la

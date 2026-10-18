@@ -10,7 +10,7 @@
      pantalla con la hora de la descarga.
    ═══════════════════════════════════════════════════════════════════ */
 
-const V     = 'torre-2026.10.18-2145';
+const V     = 'torre-2026.10.18-2218';
 const SHELL = [
   './', './index.html', './styles.css', './reglas-tiempo.js', './app.js', './maps.js',
   './manifest.webmanifest',
@@ -170,6 +170,8 @@ self.addEventListener('fetch', e => {
     '/rayos',         // las descargas: su veto
     '/mareas',        // la tabla oficial
     '/radar', '/satelite', '/webcams',
+    '/radar-aemet',   // el catálogo de fotogramas: una copia vieja enseñaría radar de ayer como el de ahora
+    '/api/alertas-espana', // los avisos oficiales de toda España
     '/api/vigilante', '/api/campo', '/api/marcador', '/api/calibrar',
     '/api/torres', '/api/ajustes', '/api/suscribir', '/api/avisar',
     '/api/parte', '/api/foto', '/api/prueba-aviso', '/api/estaciones',

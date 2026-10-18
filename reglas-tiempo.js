@@ -809,6 +809,54 @@ const ReglasTiempo = (() => {
                             rojo: horasCodigo.length > 0 } : null;
   }
 
+
+  /* ── LAS HORAS DE OPEN-METEO, A LA HORA DEL RELOJ DE UNA ZONA (18-10-2026) ──
+     Open-Meteo usa UN SOLO desfase para toda la serie: el del momento de la
+     petición (MEDIDO con el cambio de hora de 2025 y otra vez el 18-10-2026 en
+     /om con start_date 24→27: `utc_offset_seconds` único, 69 de 96 etiquetas
+     una hora corridas desde el 25-10 a las 03:00). Pedido el sábado 24 con +2,
+     el domingo 25 desde las 03:00 va una hora adelantado; el lunes a las 07:00
+     se lee «08:00». La app lo corrige desde el 03-10 con el reloj del aparato
+     (`horasAlReloj` de app.js). El vigilante (en un servidor sin zona), el
+     Centro Operativo y la agenda NO lo hacían: esta es la misma cuenta, con la
+     zona escrita, para los tres.
+
+     Cada hora se pasa al instante de verdad con el desfase de la propia
+     respuesta y se reescribe en el reloj de `zona`. Las series siguen
+     alineadas (solo cambian las etiquetas); la hora repetida del cambio de
+     otoño sale dos veces, que es lo que marca el reloj. Se marca para no
+     hacerlo dos veces; lo pedido en UTC se queda en UTC. */
+  const relojes = new Map();
+  const relojDe = zona => {
+    if (!relojes.has(zona)) relojes.set(zona, new Intl.DateTimeFormat('en-GB', {
+      timeZone: zona, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }));
+    return relojes.get(zona);
+  };
+  function horasAlReloj(d, zona = 'Europe/Madrid') {
+    const reloj = relojDe(zona);
+    const pasa = (arr, off) => Array.isArray(arr) ? arr.map(t => {
+      if (typeof t !== 'string' || t.length < 16 || t[10] !== 'T') return t;
+      const inst = Date.parse(t.slice(0, 16) + ':00Z') - off;
+      if (!Number.isFinite(inst)) return t;
+      const p = {};
+      for (const x of reloj.formatToParts(new Date(inst))) p[x.type] = x.value;
+      return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+    }) : arr;
+    const uno = x => {
+      if (!x || typeof x !== 'object' || x._horasAlReloj || !Number.isFinite(x.utc_offset_seconds)) return;
+      if (x.timezone === 'GMT' || x.timezone === 'UTC') return;
+      const off = x.utc_offset_seconds * 1000;
+      for (const k of ['hourly', 'minutely_15']) if (Array.isArray(x[k]?.time)) x[k].time = pasa(x[k].time, off);
+      if (typeof x.current?.time === 'string') x.current.time = pasa([x.current.time], off)[0];
+      /* Y el orto y el ocaso, que llevan el mismo desfase único (MEDIDO el 18-10-2026 en Bermeo con +2: el 25-10 salía
+         «08:36», y con la hora ya cambiada son las 07:36). */
+      for (const k of ['sunrise', 'sunset']) if (Array.isArray(x.daily?.[k])) x.daily[k] = pasa(x.daily[k], off);
+      x._horasAlReloj = true;
+    };
+    if (Array.isArray(d)) d.forEach(uno); else uno(d);
+    return d;
+  }
+
   return Object.freeze({
     has, LISTON, DUENO_AGUA, AGUA_ACUERDO, RELLENO_AGUA, CIELO_PRESTADO, ECMWF_9KM,
     MODELOS_TORMENTA, NOMBRES, nombreDe, mojaEsaHora, lluviaDeUnSitio, lloviznaAcompanadaEn, AGUA_ACOMPANA,
@@ -817,6 +865,7 @@ const ReglasTiempo = (() => {
     RAYO_ENCIMA, RAYO_CERCA, RAYO_RADIO, RAYO_VIGENTE, kmEntre, loQueAunCuenta, lectorDeRayos,
     rayosConCache, vetaRayo, textoRayos,
     CAPE_COMBINACION, TAPA_ROMPE, MODELOS_RAYO, rayoDelModelo, otrosDelAgua, rayoEnHoras,
+    horasAlReloj,
   });
 })();
 /* En el servidor (el vigilante de Vercel) se carga con require; en el

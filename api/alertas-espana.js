@@ -41,12 +41,15 @@ const ZONA_MIA = /bizkaia|vizcaya|gipuzkoa|guip[uú]zcoa|[áa]lava|araba|llanada
 export function leerFeed(xml, ahora = Date.now()) {
   const avisos = [];
   const vistos = new Set();
+  let reconocidos = 0;
+  const entradas = xml.split('<entry>').length - 1;
   for (const e of xml.split('<entry>').slice(1)) {
     const titulo = etiqueta(e, 'title') || '';
     const m = titulo.match(/^(Yellow|Orange|Red)\s+(.+?)\s+Warning issued/i);
     if (!m) continue;
     const nivel = NIVEL[m[1][0].toUpperCase() + m[1].slice(1).toLowerCase()];
     if (!nivel) continue;
+    reconocidos++;
     const tipo = m[2];
     const zona = etiqueta(e, 'cap:areaDesc');
     const hasta = etiqueta(e, 'cap:expires');
@@ -78,7 +81,18 @@ export function leerFeed(xml, ahora = Date.now()) {
        AEMET en Euskadi, por nombre: «Llanada alavesa» no casa con «álava». */
     euskadi: avisos.filter(a => ZONA_MIA.test(a.zona || '')),
     total: avisos.length,
+    entradas, reconocidos,
   };
+}
+
+/* ¿El feed se ha podido LEER? Un cuerpo que no es el feed (una página de
+   error con 200) o entradas que ya no casan con el título que esperamos
+   (Meteoalarm cambia el formato) daban «0 avisos», que se lee igual que
+   «hoy no hay ninguno». Se canta como fallo (revisión del 18-10-2026). */
+export function feedLegible(xml, d) {
+  if (!/<feed[\s>]/.test(xml)) return 'la respuesta no es el feed de avisos';
+  if (d.entradas >= 5 && d.reconocidos === 0) return `el feed trae ${d.entradas} entradas y ninguna se reconoce (¿formato cambiado?)`;
+  return null;
 }
 
 export default async () => {
@@ -89,6 +103,8 @@ export default async () => {
     if (!r.ok) return json({ error: true, reason: `Meteoalarm respondió ${r.status}` }, 502);
     const xml = await r.text();
     const d = leerFeed(xml);
+    const roto = feedLegible(xml, d);
+    if (roto) return json({ error: true, reason: roto }, 502);
     return json({ ...d, consultado: new Date().toISOString() }, 200);
   } catch (e) {
     return json({ error: true, reason: String(e?.message || e).slice(0, 100) }, 502);

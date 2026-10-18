@@ -332,9 +332,9 @@ const TLAYERS = [
   /* NIEVE QUE CAE (18-10-2026, suyo: «muy importante, me hará falta alguna capa de NIEVE… en los montes de aquí habrá nieve
      enseguida, las pistas para subir a las torres»). La nieve de «Tipo de precipitación» iba apilada sobre la lluvia y sin
      capa propia; «Espesor de nieve» es lo que ya hay en el suelo. Esta es la que CAE: `snowfall_water_equivalent`, en agua
-     equivalente (mm/h; 1 mm ≈ 1 cm de nieve fresca), sobre fondo oscuro. */
+     equivalente (mm/h; 1 mm de agua ≈ 0,7 cm de nieve fresca, el factor del modelo), sobre fondo oscuro. */
   { id:'nieve', g:'Nieve', name:'Nieve que cae', v:'snowfall_water_equivalent', unit:'mm/h', escala:'nieveAzul',
-    desc:'Nieve prevista, en agua equivalente (mm/h): 1 mm ≈ 1 cm de nieve fresca. Del azul claro al azul marino según intensidad. Solo algunos modelos la publican: al entrar, el mapa pasa solo a uno que la tenga. Al pulsar, la nieve que caería en 1, 3, 6 y 24 horas en centímetros' },
+    desc:'Nieve prevista, en agua equivalente (mm/h): 1 mm de agua ≈ 0,7 cm de nieve fresca (el factor del modelo). Del azul claro al cian, lila, rosa y blanco según intensidad (blanco = nevada fuerte). Solo algunos modelos la publican: al entrar, el mapa pasa solo a uno que la tenga. Al pulsar, la nieve que caería en 1, 3, 6 y 24 horas en centímetros' },
   /* Suyo, 14-09-2026: «esta capa debe de estar en lluvia». Y con escala
      propia: la de fábrica era un azul oscuro plano en el que «no se
      distingue nada». */
@@ -434,7 +434,7 @@ const TLAYERS = [
      queda 0 °C decide hasta dónde llega la nieve en los montes y las pistas de las torres; la nieve suele quedarse unos cientos de metros
      por debajo. En Tormenta sigue como estaba (hielo en la estructura). */
   { id:'frznieve', g:'Nieve', name:'Isocero 0 °C', v:'freezing_level_height', unit:'m', escala:'isocero',
-    desc:'Altura a la que la temperatura baja a 0 °C: por encima de ella, lluvia; por debajo, nieve o hielo. La nieve llega algo más abajo, unos cientos de metros. Compárala con la cota de la pista y de la torre. ROJO es isocero BAJO (nieve y hielo cerca); lo alto va pálido' },
+    desc:'Altura a la que la temperatura baja a 0 °C: por encima de ella hace frío (nieve o hielo); por debajo, lluvia. La nieve llega algo más abajo, unos cientos de metros. Compárala con la cota de la pista y de la torre. ROJO es isocero BAJO (nieve y hielo cerca); lo alto va pálido' },
   { id:'li',   g:'Tormenta', name:'Índice de elevación', v:'lifted_index', unit:'°C', escala:'elevacion',
     desc:'Lifted Index, en °C. NEGATIVO es malo: de −2 a −5 tormentas probables, '
        + 'por debajo de −5 tormenta fuerte. Positivo, aire estable' },
@@ -629,7 +629,10 @@ const CAPAS_LLUVIA_AROME = new Set(['lluvia']);
    18-10-2026): con él todo salía verde y no se veía la nieve del Pirineo y los Alpes («se que han dado algo de nieve y no
    lo veo»). Al entrar en esa capa con un modelo sin nieve se pone ICON-EU (7 km); los que la publican se respetan. */
 const MODELO_TIPO = 'dwd_icon_eu';
-const CON_NIEVE = new Set(['dwd_icon_eu', 'dwd_icon_d2', 'ecmwf_ifs', 'ecmwf_ifs025', 'meteofrance_arpege_europe',
+/** Centímetros de nieve fresca por milímetro de agua: el factor con el que Open-Meteo saca `snowfall` de `snowfall_water_equivalent`
+ *  (medido el 18-10-2026 en icon_eu y ecmwf_ifs: 0,7 exacto). El titular del popup y la tablita tienen que usar el MISMO. */
+const CM_NIEVE_POR_MM = 0.7;
+const CON_NIEVE = new Set(['ncep_gfs013', 'dwd_icon_eu', 'dwd_icon_d2', 'ecmwf_ifs', 'ecmwf_ifs025', 'meteofrance_arpege_europe',
                            'knmi_harmonie_arome_europe', 'dwd_icon']);
 /* La niebla sale de la visibilidad, y AROME HD no la publica: al entrar en
    Niebla con un modelo sin visibilidad, ICON-EU (el de la niebla de Windy,
@@ -659,6 +662,7 @@ const RANGOS = {
   vis:   [0, 100, 'km'],
   niebla: [0, 100, 'km'],   // la misma visibilidad, pintada como Windy (17-10-2026)
   gusts: [0, 400, 'km/h'],
+  viento10: [0, 400, 'km/h'],   // el viento medio pasa por la misma conversión m/s → km/h que las ráfagas: si la unidad cambia, que lo cante igual
   snow_depth: [0, 2000, 'cm'],   // 20 m de nieve no existe ni en el Himalaya medido por un modelo: si sale, la unidad ha cambiado
   ola:   [0, 30, 'm'],     // la ola más alta medida en el mundo ronda los 30 m
   fondo: [0, 30, 'm'],
@@ -672,7 +676,7 @@ function fueraDeRango(L_, valor) {
   if (!r || !Number.isFinite(valor)) return null;
   const [min, max, u] = r;
   if (valor >= min && valor <= max) return null;
-  return `OJO: ${L_.name} da ${valor.toFixed(1)} ${u}, que es imposible. `
+  return `OJO: ${L_.name} da ${valor.toFixed(1).replace('.', ',')} ${u}, que es imposible. `
        + `La fuente ha debido de cambiar la unidad: NO te fíes de esta capa hasta revisarla.`;
 }
 const marcaDe = u => u.match(new RegExp(`${MARCA}=([A-Za-z0-9_]+)`))?.[1] ?? null;
@@ -1621,7 +1625,7 @@ function escalasPropias() {
      Desde hoy los dos saltos secos son los suyos, vengan de donde
      vengan: `listonRafaga()` es quien los sabe. Los azules de abajo van
      en proporción a su aviso, y arriba se sigue subiendo de 20 en 20. */
-  const LR = (typeof listonRafaga === 'function' && listonRafaga()) || { warn: 70, no: 90 };
+  const LR = (typeof listonRafaga === 'function' && listonRafaga()) || { warn: 60, no: 90 };
   const creciente = a => a.map((v2, i) => Math.round(v2)).reduce(
     (o, v2) => (o.push(o.length && v2 <= o[o.length - 1] ? o[o.length - 1] + 1 : v2), o), []);
   const rfm = creciente([0, LR.warn * 0.3, LR.warn * 0.45, LR.warn * 0.6, LR.warn - 1, LR.warn,
@@ -1679,7 +1683,7 @@ function escalasPropias() {
   const esm = [0, 0.01, 0.05, 0.1, 0.2, 0.4, 0.8, 1.5];                     // metros en la tesela = 0 · 1 · 5 · 10 · 20 · 40 · 80 · 150 cm
   const esc2 = [['#d8ecff',0], ['#d8ecff',.75], ['#a9d3ff',.9], ['#5aa7ff',1], ['#2f78e8',1], ['#6a4de0',1], ['#b04ad0',1], ['#f06ab0',1]];
   const espesor = {
-    scale: { type:'breakpoint', unit:'cm', breakpoints: esm, colors: esc2.map(([c,a2]) => hexRGBA(c, a2)) },
+    scale: { type:'breakpoint', unit:'cm', ...corteSeco(esm, esc2.map(([c,a2]) => hexRGBA(c, a2))) },   // corte seco en 1 cm: antes se fundía desde 0 y pintaba 0,5 cm al 38 % (medido con getColor)
     conv: v => v * 100,                                                       // m → cm en pantalla
     eje: esm.map(v => v * 100), unidad: 'cm', pos: esm.map((_, i) => i),
   };
@@ -1923,8 +1927,11 @@ function escalasPropias() {
     eje: mm, unidad: 'mm/h', pos: mm.map((_, i) => i),
   };
   const nvm = [0, 0.1, 0.3, 0.6, 1, 2, 4, 8, 15];
-  const nvc = [['#a9c8ff',0], ['#a9c8ff',.85], ['#7fa6ff',.92], ['#5a86ff',1],
-               ['#3f66f0',1], ['#2b49d0',1], ['#1c31a8',1], ['#121f7a',1], ['#0b1350',1]];
+  /* 18-10-2026, revisión del mapa: la rampa iba del azul claro al azul MARINO y el suelo de esta capa es negro, así que la nevada
+     más fuerte desaparecía (contraste con el suelo, WCAG: 5,1 a 0,6 mm/h; 2,4 a 2; 1,65 a 4; 1,2 a 8; 1,02 a 15). Justo la celda
+     peligrosa se leía como hueco. Ahora AClara con la intensidad —azul, cian, lila, rosa y blanco— y todos pasan de 7. */
+  const nvc = [['#a9c8ff',0], ['#a9c8ff',.85], ['#8db6ff',.92], ['#6fc3ff',1],
+               ['#4fd6ff',1], ['#9ff0ff',1], ['#d6b0ff',1], ['#f08cff',1], ['#ffffff',1]];
   const nieveAzul = {
     scale: { type:'breakpoint', unit:'mm/h', ...corteSeco(nvm, nvc.map(([c,a]) => hexRGBA(c, a))) },
     desde: 1,
@@ -4014,7 +4021,7 @@ const Maps = {
     const L_ = TLAYERS.find(l => l.id === this.layer);
     const h = (esAcumulada(L_?.v) || esAcumulada(L_?.encima)) ? horasDelPaso(T, this.t) : 1;
     this.status(`${M.name} · ${M.res} · pasada de las ${ref} · ${T.length} pasos (${dias.toFixed(0)} días)`
-      + (h > 1 ? ` · paso de ${h} h: la lluvia se enseña POR HORA (la suma de ${h} h ÷ ${h})` : '')
+      + (h > 1 ? ` · paso de ${h} h: ${this.layer === 'nieve' ? 'la nieve' : this.layer === 'tipo' ? 'la lluvia y la nieve' : 'la lluvia'} se enseña POR HORA (la suma de ${h} h ÷ ${h})` : '')
       + (this.usando?.sustituido ? ' · CAPA SUSTITUIDA' : '')
       + (this._sinEncima ? ` · SIN ${this._sinEncima === 'snowfall_water_equivalent' ? 'NIEVE' : this._sinEncima.toUpperCase()}: este modelo no la publica, solo se pinta la lluvia` : ''));
   },
@@ -5371,15 +5378,15 @@ const Maps = {
             } catch { /* sin ensemble: se enseña lo demás, que es verdad */ }
             acum = `<div class="pa"><div class="pa__t">${deNieve ? 'La nieve que caería' : 'Lo que caería'} desde el ${diaDe(ini)} a las ${hhmm(ini)}</div>`
               + `<table>${filas.map(fila).join('')}</table>`
-              + `<div class="pa__p">${deNieve ? `centímetros de nieve fresca que da el modelo · ${esc(nombreModelo)}` : `litros por metro cuadrado (1 mm = 1 litro) · ${esc(nombreModelo)}${nieveAqui ? '. En nieve cuenta su agua: 1 litro ≈ 1 cm de nieve fresca' : ''}`}</div>${ens}</div>`;
+              + `<div class="pa__p">${deNieve ? `centímetros de nieve fresca que da el modelo · ${esc(nombreModelo)}` : `litros por metro cuadrado (1 mm = 1 litro) · ${esc(nombreModelo)}${nieveAqui ? '. En nieve cuenta su agua: 1 litro ≈ 0,7 cm de nieve fresca (el factor del modelo)' : ''}`}</div>${ens}</div>`;
           }
         } catch { /* sin acumulado: se enseña la intensidad sola, que es verdad */ }
       }
-      /* Qué cae aquí, con palabras (solo en «Tipo de precipitación»): nieve con su equivalente en centímetros (1 mm de agua ≈ 1 cm
-         de nieve fresca), aguanieve con las dos partes, lluvia. Sin dato de nieve del modelo, no se afirma el tipo. */
+      /* Qué cae aquí, con palabras (solo en «Tipo de precipitación»): nieve con su equivalente en centímetros (1 mm de agua ≈ 0,7 cm
+         de nieve fresca, el factor del modelo), aguanieve con las dos partes, lluvia. Sin dato de nieve del modelo, no se afirma el tipo. */
       let tituloP = `<b>${coma(val, Math.abs(val) < 10 ? 1 : 0)} ${esc(uTxt)}</b>`;
       if (tipoP && tipoP.tipo === 'nieve')
-        tituloP = `<b>Nieve · ${coma(tipoP.nieve, 1)} mm/h</b> <span class="pa__r">de agua (≈ ${coma(tipoP.nieve, 1)} cm de nieve por hora)</span>`;
+        tituloP = `<b>Nieve · ${coma(tipoP.nieve, 1)} mm/h</b> <span class="pa__r">de agua (≈ ${coma(tipoP.nieve * CM_NIEVE_POR_MM, 1)} cm de nieve por hora, como la cuenta el modelo)</span>`;
       else if (tipoP && tipoP.tipo === 'aguanieve')
         tituloP = `<b>Aguanieve · ${coma(tipoP.nieve + tipoP.lluvia, 1)} mm/h</b> <span class="pa__r">(${coma(tipoP.nieve, 1)} de nieve y ${coma(tipoP.lluvia, 1)} de lluvia)</span>`;
       else if (tipoP && tipoP.tipo === 'lluvia')
@@ -5620,6 +5627,7 @@ const Maps = {
     const dentro = pt => pt.x >= 10 && pt.y >= 10 && pt.x <= W - 10 && pt.y <= H - 10;
     const hh = ms => new Date(ms).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
     const piezas = [];
+    const colorEs = this.layer === 'viento10' ? 'el viento medio' : 'la racha';   // en «Viento 10 m» el color NO es la racha
     if (this.verPeor) {
       const lis = typeof listonRafaga === 'function' ? listonRafaga() : null;
       let corta = Infinity;
@@ -5635,7 +5643,7 @@ const Maps = {
       });
       cont.innerHTML = piezas.join('');
       decir(`Números: la PEOR racha de ${hh(tMs)} a ${hh(tMs + RACHA_VENTANA_H * 3600e3)} en cada punto, en km/h y con su hora `
-        + `(${quien}, a 10 m, de la API). El color del mapa es la racha de las ${hh(tMs)}. `
+        + `(${quien}, a 10 m, de la API). El color del mapa es ${colorEs} de las ${hh(tMs)}. `
         + (lis ? `Verde por debajo de tu aviso (${lis.warn}), ámbar desde ${lis.warn}, rojo desde ${lis.no}.` : '')
         + (corta < RACHA_VENTANA_H ? ` OJO: el modelo se acaba antes y en algún punto solo hay ${corta} h.` : '')
         + (piezas.length ? '' : ' Ningún punto con dato en lo que ves.'));
@@ -5656,7 +5664,7 @@ const Maps = {
     });
     cont.innerHTML = piezas.join('');
     decir(`↗ Flechas: viento MEDIO a 10 m de ${quien}, de la API de pronóstico (la tesela no sabe dar el rumbo). `
-      + 'Apuntan de DONDE viene; cada pluma entera son 10 nudos (18 km/h). El color es la racha.'
+      + 'Apuntan de DONDE viene; cada pluma entera son 10 nudos (18 km/h). El color es ' + colorEs + '.'
       + (piezas.length ? '' : ' Ningún punto con dato en lo que ves.'));
   },
 

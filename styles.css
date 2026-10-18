@@ -684,6 +684,7 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;
 .omPop .maplibregl-popup-content{background:#0e1626;color:var(--ink);
   border:1px solid var(--line);border-radius:11px;padding:10px 13px;font-size:0.8125rem;
   box-shadow:0 14px 40px -16px rgba(0,0,0,.95)}
+.omPop .maplibregl-popup-content{max-height:min(68vh,460px);overflow-y:auto;overscroll-behavior:contain}   /* con el bloque de probabilidad mide 430 px: en un móvil bajo se recortaba por arriba; así se desplaza dentro (revisión del 18-10-2026) */
 .omPop .maplibregl-popup-content b{font-size:1.0625rem}
 .omPop .maplibregl-popup-content small{color:var(--dim);line-height:1.45;display:block;margin-top:4px}
 /* EL POPUP, POR ENCIMA DE LOS NÚMEROS DEL MAPA (15-10-2026). La capa de números

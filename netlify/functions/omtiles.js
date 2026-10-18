@@ -18,6 +18,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 import { cabeceras } from '../../lib/cabeceras.mjs';
+import { rutaDeTeselasValida } from '../../lib/ruta-teselas.mjs';
 
 /* Host cambiado el 04-09-2026: map-tiles.open-meteo.com dejó de existir
    (NXDOMAIN). El origen S3 es el que usa la librería oficial. Ver la
@@ -27,7 +28,7 @@ const BASE = 'https://openmeteo.s3.amazonaws.com/data_spatial';
 export default async (request) => {
   const url = new URL(request.url);
   const ruta = url.pathname.replace(/^\/omtiles\//, '');
-  if (!ruta || ruta.includes('..')) {
+  if (!rutaDeTeselasValida(ruta)) {
     return new Response('ruta no válida', { status: 400 });
   }
   const destino = `${BASE}/${ruta}${url.search}`;

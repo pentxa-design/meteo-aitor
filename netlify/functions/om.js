@@ -71,13 +71,26 @@ const PERMITIDOS = {
 const CACHE = { fc: 600, aq: 900, marine: 900, geo: 86400, elev: 2592000,
                 hist: 86400, arch: 86400, rain: 300, ens: 1800 };   // segundos
 
+/** Más puntos que esto en una consulta es un abuso o un fallo, no la app. */
+const TOPE_PUNTOS = 150;
+
 export default async (request) => {
   const entrada = new URL(request.url);
   const cual = entrada.searchParams.get('api') || 'fc';
-  const destino = PERMITIDOS[cual];
+  const destino = Object.hasOwn(PERMITIDOS, cual) ? PERMITIDOS[cual] : null;
 
   if (!destino) {
     return new Response(JSON.stringify({ error: true, reason: 'api no permitida' }),
+      { status: 400, headers: { 'content-type': 'application/json' } });
+  }
+
+  /* Tope de puntos por consulta: la app pide 100 como mucho (la rejilla
+     del viento del mapa, `rejillaViento`, tope 100; lo demás son 26). Sin tope, una sola llamada con miles de puntos
+     gasta la cuota gratuita de Open-Meteo, que es de TODOS los usuarios
+     del servidor (revisión del 18-10-2026). */
+  const lat = entrada.searchParams.get('latitude');
+  if (lat && lat.split(',').length > TOPE_PUNTOS) {
+    return new Response(JSON.stringify({ error: true, reason: 'demasiados puntos' }),
       { status: 400, headers: { 'content-type': 'application/json' } });
   }
 

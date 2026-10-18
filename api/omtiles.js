@@ -19,6 +19,7 @@
    la puerta. */
 
 import { cabeceras } from '../lib/cabeceras.mjs';
+import { rutaDeTeselasValida } from '../lib/ruta-teselas.mjs';
 
 /* Host cambiado el 04-09-2026: map-tiles.open-meteo.com dejó de existir
    (NXDOMAIN). El origen S3 es el que usa la librería oficial. Ver la
@@ -91,7 +92,7 @@ async function bloquePorUrl(ruta, cola, rango, soloCabecera) {
 export default async (request) => {
   const url = new URL(request.url);
   const ruta = url.searchParams.get('ruta');
-  if (!ruta || ruta.includes('..')) return new Response('ruta no válida', { status: 400 });
+  if (!rutaDeTeselasValida(ruta)) return new Response('ruta no válida', { status: 400 });
 
   // Todo lo demás que venga en la consulta se reenvía a Open-Meteo.
   const resto = new URLSearchParams(url.search);

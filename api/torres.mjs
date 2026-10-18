@@ -123,6 +123,16 @@ export default async function handler(req, res) {
     const previas = await leerLista();
     const borrados = await leerBorrados();
 
+    /* «mandar» con la lista VACÍA sobre una lista de verdad la borraría
+       entera y apuntaría todo como borrado, sin vuelta. Lo puede mandar
+       un aparato que no ha cargado bien (revisión del 18-10-2026) y lo
+       puede mandar cualquiera: esta ruta no lleva clave. Quitar el último
+       o los dos últimos con el corazón sí sigue pudiendo (hasta 3). */
+    if (sustituir && !llegan.length && previas.length > 3) {
+      return res.status(400).json({ error: 'lista vacía: no sustituye a una de ' + previas.length,
+                                    torres: previas, guardadas: previas.length });
+    }
+
     let final;
     if (sustituir) {
       final = llegan;

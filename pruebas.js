@@ -4916,6 +4916,25 @@ ok('en ninguno de los casos se le dice qué hacer',
     globalThis.CAPE_COMBINACION, TA, LF);
   ok('un día entero sin frenos se dice como lo que es: todo el día',
      /Nada te frena para llegar<\/b> en todo el día/.test(cuandoSePuede(K)), cuandoSePuede(K));
+
+  /* ── SIN DATO NO ES CALMA (revisión del 18-10-2026) ──────────────────
+     Con la racha a null en los modelos, `frenos` solo se llenaba `si has(racha)`,
+     así que salía «Nada te frena para llegar» sin haber mirado el viento. */
+  const mudo = { ...H, 'wind_gusts_10m_ecmwf_ifs025': gust.map(() => null) };
+  S.parteSel = 0;
+  const v0 = ventanaParte(T10);
+  S.cuandoTorres = calcularCuando(S, SITIO, [{ hourly: mudo }], v0, v0.desde, v0.hasta,
+    globalThis.has, globalThis.key, MT, globalThis.isStormCode, globalThis.CAPE_COMBINACION, TA, LF);
+  const hoyMudo = cuandoSePuede(K);
+  ok('con la racha SIN DATO en la ventana de hoy no se dice «Nada te frena»: se dice «No sé si algo te frena… la racha»',
+     S.cuandoTorres[0].sinRacha === true && !/Nada te frena/.test(hoyMudo)
+     && /No sé si algo te frena/.test(hoyMudo) && /ningún modelo da la racha/.test(hoyMudo), hoyMudo);
+  S.parteSel = 1;
+  const vm = ventanaParte(T10); S.parteSel = 0;
+  S.cuandoTorres = calcularCuando(S, SITIO, [{ hourly: mudo }], vm, vm.desde, vm.hasta,
+    globalThis.has, globalThis.key, MT, globalThis.isStormCode, globalThis.CAPE_COMBINACION, TA, LF);
+  ok('   ni «en todo el día» en la pestaña de otro día',
+     !/Nada te frena/.test(cuandoSePuede(K)) && /No sé si algo te frena/.test(cuandoSePuede(K)));
 }
 
 /* ── RESULTADO ──────────────────────────────────────────────────── */
@@ -8073,8 +8092,11 @@ grupo('EL SOL DE LA MAÑANA NO SE BORRA (01-09-2026, su queja de siempre)');
 
   /* Y que las TRES pantallas beban de esta misma función, que es lo que
      él pide: «pero en Ahora, Mis estaciones y donde sea». */
-  ok('la franja, sus dos iconos y el día de 10 días usan la MISMA función',
-     (src.match(/cieloPartido\(/g) || []).length >= 3,
+  /* Cuenta LLAMADAS en el código (sin comentarios ni la declaración): con `cieloPartido(` salían 3 —la declaración y dos
+     comentarios— y la prueba pasaba con CERO llamadas reales (revisión del 18-10-2026). La función viva es tramosDeCielo(). */
+  const sinComentarios = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  ok('la franja, sus dos iconos y el día de 10 días usan la MISMA función (tramosDeCielo, con llamadas de verdad)',
+     (sinComentarios.match(/(?<!function )tramosDeCielo\(/g) || []).length >= 3,
      'si cada pantalla se hace su cuenta, vuelven a discrepar');
   ok('y el dibujo del día parte por donde dicen los tramos, no por el reloj',
      /const R = resumenCielo\(delDia\);/.test(src)
@@ -9334,12 +9356,24 @@ grupo('El acceso no cuenta un hueco como un cero (01-09-2026)');
   const wRedP = v => has(v) ? Number(v.toFixed(0)) : null;
   const nivelDePrueba = new Function('has', 'wRed', 'listonRafaga',
     `${sacar('function nivelRacha(')} return nivelRacha;`)(has, wRedP, listonDePrueba);
-  const fn = new Function('has', 'wtxt', 'kmTxt', 'listonRafaga', 'nivelRacha', `
+  const topeAcceso = new Function('const g = {};' + sacarConst('TOPE_ACCESO').replace('globalThis.', 'g.') + ' return g.TOPE_ACCESO;')();
+  const fn = new Function('has', 'wtxt', 'kmTxt', 'listonRafaga', 'nivelRacha', 'TOPE_ACCESO', `
     ${sacar('function acceso(')}
     return acceso;`)(globalThis.has, x => `${x} km/h`, x => String(x),
-                     listonDePrueba, nivelDePrueba);
+                     listonDePrueba, nivelDePrueba, topeAcceso);
 
   const hora = (extra = {}) => ({ temp: 8, hum: 60, vis: 20000, frz: 3000, ...extra });
+
+  /* 0 · El tope del 4x4 (70) vale en Torre igual que en Mis estaciones (18-10-2026). */
+  {
+    const con75 = fn(Array.from({ length: 12 }, () => hora({ prec: 0, gust10: 75 })), 400);
+    const con65 = fn(Array.from({ length: 12 }, () => hora({ prec: 0, gust10: 65 })), 400);
+    ok('¿Se llega?: con racha de 75 km/h (más que el 70 con el que vuelca el 4x4) sale un aviso ROJO, aunque el rojo de tu perfil sea 90',
+       topeAcceso === 70 && con75.avisos.some(a => a.n === 'no' && /4x4/.test(a.t)),
+       'Mis estaciones decía «el camino se estropea» y Torre callaba');
+    ok('   y con 65 km/h, que no llega al 70, no sale ese aviso',
+       !con65.avisos.some(a => /4x4/.test(a.t)));
+  }
 
   /* 1 · Sin dato de nieve: NO se dice «no ha nevado», se dice que falta. */
   const sinNieve = fn(Array.from({ length: 12 }, () => hora({ prec: 0, gust10: 20 })), 400);
@@ -10218,10 +10252,30 @@ console.log('\n  Revisión 04-09: clases 1b, 2, 4, 5 y 6 — lo que se imprime c
      && /lo más alto <b>\$\{mTxt\(mxReal\)\} m<\/b>/.test(codigo)
      && /const iMx = wv\.findIndex\(v => v === mxReal\)/.test(codigo),
      '«lo más alto 0,5 m» con la hora del máximo real al lado parecía un dato medido');
-  ok('la pestaña Avisos cuenta las horas ANTES de recortar a seis',
-     /const malas = hrs\.filter\(h => h\.st === 'no'\);\s*const bad = malas\.slice\(0, 6\);/.test(codigo)
-     && !/\$\{bad\.length\}/.test(codigo),
-     'con 20 horas de galerna el titular decía «6 horas en 48 h»');
+  {
+    const avisosHtml = new Function(sacar('function avisosPropiosHtml(') + '\nreturn avisosPropiosHtml;')();
+    const hora = (k, st, txt) => ({ date: new Date(2026, 9, 19, k % 24, 0), st, reasons: [{ s: st, txt }] });
+    const veinte = Array.from({ length: 20 }, (_, k) => hora(k, 'no', 'Ráfaga 95 km/h'));
+    const t20 = avisosHtml(veinte, x => x);
+    ok('la pestaña Avisos cuenta las horas ANTES de recortar a seis',
+       /20 horas en 48 h/.test(t20) && (t20.match(/Ráfaga 95 km\/h/g) || []).length === 6 && !/SIN SUPERAR/.test(t20),
+       'con 20 horas de galerna el titular decía «6 horas en 48 h»; ahora dice 20 y enseña seis filas');
+    const ambar = avisosHtml([hora(1, 'go', ''), hora(2, 'warn', 'Ráfaga 65 km/h'), hora(3, 'warn', 'Ráfaga 66 km/h')], x => x);
+    ok('Avisos: con horas por encima del AVISO (ámbar) NO sale el verde «SIN SUPERAR»; sale «POR ENCIMA DE TU AVISO» con su cuenta (revisión del 18-10-2026)',
+       !/SIN SUPERAR/.test(ambar) && /POR ENCIMA DE TU AVISO/.test(ambar) && /2 horas en 48 h/.test(ambar) && /Ráfaga 65 km\/h/.test(ambar),
+       'Torre pintaba «OJO» y Avisos decía en verde que ninguna hora supera tus umbrales');
+    const huecos = avisosHtml(Array.from({ length: 48 }, (_, k) => hora(k, 'nd', 'Ráfaga: sin dato del modelo')), x => x);
+    ok('   y con la ráfaga SIN DATO las 48 horas tampoco sale el verde: sale «SIN DATO» y «un hueco no es calma»',
+       !/SIN SUPERAR/.test(huecos) && /SIN DATO/.test(huecos) && /Un hueco no es calma/.test(huecos));
+    const vacia = avisosHtml([], x => x);
+    ok('   y con la previsión vacía tampoco: «SIN PREVISIÓN», nunca un verde',
+       !/SIN SUPERAR/.test(vacia) && /SIN PREVISIÓN/.test(vacia));
+    const verde = avisosHtml([hora(1, 'go', ''), hora(2, 'go', '')], x => x);
+    ok('   y el verde sí sale cuando TODAS las horas están bien y con dato (tiene que poder salir)',
+       /SIN SUPERAR/.test(verde) && !/POR ENCIMA|SIN DATO|FUERA DE/.test(verde));
+    ok('   y renderAlerts usa esa función',
+       /avisosPropiosHtml\(hrs, esc\);/.test(sacar('function renderAlerts() {', '\n}\n')));
+  }
   /* C2 */
   ok('avisoCielo lee porAbismo: la rama «cuantos === 0» que nunca corría ya no está',
      !/r\.cuantos === 0/.test(codigo) && /if \(r\.porAbismo\)/.test(codigo) && /r\.quienes\?\.\[0\]/.test(codigo));
@@ -10665,8 +10719,10 @@ grupo('Así con todo (13-09): al lado del dato, qué ve distinto otro modelo y c
    la app.» Nada de parches diarios: la causa, una vez, y su prueba. */
 grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
 {
-  const hoyK = new Date().toISOString().slice(0, 10);
-  const k = `${hoyK}·Noche·prueba`;
+  const _d = new Date();
+  const hoyK = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`;   // la fecha del reloj de aquí, como la clave real
+  const SK = '43.413,-2.718';   // la clave REAL es `sitio·fecha·franja·modelo` (antes aquí iba sin sitio, y por eso el podado que la borraba pasaba)
+  const k = `${SK}·${hoyK}·Noche·prueba`;
   try { LS.set('cieloFranjas', {}); } catch {}
   const cdc = typeof cambioDeCielo === 'function' ? cambioDeCielo : () => null;   // sin la función, rojo limpio
   const c1 = cdc(k, 0, 0);
@@ -10678,10 +10734,10 @@ grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
   ok('y lo sigue diciendo mientras el nuevo se mantenga',
      /Antes decía: despejado$/.test(cdc(k, 3, 0) || ''));
   ok('de noche el «antes» se dice con la palabra de noche',
-     (() => { const k2 = `${hoyK}·Noche2·prueba`; cdc(k2, 4, 0); return /Antes decía: velo de nubes altas$/.test(cdc(k2, 0, 0) || ''); })());
+     (() => { const k2 = `${SK}·${hoyK}·Noche2·prueba`; cdc(k2, 4, 0); return /Antes decía: velo de nubes altas$/.test(cdc(k2, 0, 0) || ''); })());
   /* El voto de modelos llega segundos después del primer pintado, dentro de la
      MISMA bajada: eso no es un cambio del tiempo (medido en producción, 22:55). */
-  const k3 = `${hoyK}·Tarde·prueba`;
+  const k3 = `${SK}·${hoyK}·Tarde·prueba`;
   ok('dentro de la misma bajada, repintar con otro cielo NO cuenta como cambio',
      cdc(k3, 0, 0, 100) === '' && cdc(k3, 3, 0, 100) === '' && cdc(k3, 3, 0, 200) === '',
      'el voto de modelos salía como «ha cambiado a las 22:55»');
@@ -10693,7 +10749,7 @@ grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
      fetch, primer pintado sin voto (mayormente despejado) contra pintado con
      voto (velo). Ahora la bajada es la hora en curso del modelo y antes del
      voto no se apunta nada. */
-  const k4 = `${hoyK}·Noche·caso2301`;
+  const k4 = `${SK}·${hoyK}·Noche·caso2301`;
   const f2 = { n: 2, ini: `${hoyK}T22:00`, votado: true };
   ok('antes del voto no se apunta ni se compara nada',
      cdc(k4, 1, 0, '2026-09-13T23:45', { ...f2, votado: false }) === ''
@@ -10714,16 +10770,16 @@ grupo('La franja dice si su cielo ha cambiado respecto a lo pintado antes');
      de verdad (el tramo 2-5 h pasó a cubierto), pero la nota comparaba el
      código de la franja entera y escribía un «antes» que era el principio
      del «ahora». Suyo: «¿si está igual, no?». */
-  const k5 = `${hoyK}·Madrugada·prueba`;
+  const k5 = `${SK}·${hoyK}·Madrugada·prueba`;
   cdc(k5, 4, 0, 'A', f2, 'Velo de nubes altas');
   const c6 = cdc(k5, 3, 0, 'B', f2, 'Velo de nubes altas · cubierto desde las 02:00');
   ok('si el «antes» es el principio del «ahora», dice «antes solo …»',
      /^Previsión cambiada a las \d\d:\d\d\. Antes decía solo: velo de nubes altas$/.test(c6 || ''), `salió «${c6}»`);
-  const k6 = `${hoyK}·Madrugada2·prueba`;
+  const k6 = `${SK}·${hoyK}·Madrugada2·prueba`;
   cdc(k6, 4, 0, 'A', f2, 'Velo de nubes altas · cubierto desde las 02:00');
   ok('si cambia el código pero se lee lo mismo, no dice nada',
      cdc(k6, 3, 0, 'B', f2, 'Velo de nubes altas · cubierto desde las 02:00') === '');
-  const k7 = `${hoyK}·Madrugada3·prueba`;
+  const k7 = `${SK}·${hoyK}·Madrugada3·prueba`;
   cdc(k7, 3, 0, 'A', f2, 'Cubierto');
   const c8 = cdc(k7, 0, 0, 'B', f2, 'Despejado · cubierto desde las 04:00');
   ok('y si lo de antes era otra cosa, la dice entera',
@@ -11578,7 +11634,7 @@ grupo('Avisos oficiales de toda España, solo información (17-09-2026)');
     </feed>`;
   /* leerFeed es una función exportada de un módulo ES: se saca el cuerpo y se evalúa aquí. */
   const cuerpoLeer = fn.slice(fn.indexOf('const NIVEL'), fn.indexOf('export default'))
-    .replace('export function leerFeed', 'function leerFeed');
+    .replace('export function leerFeed', 'function leerFeed').replace('export function feedLegible', 'function feedLegible');
   let d = null, err = null;
   try { d = new Function(cuerpoLeer + '\nreturn leerFeed(arguments[0]);')(feed); } catch (e) { err = e; }
   ok('leerFeed() saca nivel, fenómeno, zona y horas tal cual, en español, y quita repetidos y caducados',
@@ -13389,7 +13445,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      !!tipo && T(0.8, null) === null && T(0.8, NaN) === null && T(NaN, 0.2) === null && T(0.3, 5).nieve === 0.3);
   ok('el popup lee la nieve SOLO en la capa que apila nieve sobre precipitación (no en Nubes total, donde «encima» es la lluvia y el valor es un % de nubes) y lo rotula «Nieve · … mm/h» con su equivalente en cm',
      /L_\.v === 'precipitation' && L_\.encima === 'snowfall_water_equivalent' && !this\._sinEncima/.test(Mx)
-     && /Nieve · \$\{coma\(tipoP\.nieve, 1\)\} mm\/h/.test(Mx) && /1 litro ≈ 1 cm de nieve fresca/.test(Mx));
+     && /Nieve · \$\{coma\(tipoP\.nieve, 1\)\} mm\/h/.test(Mx) && /1 litro ≈ 0,7 cm de nieve fresca/.test(Mx));
 }
 
 /* ── LA PROBABILIDAD DEL ENSEMBLE EN LA VENTANITA DE LA LLUVIA (18-10-2026) ──
@@ -13521,6 +13577,217 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('el «hasta las…» va DEBAJO de la etiqueta (bloque) y la ventanita admite 300 px (o el 88 % de la pantalla) en vez de los 240 de MapLibre',
      /\.omPop \.pa td small\{display:block;margin:0;/.test(CSS)
      && /\.omPop\{z-index:8;max-width:min\(300px,88vw\) !important\}/.test(CSS));
+}
+
+
+
+/* ═══ LAS PUERTAS DEL SERVIDOR (revisión del 18-10-2026) ═════════════════
+   Tres agentes revisaron la web entera. Medido contra lo publicado: la ruta
+   `/omtiles/%252e%252e/?list-type=2` devolvía el LISTADO del bucket de
+   Open-Meteo (la comprobación era `includes('..')`); `/om?api=constructor`
+   daba 500; y POST /api/torres con la lista vacía en modo «mandar» la
+   borraba entera. Cada prueba se ve roja rompiendo la guardia. */
+{
+  grupo('Las puertas del servidor: teselas, /om, torres, avisos de España, push');
+  const rd = f => fs.readFileSync(path.join(__dirname, f), 'utf8');
+  const sinEsm = t => t.replace(/export (async )?function /g, '$1function ').replace(/^export const /gm, 'const ');
+  const valida = new Function(sinEsm(rd('lib/ruta-teselas.mjs')) + '\nreturn rutaDeTeselasValida;')();
+  ok('teselas: pasan las rutas que pide la librería (latest.json y un .om con pasada)',
+     valida('dwd_icon_eu/latest.json') && valida('ecmwf_ifs/2026/10/18/1500Z/2026-10-18T1500.om'));
+  ok('   y NO pasa %2e%2e (la ruta que abría el listado del bucket), ni .., ni // , ni \\, ni lo que no es .om/.json',
+     !valida('%2e%2e/x.om') && !valida('%2e%2e/') && !valida('a/../b.om') && !valida('a//b.om')
+     && !valida('a\\b.om') && !valida('a/b.txt') && !valida('') && !valida('./x.om'));
+  ok('   y las dos copias del intermediario (api/ y netlify/) usan esa puerta y no el includes(\'..\')',
+     /rutaDeTeselasValida\(ruta\)/.test(rd('api/omtiles.js')) && /rutaDeTeselasValida\(ruta\)/.test(rd('netlify/functions/omtiles.js'))
+     && !/ruta\.includes\('\.\.'\)/.test(rd('api/omtiles.js')) && !/ruta\.includes\('\.\.'\)/.test(rd('netlify/functions/omtiles.js')));
+  const om = rd('netlify/functions/om.js');
+  ok('/om: «api=constructor» y compañía no son una api (Object.hasOwn), y hay tope de puntos que deja pasar la rejilla del viento (100)',
+     /Object\.hasOwn\(PERMITIDOS, cual\)/.test(om) && /const TOPE_PUNTOS = (\d+);/.test(om)
+     && +om.match(/const TOPE_PUNTOS = (\d+);/)[1] >= 100 && +om.match(/const TOPE_PUNTOS = (\d+);/)[1] <= 300
+     && /rejillaViento\(caja, zoom, \{ minPx = 110, tope = 100 \}/.test(rd('maps.js')),
+     'si la rejilla del viento pasa del tope del servidor, la capa de viento se queda sin dato');
+  const tor = rd('api/torres.mjs');
+  ok('torres: un «mandar» con la lista vacía no borra una lista de verdad (solo hasta 3 sitios se puede vaciar)',
+     /if \(sustituir && !llegan\.length && previas\.length > 3\) \{/.test(tor) && /status\(400\)\.json\(\{ error: 'lista vacía/.test(tor));
+  const al = rd('api/alertas-espana.js');
+  const leer = new Function(sinEsm(al.slice(al.indexOf('const NIVEL'), al.indexOf('export default'))) + '\nreturn { leerFeed, feedLegible };')();
+  const entrada = (t, z) => `<entry><title>${t}</title><cap:areaDesc>${z}</cap:areaDesc><cap:onset>2030-01-01T00:00:00+00:00</cap:onset><cap:expires>2030-01-02T00:00:00+00:00</cap:expires><cap:identifier>x${z}</cap:identifier></entry>`;
+  const buenos = '<feed><updated>2030-01-01</updated>' + [1, 2, 3, 4, 5, 6].map(n => entrada('Yellow Rain Warning issued', 'Zona' + n)).join('') + '</feed>';
+  const rotos  = '<feed><updated>2030-01-01</updated>' + [1, 2, 3, 4, 5, 6].map(n => entrada('Aviso amarillo de lluvia', 'Zona' + n)).join('') + '</feed>';
+  ok('avisos de España: un feed legible pasa; una página de error con 200, o un feed cuyo formato ya no se reconoce, se canta como fallo y no como «0 avisos»',
+     leer.feedLegible(buenos, leer.leerFeed(buenos)) === null
+     && /no es el feed/.test(leer.feedLegible('<html>Service unavailable</html>', leer.leerFeed('<html>Service unavailable</html>')) || '')
+     && /ninguna se reconoce/.test(leer.feedLegible(rotos, leer.leerFeed(rotos)) || '')
+     && leer.feedLegible('<feed><updated>2030-01-01</updated></feed>', leer.leerFeed('<feed><updated>2030-01-01</updated></feed>')) === null,
+     'un día sin avisos de verdad (feed vacío pero válido) tiene que seguir pasando');
+  ok('   y el manejador usa feedLegible antes de contestar 200',
+     /const roto = feedLegible\(xml, d\);\s*\n\s*if \(roto\) return json\(\{ error: true, reason: roto \}, 502\);/.test(al));
+  const su = rd('api/suscribir.mjs');
+  const push = new Function(sinEsm(su.slice(su.indexOf('const SERVICIOS_PUSH'), su.indexOf('export default'))) + '\nreturn endpointDePushValido;')();
+  ok('suscribir: solo servicios de push de verdad (Chrome, Firefox, Apple, Windows); no una URL ajena, ni http, ni una IP, ni el truco del @',
+     push('https://fcm.googleapis.com/fcm/send/abc') && push('https://updates.push.services.mozilla.com/wpush/v2/x')
+     && push('https://web.push.apple.com/Qx') && push('https://x.notify.windows.com/w')
+     && !push('https://evil.com/') && !push('http://fcm.googleapis.com/x') && !push('https://fcm.googleapis.com.evil.com/x')
+     && !push('https://127.0.0.1/x') && !push('https://fcm.googleapis.com@evil.com/') && !push(''));
+  ok('   y la puerta está en el manejador, antes de guardar, con tope de aparatos',
+     /if \(!endpointDePushValido\(s\.endpoint\)\)/.test(su) && /previas\.length >= TOPE_APARATOS/.test(su)
+     && su.indexOf('endpointDePushValido(s.endpoint)') < su.indexOf('await guardar('));
+  const sw = rd('sw.js');
+  ok('service worker: el catálogo del radar de AEMET y los avisos de España nunca salen de una copia',
+     /'\/radar-aemet'/.test(sw.slice(sw.indexOf('const NUNCA_DE_COPIA'), sw.indexOf('const NUNCA_DE_COPIA') + 900))
+     && /'\/api\/alertas-espana'/.test(sw.slice(sw.indexOf('const NUNCA_DE_COPIA'), sw.indexOf('const NUNCA_DE_COPIA') + 900)),
+     'con /radar a secas, /radar-aemet no casa (el filtro compara el nombre entero o con /)');
+  const vi = rd('.vercelignore');
+  ok('lo interno no se publica: las notas .md y revisiones/ van en .vercelignore, y lo que la app SÍ pide (torres-copia, estaciones) no',
+     /^\*\.md$/m.test(vi) && /^revisiones\/$/m.test(vi) && !/torres-copia/.test(vi) && !/^data\/?$/m.test(vi) && !/estaciones\.json/.test(vi));
+}
+
+
+
+/* ═══ LA REVISIÓN DEL MAPA (18-10-2026) ══════════════════════════════════
+   Un agente midió el mapa ejecutando maps.js. Lo que salió y se arregló,
+   cada cosa con su prueba vista en rojo: el Isocero decía lo contrario de
+   lo que es (nieve ARRIBA de la cota de 0 °C, no lluvia); la nevada más
+   fuerte se pintaba azul marino sobre suelo NEGRO (contraste 1,02 a 15
+   mm/h: un hueco); el titular del popup decía 1 cm por mm y la tablita 0,7;
+   «Viento 10 m» decía que el color era la racha; «Espesor» pintaba 0,5 cm
+   aunque dice no pintar bajo 1 cm (la prueba antigua solo miraba alfa[0]). */
+{
+  grupo('Revisión del mapa: isocero, nieve que cae sobre suelo negro, espesor, popup, viento medio');
+  const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const Ix = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const iso = /\{ id:'frznieve'[\s\S]*?desc:'([^']*)'/.exec(Mx)?.[1] || '';
+  ok('Isocero 0 °C: por ENCIMA de la cota hace frío (nieve o hielo) y por debajo llueve; no al revés',
+     /por encima de ella hace frío \(nieve o hielo\); por debajo, lluvia/.test(iso) && !/por encima de ella, lluvia/.test(Mx),
+     'estaba escrito al revés: quien suba a una torre a 1.800 m con la cota en 1.500 leía «lluvia»');
+  // contraste WCAG de cada corte de la nevada contra el suelo negro de la capa
+  const suelo = /#1b1d21/.test(Mx) ? [0x1b, 0x1d, 0x21] : null;
+  const lum = ([r, g, b]) => [r, g, b].map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; })
+    .reduce((a, v, k) => a + v * [0.2126, 0.7152, 0.0722][k], 0);
+  const contraste = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+  const nvc = [...((/const nvc = \[([\s\S]*?)\];/.exec(Mx) || [])[1] || '').matchAll(/\['#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})',([0-9.]+)\]/g)]
+    .map(m => ({ rgb: [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)], a: Number(m[4]) }));
+  const cont = nvc.filter(c => c.a >= 0.85).map(c => contraste(c.rgb.map((v, k) => v * c.a + suelo[k] * (1 - c.a)), suelo));
+  ok('«Nieve que cae»: TODOS los cortes se leen sobre el suelo negro (contraste ≥ 4,5), también la nevada fuerte; antes bajaba a 1,02',
+     !!suelo && nvc.length === 9 && cont.length === 8 && cont.every(c => c >= 4.5), cont.map(c => c.toFixed(1)).join(' '));
+  ok('   y los cortes fuertes (desde 1 mm/h) se leen aún mejor (contraste ≥ 7), que es donde se decide si la pista se cierra',
+     cont.length === 8 && cont.slice(3).every(c => c >= 7), cont.slice(3).map(c => c.toFixed(1)).join(' '));
+  // espesor: se EVALÚA la escala, no se mira solo el primer alfa
+  const corte = /const corteSeco = \(bp, cols\) => \(\{[\s\S]*?\}\);/.exec(Mx)?.[0];
+  const esmL = /const esm = (\[[^\]]*\]);/.exec(Mx)?.[1];
+  const esc2L = /const esc2 = (\[[\s\S]*?\]\]);/.exec(Mx)?.[1];
+  let alfaA = null, alfaB = null;
+  if (corte && esmL && esc2L && /scale: \{ type:'breakpoint', unit:'cm', \.\.\.corteSeco\(esm, /.test(Mx)) {
+    const f = new Function('hexRGBA', `${corte}; const esm = ${esmL}; const esc2 = ${esc2L}; return corteSeco(esm, esc2.map(([c, a2]) => hexRGBA(c, a2)));`);
+    const e = f((c, a) => ({ c, a }));
+    const alfaEn = x => { const bp = e.breakpoints; let k = bp.findIndex(v => v > x); if (k <= 0) return e.colors[k < 0 ? bp.length - 1 : 0].a;
+      const t = (x - bp[k - 1]) / (bp[k] - bp[k - 1]); return e.colors[k - 1].a + (e.colors[k].a - e.colors[k - 1].a) * t; };
+    alfaA = alfaEn(0.005); alfaB = alfaEn(0.0101);
+  }
+  ok('«Espesor de nieve»: con 0,5 cm el alfa es 0 (sin color bajo 1 cm, como dice su texto) y a 1 cm ya pinta; antes salía al 38 %',
+     alfaA === 0 && alfaB > 0.6, `alfa a 0,5 cm = ${alfaA}, a 1,01 cm = ${alfaB}`);
+  ok('popup de nieve: UN solo factor (0,7 cm por mm, el de Open-Meteo) en el titular, la tablita y los textos; ya no «≈ 1 cm»',
+     /const CM_NIEVE_POR_MM = 0\.7;/.test(Mx) && /coma\(tipoP\.nieve \* CM_NIEVE_POR_MM, 1\)\} cm de nieve por hora/.test(Mx)
+     && !/1 mm ≈ 1 cm|1 litro ≈ 1 cm|\(≈ \$\{coma\(tipoP\.nieve, 1\)\} cm/.test(Mx));
+  ok('GFS 13 km está entre los modelos que traen nieve en los mapas (publica snowfall_water_equivalent: medido en su latest.json)',
+     /const CON_NIEVE = new Set\(\['ncep_gfs013', /.test(Mx));
+  const rg = /const RANGOS = \{[\s\S]*?\n\};\n[\s\S]*?function fueraDeRango\([\s\S]*?\n\}/.exec(Mx)?.[0];
+  const fdr = rg ? new Function(rg + '\nreturn fueraDeRango;')() : null;
+  ok('cordura: «Viento 10 m» también se vigila (500 km/h canta) y el aviso escribe con coma (500,0)',
+     !!fdr && /viento10: \[0, 400, 'km\/h'\]/.test(Mx) && /500,0 km\/h/.test(fdr({ id: 'viento10', name: 'Viento 10 m' }, 500) || '')
+     && fdr({ id: 'viento10', name: 'Viento 10 m' }, 40) === null);
+  ok('«Viento 10 m»: el texto de las flechas y de «Peor 12 h» dice que el color es el viento MEDIO, no la racha',
+     /const colorEs = this\.layer === 'viento10' \? 'el viento medio' : 'la racha';/.test(Mx)
+     && /El color del mapa es \$\{colorEs\} de las/.test(Mx) && /El color es ' \+ colorEs \+ '\./.test(Mx));
+  ok('la barra de estado de un paso de 3 h dice «la nieve» en la capa de nieve, no «la lluvia se enseña por hora»',
+     /this\.layer === 'nieve' \? 'la nieve' : this\.layer === 'tipo' \? 'la lluvia y la nieve' : 'la lluvia'/.test(Mx));
+  ok('la Guía: la tarjeta de viento ya no se llama «Torre» (grupo retirado) ni habla de «Viento 10/20/50/100 m» (capas retiradas el 21-09)',
+     !/data-g="torre"/.test(Ix) && !/Viento 10 \/ 20 \/ 50 \/ 100 m/.test(Ix) && /data-g="viento">Viento · lo que decide/.test(Ix));
+}
+
+
+
+/* ═══ JGET REPITE UNA VEZ ANTE UN FALLO DE INSTANTE (18-10-2026) ═════════
+   En plena DANA Open-Meteo contestó 503 «The service is overloaded» y la
+   app lo tomó por definitivo. Un 502/503/504 o una red que se cae a medias
+   se repite UNA vez; un 400 («No data», fuera del dominio de un modelo), un
+   429 (cuota por minuto, repetir lo empeora) o un tiempo agotado, no. */
+{
+  grupo('jget: una repetición ante 502/503/504 o red caída, y nunca ante 400, 429 o tiempo agotado');
+  const hacer = (respuestas) => {
+    const llamadas = [];
+    const f = new Function('fetch', 'horasAlReloj', 'setTimeout', 'AbortController', 'URL',
+      sacar('async function jget(') + '\nreturn jget;');
+    const falsoFetch = async (u, o) => {
+      llamadas.push(u.toString());
+      const r = respuestas.shift();
+      if (r === 'red') throw new TypeError('Failed to fetch');
+      return { ok: r === 200, status: r, json: async () => ({ ok: 1 }) };
+    };
+    return { jget: f(falsoFetch, d => d, fn => globalThis.setTimeout(fn, 1), AbortController, URL), llamadas };
+  };
+  const intenta = async (rs) => { const h = hacer(rs); let res = null, err = null;
+    try { res = await h.jget('https://x.test/om', { a: 1 }); } catch (e) { err = e; }
+    return { res, err, n: h.llamadas.length }; };
+  (globalThis.__pendientes ??= []).push((async () => {
+    const a = await intenta([503, 200]);
+    ok('un 503 y luego un 200: contesta bien (a la segunda)', a.res?.ok === 1 && a.n === 2, `n=${a.n} err=${a.err}`);
+    const b = await intenta([503, 503, 200]);
+    ok('   pero solo UNA repetición: dos 503 seguidos fallan con «HTTP 503» (mensaje que leen otros sitios)',
+       b.err?.message === 'HTTP 503' && b.n === 2, `n=${b.n} err=${b.err}`);
+    const c = await intenta([400, 200]);
+    ok('   un 400 («No data» fuera del dominio de un modelo) NO se repite: es una respuesta', c.err?.message === 'HTTP 400' && c.n === 1, `n=${c.n}`);
+    const d = await intenta([429, 200]);
+    ok('   un 429 (cuota por minuto) tampoco: repetir lo empeora', d.err?.message === 'HTTP 429' && d.n === 1, `n=${d.n}`);
+    const e = await intenta(['red', 200]);
+    ok('   la red que se cae a medias sí se repite una vez', e.res?.ok === 1 && e.n === 2, `n=${e.n} err=${e.err}`);
+  })());
+}
+
+
+
+/* ═══ EL CAMBIO DE HORA DEL 25-10-2026, EN LAS TRES WEBS Y EL VIGILANTE ══
+   Open-Meteo pone UN solo desfase a toda la serie, el del momento de la
+   petición. Medido el 18-10-2026 con /om del 24 al 27: `utc_offset_seconds`
+   único (7200), y el orto del 25-10 salía «08:36» cuando son las 07:36.
+   La app lo corregía con el reloj del aparato; el vigilante (servidor),
+   el Centro Operativo y la agenda NO. Ahora la regla única lo hace con la
+   zona escrita, y las cuatro puertas la usan. */
+{
+  grupo('Cambio de hora: las horas de Open-Meteo, al reloj de Madrid, en el vigilante, el CO y la agenda');
+  const R = require('./reglas-tiempo.js');
+  const mk = (off, t, extra = {}) => ({ utc_offset_seconds: off, timezone: 'Europe/Madrid', hourly: { time: t }, ...extra });
+  const a = R.horasAlReloj(mk(7200, ['2026-10-24T12:00', '2026-10-25T02:00', '2026-10-25T03:00', '2026-10-25T04:00', '2026-10-25T05:00']));
+  ok('pedido el sábado (+2), las horas del domingo desde el cambio se corren: 03:00 → 02:00 (la repetida), 04:00 → 03:00, 05:00 → 04:00; lo anterior no se toca',
+     JSON.stringify(a.hourly.time) === JSON.stringify(['2026-10-24T12:00', '2026-10-25T02:00', '2026-10-25T02:00', '2026-10-25T03:00', '2026-10-25T04:00']),
+     JSON.stringify(a.hourly.time));
+  const b = R.horasAlReloj(mk(3600, ['2026-10-25T03:00', '2026-10-25T12:00']));
+  ok('   pedido ya con la hora cambiada (+1) no se toca nada', JSON.stringify(b.hourly.time) === JSON.stringify(['2026-10-25T03:00', '2026-10-25T12:00']));
+  const c = mk(7200, ['2026-10-25T04:00']); R.horasAlReloj(c); R.horasAlReloj(c);
+  ok('   y no se hace dos veces (la marca): una copia ya corregida no se vuelve a correr', c.hourly.time[0] === '2026-10-25T03:00');
+  const u = { utc_offset_seconds: 0, timezone: 'GMT', hourly: { time: ['2026-10-25T04:00'] } }; R.horasAlReloj(u);
+  ok('   lo pedido en UTC se queda en UTC', u.hourly.time[0] === '2026-10-25T04:00');
+  const lista = R.horasAlReloj([mk(7200, ['2026-10-25T04:00']), mk(7200, ['2026-10-25T05:00'])]);
+  ok('   una respuesta multipunto (lista) se corrige entera', lista[0].hourly.time[0] === '2026-10-25T03:00' && lista[1].hourly.time[0] === '2026-10-25T04:00');
+  const dia = R.horasAlReloj(mk(7200, ['2026-10-25T04:00'], { current: { time: '2026-10-25T04:00' },
+    daily: { time: ['2026-10-24', '2026-10-25'], sunrise: ['2026-10-24T08:35', '2026-10-25T08:36'], sunset: ['2026-10-24T19:13', '2026-10-25T19:12'] } }));
+  ok('   el «ahora», el orto y el ocaso también: el 25 sale 07:36 y 18:12 (medido: con +2 salían 08:36 y 19:12), el 24 se queda',
+     dia.current.time === '2026-10-25T03:00' && dia.daily.sunrise[1] === '2026-10-25T07:36' && dia.daily.sunset[1] === '2026-10-25T18:12'
+     && dia.daily.sunrise[0] === '2026-10-24T08:35' && JSON.stringify(dia.daily.time) === JSON.stringify(['2026-10-24', '2026-10-25']));
+  const rd = f => fs.readFileSync(path.join(__dirname, f), 'utf8');
+  ok('el vigilante, el parte y la calibración usan la regla única en TODAS sus peticiones a Open-Meteo',
+     (rd('api/vigilante.mjs').match(/ReglasTiempo\.horasAlReloj\(await r8?\.json\(\)\)/g) || []).length === 4
+     && /ReglasTiempo\.horasAlReloj\(await r\.json\(\)\)\.hourly/.test(rd('api/parte.mjs'))
+     && /ReglasTiempo\.horasAlReloj\(await r\.json\(\)\)\.hourly/.test(rd('api/calibrar.mjs')),
+     'cuatro en el vigilante: tanda, contraste, sitio y estaciones del marcador');
+  const co = path.resolve(__dirname, '..', 'centro-operativo', 'js', 'weather.js');
+  const ag = path.resolve(__dirname, '..', 'agenda-familiar', 'api', 'tiempo.mjs');
+  if (fs.existsSync(co)) ok('el Centro Operativo corrige las horas al traer el pronóstico', /ReglasTiempo\.horasAlReloj\(await r\.json\(\)\)/.test(fs.readFileSync(co, 'utf8')));
+  if (fs.existsSync(ag)) ok('la agenda las corrige en sus dos lecturas (el pronóstico y la comparación de modelos)',
+     (fs.readFileSync(ag, 'utf8').match(/ReglasTiempo\.horasAlReloj\(/g) || []).length === 2);
+  ok('la app usa la MISMA cuenta (envoltorio con la zona del aparato), no una segunda copia: el orto y el ocaso del 25-10 ya no salen una hora tarde',
+     /function horasAlReloj\(d\) \{[\s\S]*?return ReglasTiempo\.horasAlReloj\(d, Intl\.DateTimeFormat\(\)\.resolvedOptions\(\)\.timeZone\);\n\}/.test(rd('app.js'))
+     && !/const pasa = \(arr, off\)/.test(rd('app.js')));
 }
 
 

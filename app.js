@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.18-2145';
+const BUILD = '2026.10.18-2218';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -2887,16 +2887,26 @@ function assess(h, thr, quePerfil, place = null) {
 
 /* ---------- 6. Obtención de datos ---------- */
 
-async function jget(url, params, { timeout = 12000 } = {}) {
+/** Una sola repetición, y solo ante un fallo del SERVIDOR que suele ser de un instante: 502/503/504 («The service is overloaded» de
+ *  Open-Meteo en plena DANA, 18-10-2026) o la red que se cae a medias. Un 400 («No data» fuera del dominio de un modelo) es una
+ *  respuesta y no se repite; un 429 (cuota por minuto) tampoco, que repetir lo empeora; y un tiempo agotado tampoco, que no
+ *  se espera dos veces 12 s. El mensaje sigue siendo `HTTP nnn`: lo leen otros sitios. */
+async function jget(url, params, { timeout = 12000, repetir = true } = {}) {
   const u = new URL(url);
   Object.entries(params || {}).forEach(([k, v]) => v != null && u.searchParams.set(k, v));
-  const ctl = new AbortController();
-  const t = setTimeout(() => ctl.abort(), timeout);
-  try {
-    const r = await fetch(u, { signal: ctl.signal });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return horasAlReloj(await r.json());
-  } finally { clearTimeout(t); }
+  for (let intento = 0; ; intento++) {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), timeout);
+    try {
+      const r = await fetch(u, { signal: ctl.signal });
+      if (!r.ok) { const e = new Error(`HTTP ${r.status}`); e.status = r.status; throw e; }
+      return horasAlReloj(await r.json());
+    } catch (e) {
+      const delServidor = [502, 503, 504].includes(e?.status) || (e instanceof TypeError && !ctl.signal.aborted);
+      if (intento === 0 && repetir && delServidor) { await new Promise(res => setTimeout(res, 800)); continue; }
+      throw e;
+    } finally { clearTimeout(t); }
+  }
 }
 
 /* ── LAS HORAS DE OPEN-METEO, A LA HORA DE SU RELOJ (03-10-2026) ──────────
@@ -2915,31 +2925,9 @@ async function jget(url, params, { timeout = 12000 } = {}) {
    guardadas ya vienen corregidas). Arregla también los sitios en otro huso
    (Tenerife: la app tomaba las 15:00 como «ahora» siendo allí las 14:32). */
 function horasAlReloj(d) {
-  const p2 = n => String(n).padStart(2, '0');
-  const pasa = (arr, off) => {
-    if (!Array.isArray(arr)) return arr;
-    return arr.map(t => {
-      if (typeof t !== 'string' || t.length < 16 || t[10] !== 'T') return t;
-      const inst = Date.parse(t.slice(0, 16) + ':00Z') - off;
-      if (!Number.isFinite(inst)) return t;
-      const L = new Date(inst);
-      return `${L.getFullYear()}-${p2(L.getMonth() + 1)}-${p2(L.getDate())}T${p2(L.getHours())}:${p2(L.getMinutes())}`;
-    });
-  };
-  const uno = x => {
-    if (!x || typeof x !== 'object' || x._horasAlReloj || !Number.isFinite(x.utc_offset_seconds)) return;
-    /* LO QUE SE PIDE EN UTC SE DEVUELVE EN UTC (03-10-2026). El mapa pide sus
-       series con timezone=UTC y les añade «Z»; convertidas al reloj del aparato
-       se leían dos veces como UTC y las flechas del viento, «Peor 12 h» y el
-       rumbo al pinchar iban 2 horas atrasados en verano. */
-    if (x.timezone === 'GMT' || x.timezone === 'UTC') return;
-    const off = x.utc_offset_seconds * 1000;
-    for (const k of ['hourly', 'minutely_15']) if (Array.isArray(x[k]?.time)) x[k].time = pasa(x[k].time, off);
-    if (typeof x.current?.time === 'string') x.current.time = pasa([x.current.time], off)[0];
-    x._horasAlReloj = true;
-  };
-  if (Array.isArray(d)) d.forEach(uno); else uno(d);
-  return d;
+  /* La cuenta vive en reglas-tiempo.js (la misma para el vigilante, el Centro Operativo y la agenda, que la llevan con la zona
+     escrita: 18-10-2026). Aquí es la zona del aparato, que es lo que esta función hacía con los getters locales. */
+  return ReglasTiempo.horasAlReloj(d, Intl.DateTimeFormat().resolvedOptions().timeZone);
 }
 
 const HOURLY = [
@@ -8788,11 +8776,13 @@ function fraseTapa(cin, h) {
    que él necesita para repartir gente) y con los demás cubre el día
    entero, de 00:00 a 23:59.
 
-   Y a partir de las 21:00 el día de hoy ya no da para mandar a nadie,
-   así que el 0 pasa a ser mañana solo. Eso evita el parte vacío de la
-   noche.                                                            */
+   Y cuando quedan menos de 2 horas de día (a partir de las 22:00) el día
+   de hoy ya no da para mandar a nadie, así que el 0 pasa a ser mañana
+   solo. Eso evita el parte vacío de la noche. (Decía «21:00»: el código
+   siempre fue `quedaDia` = más de 2 h, o sea las 22:00; revisión del
+   18-10-2026.)                                                      */
 /* El `ahora` se puede pasar a propósito, y no es un capricho de diseño:
-   sin él las pruebas usaban la hora real, y **a partir de las 21:00 el
+   sin él las pruebas usaban la hora real, y **a partir de las 22:00 el
    día 0 pasa a mañana**, así que tres pruebas del parte empezaban a
    fallar solas cada noche. Un revisor que da falsos fallos según la hora
    es peor que no tenerlo: se acaba publicando a pesar de él.
@@ -8909,14 +8899,13 @@ function calcularParte(sitios, arr) {
          la caseta, así que veta el emplazamiento entero.
        · **racha de 70** — tampoco sale, y esto no es subir: *«si hay unas
          rachas de 70 puedo volcar con el 4x4»*. Pasa antes de llegar.
-         El 70 es su mismo tope de caseta, así que no hay número nuevo
-         que preguntarle.
+         (Antes del 25-09 era también su tope de caseta; ya no: la caseta
+         avisa en 60 y veta en 90. El 70 del 4x4 es otro número, suyo.)
        · **lluvia fuerte** — sale, pero no toca contadores ni CGP, que
          están a la intemperie y con tensión.
 
      No se calcula nada nuevo: es ordenar por su pregunta lo que ya está
      pedido. Y NO decide: dice la hora y por qué, y él verá. */
-  const TOPE_ACCESO = 70;        // suyo: con esa racha vuelca el 4x4
   const LLUVIA_FUERTE = 2.0;     // su escala: «llueve bien» de 2 mm/h
 
   /* ── Y LA VENTANA ES LA DEL DÍA QUE ESTÁ MIRANDO (21-09-2026) ───────
@@ -8995,6 +8984,10 @@ function calcularParte(sitios, arr) {
       tiposFreno: ['rayo', 'racha', 'lluvia'].filter(f => hay.has(f)),
       peorRacha: peorDe('racha'),
       peorLluvia: peorDe('lluvia'),
+      /* Sin ni un dato de racha o de lluvia en la ventana, «nada te frena»
+         no se puede decir (revisión del 18-10-2026): un hueco no es calma. */
+      sinRacha: !horas.some(h => has(h.racha)),
+      sinLluvia: !horas.some(h => has(h.lluvia)),
     };
   }).filter(Boolean);
 
@@ -10248,6 +10241,12 @@ function renderParte() {
     const hh = d => String(new Date(d).getHours()).padStart(2, '0') + ':00';
     const A = C.ahora;
 
+    /* Sin dato de racha o de lluvia de NINGÚN modelo en la ventana no se dice
+       «nada te frena»: se dice que no se sabe. */
+    const hueco = [C.sinRacha ? 'la racha' : null, C.sinLluvia ? 'la lluvia' : null].filter(Boolean).join(' ni ');
+    const noSe = `<div class="pt__ventana" data-v="nd"><b>No sé si algo te frena para llegar:</b> `
+      + `ningún modelo da ${hueco} en esta ventana. Un hueco no es calma.</div>`;
+
     const dice = {
       rayo:   `<b>rayo</b>`,
       racha:  r => `<b>racha ${has(r) ? wtxt(r, true) : ''}</b> (vuelcas con el 4x4)`,
@@ -10259,7 +10258,7 @@ function renderParte() {
        el día entero, de 00:00 a 23:59. Se dice cuántas horas frena, de
        qué, y cuándo se abre el hueco. Que es con lo que programa. */
     if (!C.esHoy) {
-      if (!C.nFrenadas) return `<div class="pt__ventana" data-v="abierta">
+      if (!C.nFrenadas) return hueco ? noSe : `<div class="pt__ventana" data-v="abierta">
         <b>Nada te frena para llegar</b> en todo el día.</div>`;
       const lista = C.tiposFreno.map(f =>
         f === 'rayo' ? dice.rayo
@@ -10292,6 +10291,7 @@ function renderParte() {
          pasaba nada, o sea casi todos los días. Un renglón que está
          siempre no se lee: se salta, y de paso se salta el de al lado.
          Cuando SÍ hay frenos, la lista los nombra uno a uno. */
+      if (hueco) return noSe;
       return `<div class="pt__ventana" data-v="abierta">
         <b>Nada te frena para llegar.</b>${C.seEstropeaEn
           ? ` El camino se estropea a las <b>${hh(C.seEstropeaEn)}</b>.` : ''}</div>`;
@@ -13876,9 +13876,15 @@ function cambioDeCielo(clave, code, dia = 1, bajada = null, forma = null, txtAho
       txt = `Previsión cambiada a las ${hora}. Antes decía: ${String(textoVisto(r.antes, dia) ?? '').toLowerCase()}`;
     }
   }
-  // Solo hoy y mañana: lo demás se tira para que no crezca.
-  const hoy = new Date(), man = new Date(Date.now() + 86400e3);
-  const vale = k => k.startsWith(hoy.toISOString().slice(0, 10)) || k.startsWith(man.toISOString().slice(0, 10));
+  /* Solo hoy y mañana: lo demás se tira para que no crezca. La clave es
+     `sitio·fecha·franja·modelo` (la fecha es el SEGUNDO trozo) y la fecha
+     es la del reloj de aquí, igual que la de `sel[0].t`. Hasta el 18-10-2026
+     se comparaba con `startsWith(fecha UTC)`: ninguna clave real empieza por
+     la fecha, así que se borraban TODAS en cada llamada y «Previsión
+     cambiada a las…» no podía salir nunca (desde el 04-10). */
+  const dl = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const hoy = dl(new Date()), man = dl(new Date(Date.now() + 86400e3));
+  const vale = k => { const f = String(k).split('·')[1]; return f === hoy || f === man; };
   for (const k of Object.keys(reg)) if (!vale(k)) delete reg[k];
   try { LS.set('cieloFranjas', reg); } catch { /* sin sitio no pasa nada */ }
   return txt;
@@ -16079,6 +16085,11 @@ function cuandoSalir(horas) {
 
    Si no está puesta la cota del emplazamiento se DICE, no se inventa:
    sin cota no se puede comparar con la isocero.                       */
+/** Suyo: «si hay unas rachas de 70 puedo volcar con el 4x4». UNA sola vez: lo leen la tarjeta «a qué hora deja de frenarte» de Mis
+ *  estaciones y el «¿Se llega?» de Torre. Estaba solo en la primera, y en Torre el aviso de rachas colgaba del rojo de tu perfil (90
+ *  desde el 25-09): con 75 km/h una pantalla decía «el camino se estropea» y la otra callaba (revisión del 18-10-2026). */
+const TOPE_ACCESO = 70;
+
 function acceso(horas, cota) {
   if (!horas?.length) return null;
   const h = horas[0];
@@ -16155,7 +16166,9 @@ function acceso(horas, cota) {
   /* Su tope de viaje, no un 70 clavado: «con unas rachas de 70 puedo
      volcar con el 4x4». Si algún día lo cambia en Ajustes, esto lo sigue
      (20-09-2026). */
-  if (nivelRacha(rachaMax) === 'no')
+  if (has(rachaMax) && rachaMax >= TOPE_ACCESO)
+    avisos.push({ n: 'no', t: `Rachas de ${wtxt(rachaMax, true)} — con el 4x4 se puede volcar, y ramas y árboles en la pista` });
+  else if (nivelRacha(rachaMax) === 'no')
     avisos.push({ n: 'warn', t: `Rachas de ${wtxt(rachaMax, true)} — ramas y árboles en la pista` });
 
   // — Niebla —
@@ -16862,6 +16875,43 @@ async function renderTropicales() {
   }
 }
 
+/* ── LO PROPIO DE LA PESTAÑA AVISOS: PURA, PARA PODER PROBARLA ──────
+   Revisión del 18-10-2026. El verde «SIN SUPERAR · Ninguna hora supera
+   tus umbrales» salía cuando no había horas en ROJO, y se le escapaban
+   las ÁMBAR (por encima de su aviso, que Torre pinta «OJO») y las SIN
+   DATO (con la ráfaga a null las 48 h salía verde igual: el hueco que
+   parece calma, la regla 2). Ahora el verde solo sale si no hay rojas,
+   ni ámbar, ni huecos, ni la previsión vacía. */
+function avisosPropiosHtml(hrs, esc) {
+  const cuando = h => h.date.toLocaleString('es', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+  const filas = (xs, s) => xs.slice(0, 6).map(h => `${cuando(h)} — ${esc(h.reasons.find(r => r.s === s)?.txt ?? '')}`).join('<br>');
+  const plural = n => `hora${n > 1 ? 's' : ''}`;
+  /* Se cuenta ANTES de recortar: con 20 horas de galerna el titular decía
+     «6 horas en 48 h». Revisión del 04-09-2026. */
+  const malas = hrs.filter(h => h.st === 'no');
+  const ambar = hrs.filter(h => h.st === 'warn');
+  const huecos = hrs.filter(h => h.st === 'nd');
+  const aviso = (vc, lvl, t, cuerpo, pie) => `
+    <div class="al" style="--vc:var(${vc})">
+      <div class="al__h"><span class="al__lvl">${lvl}</span>
+        <span class="al__t">${t}</span></div>
+      ${cuerpo ? `<p>${cuerpo}</p>` : ''}
+      <div class="al__w">${pie}</div>
+    </div>`;
+  const pieCalculo = 'Cálculo propio sobre datos de modelo y tus umbrales. No es un aviso oficial.';
+  /* SE ME QUEDÓ VIVO UN «NO APTO» (04-09-2026): quité los rótulos que
+     autorizan de toda la app —orden suya repetida cinco veces: «vosotros
+     cifras, yo decido»— y este se me escapó. Dice cuántas horas y por qué,
+     que es el dato. Lo que se haga con eso es suyo. */
+  return (malas.length ? aviso('--no', 'FUERA DE TUS UMBRALES', `${malas.length} ${plural(malas.length)} en 48 h`, filas(malas, 'no'), pieCalculo) : '')
+    + (ambar.length ? aviso('--warn', 'POR ENCIMA DE TU AVISO', `${ambar.length} ${plural(ambar.length)} en 48 h`, filas(ambar, 'warn'), pieCalculo) : '')
+    + (huecos.length ? aviso('--faint', 'SIN DATO', `${huecos.length} ${plural(huecos.length)} en 48 h sin dato de algún campo`, filas(huecos, 'nd'),
+        'Un hueco no es calma: de esas horas no sé si pasan tus umbrales.') : '')
+    + (!hrs.length ? aviso('--faint', 'SIN PREVISIÓN', 'No hay horas cargadas', '', 'Eso no quiere decir que no pase nada: recarga antes de decidir.') : '')
+    + (hrs.length && !malas.length && !ambar.length && !huecos.length
+        ? aviso('--go', 'SIN SUPERAR', 'Ninguna hora supera tus umbrales en 48 h', '', 'Cálculo propio sobre datos de modelo. No sustituye a los avisos oficiales.') : '');
+}
+
 function renderAlerts() {
   const p = S.place;
   const links = [
@@ -16884,10 +16934,6 @@ function renderAlerts() {
   // Riesgo propio calculado a partir del modelo (claramente diferenciado
   // de un aviso oficial, que esta app no puede emitir).
   const hrs = S.data?.hours ?? [];
-  /* Se cuenta ANTES de recortar: con 20 horas de galerna el titular decía
-     «6 horas en 48 h». Revisión del 04-09-2026. */
-  const malas = hrs.filter(h => h.st === 'no');
-  const bad = malas.slice(0, 6);
   const el = $('#alerts');
 
   el.innerHTML = `
@@ -16913,26 +16959,7 @@ function renderAlerts() {
       leen aquí abajo tal como los publica (los de tu zona primero, con los amarillos); los de
       Euskalmet no se pueden leer desde el navegador: su acceso directo va en los enlaces.</p>
     </div>` +
-    (bad.length ? `
-    <div class="al" style="--vc:var(--no)">
-      <!-- SE ME QUEDÓ VIVO UN «NO APTO». Esta mañana quité los rótulos
-           que autorizan de toda la app —orden suya repetida cinco veces:
-           «vosotros cifras, yo decido»— y este, en el bloque de avisos,
-           se me escapó. Lo encontró la otra sesión repasando el código
-           publicado: de 21 apariciones de «APTO», veinte eran comentarios
-           y **una estaba en pantalla**.
-           Ahora dice cuántas horas y por qué, que es el dato. Lo que se
-           haga con eso es suyo. -->
-      <div class="al__h"><span class="al__lvl">FUERA DE TUS UMBRALES</span>
-        <span class="al__t">${malas.length} hora${bad.length > 1 ? 's' : ''} en 48 h</span></div>
-      <p>${bad.map(h => `${h.date.toLocaleString('es', { weekday: 'short', hour: '2-digit', minute: '2-digit' })} — ${esc(h.reasons.find(r => r.s === 'no')?.txt ?? '')}`).join('<br>')}</p>
-      <div class="al__w">Cálculo propio sobre datos de modelo y tus umbrales. No es un aviso oficial.</div>
-    </div>` : `
-    <div class="al" style="--vc:var(--go)">
-      <div class="al__h"><span class="al__lvl">SIN SUPERAR</span>
-        <span class="al__t">Ninguna hora supera tus umbrales en 48 h</span></div>
-      <div class="al__w">Cálculo propio sobre datos de modelo. No sustituye a los avisos oficiales.</div>
-    </div>`);
+    avisosPropiosHtml(hrs, esc);
   /* ── RESTO DE ESPAÑA, SOLO INFORMACIÓN (17-09-2026) ─────────────────
      Suyo, la mañana después de las trombas de Valencia (51 mm en una
      hora en Valencia centro, garajes inundados, riadas): «cuando pase
