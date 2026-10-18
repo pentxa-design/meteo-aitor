@@ -33,6 +33,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+/* El listón de racha se LEE del vigilante, no se escribe aquí (18-10-2026): el 17-10 pasó de 70 a 60 («cuando superen
+   rachas de 60 me preocuparé») y esta prueba seguía exigiendo 70 a mano; con 63 km/h de GFS un día cualquiera dio rojo
+   sin que el vigilante fallara. Un número que vive en dos sitios acaba en dos valores. */
+const RACHA_TOPE = Number(/const RACHA_TOPE = (\d+);/.exec(
+  fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'api', 'vigilante.mjs'), 'utf8'))?.[1]);
+if (!Number.isFinite(RACHA_TOPE)) { console.log('✗ no se pudo leer RACHA_TOPE de api/vigilante.mjs'); process.exit(1); }
+
 const aqui = path.dirname(fileURLToPath(import.meta.url));
 let bien = 0, mal = 0;
 const ok = (q, c, p = '') => { c ? (bien++, console.log(`    ✓ ${q}`))
@@ -108,12 +115,11 @@ for (const s of SITIOS) {
   }
   for (const [dia, w] of racha) {
     console.log(`      💨 ${dia} · ${w.kmh} km/h · ${txt(w.tramos)} · lo ve ${w.quien}`);
-    /* 70 y no 60 a propósito: el vigilante avisa por el listón del
-       VIAJE (con 70 no se va, puede volcar el 4x4), no por el de la
-       torre (60, que decide si se sube). Confirmado por él el
-       04-09-2026: «pon 70, pero suelo ir también si no hay más de 80». */
-    ok(`${dia}: la racha pasa del listón del viaje (70), que es para lo que salta`,
-       Number.isFinite(w.kmh) && w.kmh >= 70, `kmh=${w.kmh}`);
+    /* Hasta el 17-10-2026 era 70 (el listón del VIAJE, 4x4: «pon 70, pero suelo ir también si no hay más de 80»). Desde
+       ese día el aviso va a 60 (suyo: «cuando superen rachas de 60 me preocuparé»); el 70 del viaje sigue en la app
+       (`TOPE_ACCESO`), pero el vigilante salta con el suyo. */
+    ok(`${dia}: la racha pasa del listón del vigilante (${RACHA_TOPE}), que es para lo que salta`,
+       Number.isFinite(w.kmh) && w.kmh >= RACHA_TOPE, `kmh=${w.kmh}`);
     ok(`${dia}: y se dice en km/h, nunca en nudos`, Number.isInteger(w.kmh));
   }
   ok('las coordenadas viajan con el aviso, para poder abrir ESE sitio',
@@ -142,8 +148,8 @@ console.log('\n  BERMEO hoy · lo que diga, respaldado por su cifra\n');
     ok(`BERMEO ${dia}: el rayo lo respalda su código de tormenta o el CAPE, no es un aviso de más`,
        (Number.isFinite(d.cape) && d.cape >= 700) || Object.values(d.porHora || {}).some(x => x?.codigo), `cape=${d.cape} · ${JSON.stringify(d.porHora).slice(0, 120)}`);
   for (const [dia, w] of Object.entries(r.racha))
-    ok(`BERMEO ${dia}: la racha pasa del listón del viaje (70)`,
-       Number.isFinite(w.kmh) && w.kmh >= 70, `kmh=${w.kmh}`);
+    ok(`BERMEO ${dia}: la racha pasa del listón del vigilante (${RACHA_TOPE})`,
+       Number.isFinite(w.kmh) && w.kmh >= RACHA_TOPE, `kmh=${w.kmh}`);
   if (!nRayo && !nRacha)
     ok('día tranquilo en Bermeo: el vigilante calla, que es lo que toca', true);
 }

@@ -1,5 +1,5 @@
 {
-  "cuando": "2026-10-17T16:48:05.655Z",
+  "cuando": "2026-10-18T08:09:52.623Z",
   "sitios": [
     "Bermeo",
     "Calpe"
@@ -270,10 +270,10 @@
   },
   "globales": [
     "best_match",
-    "icon_seamless",
     "ecmwf_ifs025",
     "ecmwf_ifs",
     "gem_seamless",
-    "gfs_seamless"
+    "gfs_seamless",
+    "icon_seamless"
   ]
 }
