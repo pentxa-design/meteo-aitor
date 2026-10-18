@@ -327,6 +327,12 @@ const TLAYERS = [
   //   desc:'Litros por metro cuadrado caídos en las últimas 6, 12, 24, 48 o 72 horas hasta la hora del mapa: la suma de la previsión del modelo, como la «Acumulación de lluvia» de Windy' },
   { id:'snow_depth', g:'Lluvia', name:'Espesor de nieve', v:'snow_depth', unit:'m',
     desc:'Nieve acumulada en el suelo' },
+  /* NIEVE QUE CAE (18-10-2026, suyo: «muy importante, me hará falta alguna capa de NIEVE… en los montes de aquí habrá nieve
+     enseguida, las pistas para subir a las torres»). La nieve de «Tipo de precipitación» iba apilada sobre la lluvia y sin
+     capa propia; «Espesor de nieve» es lo que ya hay en el suelo. Esta es la que CAE: `snowfall_water_equivalent`, en agua
+     equivalente (mm/h; 1 mm ≈ 1 cm de nieve fresca), sobre fondo oscuro. */
+  { id:'nieve', g:'Lluvia', name:'Nieve que cae', v:'snowfall_water_equivalent', unit:'mm/h', escala:'nieveAzul',
+    desc:'Nieve prevista, en agua equivalente (mm/h): 1 mm ≈ 1 cm de nieve fresca. Del azul claro al azul marino según intensidad. Solo algunos modelos la publican: al entrar, el mapa pasa solo a uno que la tenga. Al pulsar, la nieve que caería en 1, 3, 6 y 24 horas en centímetros' },
   /* Suyo, 14-09-2026: «esta capa debe de estar en lluvia». Y con escala
      propia: la de fábrica era un azul oscuro plano en el que «no se
      distingue nada». */
@@ -374,6 +380,8 @@ const TLAYERS = [
        pasaron a 70/90. Un pie con cifras se queda viejo sin avisar; la
        barra de la leyenda ya enseña los cortes de verdad. */
     desc:'Racha máxima — la capa que decide el ascenso. El color cambia en TUS listones: naranja en tu aviso, rojo en tu límite. Al pinchar, también de dónde viene el viento' },
+  { id:'viento10', g:'Torre', name:'Viento 10 m', v:'wind_speed_10m', unit:'km/h', vientoApi: true, escala:'viento', rumbo: true,
+    desc:'Viento MEDIO a 10 m, en km/h, con las flechas de dónde viene (↗ Flechas) y el movimiento. A 40 m de torre pega más fuerte, y la ráfaga más todavía: para decidir si se sube, mira Ráfagas' },
   /* ── LAS CUATRO CAPAS DE BARBAS, RETIRADAS EL 21-09-2026 ────────────
      Eran `wind_u_component_10m/20m/50m/100m`. El color ya se apagó el
      14-09 (era la componente, no la fuerza) y quedaban «las barbas y los
@@ -571,7 +579,7 @@ const LENTOS = new Set(['ecmwf_ifs', 'ecmwf_ifs025', 'ncep_gfs013', 'ncep_gfs025
 /* 15-09-2026, con Windy delante: «mira capa temperatura 2m qué bien se ve». Temperatura
    y T850 pasan a degradado continuo; los cortes (30 naranja, 34 rojo, 38 granate)
    siguen siendo los suyos, solo se funden entre sí en vez de verse a bandas. */
-const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'niebla', 'sombraLluvia', 'tempc', 't850', 'rafagas',
+const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isocero', 'nubes', 'niebla', 'sombraLluvia', 'tempc', 't850', 'rafagas', 'viento',
   /* 19-09-2026: olas y periodo fundidos, como Ventusky (pero en lineal:
      la monótona hacía polígonos junto a la costa; ver TMODELS). */
   'ola', 'periodo',
@@ -602,7 +610,7 @@ function interpolacionDe(L_) {
 }
 /* Capas de lluvia que van sobre suelo negro (como AguaceroWx) y sin la
    sombra del relieve encima (18-09-2026: al 32 % dejaba la tierra gris). */
-const CON_SUELO_NEGRO = new Set(['lluvia', 'lluviaVerde', 'dbz']);
+const CON_SUELO_NEGRO = new Set(['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul']);   // nieveAzul: la capa «Nieve que cae» sola (apilada va sobre el suelo de la lluvia)
 
 /* Las capas de lluvia que al entrar se ponen en el modelo que mejor acierta
    la lluvia en sus sitios (17-10-2026, ver setLayer). */
@@ -1640,6 +1648,20 @@ function escalasPropias() {
     eje: rfm, unidad: 'km/h', pos: rfm.map((_, i) => i),
   };
 
+  /* ── VIENTO MEDIO A 10 m (18-10-2026, suyo: «en torres falta la capa de viento, solo está la de ráfagas» · «antes había») ──
+     Había «Viento 10/20/50/100 m · barbas» y se retiraron el 21-09 porque las barbas apuntaban TODAS al suroeste (la librería no
+     da la componente norte-sur). Las flechas ya vuelven por la API en Ráfagas, y enseñan el viento MEDIO: esta capa es la misma
+     con el COLOR del viento medio, en los cortes de Beaufort (km/h). Para decidir sigue mandando Ráfagas, que lleva SUS listones. */
+  const vkm = [0, 6, 12, 20, 29, 39, 50, 62, 75, 89, 103];
+  const vcc = [['#2f5bff',.35], ['#2f8cff',.7], ['#19c6e8',1], ['#25d366',1], ['#a6e22e',1], ['#f2e63a',1],
+               ['#f5a623',1], ['#f0583a',1], ['#d6249f',1], ['#8f2bd6',1], ['#4b1f8f',1]];
+  const viento = {
+    scale: { type:'breakpoint', unit:'km/h', breakpoints: vkm.map(k => k / 3.6),     // m/s en la tesela
+             colors: vcc.map(([c,a2]) => hexRGBA(c, a2)) },
+    conv: v => v * 3.6,                                                              // m/s → km/h en pantalla
+    eje: vkm, unidad: 'km/h', pos: vkm.map((_, i) => i),
+  };
+
   /* ── CAPE: LA GASOLINA, CON LOS CORTES QUE ÉL USA ──────────────────
      La segunda de las tres con las que decide, y también iba con la
      escala de fábrica. Los cortes NO son de manual, son los suyos y los
@@ -2067,7 +2089,7 @@ function escalasPropias() {
     // la misma cuenta de Marshall-Palmer con la que está hecha la escala.
     dbz: { scale: ESCALA_DBZ, eje: DBZ, unidad: 'dBZ',
            conv: v => v > 0 ? 10 * Math.log10(200 * Math.pow(v, 1.6)) : 0 },
-    presion, visibilidad, niebla, tempc, t850, rafagas, capeE, tapa, agua, isocero, sinColor, nubes, sombraLluvia,
+    presion, visibilidad, niebla, tempc, t850, rafagas, viento, capeE, tapa, agua, isocero, sinColor, nubes, sombraLluvia,
     ola, periodo, acum,
   };
   return _escalas;
@@ -3491,7 +3513,10 @@ const Maps = {
         await new Promise(r => setTimeout(r, 1500));
         try { limpia = await limpiarRadarAemet(f.url); }
         catch (err) {
-          this.status(`Radar AEMET no disponible ahora mismo (${err.message}). `
+          /* 18-10-2026: AEMET dejó de publicar el radar a las 03:30 (su propio catálogo se quedó ahí, 17 horas) y el cartel decía
+             «respondió 404», que suena a fallo de la app. Se dice de quién es la falta y qué mirar mientras. */
+          this.status(`Radar AEMET no disponible ahora mismo (${err.message}): AEMET no tiene la imagen más reciente del radar. `
+                    + `Es cosa suya, no de la app. Mientras, mira Radar observado, Radar + previsión o Reflectividad (esta es estimada). `
                     + `No se pinta nada: un mapa en blanco no significa que no llueva.`);
           document.querySelector('#mapLegend').hidden = true;
           return;
@@ -5185,6 +5210,7 @@ const Maps = {
           tipoP = tipoDePrecipitacion(vh, has(vn) ? porHora(vn, L_.encima, h) : null);
         }
       }
+      if (L_.v === 'snowfall_water_equivalent') tipoP = tipoDePrecipitacion(vh, vh);   // la capa «Nieve que cae»: todo lo que lee es nieve
       const nieveAqui = tipoP && (tipoP.tipo === 'nieve' || tipoP.tipo === 'aguanieve');
       const val = e?.conv ? e.conv(vh) : vh * f;
       const uTxt = u;
@@ -5284,13 +5310,14 @@ const Maps = {
          aguaQueCaeria(); cada fila dice hasta qué hora va, y donde el modelo
          no llega se dice hasta dónde llega. 1 mm = 1 litro por m², y se dice. */
       let acum = '';
-      if (L_.v === 'precipitation' && !L_.dbz && hIso && modeloEnApi(R.modelo)) {
+      const deNieve = L_.v === 'snowfall_water_equivalent';        // en la capa de nieve la tablita va en CENTÍMETROS de nieve (variable `snowfall`)
+      if (((L_.v === 'precipitation' && !L_.dbz) || deNieve) && hIso && modeloEnApi(R.modelo)) {
         try {
           const ini = new Date(hIso + ':00Z').getTime();
           const fin = new Date(ini + 24 * 3600e3).toISOString().slice(0, 13) + ':00';
           const d = await jget(API.fc, { latitude: lngLat.lat.toFixed(4), longitude: lngLat.lng.toFixed(4),
-            timezone: 'UTC', models: modeloEnApi(R.modelo), hourly: 'precipitation', start_hour: hIso, end_hour: fin }, { timeout: 9000 });
-          const filas = d?.hourly?.time?.[0] === hIso ? aguaQueCaeria((d.hourly.precipitation || []).slice(1), ini) : [];
+            timezone: 'UTC', models: modeloEnApi(R.modelo), hourly: deNieve ? 'snowfall' : 'precipitation', start_hour: hIso, end_hour: fin }, { timeout: 9000 });
+          const filas = d?.hourly?.time?.[0] === hIso ? aguaQueCaeria((d.hourly[deNieve ? 'snowfall' : 'precipitation'] || []).slice(1), ini) : [];
           if (has(filas[0]?.litros)) {
             /* EN UNA TABLITA, QUE SE LEA DE UN TIRÓN (15-10-2026, suyo: «el texto
                un poco más entendible, que lo pueda leer bien de un tirón»). */
@@ -5303,11 +5330,11 @@ const Maps = {
             const fila = f => `<tr><td>en ${f.n === 1 ? '1 hora' : f.n + ' horas'}<small${f.corta ? ' class="pa__c"' : ''}>${
                 !has(f.litros) ? 'sin dato'
                 : f.corta ? `${esc(nombreModelo)} solo llega hasta ${cuando(f.hasta)}`
-                : `hasta ${cuando(f.hasta)}`}</small></td><td><b>${f1(f.litros)}</b> litros</td></tr>`;
+                : `hasta ${cuando(f.hasta)}`}</small></td><td><b>${f1(f.litros)}</b> ${deNieve ? 'cm' : 'litros'}</td></tr>`;
             /* ENSEMBLE (18-10-2026, suyo, tras ver WXCharts y Meteologix: «saca provecho de lo que puedas»): no un número, la
                probabilidad de que lo que caiga en esas 24 h pase de 10, 30, 50 y 100 litros, contando los miembros del ensemble. */
             let ens = '';
-            try {
+            if (!deNieve) try {
               const dE = await jget(API.ens, { latitude: lngLat.lat.toFixed(4), longitude: lngLat.lng.toFixed(4), timezone: 'UTC',
                 models: ENSEMBLE_MODELO, hourly: 'precipitation', start_hour: new Date(ini + 3600e3).toISOString().slice(0, 13) + ':00', end_hour: fin }, { timeout: 8000 });
               const pe = probEnsemble(dE?.hourly);
@@ -5319,9 +5346,9 @@ const Maps = {
                   + `<div class="pa__p">${pe.n} miembros del ensemble de ${esc(nomE)}: lo más probable ${nE(pe.mediana)} litros (de ${nE(pe.min)} a ${nE(pe.max)})</div></div>`;
               }
             } catch { /* sin ensemble: se enseña lo demás, que es verdad */ }
-            acum = `<div class="pa"><div class="pa__t">Lo que caería desde el ${diaDe(ini)} a las ${hhmm(ini)}</div>`
+            acum = `<div class="pa"><div class="pa__t">${deNieve ? 'La nieve que caería' : 'Lo que caería'} desde el ${diaDe(ini)} a las ${hhmm(ini)}</div>`
               + `<table>${filas.map(fila).join('')}</table>`
-              + `<div class="pa__p">litros por metro cuadrado (1 mm = 1 litro) · ${esc(nombreModelo)}${nieveAqui ? '. En nieve cuenta su agua: 1 litro ≈ 1 cm de nieve fresca' : ''}</div>${ens}</div>`;
+              + `<div class="pa__p">${deNieve ? `centímetros de nieve fresca que da el modelo · ${esc(nombreModelo)}` : `litros por metro cuadrado (1 mm = 1 litro) · ${esc(nombreModelo)}${nieveAqui ? '. En nieve cuenta su agua: 1 litro ≈ 1 cm de nieve fresca' : ''}`}</div>${ens}</div>`;
           }
         } catch { /* sin acumulado: se enseña la intensidad sola, que es verdad */ }
       }
@@ -6110,7 +6137,7 @@ const Maps = {
        enseña ECMWF y lo avisa. */
     const esLluvia = l => CAPAS_LLUVIA_AROME.has(TLAYERS.find(x => x.id === l)?.escala);
     const esNiebla = l => TLAYERS.find(x => x.id === l)?.escala === 'niebla';
-    const esTipo = l => TLAYERS.find(x => x.id === l)?.escala === 'lluviaVerde';
+    const esTipo = l => ['lluviaVerde', 'nieveAzul'].includes(TLAYERS.find(x => x.id === l)?.escala);   // las dos capas que necesitan un modelo con NIEVE
     if (esNiebla(id) && !esNiebla(anterior) && !CON_VISIBILIDAD.has(this.model)) {
       this.ui();
       this.setModel(MODELO_NIEBLA).then(() => { this.ui(); this.apply(); });

@@ -2983,7 +2983,7 @@ ok('«Valores» no rotula por debajo de 5 dBZ (pero el pulsar el punto sigue dan
    /if \(e\?\.unidad === 'dBZ' && txt < DBZ_SIN_ECO\) continue;/.test(mapsSrc)
    && !/if \(e\?\.unidad === 'dBZ'[^\n]*\n[^\n]*pop\.setHTML/.test(mapsSrc));
 ok('bajo la lluvia, en mm/h y en dBZ, el suelo va negro como en AguaceroWx',
-   /const CON_SUELO_NEGRO = new Set\(\['lluvia', 'lluviaVerde', 'dbz'\]\);/.test(mapsSrc)
+   /const CON_SUELO_NEGRO = new Set\(\['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul'\]\);/.test(mapsSrc)
    && /sueloParaLluvia\(CON_SUELO_NEGRO\.has\(L_\.escala\)\)/.test(mapsSrc)
    && /setPaintProperty\('hillLayer', 'raster-opacity', \(CON_SUELO_NEGRO\.has\(L_\.escala\) \|\| ESCALAS_BLANCAS\.has\(L_\.escala\)\) \? 0 : 0\.32\)/.test(mapsSrc)
    && /const tono = \{ tierra: '#1b1d21'[^}]*mar: '#0b0c0f'/.test(mapsSrc)
@@ -3021,7 +3021,7 @@ ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan 
   const hacer = (desde, a, modelo) => {
     const M = { layer: desde, model: modelo, horaMirada() {}, cerrarPopups() {}, cancelarPrecarga() {}, soltarMemoria() {},
       pause() {}, ui() {}, apply() {}, avisoAlcance() {}, setModel(m) { pedidos.push(m); return { then() {} }; } };
-    const TL = [{ id: 'rain', escala: 'lluvia' }, { id: 'tipo', escala: 'lluviaVerde' }, { id: 'cape', escala: 'cape' },
+    const TL = [{ id: 'rain', escala: 'lluvia' }, { id: 'tipo', escala: 'lluviaVerde' }, { id: 'nieve', escala: 'nieveAzul' }, { id: 'cape', escala: 'cape' },
                 { id: 'niebla', escala: 'niebla' }];
     const f = new Function('TLAYERS', 'LS', 'MODELO_LLUVIA', 'CAPAS_LLUVIA_AROME', 'MODELO_NIEBLA', 'CON_VISIBILIDAD', 'TMODELS', 'esc', 'MODELO_TIPO', 'CON_NIEVE',
       `return function(id) ${cuerpo}`)(
@@ -3043,6 +3043,11 @@ ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan 
      && JSON.stringify(hacer('cape', 'tipo', 'ncep_gfs025')) === '["dwd_icon_eu"]'
      && hacer('cape', 'tipo', 'ecmwf_ifs').length === 0 && hacer('cape', 'tipo', 'dwd_icon_d2').length === 0
      && hacer('cape', 'tipo', 'dwd_icon_eu').length === 0);
+  ok('al entrar en «Nieve que cae» con AROME HD o GFS (sin nieve) el mapa pide ICON-EU; con ECMWF 9 km, ICON-D2 o ICON-EU no toca el modelo; y de Tipo de precipitación a Nieve no lo vuelve a forzar',
+     !!cuerpo && JSON.stringify(hacer('rain', 'nieve', 'meteofrance_arome_france_hd')) === '["dwd_icon_eu"]'
+     && JSON.stringify(hacer('cape', 'nieve', 'ncep_gfs025')) === '["dwd_icon_eu"]'
+     && hacer('cape', 'nieve', 'ecmwf_ifs').length === 0 && hacer('cape', 'nieve', 'dwd_icon_d2').length === 0
+     && hacer('tipo', 'nieve', 'meteofrance_arome_france_hd').length === 0);
   /* LA NIEBLA, COMO WINDY (17-10-2026, suyo: «la capa de niebla no esperes hazlo»).
      AROME HD no trae visibilidad en los mapas: entrar en Niebla desde AROME pide ICON-EU;
      con ECMWF 9 km o ICON-D2, que sí la traen, se respeta lo que él tenía. */
@@ -11417,7 +11422,7 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
     && canales(hexDe(nb[7])).every(v => v <= 0xe6 && v >= 0xd0);
   ok('la escala «nubes» va de transparente (0 %) a blanco casi opaco (100 %): blanca como Windy, un gris ligero solo cerrada, y neutra, no azul',
      alfa.length >= 6 && alfa[0] === 0 && alfa[alfa.length - 1] >= 0.9 && alfa.every((a, i) => i === 0 || a >= alfa[i - 1]) && clara
-     && /const nubes = \{/.test(M) && /presion, visibilidad, niebla, tempc, t850, rafagas, capeE, tapa, agua, isocero, sinColor, nubes,/.test(M),
+     && /const nubes = \{/.test(M) && /presion, visibilidad, niebla, tempc, t850, rafagas, viento, capeE, tapa, agua, isocero, sinColor, nubes,/.test(M),
      JSON.stringify({ alfa, clara }));
   ok('las nubes piden degradado continuo (color_blend), como la reflectividad',
      /const ESCALAS_SUAVES = new Set\(\[[^\]]*'nubes'[^\]]*\]\);/.test(M));
@@ -13183,12 +13188,12 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('   con un hueco en medio no se suma: «sin dato», no un total más bajo',
      hueco[0].litros === 3 && hueco[1].litros === null && hueco[2].litros === null && hueco[3].litros === null
      && f([], ini)[0].litros === null && f(undefined, ini)[0].litros === null, JSON.stringify(hueco));
-  ok('   y el popup pide a la API del MISMO modelo la hora del mapa y las 24 siguientes, solo en Precipitación, y lo titula «Lo que caería desde…»',
-     /if \(L_\.v === 'precipitation' && !L_\.dbz && hIso && modeloEnApi\(R\.modelo\)\)/.test(M)
+  ok('   y el popup pide a la API del MISMO modelo la hora del mapa y las 24 siguientes, en Precipitación (litros) y en Nieve que cae (cm, variable `snowfall`), y lo titula «Lo que caería desde…» / «La nieve que caería desde…»',
+     /\(\(L_\.v === 'precipitation' && !L_\.dbz\) \|\| deNieve\) && hIso && modeloEnApi\(R\.modelo\)/.test(M)
      && /const fin = new Date\(ini \+ 24 \* 3600e3\)/.test(M)
-     && /hourly: 'precipitation', start_hour: hIso, end_hour: fin/.test(M)
-     && /aguaQueCaeria\(\(d\.hourly\.precipitation \|\| \[\]\)\.slice\(1\), ini\)/.test(M)
-     && /Lo que caería desde el \$\{diaDe\(ini\)\} a las \$\{hhmm\(ini\)\}/.test(M)
+     && /hourly: deNieve \? 'snowfall' : 'precipitation', start_hour: hIso, end_hour: fin/.test(M)
+     && /aguaQueCaeria\(\(d\.hourly\[deNieve \? 'snowfall' : 'precipitation'\] \|\| \[\]\)\.slice\(1\), ini\)/.test(M)
+     && /\$\{deNieve \? 'La nieve que caería' : 'Lo que caería'\} desde el \$\{diaDe\(ini\)\} a las \$\{hhmm\(ini\)\}/.test(M)
      && !/Agua caída hasta esa hora/.test(M) && /1 mm = 1 litro\) · \$\{esc\(nombreModelo\)\}/.test(M)
      && /\$\{deDonde\}\$\{delPaso\}\$\{acum\}/.test(M));
   ok('   en una tablita de cuatro filas en litros, cada una con su «hasta las…» debajo de la etiqueta (15-10-2026: «que lo pueda leer de un tirón»; debajo desde el 17-10 para que quepa en la tarjeta)',
@@ -13440,6 +13445,29 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   grupo('Entrar en lluvia: AROME sin cartel');
   ok('al entrar en una capa de lluvia el mapa se pone en AROME HD (setModel(MODELO_LLUVIA)) y NO saca el cartel «Lluvia con AROME HD: es el que mejor acierta…»',
      /this\.setModel\(MODELO_LLUVIA\)\.then\(\(\) => \{ this\.ui\(\); this\.apply\(\); \}\);/.test(Mx) && !/es el que mejor acierta los litros en tus sitios/.test(Mx));
+}
+
+/* ── NIEVE Y VIENTO MEDIO, QUE FALTABAN (18-10-2026) ──
+   Suyo: «muy importante, me hará falta alguna capa de NIEVE… en los montes de aquí habrá nieve enseguida, las pistas para subir a las
+   torres» y «en torres falta la capa de viento, solo está la de ráfagas» · «antes había». */
+{
+  const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  grupo('Capas de nieve y de viento medio');
+  ok('«Nieve que cae»: en el grupo Lluvia, con la nieve (agua equivalente) y la escala azul de nieve, y sobre suelo negro',
+     /\{ id:'nieve', g:'Lluvia', name:'Nieve que cae', v:'snowfall_water_equivalent', unit:'mm\/h', escala:'nieveAzul'/.test(Mx)
+     && /new Set\(\['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul'\]\)/.test(Mx));
+  ok('«Viento 10 m»: en el grupo Torre, con la velocidad media, las flechas y el rumbo por la API (vientoApi, rumbo) y escala propia en km/h',
+     /\{ id:'viento10', g:'Torre', name:'Viento 10 m', v:'wind_speed_10m', unit:'km\/h', vientoApi: true, escala:'viento', rumbo: true/.test(Mx));
+  const vkm = JSON.parse((/const vkm = (\[[^\]]*\]);/.exec(Mx) || [])[1] || 'null');
+  const vcc = [...((/const vcc = \[([\s\S]*?)\];/.exec(Mx) || [])[1] || '').matchAll(/'#[0-9a-f]{6}',([0-9.]+)/g)].map(x => Number(x[1]));
+  ok('la escala del viento medio: 11 cortes de Beaufort en km/h, crecientes, desde 0; la tesela viene en m/s y se convierte (km/h = m/s × 3,6); el primer tramo suave y el resto opaco',
+     Array.isArray(vkm) && vkm.length === 11 && vkm[0] === 0 && vkm.every((v, i) => i === 0 || v > vkm[i - 1]) && vcc.length === 11 && vcc[0] < 0.5 && vcc.slice(2).every(a => a === 1)
+     && /breakpoints: vkm\.map\(k => k \/ 3\.6\)/.test(Mx) && /conv: v => v \* 3\.6,\s+\/\/ m\/s → km\/h en pantalla\s*\n\s*eje: vkm/.test(Mx));
+  ok('la capa de nieve sola dice «Nieve» y, al pulsar, la nieve que caería en CENTÍMETROS (variable snowfall, no litros); el ensemble de agua no se pide en ella',
+     /if \(L_\.v === 'snowfall_water_equivalent'\) tipoP = tipoDePrecipitacion\(vh, vh\);/.test(Mx)
+     && /\$\{deNieve \? 'cm' : 'litros'\}/.test(Mx) && /if \(!deNieve\) try \{\s*\n\s*const dE = await jget\(API\.ens/.test(Mx));
+  ok('el cartel del radar de AEMET dice que la falta es de AEMET («cosa suya, no de la app») y manda a Radar observado, Radar + previsión o Reflectividad',
+     /AEMET no tiene la imagen más reciente del radar/.test(Mx) && /Es cosa suya, no de la app\. Mientras, mira Radar observado, Radar \+ previsión o Reflectividad/.test(Mx));
 }
 
 /* ── «⚡ RAYOS» SIN RAYOS: EL MOTIVO, DENTRO DEL MAPA (17-10-2026) ──
