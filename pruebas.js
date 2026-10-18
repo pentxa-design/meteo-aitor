@@ -3007,7 +3007,7 @@ ok('y no hay lista de «capas oscuras» que se quede vieja',
    !/capasOscuras|LAYERS_OSCURAS/.test(mapsSrc),
    'la Inhibición no pasa por el suelo de la lluvia y también es oscura: una lista se queda corta');
 ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan un decimal',
-   /\['#4a7fd8',0\], \['#4a7fd8',\.18\]/.test(mapsSrc)
+   /\['#4a7fd8',0\], \['#4a7fd8',\.3\], \['#3f9fe0',\.5\], \['#3a86e0',\.75\]/.test(mapsSrc)
    && /if \(e\?\.unidad === 'mm\/h' && txt < 0\.1\) continue;/.test(mapsSrc)
    && /e\?\.unidad === 'mm\/h'\) \? 1 : 0;/.test(mapsSrc),
    'un «0» encima de una mancha azul de 0,3 mm/h es un número que miente');
@@ -3142,10 +3142,12 @@ ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan 
 {
   const alfas = nombre => (((mapsSrc.match(new RegExp(`const ${nombre} = \\[([\\s\\S]*?)\\];`)) || [])[1] || '')
     .match(/\['#[0-9a-f]{6}',\s*([0-9.]+)\]/g) || []).map(x => Number(x.match(/,\s*([0-9.]+)\]/)[1]));
-  for (const nombre of ['cc', 'lvc']) {
+  /* 18-10-2026, suyo: «hazlo a ver qué tal» (velo más visible junto al frente de la DANA): en `cc` el techo del velo
+     sube a 0,35 en 0,1 y a 0,8 en 0,6; `lvc` (Tipo de precipitación) se queda como estaba. */
+  for (const [nombre, tope1, tope3] of [['cc', 0.35, 0.8], ['lvc', 0.25, 0.6]]) {
     const a = alfas(nombre);   // cortes: 0 · 0,1 · 0,3 · 0,6 · 1 · 2 …
     ok(`lluvia (${nombre}): de 0,1 a 0,6 mm/h es un velo que sube, y de 1 mm/h para arriba el color es fuerte`,
-       a.length >= 6 && a[0] === 0 && a[1] > 0 && a[1] <= 0.25 && a[1] < a[2] && a[2] < a[3] && a[3] <= 0.6
+       a.length >= 6 && a[0] === 0 && a[1] > 0 && a[1] <= tope1 && a[1] < a[2] && a[2] < a[3] && a[3] <= tope3
        && a[4] >= 0.85 && a.slice(5).every(x => x === 1), JSON.stringify(a));
   }
 }

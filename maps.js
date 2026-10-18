@@ -1807,7 +1807,10 @@ function escalasPropias() {
      avisos siguen con la escala de AEMET (fuerte desde 15 mm/h): esto es el
      color del mapa. */
   const mmW = [0, 0.1, 0.3, 0.5, 1, 2, 3.5, 7, 10, 20, 40];
-  const cc = [['#4a7fd8',0], ['#4a7fd8',.18], ['#3f9fe0',.35], ['#3a86e0',.6],
+  /* 18-10-2026, suyo («hazlo a ver qué tal», tras «¿se pueden mejorar?»): el velo de lo flojo se perdía sobre el fondo
+     oscuro junto a un frente como el de la DANA. 0,1 sube del 18 al 30 %, 0,3 del 35 al 50 %, 0,6 del 60 al 75 %. Del 1 mm/h
+     para arriba, igual. OJO: el 17-10 había pedido lo contrario («pintan demasiado»); si vuelve a ensuciar, bajar de aquí. */
+  const cc = [['#4a7fd8',0], ['#4a7fd8',.3], ['#3f9fe0',.5], ['#3a86e0',.75],
               ['#2fb8c8',.9], ['#3fcf4a',1], ['#d6dc2a',1], ['#e8482a',1],
               ['#c0309a',1], ['#7a1fa0',1], ['#4a1270',1]];
   /* ── CORTE SECO EN 0,1 (18-09-2026, 14:24, su captura de Tipo de

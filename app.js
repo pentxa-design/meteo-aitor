@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.18-1010';
+const BUILD = '2026.10.18-1333';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -3710,11 +3710,11 @@ const COBERTURA = {
    escrita a mano: él se va a Calpe, a Gijón, y habló de Miami y Brasil. */
 const GLOBALES = [
   "best_match",
+  "icon_seamless",
   "ecmwf_ifs025",
   "ecmwf_ifs",
   "gem_seamless",
-  "gfs_seamless",
-  "icon_seamless"
+  "gfs_seamless"
 ];
 /* ─── HASTA AQUÍ ────────────────────────────────────────────────────
 
