@@ -64,6 +64,14 @@ const CAPAS = {
   ir:         { wms: 'msg_fes:ir108',        nombre: 'Satélite infrarrojo' },
   convection: { wms: 'msg_fes:rgb_convection', nombre: 'Satélite tormentas' },
   visible:    { wms: 'msg_fes:rgb_eview',    nombre: 'Satélite visible' },
+  /* 19-10-2026, suyo con EUMETView delante: «utilízala» · «si hay algo más, añades». Meteosat de tercera generación (MTG), sin clave.
+     `sinComprobar`: una imagen SIN rayos o SIN lluvia es pequeña y vacía de verdad, y la comprobación de abajo la daría por «no
+     servida»; lo que evita pedir una pasada aún no publicada es no pasar del fin que declara el catálogo (como `?rayos=1`). */
+  rayos:      { wms: 'mtg_fd:li_afa',        nombre: 'Rayos del satélite (MTG)', sinComprobar: true },
+  lluvia:     { wms: 'mtg_fd:h40b',          nombre: 'Lluvia por satélite (MTG)', sinComprobar: true },
+  nieve:      { wms: 'mtg_fd:rgb_snow',      nombre: 'Nieve y niebla, de día (MTG)' },
+  niebla:     { wms: 'mtg_fd:rgb_fog',       nombre: 'Niebla y nubes bajas, de noche (MTG)' },
+  geocolor:   { wms: 'mtg_fd:rgb_geocolour', nombre: 'GeoColour (MTG)' },
 };
 
 /* La comprobación de la última hora: un GetMap de 64×64 sobre la costa
@@ -182,7 +190,7 @@ async function prepararCapa(clave, def, xml, n, ahora) {
     const horas = horasDe(t, n, tope);
     if (!horas.length) return { clave, motivo: 'el catálogo no da ninguna hora que ya haya pasado' };
     const ultima = horas[horas.length - 1];
-    const sirve = await sirveImagen(def.wms, ultima);
+    const sirve = def.sinComprobar ? null : await sirveImagen(def.wms, ultima);
     if (sirve !== false) {
       // Con lista no hay paso declarado: se dice el que hay entre las dos últimas.
       const pasoMin = t.pasoMin ?? (horas.length >= 2

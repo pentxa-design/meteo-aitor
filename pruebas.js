@@ -13994,6 +13994,42 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
 
 
 
+/* ═══ LO DEL METEOSAT NUEVO EN EL MAPA (19-10-2026) ════════════════════════
+   Suyo, con EUMETView delante: «utilízala» · «si hay algo más, añades». Se
+   arranca /satelite con un EUMETSAT de mentira: la hora de los rayos se
+   ofrece aunque su imagen venga VACÍA (sin rayos es vacía de verdad), y el
+   resto de capas siguen comprobándose como siempre. */
+{
+  grupo('Rayos, lluvia, nieve, niebla y GeoColour del Meteosat nuevo, en el mapa');
+  const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  ok('las cinco capas están en el grupo Satélite del mapa',
+     ['sat_rayos', 'sat_lluvia', 'sat_nieve', 'sat_niebla', 'sat_geo'].every(id => new RegExp(`\\{ id:'${id}', g:'Satélite'`).test(Mx)));
+  (globalThis.__pendientes ??= []).push((async () => {
+    /* Relativo al reloj (el arnés corre a otras horas del día: con una hora fija, a las 03:30 «ahora» quedaba antes del fin). */
+    const redondo = (ms, min) => new Date(Math.floor(ms / (min * 60e3)) * min * 60e3).toISOString();
+    const finRayos = redondo(Date.now() - 15 * 60e3, 5), inicio = redondo(Date.now() - 2 * 864e5, 60);
+    const capa = (n, fin, paso) => `<Layer><Name>${n}</Name><Dimension name="time">${inicio}/${fin}/PT${paso}M</Dimension></Layer>`;
+    const xml = '<WMS_Capabilities>' + capa('msg_fes:ir108', redondo(Date.now() - 30 * 60e3, 15), 15) + capa('mtg_fd:li_afa', finRayos, 5)
+      + capa('mtg_fd:rgb_snow', redondo(Date.now() - 20 * 60e3, 10), 10) + '</WMS_Capabilities>';
+    const fetchViejo = globalThis.fetch;
+    globalThis.fetch = async (u) => /GetCapabilities/.test(String(u))
+      ? new Response(xml, { status: 200, headers: { 'content-type': 'text/xml' } })
+      : new Response(new Uint8Array(96), { status: 200, headers: { 'content-type': 'image/png' } });   // PNG vacío: sin nubes ni rayos
+    let j = null, err = null;
+    try {
+      const mod = await import(require('url').pathToFileURL(path.join(__dirname, 'netlify', 'functions', 'satelite.js')).href);
+      const r = await mod.default(new Request('https://x/satelite?n=12'));
+      j = await r.json();
+    } catch (e) { err = e; } finally { globalThis.fetch = fetchViejo; }
+    ok('con la imagen vacía, la hora de los RAYOS se ofrece igual (sin rayos, la imagen ES vacía), cada 5 min hasta el fin del catálogo',
+       !err && j?.capas?.rayos?.horas?.at(-1) === finRayos && j.capas.rayos.pasoMin === 5, err ? String(err) : JSON.stringify(j?.capas?.rayos || j?.noOfrecidas));
+    ok('   y una capa de nubes con la imagen vacía NO se ofrece (vacía ahí es «no se sirve»): la comprobación sigue',
+       !!j && !j.capas?.ir && !!j.noOfrecidas?.ir, JSON.stringify(j?.noOfrecidas));
+  })());
+}
+
+
+
 /* ═══════════════════════════════════════════════════════════════════
    EL RECUENTO VA EL ÚLTIMO. SIEMPRE.
    ───────────────────────────────────────────────────────────────────

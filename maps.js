@@ -436,6 +436,17 @@ const TLAYERS = [
     desc:'Meteosat en infrarrojo — la nube que HAY, de día y de noche. Cuanto más blanco, más alto el tope: más potente la nube' },
   { id:'sat_conv', g:'Satélite', name:'Tormentas', v:null, unit:'', sat:'convection', sol:true,
     desc:'Meteosat, combinación para convección — distingue la nube que está creciendo. Solo sirve de día' },
+  /* 19-10-2026, suyo con EUMETView delante: «utilízala» · «si hay algo más, añades». Lo del Meteosat nuevo (MTG) que le sirve. */
+  { id:'sat_rayos', g:'Satélite', name:'Rayos (satélite)', v:null, unit:'', sat:'rayos',
+    desc:'Rayos que ve el Meteosat nuevo desde arriba, en bloques de 5 minutos, de día y de noche (también los de dentro de la nube). Llega con unos 15 min de retraso, antes que el mapa de AEMET. Sin puntos no es «no hay rayos» si la hora es vieja: mira la hora de la pasada' },
+  { id:'sat_lluvia', g:'Satélite', name:'Lluvia (satélite)', v:null, unit:'', sat:'lluvia',
+    desc:'Lluvia estimada por el satélite cada 10 minutos (infrarrojo calibrado con microondas). Es una estimación desde arriba: la nube baja de la costa se le puede escapar' },
+  { id:'sat_nieve', g:'Satélite', name:'Nieve y niebla (día)', v:null, unit:'', sat:'nieve', sol:true,
+    desc:'Solo de día: la NIEVE en el suelo sale en rojo y la niebla y nubes bajas en blanco. Para ver si los montes y las pistas tienen nieve' },
+  { id:'sat_niebla', g:'Satélite', name:'Niebla (noche)', v:null, unit:'', sat:'niebla',
+    desc:'Solo de noche: niebla y nubes bajas destacadas. De día se queda con la última imagen de la madrugada (mira la hora de la pasada)' },
+  { id:'sat_geo', g:'Satélite', name:'GeoColour', v:null, unit:'', sat:'geocolor',
+    desc:'La foto del satélite de día y las nubes de noche sobre el mapa con las luces de las ciudades: el vistazo general' },
   { id:'sat_vis', g:'Satélite', name:'Visible', v:null, unit:'', sat:'visible', sol:true,
     desc:'Meteosat en visible de alta resolución — la foto tal cual. Solo de día' },
 
@@ -3454,8 +3465,13 @@ const Maps = {
       ['satSrc'].forEach(id => { if (this.map.getSource(id)) this.map.removeSource(id); });
 
       this.map.addSource('satSrc', { type: 'raster', tiles: [url], tileSize: 512 });
+      /* Los rayos del satélite vienen en tonos pálidos y a la escala de Europa se perdían; opacos y más vivos se leen (19-10-2026,
+         probado en pantalla antes de ponerlo). */
+      const vivo = L_.sat === 'rayos'   // «más tirando a rojo» (suyo, visto en pantalla): EUMETSAT ignora un estilo propio (SLD_BODY, medido), así que se retoca aquí
+        ? { 'raster-opacity': 1, 'raster-saturation': 1, 'raster-contrast': 0.45, 'raster-hue-rotate': -22, 'raster-brightness-max': 0.85 }
+        : { 'raster-opacity': this.opacity };
       this.map.addLayer({ id: 'satLayer', type: 'raster', source: 'satSrc',
-        paint: { 'raster-opacity': this.opacity, 'raster-fade-duration': 0 } },
+        paint: { ...vivo, 'raster-fade-duration': 0 } },
         this.firstLabelLayer());
 
       const d = new Date(hora);
@@ -6072,13 +6088,16 @@ const Maps = {
       if (src) src.setData(data);
       else {
         this.map.addSource('rayosSrc', { type: 'geojson', data });
+        /* EL TAMAÑO VA CON EL ZOOM (19-10-2026, suyo: «pinta demasiados puntos, ¿no?»). Eran 876 descargas reales en la tormenta de
+           Ibiza, cada una de 4,5 px con halo de 7,5: de lejos, un manchón que tapaba el radar. Ahora de lejos son puntitos y de cerca
+           crecen; no se quita ninguna. Probado en pantalla antes de ponerlo. */
         this.map.addLayer({ id: 'rayosHalo', type: 'circle', source: 'rayosSrc',
-          paint: { 'circle-radius': 7.5, 'circle-color': '#000', 'circle-opacity': 0.35 } });
+          paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 2.2, 6, 3.4, 8, 5, 11, 7.5], 'circle-color': '#000', 'circle-opacity': 0.22 } });
         this.map.addLayer({ id: 'rayosLayer', type: 'circle', source: 'rayosSrc',
-          paint: { 'circle-radius': 4.5,
+          paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 1.4, 6, 2.2, 8, 3.2, 11, 5],
                    'circle-color': ['case', ['==', ['get', 'edad'], 0], '#ff3b30', '#ffb020'],
                    'circle-stroke-color': ['case', ['==', ['get', 'pos'], 1], '#ffffff', '#1a1a1a'],
-                   'circle-stroke-width': 1.2, 'circle-opacity': 0.95 } });
+                   'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 4, 0, 7, 0.6, 10, 1.2], 'circle-opacity': 0.95 } });
       }
       this.pastillaRayos('');
       const hasta = marcos[marcos.length - 1]?.hasta;
