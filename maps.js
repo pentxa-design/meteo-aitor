@@ -206,6 +206,56 @@ async function jgetMeta(url, { timeout = 12000, tries = 3 } = {}) {
   throw ultimo;
 }
 
+/* ── 24 HORAS HACIA ATRÁS EN EL MAPA (19-10-2026) ──────────────────────
+   Suyo, con la DANA: «solo puedo mirar para atrás hasta las 5 am, tendría que dejarme al menos hasta ayer al mediodía» · «para mirar
+   lo que cayó ayer en Gandía» · «al menos 12 horas antes». La tira empezaba en la hora de ARRANQUE de la pasada: lo de antes no estaba.
+
+   Open-Meteo guarda las pasadas anteriores (medido: dos días enteros, AROME HD e ICON-EU cada 3 h, ECMWF cada 6), cada una con su
+   `meta.json`. Para cada hora de las 24 anteriores se usa la pasada MÁS RECIENTE que arrancó ANTES de esa hora y la publica: así la
+   lluvia (acumulada) tiene dato también a la hora de arranque. Es lo que PREVEÍA el modelo, no lo medido: la barra lo dice.
+   `pasadaDe[ms de la hora] = reference_time` de la pasada que la sirve; `omUrl` la usa. */
+const HORAS_ATRAS = 24;
+async function conPasado(meta, modelo) {
+  if (!meta?.reference_time || !Array.isArray(meta.valid_times) || meta._pasado) return meta;
+  const ref = new Date(meta.reference_time).getTime();
+  if (!Number.isFinite(ref)) return meta;
+  const p2 = n => String(n).padStart(2, '0');
+  const dirDe = ms => { const R = new Date(ms); return `${R.getUTCFullYear()}/${p2(R.getUTCMonth() + 1)}/${p2(R.getUTCDate())}/${p2(R.getUTCHours())}00Z`; };
+  const fichaDe = async ms => {
+    try { const f = await jget(`${TILES}/${modelo}/${dirDe(ms)}/meta.json`, {}, { timeout: 8000, repetir: false });
+          return Array.isArray(f?.valid_times) && f.valid_times.length ? f : null; }
+    catch { return null; }
+  };
+  /* La pasada anterior: la primera que exista de 1 a 6 h antes (cada modelo arranca cada 1, 3 o 6 h). */
+  let paso = 0, pasadas = [];
+  for (let h = 1; h <= 6 && !pasadas.length; h++) {
+    const f = await fichaDe(ref - h * 3600e3);
+    if (f) { paso = h; pasadas.push({ ms: ref - h * 3600e3, f }); }
+  }
+  while (pasadas.length && pasadas.length < 12 && pasadas.at(-1).ms > ref - HORAS_ATRAS * 3600e3) {
+    const ms = pasadas.at(-1).ms - paso * 3600e3;
+    const f = await fichaDe(ms);
+    if (!f) break;
+    pasadas.push({ ms, f });
+  }
+  const pasadaDe = {}, nuevas = [];
+  for (let H = ref - HORAS_ATRAS * 3600e3; H <= ref; H += 3600e3) {
+    for (const x of pasadas) {                      // de la más reciente a la más vieja
+      if (x.ms >= H) continue;                      // tiene que haber arrancado ANTES: si no, la lluvia de esa hora no está
+      const v = x.f.valid_times.find(t => new Date(t).getTime() === H);
+      if (!v) continue;
+      pasadaDe[H] = new Date(x.ms).toISOString();
+      if (H < ref) nuevas.push(v);
+      break;
+    }
+  }
+  meta.valid_times = [...nuevas, ...meta.valid_times];
+  ordenarHoras(meta);
+  meta.pasadaDe = pasadaDe;
+  meta._pasado = { horas: nuevas.length };
+  return meta;
+}
+
 const TMODELS = [
   { id:'ecmwf_ifs', name:'ECMWF HRES', res:'9 km',
     desc:'Centro Europeo, alta resolución — 6 días hora a hora. El de referencia' },
@@ -641,6 +691,22 @@ const MODELO_NIEBLA = 'dwd_icon_eu';
 const CON_VISIBILIDAD = new Set(['dwd_icon_eu', 'dwd_icon_d2', 'ecmwf_ifs']);
 /* Las capas que se pintan en blanco sobre el suelo de las nubes. */
 const ESCALAS_BLANCAS = new Set(['nubes', 'niebla']);
+/* En el fondo Claro las nubes y la niebla van sin suelo ocre y oscurecidas a gris: blanca sobre el mapa claro no se veía (19-10-2026, probado
+   en pantalla antes de ponerlo: 0,72 deja la nube cerrada en gris claro y se distingue del mapa). */
+const NUBE_EN_CLARO = { 'raster-brightness-max': 0.72 };
+/* ── EL FONDO CLARO, CLARO DE VERDAD (19-10-2026) ─────────────────────────
+   Suyo: «en modo color o claro no hay ninguna diferencia» · «en temperatura o en cualquier capa no había diferencia, solo contra el
+   oscuro» · «en color y oscuro déjalo como está». La capa de datos iba casi opaca y tapaba el fondo entero, así que Claro y Color eran
+   el mismo mapa. En Claro: el color de la capa más suave (opacidad ×0,65, menos saturado) con el mapa claro visible debajo, la lluvia
+   sin suelo negro y las nubes sin suelo ocre y en gris. Probado en su navegador antes de ponerlo. Color y Oscuro, sin tocar. */
+const CLARO_OPACIDAD = 0.65;
+const CLARO_SUAVE = { 'raster-saturation': 0.2 };
+/** La opacidad de la capa de datos para la capa y el fondo que haya: una sola cuenta, para pintar y para el deslizador. */
+function opacidadDeCapa(L_, base, o) {
+  if (ESCALAS_BLANCAS.has(L_?.escala)) return Math.max(o, 0.92);
+  if (CON_SUELO_NEGRO.has(L_?.escala)) return Math.max(o, 0.95);
+  return base === 'claro' ? o * CLARO_OPACIDAD : o;
+}
 /* Desde qué zoom la costa es la detallada de CARTO; por debajo, Natural Earth
    (ver costaEncima: los cortes de tesela de CARTO salían como rayas). */
 const COSTA_DETALLE_DESDE = 7;
@@ -1452,6 +1518,9 @@ const Peticiones = {
           // capa o de hora): tampoco cuenta ni se reintenta (14-09-2026).
           if (e?.name === 'AbortError' || /abort/i.test(String(e?.message || ''))) throw e;
           if (i === intentos - 1) {
+            /* El porqué del último trozo que no llegó, para decirlo en el cartel (19-10-2026: «26 trozos del mapa…» en su Mac y aquí no
+               se reproducía; sin el motivo no hay por dónde empezar). */
+            this.ultimoFallo = String(e?.message || e).slice(0, 90);
             if (cuenta) {
               this.fallos++;
               this.onCambio?.(this.fallos, this.servidas);
@@ -2515,6 +2584,22 @@ const Maps = {
       .then(() => js('vendor/openmeteo-weather-map-layer-0.0.20.js'));
   },
 
+  /** Añade a la tira las 24 h anteriores a la pasada (ver `conPasado`) y deja el deslizador en la MISMA hora que se miraba. */
+  async anadirPasado(m) {
+    try {
+      const modelo = this.model, mirada = new Date(m.valid_times?.[this.t]).getTime();
+      const antes = m.valid_times.length;
+      await conPasado(m, modelo);
+      if (this.meta !== m || this.model !== modelo || (this.usando?.meta && this.usando.meta !== m)) return;   // se cambió de modelo
+      if (m.valid_times.length === antes) return;
+      const i = m.valid_times.findIndex(t => new Date(t).getTime() === mirada);
+      if (i >= 0) this.t = i;
+      this._idx = null;
+      this.ajustarSlider();
+      this.stamp?.();
+    } catch { /* sin pasado no pasa nada: la tira se queda como estaba */ }
+  },
+
   /* ---------- Metadatos reales del modelo ---------- */
   async loadMeta() {
     this.status('leyendo modelo…');
@@ -2533,6 +2618,7 @@ const Maps = {
       this.ui();
       this.apply();
       this.ocultarModeloCaido();
+      this.anadirPasado(m);      // las 24 h de antes, de fondo: el mapa no espera por ellas
     } catch (e) {
       this.status('no se ha podido leer el modelo: ' + e.message);
       this.avisoModeloCaido(e);
@@ -2687,8 +2773,8 @@ const Maps = {
    *    …/{modelo}/AAAA/MM/DD/HH00Z/AAAA-MM-DDTHHMM.om?variable=…
    */
   omUrl(variable, t, modelo = this.model, meta = this.meta, capa = null) {
-    const ref = meta?.reference_time;
     const vt  = meta?.valid_times?.[t];
+    const ref = meta?.pasadaDe?.[new Date(vt).getTime()] ?? meta?.reference_time;   // las horas de antes, de su pasada (conPasado)
     if (!ref || !vt) return null;
     const R = new Date(ref), V = new Date(vt);
     if (isNaN(R) || isNaN(V)) return null;
@@ -2976,11 +3062,19 @@ const Maps = {
   indices(meta = this.usando?.meta ?? this.meta) {
     const T = meta?.valid_times ?? [];
     if (!T.length) return [];
-    if (this.pasoHoras <= 1) return T.map((_, i) => i);
-    const t0 = new Date(T[0]).getTime();
+    /* ── LA HORA DE ARRANQUE NO TIENE LLUVIA (19-10-2026) ──────────────
+       En una capa ACUMULADA (lluvia, nieve) el primer paso de la pasada —su hora de arranque, `reference_time`— no trae la variable:
+       no hay nada sumado todavía. Medido en su pantalla: AROME HD a las 05:00, «Variable: precipitation not found» y «6 trozos del
+       mapa sin cargar». Ese paso no se ofrece en la tira: no hay dato que enseñar. */
+    const L_ = TLAYERS.find(l => l.id === this.layer);
+    const arranque = meta?.reference_time ? new Date(meta.reference_time).getTime() : NaN;
+    const desde = (esAcumulada(L_?.v) && T.length > 1 && new Date(T[0]).getTime() <= arranque
+                   && !meta?.pasadaDe?.[new Date(T[0]).getTime()]) ? 1 : 0;   // si esa hora la sirve una pasada anterior, sí tiene lluvia
+    if (this.pasoHoras <= 1) return T.map((_, i) => i).slice(desde);
+    const t0 = new Date(T[desde]).getTime();
     const out = [];
     let objetivo = t0;
-    for (let i = 0; i < T.length; i++) {
+    for (let i = desde; i < T.length; i++) {
       const ti = new Date(T[i]).getTime();
       if (ti + 1 >= objetivo) { out.push(i); objetivo = ti + this.pasoHoras * 3600e3; }
     }
@@ -3152,9 +3246,7 @@ const Maps = {
          sin contraste (suyo, 18-09-2026 14:30, con AguaceroWx al lado:
          «y no el fondo, el contraste en general»). El deslizador CAPA
          solo puede subirla, como en las nubes. */
-      const op = ESCALAS_BLANCAS.has(L_.escala) ? Math.max(this.opacity, 0.92)
-               : CON_SUELO_NEGRO.has(L_.escala) ? Math.max(this.opacity, 0.95)
-               : this.opacity;
+      const op = opacidadDeCapa(L_, this.base, this.opacity);
       this.map.addSource('omSrc', {
         type:'raster', tiles:[`${url}/{z}/{x}/{y}`], tileSize:256, maxzoom:12,
         attribution:'Datos de modelo: Open-Meteo',
@@ -3162,7 +3254,8 @@ const Maps = {
       this.map.addLayer({
         id:'omLayer', type:'raster', source:'omSrc',
         paint:{ 'raster-opacity': op, 'raster-fade-duration': 120,
-                'raster-resampling': 'linear', ...(ESCALAS_BLANCAS.has(L_.escala) ? {} : VIVOS) },
+                'raster-resampling': 'linear', ...(ESCALAS_BLANCAS.has(L_.escala) ? (this.base === 'claro' ? NUBE_EN_CLARO : {})
+                    : (this.base === 'claro' && !CON_SUELO_NEGRO.has(L_.escala)) ? CLARO_SUAVE : VIVOS) },
       }, this.firstLabelLayer());
       /* La sombra del terreno, POR ENCIMA del color y rebajada: así el
          cordal y el valle se siguen leyendo sin lavar la capa. */
@@ -3176,7 +3269,7 @@ const Maps = {
           /* Sin relieve también bajo las nubes (08-10-2026, «no se parece
              todavía» a Windy): el sombreado blanquecino aclaraba el suelo
              marrón y lo despejado parecía velo. */
-          this.map.setPaintProperty('hillLayer', 'raster-opacity', (CON_SUELO_NEGRO.has(L_.escala) || ESCALAS_BLANCAS.has(L_.escala)) ? 0 : 0.32);
+          this.map.setPaintProperty('hillLayer', 'raster-opacity', (this.base !== 'claro' && (CON_SUELO_NEGRO.has(L_.escala) || ESCALAS_BLANCAS.has(L_.escala))) ? 0 : 0.32);   // en Claro no hay suelo que tape el relieve
         } catch {}
       }
 
@@ -3788,7 +3881,9 @@ const Maps = {
   sueloParaNubes(on) {
     if (!this.map) return;
     const quitar = () => { ['sueloLayer', 'marLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); }); this.rayasParaNubes(false); };
-    if (!on || this.base === 'oscuro') { quitar(); return; }
+    /* SOLO EN COLOR (19-10-2026, suyo: «en color y oscuro déjalo como está» — que Claro se distinga). En Claro se ve el mapa claro debajo y
+       la nube va oscurecida a gris (`raster-brightness-max`, en la capa), que blanca sobre blanco no existe; en Oscuro nunca hizo falta. */
+    if (!on || this.base === 'oscuro' || this.base === 'claro') { quitar(); return; }
     try {
       quitar();
       const ls = this.map.getStyle()?.layers || [];
@@ -3903,7 +3998,7 @@ const Maps = {
   sueloParaLluvia(on) {
     if (!this.map) return;
     const quitar = () => ['sueloLluviaLayer', 'marLluviaLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
-    if (!on || this.base === 'oscuro') { quitar(); this.etiquetasLegibles(); return; }
+    if (!on || this.base === 'oscuro' || this.base === 'claro') { quitar(); this.etiquetasLegibles(); return; }   // en Claro, la lluvia sobre el mapa claro (19-10-2026)
     const tono = { tierra: '#1b1d21', tierraOp: 0.94, mar: '#0b0c0f', marOp: 0.96 };
     try {
       quitar();
@@ -4022,7 +4117,12 @@ const Maps = {
     // Paso de 3 h en una capa de lluvia o nieve: se dice que va por hora.
     const L_ = TLAYERS.find(l => l.id === this.layer);
     const h = (esAcumulada(L_?.v) || esAcumulada(L_?.encima)) ? horasDelPaso(T, this.t) : 1;
-    this.status(`${M.name} · ${M.res} · pasada de las ${ref} · ${T.length} pasos (${dias.toFixed(0)} días)`
+    /* Una hora de ANTES de la pasada se dice: es lo que preveía una pasada anterior, no lo que cayó (19-10-2026). */
+    const vtAhora = new Date(T[this.t]).getTime();
+    const deAntes = metaUsada.pasadaDe?.[vtAhora] && vtAhora < new Date(metaUsada.reference_time).getTime()
+      ? ` · HORA PASADA: lo que PREVEÍA la pasada de las ${new Date(metaUsada.pasadaDe[vtAhora]).toLocaleString('es', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}, no lo que cayó (lo medido, en las estaciones)`
+      : '';
+    this.status(`${M.name} · ${M.res} · pasada de las ${ref} · ${T.length} pasos (${dias.toFixed(0)} días)${deAntes}`
       + (h > 1 ? ` · paso de ${h} h: ${this.layer === 'nieve' ? 'la nieve' : this.layer === 'tipo' ? 'la lluvia y la nieve' : 'la lluvia'} se enseña POR HORA (la suma de ${h} h ÷ ${h})` : '')
       + (this.usando?.sustituido ? ' · CAPA SUSTITUIDA' : '')
       + (this._sinEncima ? ` · SIN ${this._sinEncima === 'snowfall_water_equivalent' ? 'NIEVE' : this._sinEncima.toUpperCase()}: este modelo no la publica, solo se pinta la lluvia` : ''));
@@ -4200,7 +4300,8 @@ const Maps = {
     // "Tesela" es jerga. El mapa se descarga a cuadros y lo que falla es
     // un cuadro; se dice así, que es lo que se ve en pantalla.
     el.innerHTML = `<b>${fallos} trozo${fallos > 1 ? 's' : ''} del mapa sin cargar.</b>
-      Donde no hay color puede ser que no haya llegado el dato, no que no pase nada.
+      Donde no hay color puede ser que no haya llegado el dato, no que no pase nada.${Peticiones.ultimoFallo
+        ? ` <small>Motivo: ${esc(Peticiones.ultimoFallo)}</small>` : ''}
       <span class="msust__acc"><button type="button" data-acc="reintentar">Reintentar</button><button
         type="button" data-acc="cerrar" aria-label="Cerrar aviso">✕</button></span>`;
     el.onclick = (ev) => {
@@ -6412,9 +6513,8 @@ const Maps = {
     this.opacity = o;
     const L_ = TLAYERS.find(l => l.id === this.layer);
     // (el velo de las densas murió el 31-08: la sombra va encima del color)
-    ['omLayer','radarLayer'].forEach(id => {
-      if (this.map?.getLayer(id)) this.map.setPaintProperty(id, 'raster-opacity', o);
-    });
+    if (this.map?.getLayer('omLayer')) this.map.setPaintProperty('omLayer', 'raster-opacity', opacidadDeCapa(L_, this.base, o));   // la misma cuenta que al pintar
+    if (this.map?.getLayer('radarLayer')) this.map.setPaintProperty('radarLayer', 'raster-opacity', o);
   },
 
   /** Cuántos pasos tiene la capa activa. Cada tipo lleva su propia tira. */

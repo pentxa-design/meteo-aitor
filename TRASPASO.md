@@ -1492,3 +1492,12 @@ Suyo: «pon 3 agentes a revisar fallos en la web» · «luego anda en la web com
 **Cambio de hora del 25-10 (medido con /om 24→27):** Open-Meteo usa un desfase único; el vigilante, el parte, la calibración, el CO y la agenda lo ignoraban (la app ya lo corregía). Nueva `ReglasTiempo.horasAlReloj(d, zona)` en `reglas-tiempo.js` (copiada a las tres webs; la hora repetida sale dos veces, como el reloj) que además corrige el orto y el ocaso (el 25 salían 08:36 y 19:12 en vez de 07:36 y 18:12). La app la usa en envoltorio con la zona del aparato.
 
 **No hecho, a propósito:** quitar las funciones sin llamadas (`cieloPartido`, `cieloDelDia`, `picoOleaje24h`, `tideExtrema`: hay pruebas que las ejecutan; es limpieza, no fallo); distinguir 400 «No data» de fallo de servicio en `completar()` (ya se dice con `rellenoFallo`).
+
+### §75 · 19-10-2026, mañana, iMac
+- **Cambio de hora (25-10) publicado en las tres** (CO 2026.10.19-070645 tras el tope de 8/día). «La más alta de los 5» ya no nombra al Automático (las tres leen MODELOS_TORMENTA); `horaDelExtremo` en la regla única.
+- **El mapa reventó** con «Cannot access 'corteSeco' before initialization» (lo publiqué el 18 sin abrir el mapa; lo vio él). `corteSeco` arriba de `escalasPropias` y prueba que carga maps.js ENTERO en una caja (vm) y ejecuta las escalas.
+- Grados a la derecha de cada dibujo (franjas, Horas, 10 días); en 10 días los dibujos se quedaron a 0 px en la v0728 (visto en pantalla y arreglado en la 0733).
+- Fondo **Claro** distinto de Color (orden suya): capa ×0,65 y menos saturada, lluvia sin suelo negro, nubes sin ocre y en gris. NO-SE-TOCA.md actualizado.
+- Lluvia/nieve: el paso de ARRANQUE de la pasada no trae la variable («precipitation not found») → fuera de la tira; el cartel de «trozos sin cargar» dice el motivo.
+- **24 h hacia atrás en el mapa** (`conPasado`): cada hora pasada, de la pasada anterior más reciente que arrancó ANTES; la barra dice «HORA PASADA: lo que PREVEÍA…». Probado en pantalla (dom 18:00, Valencia, 0 fallos).
+- Método que pidió él y queda: **mirar en el navegador ANTES de publicar** (inyectando la prueba en la página abierta) y después otra vez.

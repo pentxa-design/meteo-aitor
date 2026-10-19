@@ -2982,15 +2982,15 @@ ok('la escala de dBZ no pinta nada hasta 10 dBZ (0,15 mm/h) y mantiene los 15 tr
 ok('«Valores» no rotula por debajo de 5 dBZ (pero el pulsar el punto sigue dando el número)',
    /if \(e\?\.unidad === 'dBZ' && txt < DBZ_SIN_ECO\) continue;/.test(mapsSrc)
    && !/if \(e\?\.unidad === 'dBZ'[^\n]*\n[^\n]*pop\.setHTML/.test(mapsSrc));
-ok('bajo la lluvia, en mm/h y en dBZ, el suelo va negro como en AguaceroWx',
+ok('bajo la lluvia, en mm/h y en dBZ, el suelo va negro como en AguaceroWx (en Color; en Claro, sobre el mapa claro desde el 19-10-2026)',
    /const CON_SUELO_NEGRO = new Set\(\['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul', 'espesor'\]\);/.test(mapsSrc)
    && /sueloParaLluvia\(CON_SUELO_NEGRO\.has\(L_\.escala\)\)/.test(mapsSrc)
-   && /setPaintProperty\('hillLayer', 'raster-opacity', \(CON_SUELO_NEGRO\.has\(L_\.escala\) \|\| ESCALAS_BLANCAS\.has\(L_\.escala\)\) \? 0 : 0\.32\)/.test(mapsSrc)
+   && /setPaintProperty\('hillLayer', 'raster-opacity', \(this\.base !== 'claro' && \(CON_SUELO_NEGRO\.has\(L_\.escala\) \|\| ESCALAS_BLANCAS\.has\(L_\.escala\)\)\) \? 0 : 0\.32\)/.test(mapsSrc)
    && /const tono = \{ tierra: '#1b1d21'[^}]*mar: '#0b0c0f'/.test(mapsSrc)
    && !/#5a5f66/.test(mapsSrc),
    'suyo: «y si es de lluvia prefiero en mm»: misma pintada negra, leyendo milímetros');
-ok('y en el fondo Oscuro no se pone suelo encima (ya está oscuro)',
-   /if \(!on \|\| this\.base === 'oscuro'\) \{ quitar\(\); this\.etiquetasLegibles\(\); return; \}/.test(mapsSrc));
+ok('y en el fondo Oscuro no se pone suelo encima (ya está oscuro), ni en Claro (19-10-2026: «en color y oscuro déjalo como está»)',
+   /if \(!on \|\| this\.base === 'oscuro' \|\| this\.base === 'claro'\) \{ quitar\(\); this\.etiquetasLegibles\(\); return; \}/.test(mapsSrc));
 /* ── Y LOS NOMBRES DE LOS PUEBLOS, LEGIBLES ENCIMA DEL SUELO ───────
    Suyo, 27-09-2026, con el mapa de lluvia: «no se leen bien los pueblos
    y ciudades». El suelo pinta un casi negro sobre el fondo CLARO y las
@@ -7758,9 +7758,9 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
      truco de Meteored. Ya no se elige entre relieve y color. */
   ok('el color va pleno y la sombra del terreno se dibuja encima, rebajada',
      /* 15-09-2026: las capas de nubes suben a ≥ 0,92 (nube blanca lavada sobre el mar azul acero); el resto sigue al valor del deslizador, nunca por debajo. */
-     /const op = ESCALAS_BLANCAS\.has\(L_\.escala\) \? Math\.max\(this\.opacity, 0\.92\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? Math\.max\(this\.opacity, 0\.95\)\s*: this\.opacity;/.test(M)
+     /const op = opacidadDeCapa\(L_, this\.base, this\.opacity\);/.test(M)
      && /moveLayer\('hillLayer', this\.firstLabelLayer\(\)\)/.test(M)
-     && /'raster-opacity', \(CON_SUELO_NEGRO\.has\(L_\.escala\) \|\| ESCALAS_BLANCAS\.has\(L_\.escala\)\) \? 0 : 0\.32/.test(M),
+     && /'raster-opacity', \(this\.base !== 'claro' && \(CON_SUELO_NEGRO\.has\(L_\.escala\) \|\| ESCALAS_BLANCAS\.has\(L_\.escala\)\)\) \? 0 : 0\.32/.test(M),
      'sus dos peticiones a la vez: relieve visible y mapa sin lavar (y bajo la lluvia, sombra apagada: 18-09-2026)');
   ok('la T850 vive en el grupo AIRE, al lado de Temperatura 2 m',
      (() => { const i = M.indexOf("id:'temp'"); const j = M.indexOf("id:'t850'");
@@ -11482,15 +11482,15 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
      JSON.stringify({ alfa, clara }));
   ok('las nubes piden degradado continuo (color_blend), como la reflectividad',
      /const ESCALAS_SUAVES = new Set\(\[[^\]]*'nubes'[^\]]*\]\);/.test(M));
-  ok('con una capa de nubes, el suelo se pone en tono tierra y el mar en azul acero (Claro y Color); en Oscuro no hace falta',
-     /sueloParaNubes\(on\) \{/.test(M) && /if \(!on \|\| this\.base === 'oscuro'\) \{ quitar\(\); return; \}/.test(M)
+  ok('con una capa de nubes, el suelo se pone en tono tierra y el mar en azul acero (solo en Color desde el 19-10-2026); en Oscuro y Claro no',
+     /sueloParaNubes\(on\) \{/.test(M) && /if \(!on \|\| this\.base === 'oscuro' \|\| this\.base === 'claro'\) \{ quitar\(\); return; \}/.test(M)
      && /id:'sueloLayer', type:'background'/.test(M) && /id:'marLayer', type:'fill', source:'carto', 'source-layer':'water'/.test(M),
      'una nube blanca sobre tierra blanca (#fafaf8) no existe');
   const iApply = M.indexOf('async apply() {'), iOm = M.indexOf("id:'omLayer', type:'raster', source:'omSrc'", iApply);
   const iSuelo = M.indexOf("this.sueloParaNubes(ESCALAS_BLANCAS.has(L_.escala));", iApply);
   ok('apply() pone el suelo ANTES de montar la capa y solo para las escalas blancas (nubes, niebla), con la nube casi opaca (≥ 0,92); quitarCapasDeDatos() lo quita con las demás',
      iSuelo > iApply && iSuelo < iOm
-     && /const op = ESCALAS_BLANCAS\.has\(L_\.escala\) \? Math\.max\(this\.opacity, 0\.92\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? Math\.max\(this\.opacity, 0\.95\)\s*: this\.opacity;/.test(M)
+     && /const op = opacidadDeCapa\(L_, this\.base, this\.opacity\);/.test(M)
      && /const CAPAS  = \['omLayer', 'omLayer2', 'radarLayer', 'satLayer', 'aemetLayer', 'acumLayer',\s*'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'\];/.test(M),
      'si se quedara puesto, la siguiente capa (temperatura, ráfagas) saldría sobre tierra ocre sin motivo');
   /* 17:52, con Windy al lado otra vez: «blancas, negras donde pinta agua», «verde donde lloverá», «así quiero». */
@@ -13418,7 +13418,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /if \(conservarAcum && id === 'acumLayer'\) return;/.test(M) && /if \(conservarAcum && id === 'acumSrc'\) return;/.test(M));
   ok('las capas de datos van más vivas (suyo, 16-10: «sosos»): el modelo y la acumulada llevan raster-saturation y raster-contrast, y las nubes blancas quedan fuera',
      /const VIVOS = \{ 'raster-saturation': 0\.[3-9]\d*, 'raster-contrast': 0\.\d+ \};/.test(M)
-     && /\.\.\.\(ESCALAS_BLANCAS\.has\(L_\.escala\) \? \{\} : VIVOS\)/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
+     && /\.\.\.\(ESCALAS_BLANCAS\.has\(L_\.escala\) \? \(this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)\s*: \(this\.base === 'claro' && !CON_SUELO_NEGRO\.has\(L_\.escala\)\) \? CLARO_SUAVE : VIVOS\)/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
   ok('la rampa es EXACTAMENTE la «Acumulación de lluvia» de Windy (tabla leída de windy.com/colors el 16-10-2026): cortes 0·1·5·10·30·50·80·120·200·320·600 y sus once colores, todos opacos desde 5 litros',
      (() => { const t = M.slice(M.indexOf('const acc = ['), M.indexOf('];', M.indexOf('const acc = [')));
        const hx = [...t.matchAll(/'#([0-9a-f]{6})',(\.?\d+)/g)];
@@ -13870,6 +13870,61 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      !err && E && typeof E === 'object', err ? String(err) : '');
   ok('   y trae las escalas de nieve y de lluvia',
      !!E?.espesor?.scale?.breakpoints && !!E?.nieveAzul?.scale?.breakpoints && !!E?.lluvia?.scale?.breakpoints);
+  /* 19-10-2026: el primer paso de una capa ACUMULADA (la hora de arranque de la pasada) no trae la variable: «Variable: precipitation
+     not found» y «trozos del mapa sin cargar» en AROME HD a las 05:00. No se ofrece en la tira; en las demás capas, sí. */
+  let idxLluvia = null, idxTemp = null, idx3 = null;
+  try {
+    const meta = "{ reference_time: '2026-10-19T03:00Z', valid_times: ['2026-10-19T03:00Z', '2026-10-19T04:00Z', '2026-10-19T05:00Z', '2026-10-19T06:00Z'] }";
+    idxLluvia = vm.runInContext(`Maps.layer = 'precipitation'; Maps.pasoHoras = 1; JSON.stringify(Maps.indices(${meta}))`, caja);
+    idx3 = vm.runInContext(`Maps.layer = 'precipitation'; Maps.pasoHoras = 3; JSON.stringify(Maps.indices(${meta}))`, caja);
+    idxTemp = vm.runInContext(`Maps.layer = 'temp'; Maps.pasoHoras = 1; JSON.stringify(Maps.indices(${meta}))`, caja);
+  } catch (e) { idxLluvia = String(e); }
+  ok('la tira de la lluvia empieza en el primer paso CON lluvia (no en la hora de arranque, que no la trae); la de temperatura, desde el arranque',
+     idxLluvia === '[1,2,3]' && idx3 === '[1]' && idxTemp === '[0,1,2,3]', `lluvia ${idxLluvia} · cada 3 h ${idx3} · temperatura ${idxTemp}`);
+  /* 24 H HACIA ATRÁS (19-10-2026, suyo: «al menos hasta ayer al mediodía» · «lo que cayó ayer en Gandía»). Un servidor de mentira con
+     pasadas cada 3 h: cada hora de antes sale de la pasada más reciente que arrancó ANTES de ella. */
+  (globalThis.__pendientes ??= []).push((async () => {
+    let r = null, err = null;
+    try {
+      caja.__fichas = {};
+      const p2 = n => String(n).padStart(2, '0');
+      const iso = ms => new Date(ms).toISOString().slice(0, 16) + 'Z';
+      const ref = Date.parse('2026-10-19T03:00Z');
+      for (let k = 1; k <= 9; k++) {            // pasadas de 00Z, 21Z, 18Z… con 48 h hora a hora cada una
+        const ms = ref - 3 * k * 3600e3, R = new Date(ms);
+        const dir = `${R.getUTCFullYear()}/${p2(R.getUTCMonth() + 1)}/${p2(R.getUTCDate())}/${p2(R.getUTCHours())}00Z`;
+        caja.__fichas[dir] = { reference_time: iso(ms), valid_times: Array.from({ length: 49 }, (_, h) => iso(ms + h * 3600e3)) };
+      }
+      vm.runInContext(String.raw`jget = async (url) => { const m = /\/(\d{4}\/\d{2}\/\d{2}\/\d{4}Z)\/meta\.json$/.exec(url); const f = m && __fichas[m[1]]; if (!f) { const e = new Error('HTTP 404'); e.status = 404; throw e; } return JSON.parse(JSON.stringify(f)); };`, caja);
+      r = await vm.runInContext(`(async () => {
+        const meta = { reference_time: '2026-10-19T03:00Z', valid_times: ['2026-10-19T03:00Z', '2026-10-19T04:00Z', '2026-10-19T05:00Z'] };
+        await conPasado(meta, 'meteofrance_arome_france_hd');
+        Maps.layer = 'precipitation'; Maps.pasoHoras = 1;
+        const i16 = meta.valid_times.findIndex(t => new Date(t).getTime() === Date.parse('2026-10-18T16:00Z'));
+        const i3 = meta.valid_times.findIndex(t => new Date(t).getTime() === Date.parse('2026-10-19T03:00Z'));
+        const i18 = meta.valid_times.findIndex(t => new Date(t).getTime() === Date.parse('2026-10-18T18:00Z'));
+        return { n: meta.valid_times.length, primera: meta.valid_times[0], horas: meta._pasado.horas,
+                 url16: Maps.omUrl('precipitation', i16, 'meteofrance_arome_france_hd', meta),
+                 url3: Maps.omUrl('precipitation', i3, 'meteofrance_arome_france_hd', meta),
+                 url18: Maps.omUrl('precipitation', i18, 'meteofrance_arome_france_hd', meta),
+                 urlHoy: Maps.omUrl('precipitation', meta.valid_times.length - 1, 'meteofrance_arome_france_hd', meta),
+                 idx0: Maps.indices(meta)[0] };
+      })()`, caja);
+    } catch (e) { err = e; }
+    ok('el mapa mira 24 h hacia atrás: ayer a las 16:00 UTC sale de la pasada de las 15Z (la más reciente que arrancó antes)',
+       !err && r && r.horas >= 20 && /\/2026\/10\/18\/1500Z\/2026-10-18T1600\.om/.test(r.url16 || ''), err ? String(err) : JSON.stringify(r));
+    ok('   la hora de arranque de la pasada actual (03Z) sale de la ANTERIOR (00Z), que sí tiene lluvia; y lo de después, de la actual',
+       !!r && /\/2026\/10\/19\/0000Z\/2026-10-19T0300\.om/.test(r.url3 || '') && /\/2026\/10\/19\/0300Z\/2026-10-19T0500\.om/.test(r.urlHoy || ''),
+       r ? `${r.url3?.slice(60, 140)} · ${r.urlHoy?.slice(60, 140)}` : '');
+    ok('   una hora que es el ARRANQUE de otra pasada (18Z de ayer) sale de la de antes (15Z), no de su arranque, que no trae lluvia',
+       !!r && /\/2026\/10\/18\/1500Z\/2026-10-18T1800\.om/.test(r.url18 || ''), r?.url18?.slice(60, 140));
+    ok('   y con las horas de antes, la tira de la lluvia empieza por la primera de ellas (ya no se salta nada)', !!r && r.idx0 === 0, String(r?.idx0));
+  })());
+  ok('   la barra dice que una hora de antes es lo que PREVEÍA una pasada anterior, no lo que cayó',
+     /HORA PASADA: lo que PREVEÍA la pasada de las/.test(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8')));
+  ok('   y el cartel de «trozos sin cargar» dice el motivo del último que falló',
+     /this\.ultimoFallo = String\(e\?\.message \|\| e\)\.slice\(0, 90\);/.test(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8'))
+     && /<small>Motivo: \$\{esc\(Peticiones\.ultimoFallo\)\}<\/small>/.test(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8')));
 }
 
 
@@ -13907,6 +13962,28 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /\.dcard__i:has\(\.dcard__ii\)\{width:auto;height:auto\}/.test(css));
   ok('Horas: el dibujo y los grados en una fila (.hcard__it)',
      /<div class="hcard__it"><div class="hcard__i">/.test(src) && /\.hcard__it\{display:flex;align-items:center/.test(css));
+}
+
+
+
+/* ═══ EL FONDO CLARO, CLARO DE VERDAD (19-10-2026) ═══════════════════════
+   Suyo: «en temperatura o en cualquier capa no había diferencia, solo contra
+   el oscuro» · «en color y oscuro déjalo como está». */
+{
+  grupo('Claro se distingue de Color, y Color y Oscuro no cambian');
+  const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const cuerpo = (/function opacidadDeCapa\([\s\S]*?\n\}/.exec(M) || [])[0];
+  const f = cuerpo ? new Function('ESCALAS_BLANCAS', 'CON_SUELO_NEGRO', 'CLARO_OPACIDAD', cuerpo + '\nreturn opacidadDeCapa;')(
+    new Set(['nubes', 'niebla']), new Set(['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul', 'espesor']), Number((/const CLARO_OPACIDAD = ([\d.]+);/.exec(M) || [])[1])) : null;
+  ok('temperatura con el deslizador a 0,92: en Color 0,92 (como siempre) y en Claro más suave (0,6), para que se vea el mapa claro debajo',
+     !!f && f({ escala: 'tempc' }, 'color', 0.92) === 0.92 && Math.abs(f({ escala: 'tempc' }, 'claro', 0.92) - 0.598) < 0.001
+     && f({ escala: 'tempc' }, 'oscuro', 0.92) === 0.92);
+  ok('   las nubes y la lluvia no se aclaran (se leerían peor): 0,92 y 0,95 en cualquier fondo',
+     !!f && f({ escala: 'nubes' }, 'claro', 0.5) === 0.92 && f({ escala: 'lluvia' }, 'claro', 0.5) === 0.95);
+  ok('   y el deslizador CAPA usa la misma cuenta (si no, al moverlo en Claro la capa volvería a taparlo todo)',
+     /setPaintProperty\('omLayer', 'raster-opacity', opacidadDeCapa\(L_, this\.base, o\)\)/.test(M));
+  ok('   en Claro las nubes van en gris (sin suelo ocre) y el resto menos saturado; en Color, VIVOS como siempre',
+     /this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)/.test(M) && /\(this\.base === 'claro' && !CON_SUELO_NEGRO\.has\(L_\.escala\)\) \? CLARO_SUAVE : VIVOS/.test(M));
 }
 
 
