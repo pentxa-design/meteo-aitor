@@ -439,16 +439,13 @@ const TLAYERS = [
   /* 19-10-2026, suyo con EUMETView delante: «utilízala» · «si hay algo más, añades». Lo del Meteosat nuevo (MTG) que le sirve. */
   { id:'sat_rayos', g:'Satélite', name:'Rayos (satélite)', v:null, unit:'', sat:'rayos',
     desc:'Rayos que ve el Meteosat nuevo desde arriba, en bloques de 5 minutos, de día y de noche (también los de dentro de la nube). Llega con unos 15 min de retraso, antes que el mapa de AEMET. Sin puntos no es «no hay rayos» si la hora es vieja: mira la hora de la pasada' },
-  { id:'sat_lluvia', g:'Satélite', name:'Lluvia (satélite)', v:null, unit:'', sat:'lluvia',
-    desc:'Lluvia estimada por el satélite cada 10 minutos (infrarrojo calibrado con microondas). Es una estimación desde arriba: la nube baja de la costa se le puede escapar' },
-  { id:'sat_nieve', g:'Satélite', name:'Nieve y niebla (día)', v:null, unit:'', sat:'nieve', sol:true,
-    desc:'Solo de día: la NIEVE en el suelo sale en rojo y la niebla y nubes bajas en blanco. Para ver si los montes y las pistas tienen nieve' },
-  { id:'sat_niebla', g:'Satélite', name:'Niebla (noche)', v:null, unit:'', sat:'niebla',
-    desc:'Solo de noche: niebla y nubes bajas destacadas. De día se queda con la última imagen de la madrugada (mira la hora de la pasada)' },
+  /* 19-10-2026, suyo: «tengo capas de niebla etc. repetidas, deja las válidas solo». Fuera Lluvia (satélite) —una hora tarde, y la
+     lluvia de ahora la dan el radar y Radar + previsión—, Niebla (noche) —la niebla ya es la capa Niebla de Cielo— y Visible —de día
+     es la misma foto que GeoColour—. «Nieve y niebla» se queda solo con lo que no da otra capa: la nieve en el suelo. */
+  { id:'sat_nieve', g:'Satélite', name:'Nieve (satélite)', v:null, unit:'', sat:'nieve', sol:true,
+    desc:'Solo de día: la NIEVE en el suelo sale en rojo (lo blanco son nubes bajas). Para ver si los montes y las pistas tienen nieve' },
   { id:'sat_geo', g:'Satélite', name:'GeoColour', v:null, unit:'', sat:'geocolor',
     desc:'La foto del satélite de día y las nubes de noche sobre el mapa con las luces de las ciudades: el vistazo general' },
-  { id:'sat_vis', g:'Satélite', name:'Visible', v:null, unit:'', sat:'visible', sol:true,
-    desc:'Meteosat nuevo en visible de alta resolución, cada 10 min — la foto tal cual. Solo de día' },
 
   { id:'gusts',  g:'Viento', name:'Ráfagas', v:'wind_gusts_10m', unit:'km/h', vientoApi: true,
     escala:'rafagas', rumbo: true,
@@ -526,8 +523,7 @@ const TLAYERS = [
     desc:'Las que te dejan sin ver la torre' },
   { id:'clouds_mid',  g:'Cielo', name:'Nubes medias', v:'cloud_cover_mid', unit:'%', escala:'nubes', desc:'Nubosidad media' },
   { id:'clouds_high', g:'Cielo', name:'Nubes altas', v:'cloud_cover_high', unit:'%', escala:'nubes', desc:'Nubosidad alta' },
-  { id:'vis', g:'Cielo', name:'Visibilidad', v:'visibility', unit:'m', escala:'visibilidad',
-    desc:'Visibilidad horizontal. Si no se ve la torre desde abajo, no se sube' },
+  /* «Visibilidad» se quitó el 19-10-2026: era el MISMO dato que Niebla, de abajo (suyo: «capas repetidas, deja las válidas»). */
   /* NIEBLA COMO WINDY (17-10-2026, suyo: «la niebla de Windy está top» · «la capa de
      niebla no esperes, hazlo»). La misma visibilidad del modelo, pintada como Windy:
      blanca donde baja de 2 km, más opaca cuanto más cerrada, y nada donde se ve bien. */
@@ -2307,7 +2303,9 @@ const Maps = {
     }
     this.model = LS.get('tmodel', 'dwd_icon_eu');
     /* Una capa guardada que ya no existe (la acumulada se retiró el 17-10-2026) no puede romper el mapa: cae a Precipitación. */
-    const guardada = LS.get('tlayer', 'precipitation');
+    /* Las quitadas el 19-10-2026 caen en la que las sustituye, no en otra cualquiera. */
+    const QUITADAS = { vis: 'niebla', sat_niebla: 'niebla', sat_vis: 'sat_geo', sat_lluvia: 'radarprev' };
+    const guardada = QUITADAS[LS.get('tlayer', 'precipitation')] ?? LS.get('tlayer', 'precipitation');
     this.layer = TLAYERS.some(l => l.id === guardada) ? guardada : 'precipitation';
     this.base  = LS.get('tbase',  'claro');
     this.terrain = LS.get('tterrain', true);

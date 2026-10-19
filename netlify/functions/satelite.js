@@ -71,9 +71,7 @@ const CAPAS = {
      `sinComprobar`: una imagen SIN rayos o SIN lluvia es pequeña y vacía de verdad, y la comprobación de abajo la daría por «no
      servida»; lo que evita pedir una pasada aún no publicada es no pasar del fin que declara el catálogo (como `?rayos=1`). */
   rayos:      { wms: 'mtg_fd:li_afa',        nombre: 'Rayos del satélite (MTG)', sinComprobar: true },
-  lluvia:     { wms: 'mtg_fd:h40b',          nombre: 'Lluvia por satélite (MTG)', sinComprobar: true },
-  nieve:      { wms: 'mtg_fd:rgb_snow',      nombre: 'Nieve y niebla, de día (MTG)' },
-  niebla:     { wms: 'mtg_fd:rgb_fog',       nombre: 'Niebla y nubes bajas, de noche (MTG)' },
+  nieve:      { wms: 'mtg_fd:rgb_snow',      nombre: 'Nieve, de día (MTG)' },   // lluvia y niebla del satélite, quitadas del mapa el 19-10-2026
   geocolor:   { wms: 'mtg_fd:rgb_geocolour', nombre: 'GeoColour (MTG)' },
 };
 

@@ -13314,7 +13314,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && JSON.stringify(colorAcum(5, bp, cols)) === JSON.stringify([...cols[3].slice(0, 3), 255]) && JSON.stringify(colorAcum(400, bp, cols)) === JSON.stringify([...cols[10].slice(0, 3), 255])
      && colorAcum(35, bp, cols)[0] > cols[5][0] && colorAcum(35, bp, cols)[0] < cols[6][0]);
   ok('la capa acumulada está RETIRADA del selector (suyo, 17-10: «chapuza de manchón»), una capa guardada que no existe cae a Precipitación, y el código de rehacerla sigue (desvío en apply, selector de horas, se quita con las demás)',
-     /CAPA RETIRADA el 17-10-2026/.test(M) && !/^\s*\{ id:'acum'/m.test(M) && /guardada = LS\.get\('tlayer', 'precipitation'\);\s*\n\s*this\.layer = TLAYERS\.some\(l => l\.id === guardada\) \? guardada : 'precipitation';/.test(M)
+     /CAPA RETIRADA el 17-10-2026/.test(M) && !/^\s*\{ id:'acum'/m.test(M) && /guardada = QUITADAS\[LS\.get\('tlayer', 'precipitation'\)\] \?\? LS\.get\('tlayer', 'precipitation'\);\s*\n\s*this\.layer = TLAYERS\.some\(l => l\.id === guardada\) \? guardada : 'precipitation';/.test(M)
      && /if \(L_\.acum\) \{[\s\S]{0,400}?await this\.pintarAcum\(L_, R\);/.test(M)
      && /'aemetLayer', 'acumLayer'/.test(M) && /'aemetSrc', 'acumSrc'/.test(M)
      && /L_\.sat \|\| L_\.acum \|\| !this\.usando/.test(M) && /data-ta="\$\{h\}"/.test(M)
@@ -14057,7 +14057,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   const horas = (fin, n, paso) => Array.from({ length: n }, (_, k) => new Date(Date.parse(fin) - (n - 1 - k) * paso * 60e3).toISOString());
   const cat = (finGeo, finLluvia) => ({ wms: 'https://w', fuente: 'EUMETSAT', capas: {
     geocolor: { wms: 'mtg_fd:rgb_geocolour', pasoMin: 10, horas: horas(finGeo, 12, 10) },
-    lluvia: { wms: 'mtg_fd:h40b', pasoMin: 10, horas: horas(finLluvia, 12, 10) } } });
+    ir: { wms: 'mtg_fd:ir105_hrfi', pasoMin: 10, horas: horas(finLluvia, 12, 10) } } });
   let r = null, err = null;
   try {
     vm.createContext(caja);
@@ -14070,11 +14070,11 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
     M.firstLabelLayer = () => undefined; M.avisoNoche = nada; M.rayos = nada;
     let estado = ''; M.status = t => { estado = t; };
     const TL = vm.runInContext('TLAYERS', caja);
-    const G = TL.find(l => l.id === 'sat_geo'), Ll = TL.find(l => l.id === 'sat_lluvia');
+    const G = TL.find(l => l.id === 'sat_geo'), Ll = TL.find(l => l.id === 'sat_ir');
     r = { };
     // (1) Mirando la última de Lluvia (12:10) se pasa a GeoColour, que llega a las 12:40: se entra en las 12:40, no en las 12:10.
     catalogo = cat('2026-10-19T12:40:00Z', '2026-10-19T12:10:00Z');
-    M.layer = 'sat_lluvia';
+    M.layer = 'sat_ir';
     (globalThis.__pendientes ??= []).push((async () => {
       try {
         M._satAlFinal = true;   // se llega desde el «ahora» del modelo
@@ -14084,7 +14084,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
         await M.applySatelite(G);
         r.geoAlEntrar = M._sat.horas[M.t];
         // y si estabas en una hora pasada a propósito (lluvia 11:30), GeoColour respeta esa hora
-        M.layer = 'sat_lluvia'; await M.applySatelite(Ll); M.t = 4; r.lluviaPasada = M._sat.horas[M.t];
+        M.layer = 'sat_ir'; await M.applySatelite(Ll); M.t = 4; r.lluviaPasada = M._sat.horas[M.t];
         M.horaPedida = M.horaMirada(); M._satAlFinal = M.enLoUltimo(); M.layer = 'sat_geo';
         await M.applySatelite(G); r.geoPasada = M._sat.horas[M.t];
         // (2) Diez minutos después hay imagen nueva (12:50): con el catálogo caducado se pide otra vez y se ve.
@@ -14117,8 +14117,13 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('Nubes (infrarrojo) y Visible salen del Meteosat NUEVO, no del viejo que iba una hora atrasado (19-10-2026)',
      /\bir:\s*\{\s*wms:\s*'mtg_fd:ir105_hrfi'/.test(SatS) && /\bvisible:\s*\{\s*wms:\s*'mtg_fd:vis06_hrfi'/.test(SatS),
      (SatS.match(/\b(ir|visible):\s*\{\s*wms:\s*'[^']+'/g) || []).join(' · '));
-  ok('las cinco capas están en el grupo Satélite del mapa',
-     ['sat_rayos', 'sat_lluvia', 'sat_nieve', 'sat_niebla', 'sat_geo'].every(id => new RegExp(`\\{ id:'${id}', g:'Satélite'`).test(Mx)));
+  /* Suyo, 19-10-2026: «tengo capas de niebla etc. repetidas, deja las válidas solo». */
+  ok('las repetidas no están: Visibilidad (= Niebla), Lluvia (satélite), Niebla (noche) y Visible (= GeoColour)',
+     !/\{ id:'(vis|sat_lluvia|sat_niebla|sat_vis)', g:/.test(Mx) && /\{ id:'niebla', g:'Cielo'/.test(Mx) && /\{ id:'sat_geo', g:'Satélite'/.test(Mx));
+  ok('   y quien las tenía abiertas cae en la que las sustituye (Visibilidad → Niebla, Visible → GeoColour)',
+     /QUITADAS = \{ vis: 'niebla', sat_niebla: 'niebla', sat_vis: 'sat_geo', sat_lluvia: 'radarprev' \}/.test(Mx));
+  ok('rayos, nieve y GeoColour están en el grupo Satélite del mapa',
+     ['sat_rayos', 'sat_nieve', 'sat_geo'].every(id => new RegExp(`\\{ id:'${id}', g:'Satélite'`).test(Mx)));
   (globalThis.__pendientes ??= []).push((async () => {
     /* Relativo al reloj (el arnés corre a otras horas del día: con una hora fija, a las 03:30 «ahora» quedaba antes del fin). */
     const redondo = (ms, min) => new Date(Math.floor(ms / (min * 60e3)) * min * 60e3).toISOString();
