@@ -3851,19 +3851,19 @@ const cuando1 = new Date(); cuando1.setMinutes(0, 0, 0);
 
 globalThis.COMPARAR = [
   { om: 'ecmwf_ifs025', name: 'ECMWF' },
-  { om: 'meteofrance_arpege_europe', name: 'ARPEGE' },
+  { om: 'icon_seamless', name: 'ICON' },
 ];
 
+/* Desde el 19-10-2026 `peorRacha` lee MODELOS_TORMENTA (los cinco con nombre, sin el «Automático»): el modelo que da más es ICON. */
 S.comparativa = { _sitio: selloDe(), hourly: {
   time: [isoDe(cuando1).slice(0, 16)],
   wind_gusts_10m_ecmwf_ifs025: [19],
-  meteofrance_arpege_europe: null,
-  wind_gusts_10m_meteofrance_arpege_europe: [46],
+  wind_gusts_10m_icon_seamless: [46],
 } };
 
 let r_ = peorRacha(horaRacha(19, 19, cuando1));
 ok('SOLLUBE 27-08: coge el peor de los modelos, no el cargado',
-   r_ && r_.v10 === 46 && r_.quien === 'ARPEGE',
+   r_ && r_.v10 === 46 && r_.quien === 'ICON',
    JSON.stringify(r_));
 
 /* A LA ALTURA DE TRABAJO, con el factor del propio modelo cargado.
@@ -8019,7 +8019,7 @@ grupo('CADA EMPLAZAMIENTO CON SUS DATOS, NO CON LOS DEL DE AL LADO (01-09)');
     .toISOString().slice(0, 13) + ':00';
   /* La columna se escribe con el modelo que el arnés tenga en COMPARAR:
      el banco usa modelos de mentira (a, b, c…) y un nombre real no casaba. */
-  const unModelo = COMPARAR[0].om;
+  const unModelo = ReglasTiempo.MODELOS_TORMENTA[0].om;   // desde el 19-10-2026 `peorRacha` lee los cinco con nombre, no COMPARAR
   S.comparativa = { _sitio: key({ name: 'BI BERMEO', lat: 43.413, lon: -2.718 }),
     hourly: { time: [isoH], [`wind_gusts_10m_${unModelo}`]: [80] } };
 
@@ -8100,7 +8100,7 @@ grupo('EL SOL DE LA MAÑANA NO SE BORRA (01-09-2026, su queja de siempre)');
      'si cada pantalla se hace su cuenta, vuelven a discrepar');
   ok('y el dibujo del día parte por donde dicen los tramos, no por el reloj',
      /const R = resumenCielo\(delDia\);/.test(src)
-     && /R\.partes\.map\(t => `<i>\$\{icon\(t\.code, d\)\}/.test(src),
+     && /R\.partes\.map\(t => `<i><span class="tramo__f">\$\{icon\(t\.code, d\)\}/.test(src),
      'desde el 09-09 el día pinta un icono por tramo de resumenCielo, la misma función que la franja');
 }
 
@@ -8815,7 +8815,7 @@ grupo('El martes doble: la franja dice el orden del cielo (31-08, 21:17)');
      mitades, el dibujo también, y de la MISMA función. */
   ok('el dibujo acompaña: franja partida = un icono por tramo, de la misma función que la frase',
      /resumenCielo\(sel\)/.test(src)
-     && /class="part__tira">\$\{R\.partes\.map\(t => `<i>\$\{icon\(t\.code, d\)\}<u>\$\{rot\(t\)\}<\/u><\/i>`\)/.test(src),
+     && /class="part__tira">\$\{R\.partes\.map\(t => `<i><span class="tramo__f">\$\{icon\(t\.code, d\)\}<b class="tramo__t">/.test(src),
      'texto e icono no pueden calcular el corte cada uno por su lado');
   ok('el dibujo del día es el DÍA ENTERO, de 0 a 23',
      /let delDia = conDato;/.test(src)
@@ -10327,7 +10327,7 @@ console.log('\n  Revisión 04-09: los dos dibujos del día dicen QUÉ horas resu
      !/<u>mañana<\/u>/.test(cuerpo) && !/<u>tarde<\/u>/.test(cuerpo),
      'con el corte a las 16:00, «tarde» resumía solo de 17 a 20 h');
   ok('el rótulo sale de las MISMAS horas que el dibujo, y cada tramo con su sol o su luna',
-     /R\.partes\.map\(t => `<i>\$\{icon\(t\.code, deSuHora\(t\)\)\}<u>\$\{has\(t\.desde\) \? `\$\{t\.desde\}h` : ''\}<\/u><\/i>`\)/.test(cuerpo)
+     /R\.partes\.map\(t => `<i><span class="tramo__f">\$\{icon\(t\.code, deSuHora\(t\)\)\}<b class="tramo__t">/.test(cuerpo)
      && /const deSuHora = t => \{/.test(cuerpo),
      'metida la noche en la ventana, un chubasco de las 22:00 salía con sol');
   /* Ejecutado, la función de rótulo tal cual está escrita. */
@@ -13788,6 +13788,125 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('la app usa la MISMA cuenta (envoltorio con la zona del aparato), no una segunda copia: el orto y el ocaso del 25-10 ya no salen una hora tarde',
      /function horasAlReloj\(d\) \{[\s\S]*?return ReglasTiempo\.horasAlReloj\(d, Intl\.DateTimeFormat\(\)\.resolvedOptions\(\)\.timeZone\);\n\}/.test(rd('app.js'))
      && !/const pasa = \(arr, off\)/.test(rd('app.js')));
+}
+
+
+
+/* ═══ DOS COSAS DEL CENTRO OPERATIVO (19-10-2026), IGUALES EN LAS TRES WEBS ═══
+   1) «la más alta de los 5, la da Automático» con el Automático oculto del
+      selector: la lista de «los 5» estaba escrita a mano en tres sitios, y
+      en los tres llevaba el Automático. Ahora las tres leen MODELOS_TORMENTA.
+   2) «Máx 17° a las 00:00»: el empate de un día plano se lo quedaba la
+      primera hora, y un máximo de verdad a medianoche no se explicaba. */
+{
+  grupo('Los cinco sin el Automático, y la hora del máximo que no desentona');
+  const R = require('./reglas-tiempo.js');
+  const dia = ts => ts.map((t, h) => ({ h, t }));
+  // Bermeo, 18-10-2026, AROME HD (medido por /om): el máximo, 16,0 a las 00:00, y bajando todo el día
+  const cae = R.horaDelExtremo(dia([16.0, 15.6, 15.4, 15.4, 15.1, 15.0, 15.0, 14.8, 14.7, 14.6, 14.5, 14.7, 14.7, 14.9, 14.9, 14.6, 14.7, 14.8, 14.5, 14.2, 14.0, 14.1, 14.1, 13.2]), true);
+  ok('Bermeo 18-10 (AROME HD 16,0 a las 00:00 y bajando): el máximo es a las 00:00 y LO DICE: «de madrugada; después baja»',
+     cae && cae.h === 0 && cae.nota === 'de madrugada; después baja', JSON.stringify(cae));
+  const plano = R.horaDelExtremo(dia([17, 16.5, 16.4, 16.3, 16.2, 16.2, 16.1, 16.2, 16.4, 16.6, 16.8, 16.9, 16.9, 17, 17, 17, 16.9, 16.8, 16.6, 16.5, 16.4, 16.3, 16.2, 16.1]), true);
+  ok('   un día plano con 17° a las 00:00 y a las 13-15 h: el empate va a la tarde (15:00), no a la medianoche',
+     plano && plano.h === 15 && plano.nota === null, JSON.stringify(plano));
+  const minNoche = R.horaDelExtremo(dia([12, 11, 10.5, 10, 9.8, 9.6, 9.5, 10, 11, 12, 13, 14, 15, 15, 15, 14, 13, 12, 11, 10, 9.5, 9, 8.5, 8]), false);
+  ok('   el mínimo a las 23:00 dice «a última hora»', minNoche && minNoche.h === 23 && minNoche.nota === 'a última hora', JSON.stringify(minNoche));
+  ok('   sin horas no se inventa nada', R.horaDelExtremo([], true) === null && R.horaDelExtremo([{ h: 3, t: null }], false) === null);
+  ok('   la app y la agenda ponen la hora con esa regla (no con «la más parecida, la primera»)',
+     /ReglasTiempo\.horaDelExtremo\(serieHoy, esMax\)/.test(src) && !/if \(!mejor \|\| mejor\.d > 1\) return '';/.test(src)
+     && (() => { const a = path.resolve(__dirname, '..', 'agenda-familiar', 'app.js');
+                 return !fs.existsSync(a) || /ReglasTiempo\.horaDelExtremo\(hs, true\)/.test(fs.readFileSync(a, 'utf8')); })());
+  // peorRacha: con el Automático dando la mayor, NO se nombra: gana el mayor de los cinco
+  const antes = { comp: S.comparativa, place: S.place };
+  const h = { date: new Date('2026-10-18T15:00'), gust: 30, gust10: 30 };
+  const isoH = new Date(h.date.getTime() - h.date.getTimezoneOffset() * 60000).toISOString().slice(0, 13) + ':00';
+  S.place = { name: 'BI BERMEO', lat: 43.413, lon: -2.718 };
+  S.comparativa = { _sitio: key(S.place), hourly: { time: [isoH], wind_gusts_10m_best_match: [80], wind_gusts_10m_icon_seamless: [46], wind_gusts_10m_ecmwf_ifs: [40] } };
+  const pr = peorRacha(h);
+  S.comparativa = antes.comp; S.place = antes.place;
+  ok('el Automático (oculto del selector) no entra en «los 5»: con él en 80 e ICON en 46, la más alta es la de ICON',
+     pr && pr.quien === 'ICON' && pr.v10 === 46, JSON.stringify(pr));
+  ok('   y la franja no nombra al cargado si no es de los cinco',
+     /const cargadoEsDeLosCinco = MODELOS_TORMENTA\.some\(m => m\.om === modeloDato\(\)\.om\);/.test(src)
+     && /quien: cargadoEsDeLosCinco \? modeloDato\(\)\.name : null/.test(src));
+  const co = path.resolve(__dirname, '..', 'centro-operativo', 'js', 'weather.js');
+  const ag = path.resolve(__dirname, '..', 'agenda-familiar', 'api', 'tiempo.mjs');
+  if (fs.existsSync(co)) ok('el Centro Operativo saca la racha más alta de ReglasTiempo.MODELOS_TORMENTA, no de su lista con el Automático',
+     /function rachaMax\(d, idx\) \{[\s\S]{0,700}for \(const m of ReglasTiempo\.MODELOS_TORMENTA\)/.test(fs.readFileSync(co, 'utf8')));
+  if (fs.existsSync(ag)) ok('la agenda, de los cinco sin best_match',
+     /PEDIDOS\.filter\(om => om !== 'best_match'\)\.map\(om => \[CMP\[`wind_gusts_10m_\$\{om\}`\]/.test(fs.readFileSync(ag, 'utf8')));
+}
+
+
+
+/* ═══ LAS ESCALAS DEL MAPA SE EJECUTAN ENTERAS (19-10-2026) ═══════════════
+   El 18-10 se publicó «Espesor de nieve» usando `corteSeco` 200 líneas antes
+   de su `const`: «Cannot access 'corteSeco' before initialization» en rojo
+   arriba del todo y el mapa sin escalas. Lo vio él. La prueba de entonces
+   sacaba `corteSeco` por separado y nunca ejecutaba la función entera.
+   Esta la EJECUTA, con lo que tiene alrededor en maps.js. */
+{
+  grupo('El mapa entero (maps.js) se carga y sus escalas se ejecutan sin reventar');
+  /* Se carga maps.js ENTERO en una caja aparte, con un navegador de mentira, y se llaman las escalas: así sale cualquier
+     «Cannot access … before initialization» o variable que falte, que es lo que él vio en rojo arriba del todo. */
+  const vm = require('vm');
+  const nada = () => {};
+  const cualquiera = () => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => '' : cualquiera()), apply: () => cualquiera(), construct: () => cualquiera() });
+  const caja = { console: { log: nada, warn: nada, error: nada, info: nada }, setTimeout: () => 0, clearTimeout: nada, setInterval: () => 0, clearInterval: nada,
+    URL, URLSearchParams, Intl, Date, Math, JSON, Promise, AbortController, document: cualquiera(), navigator: { userAgent: 'node' },
+    localStorage: { getItem: () => null, setItem: nada, removeItem: nada }, sessionStorage: { getItem: () => null, setItem: nada, removeItem: nada },
+    location: { search: '', href: 'https://x/', origin: 'https://x' }, fetch: async () => ({ ok: false }), maplibregl: cualquiera(),
+    OMWeatherMapLayer: cualquiera(), addEventListener: nada, matchMedia: () => ({ matches: false, addEventListener: nada }),
+    requestAnimationFrame: nada, performance: { now: () => 0 }, Blob: function () {}, Image: function () {} };
+  caja.window = caja; caja.globalThis = caja; caja.self = caja;
+  let E = null, err = null;
+  try {
+    vm.createContext(caja);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'reglas-tiempo.js'), 'utf8'), caja);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8'), caja, { filename: 'maps.js' });
+    E = vm.runInContext('escalasPropias()', caja);
+  } catch (e) { err = e; }
+  ok('maps.js se carga y escalasPropias() corre entera (el 18-10 reventaba: «Cannot access \'corteSeco\' before initialization»)',
+     !err && E && typeof E === 'object', err ? String(err) : '');
+  ok('   y trae las escalas de nieve y de lluvia',
+     !!E?.espesor?.scale?.breakpoints && !!E?.nieveAzul?.scale?.breakpoints && !!E?.lluvia?.scale?.breakpoints);
+}
+
+
+
+/* ═══ LA TEMPERATURA DEBAJO DE CADA DIBUJO (19-10-2026) ═══════════════════
+   Suyo: «en los dibujos de lluvia etc no pone la temperatura y debería
+   poner» · «añádelos» · «en todos». */
+{
+  grupo('Cada dibujo de tramo lleva su temperatura');
+  const tdt = new Function('has', sacar('function tempDeTramo(') + '\nreturn tempDeTramo;')(globalThis.has);
+  const H = [[7, 10.4], [8, 10.6], [9, 11.4], [10, 12.2], [13, 13.6]].map(([hh, t]) => ({ date: new Date(2026, 9, 19, hh), temp: t }));
+  ok('franja «7-8 h» con 10,4 y 10,6 → «10–11°»; el tramo «9-13 h» → «11–14°»',
+     tdt(H, 7, 8) === '10–11°' && tdt(H, 9, 13) === '11–14°', `${tdt(H, 7, 8)} · ${tdt(H, 9, 13)}`);
+  ok('   en el día, la de la hora que lleva escrita («9h» → 11°), y sin dato de esas horas no se inventa nada',
+     tdt(H, 9) === '11°' && tdt(H, 20) === '' && tdt([{ date: new Date(2026, 9, 19, 9), temp: null }], 9) === '');
+  ok('   la franja y la tarjeta de 10 días la pintan a la DERECHA del dibujo (suyo: «a mano derecha del sol»), con las horas debajo',
+     /\$\{icon\(t\.code, d\)\}<b class="tramo__t">\$\{tempDeTramo\(sel, t\.desde, t\.hasta\)\}<\/b><\/span><u>/.test(src)
+     && /\$\{icon\(t\.code, deSuHora\(t\)\)\}<b class="tramo__t">\$\{has\(t\.desde\) \? tempDeTramo\(delDia, t\.desde\) : ''\}<\/b><\/span><u>/.test(src));
+  const ag = path.resolve(__dirname, '..', 'agenda-familiar', 'app.js');
+  if (fs.existsSync(ag)) ok('   y la agenda también, en sus franjas',
+     /el\('b', \{ class: 'tramo__t', text: tempTramo\(t\) \}\)/.test(fs.readFileSync(ag, 'utf8')));
+}
+
+
+
+/* ═══ LOS DIBUJOS NO PUEDEN QUEDARSE A CERO (19-10-2026) ═══════════════════
+   Al meter los grados a la derecha, en «10 días» el dibujo quedó dentro de
+   .tramo__f con `width:inherit` y se pintaba a 0 px: desaparecieron. Visto
+   en pantalla, no por una prueba. Esto guarda el tamaño y la fila de Horas. */
+{
+  grupo('Los dibujos con sus grados a la derecha tienen tamaño');
+  const css = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+  ok('10 días: el dibujo dentro de .tramo__f lleva tamaño propio (30/24/20 px), no «inherit»',
+     /\.dcard__ii \.tramo__f > svg,\.dcard__ii \.tramo__f > img\{width:30px;height:30px\}/.test(css) && !/tramo__f > svg\{width:inherit/.test(css)
+     && /\.dcard__i:has\(\.dcard__ii\)\{width:auto;height:auto\}/.test(css));
+  ok('Horas: el dibujo y los grados en una fila (.hcard__it)',
+     /<div class="hcard__it"><div class="hcard__i">/.test(src) && /\.hcard__it\{display:flex;align-items:center/.test(css));
 }
 
 

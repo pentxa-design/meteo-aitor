@@ -857,6 +857,30 @@ const ReglasTiempo = (() => {
     return d;
   }
 
+  /* ── A QUÉ HORA CAE EL MÁXIMO (O EL MÍNIMO) DEL DÍA (19-10-2026) ──────
+     El Centro Operativo vio en la tarjeta, a las 21:40, «Máx 17° a las
+     00:00 · Mín 16°»: un máximo a medianoche que desentona. Era verdad —el
+     día venía más cálido de madrugada y solo bajó—, pero sin decirlo se leía
+     como un fallo; y en un día plano (16-17°) varias horas empatan y salía
+     la primera, la de las 00:00, aunque la de la tarde valiera lo mismo.
+
+     Entre las horas que empatan (a 0,15° del extremo) gana la más cercana a
+     la hora típica —15:00 el máximo, 06:00 el mínimo—; y si aun así el
+     extremo cae en el borde del día (00-02 h o 21-23 h) lo dice: «de
+     madrugada, después baja/sube» o «a última hora». `serie` = [{ h, t }]. */
+  function horaDelExtremo(serie, esMax) {
+    const v = (serie || []).filter(x => has(x?.t) && has(x?.h));
+    if (!v.length) return null;
+    const ex = esMax ? Math.max(...v.map(x => x.t)) : Math.min(...v.map(x => x.t));
+    const tipica = esMax ? 15 : 6;
+    const mejor = v.filter(x => Math.abs(x.t - ex) <= 0.15)
+      .reduce((a, b) => (Math.abs(b.h - tipica) < Math.abs(a.h - tipica) ? b : a));
+    const borde = mejor.h <= 2 ? 'madrugada' : mejor.h >= 21 ? 'noche' : null;
+    return { h: mejor.h, valor: ex, borde,
+             nota: borde === 'madrugada' ? `de madrugada; después ${esMax ? 'baja' : 'sube'}`
+                 : borde === 'noche' ? 'a última hora' : null };
+  }
+
   return Object.freeze({
     has, LISTON, DUENO_AGUA, AGUA_ACUERDO, RELLENO_AGUA, CIELO_PRESTADO, ECMWF_9KM,
     MODELOS_TORMENTA, NOMBRES, nombreDe, mojaEsaHora, lluviaDeUnSitio, lloviznaAcompanadaEn, AGUA_ACOMPANA,
@@ -865,7 +889,7 @@ const ReglasTiempo = (() => {
     RAYO_ENCIMA, RAYO_CERCA, RAYO_RADIO, RAYO_VIGENTE, kmEntre, loQueAunCuenta, lectorDeRayos,
     rayosConCache, vetaRayo, textoRayos,
     CAPE_COMBINACION, TAPA_ROMPE, MODELOS_RAYO, rayoDelModelo, otrosDelAgua, rayoEnHoras,
-    horasAlReloj,
+    horasAlReloj, horaDelExtremo,
   });
 })();
 /* En el servidor (el vigilante de Vercel) se carga con require; en el

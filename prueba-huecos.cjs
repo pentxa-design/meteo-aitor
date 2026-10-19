@@ -85,6 +85,7 @@ eval(sacarConst('NUBE_ALTA'));
 eval(sacarConst('NUBE_BAJA'));
 eval(sacar('function loQueMideLaNube(h, place) {'));
 globalThis.COMPARAR = [];
+globalThis.MODELOS_TORMENTA = ReglasTiempo.MODELOS_TORMENTA;   // peorRacha lee los cinco con nombre (19-10-2026)
 eval(sacar('function peorRacha('));
 /* `assess` decide el color de la ráfaga con `nivelRacha`, que compara el
    número TAL COMO SE IMPRIME (25-09-2026). Van con ella sus dos
@@ -157,8 +158,8 @@ console.log('\n  Un hueco no es verde — perfil hierro, el de fábrica');
      que se comprueba en su sitio. */
   S.place = { lat: 43.42, lon: -2.72 };
   S.comparativa = { clave: '43.420,-2.720',
-    hourly: { time: ['2026-09-05T14:00'], wind_gusts_10m_icon_eu: [75] } };
-  COMPARAR.push({ om: 'icon_eu', name: 'ICON' });
+    hourly: { time: ['2026-09-05T14:00'], wind_gusts_10m_icon_seamless: [75] } };   // ICON de los cinco con nombre (19-10-2026: peorRacha lee MODELOS_TORMENTA)
+  COMPARAR.push({ om: 'icon_seamless', name: 'ICON' });
   const r = juzgar({ gust: null, gust10: null });
   ok('hierro con la ráfaga a null pero ICON da 75 en la comparativa: OJO con 75 km/h, no SIN DATO',
      r.st === 'warn' && r.reasons.some(x => /^Ráfaga 75 km\/h/.test(x.txt)) && !sinDato(r, 'Ráfaga'), pinta(r));

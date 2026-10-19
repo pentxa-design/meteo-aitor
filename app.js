@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.18-2218';
+const BUILD = '2026.10.19-0733';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -2440,11 +2440,14 @@ function peorRacha(h, place = null) {
   const i = C.time.findIndex(t => t.slice(0, 13) === iso);
   if (i < 0) return null;
 
+  /* LOS CINCO CON NOMBRE (los del selector: AROME HD, ECMWF, ECMWF 9 km, ICON y GFS), no COMPARAR: ahí va también el «Automático», que
+     está oculto del selector y es una mezcla. Salía «la más alta de los 5, la da Automático» y «lo dice Automático» (el Centro Operativo,
+     19-10-2026); «Mis estaciones» ya usaba estos cinco desde el 03-10. */
   let mejor = null;
-  for (const m of COMPARAR) {
+  for (const m of MODELOS_TORMENTA) {
     const v = C[`wind_gusts_10m_${m.om}`]?.[i];
     if (!has(v)) continue;
-    if (!mejor || v > mejor.v10) mejor = { v10: v, quien: m.name };
+    if (!mejor || v > mejor.v10) mejor = { v10: v, quien: m.nom };
   }
   if (!mejor) return null;
 
@@ -14399,17 +14402,15 @@ function renderNow() {
     const Hh = fc.hourly;
     const idxHoy = (Hh?.time || []).map((t, i) => i)
       .filter(i => has(Hh.temperature_2m?.[i]) && mismoDia(new Date(Hh.time[i])));
-    const cuando = valor => {
-      let mejor = null;
-      for (const i of idxHoy) {
-        const d = Math.abs(Hh.temperature_2m[i] - valor);
-        if (!mejor || d < mejor.d) mejor = { i, d };
-      }
-      if (!mejor || mejor.d > 1) return '';
-      const hh = new Date(Hh.time[mejor.i]).getHours();
-      return ` <small>a las ${String(hh).padStart(2, '0')}:00</small>`;
+    /* La hora la pone la regla única (`horaDelExtremo`, igual que la agenda): el empate de un día plano va a la hora típica y un extremo
+       en el borde del día (00:00 con «Máx 17°») lo dice, en vez de parecer un fallo (el Centro Operativo, 19-10-2026). */
+    const serieHoy = idxHoy.map(i => ({ h: new Date(Hh.time[i]).getHours(), t: Hh.temperature_2m[i] }));
+    const cuando = (valor, esMax) => {
+      const e = ReglasTiempo.horaDelExtremo(serieHoy, esMax);
+      if (!e || Math.abs(e.valor - valor) > 1) return '';
+      return ` <small>a las ${String(e.h).padStart(2, '0')}:00${e.nota ? `, ${e.nota}` : ''}</small>`;
     };
-    el.innerHTML = `Máx ${mx.toFixed(0)}°${cuando(mx)} · Mín ${mn.toFixed(0)}°${cuando(mn)}`;
+    el.innerHTML = `Máx ${mx.toFixed(0)}°${cuando(mx, true)} · Mín ${mn.toFixed(0)}°${cuando(mn, false)}`;
   })();
 
   $('#tz').textContent = fc.timezone_abbreviation ?? '';
@@ -14560,11 +14561,14 @@ function renderNow() {
        en la agenda, y «46 · la más alta de los 5, la da ICON» en el Centro
        Operativo. Ahora las tres dicen la más alta, con su dueño — que es
        también como decide el semáforo (`peorRacha`). */
+    /* El modelo CARGADO solo compite si es uno de los cinco (o si no hay comparativa): el «Automático», oculto del selector, no es uno de
+       «los 5» y no se nombra (19-10-2026). */
+    const cargadoEsDeLosCinco = MODELOS_TORMENTA.some(m => m.om === modeloDato().om);
     const gTop = sel.reduce((top, h) => {
       const otra = peorRacha(h);
-      const c = (otra && has(otra.v) && (!has(h.gust) || otra.v > h.gust))
+      const c = (otra && has(otra.v) && (!has(h.gust) || otra.v > h.gust || !cargadoEsDeLosCinco))
         ? { v: otra.v, quien: otra.quien, date: h.date }
-        : has(h.gust) ? { v: h.gust, quien: modeloDato().name, date: h.date } : null;
+        : has(h.gust) ? { v: h.gust, quien: cargadoEsDeLosCinco ? modeloDato().name : null, date: h.date } : null;
       return c && (!top || c.v > top.v) ? c : top;
     }, null);
     const gm = gTop ? gTop.v : null;
@@ -14674,7 +14678,7 @@ function renderNow() {
         const d = deDia(sel);
         if (R && R.partes && R.partes.length >= 2) {
           const rot = t => (t.desde === t.hasta ? `${t.desde} h` : `${t.desde}-${t.hasta} h`);
-          return `<span class="part__tira">${R.partes.map(t => `<i>${icon(t.code, d)}<u>${rot(t)}</u></i>`).join('')}</span>`;
+          return `<span class="part__tira">${R.partes.map(t => `<i><span class="tramo__f">${icon(t.code, d)}<b class="tramo__t">${tempDeTramo(sel, t.desde, t.hasta)}</b></span><u>${rot(t)}</u></i>`).join('')}</span>`;
         }
         return icon(code, d);
       })()}</div>
@@ -15583,8 +15587,7 @@ function tarjetaHora(h, pasada = false) {
     <div class="hcard${pasada ? ' hcard--pasada' : ''}" data-s="${h.st}">
       <div class="hcard__h">${String(h.date.getHours()).padStart(2,'0')}:00${pasada ? ' <small>pasada</small>' : ''}</div>
       <div class="hcard__d">${h.date.toLocaleDateString('es',{weekday:'short'})}</div>
-      <div class="hcard__i">${(v => icon(v.code, v.dia))(cieloVisto(h))}</div>${chipsOtrosHora(h, 'nubes')}
-      <div class="hcard__t">${has(h.temp) ? `${h.temp.toFixed(0)}°` : '—'}</div>
+      <div class="hcard__it"><div class="hcard__i">${(v => icon(v.code, v.dia))(cieloVisto(h))}</div><div class="hcard__t">${has(h.temp) ? `${h.temp.toFixed(0)}°` : '—'}</div></div>${chipsOtrosHora(h, 'nubes')}
       <div class="hcard__r">
         <span>💧 ${has(h.pop) ? h.pop + '%' : '—'} · ${has(h.prec) ? mmTxt(h.prec) + ' mm' : 'sin dato'}${
           (c => c !== null ? ` <span class="nd__ojo">⚠ ${esc(h.cieloDe || 'otro modelo')} ve ${esLlovizna(c) ? 'llovizna' : 'lluvia'}${mmQueVeTxt(mmQueVeElOtro(h))}</span>` : '')(aguaPrestada(h))}${chipsOtrosHora(h, 'lluvia')}</span>
@@ -15722,7 +15725,22 @@ function iconosDelDia(dia) {
     return suyas.length ? (suyas.some(h => h.day === 1) ? 1 : 0) : d;
   };
   return `<span class="dcard__ii" data-n="${R.partes.length}">${
-    R.partes.map(t => `<i>${icon(t.code, deSuHora(t))}<u>${has(t.desde) ? `${t.desde}h` : ''}</u></i>`).join('')}</span>`;
+    R.partes.map(t => `<i><span class="tramo__f">${icon(t.code, deSuHora(t))}<b class="tramo__t">${has(t.desde) ? tempDeTramo(delDia, t.desde) : ''}</b></span><u>${has(t.desde) ? `${t.desde}h` : ''}</u></i>`).join('')}</span>`;
+}
+
+/* ── LA TEMPERATURA DEBAJO DE CADA DIBUJO (19-10-2026) ────────────────
+   Suyo, con las franjas y los diez días delante: «en los dibujos de lluvia
+   etc no pone la temperatura y debería poner» · «añádelos» · «en todos».
+   Y A LA DERECHA DEL DIBUJO, no debajo (suyo, el mismo día: «a mano derecha del sol etc»).
+   Cada tramo lleva la de SUS horas: en la franja, la horquilla de esas
+   horas («10–12°»); en el día, la de la hora que lleva escrita debajo
+   («9h» → la de las 09:00). Sin dato de esas horas, nada: no se inventa. */
+function tempDeTramo(horas, desde, hasta = desde) {
+  const ts = (horas || []).filter(h => has(h?.temp) && h.date instanceof Date
+    && h.date.getHours() >= desde && h.date.getHours() <= hasta).map(h => Math.round(h.temp));
+  if (!ts.length) return '';
+  const lo = Math.min(...ts), hi = Math.max(...ts);
+  return lo === hi ? `${lo}°` : `${lo}–${hi}°`;
 }
 
 function renderDays() {

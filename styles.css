@@ -434,9 +434,30 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;
 /* La tira de tramos de la franja: un icono por tramo con sus horas
    debajo, en el orden de la frase (09-09-2026). */
 .part__i:has(.part__tira){width:auto;height:auto}
-.part__tira{display:inline-flex;align-items:flex-start;gap:8px}
+.part__tira{display:inline-flex;align-items:flex-start;gap:6px}
 .part__tira i{display:flex;flex-direction:column;align-items:center;gap:1px;font-style:normal}
 .part__tira i > svg{width:26px;height:26px}
+/* La temperatura de cada tramo, debajo de sus horas (19-10-2026, suyo: «en todos»). */
+.tramo__f{display:inline-flex;align-items:center;gap:2px}   /* el dibujo y sus grados, en fila: «a mano derecha del sol» */
+.tramo__f > svg{width:26px;height:26px}
+/* 10 días: el dibujo de cada tramo a su tamaño (dentro de .tramo__f ya no es «i > svg» y se quedaba en CERO: los dibujos desaparecieron
+   en la v2026.10.19-0728, visto en pantalla) y la tira ocupa la tarjeta y baja de fila si no cabe (la caja .dcard__i era de 52 px). */
+.dcard__i:has(.dcard__ii){width:auto;height:auto}
+.dcard__ii{flex-wrap:wrap;row-gap:6px;column-gap:8px;width:100%;box-sizing:border-box;padding:0 6px}
+.dcard__ii .tramo__f > svg,.dcard__ii .tramo__f > img{width:30px;height:30px}
+.dcard__ii[data-n="3"] .tramo__f > svg{width:24px;height:24px}
+.dcard__ii:not([data-n="2"]):not([data-n="3"]) .tramo__f > svg{width:20px;height:20px}
+/* Franjas: la tira baja de fila si no cabe, y la horquilla grande no se parte («13–/15°»). */
+.part__i:has(.part__tira){max-width:100%}
+.part__tira{flex-wrap:wrap;row-gap:4px;max-width:100%}
+.part__b{flex-wrap:wrap;row-gap:4px}
+.part__t{white-space:nowrap}
+/* Horas: los grados a la derecha del dibujo, en una fila (suyo: «también en horas y 10 días, lo mismo»). */
+.hcard__it{display:flex;align-items:center;justify-content:center;gap:6px;margin:8px auto 4px}
+.hcard__it .hcard__i{margin:0;width:40px;height:40px}
+.tramo__t{font-weight:700;font-size:.875rem;line-height:1.1;color:var(--ink);white-space:nowrap}
+.dcard__ii .tramo__t{font-size:.8125rem}   /* 13 px: su suelo de lectura */
+.tramo__t:empty{display:none}
 .part__tira u{text-decoration:none;font-size:.8125rem;line-height:1.1;color:var(--dim);white-space:nowrap}
 .part__t{font-size:1.0625rem;font-weight:600}
 .part__s{font-size:0.9375rem;color:var(--dim);margin-top:4px;line-height:1.35}

@@ -1486,6 +1486,12 @@ const Peticiones = {
    error, daba un color equivocado.                                    */
 let _escalas = null, _escalasCon = '';
 function escalasPropias() {
+  /* ARRIBA DEL TODO (19-10-2026): «Espesor de nieve» la usa unas 200 líneas antes de donde estaba declarada, y un `const` no se puede
+     usar antes de su línea: «Cannot access 'corteSeco' before initialization» y el mapa entero sin escalas. Lo vio él en pantalla. */
+  const corteSeco = (bp, cols) => ({
+    breakpoints: [bp[0], bp[1] - 1e-3, ...bp.slice(1)],
+    colors: [cols[0], cols[0], ...cols.slice(1)],
+  });
   /* La escala de racha lleva SUS listones dentro, así que si cambia de
      perfil hay que rehacerla: guardada a secas, el mapa se quedaba con
      los cortes del perfil anterior hasta recargar (26-09-2026). */
@@ -1898,10 +1904,6 @@ function escalasPropias() {
      corte a 0,099 en alfa 0, de 0 a 0,099 no se pinta nada y en 0,1
      entra el primer color de golpe. La barra sigue con sus tramos
      (`desde: 1` deja fuera el corte). */
-  const corteSeco = (bp, cols) => ({
-    breakpoints: [bp[0], bp[1] - 1e-3, ...bp.slice(1)],
-    colors: [cols[0], cols[0], ...cols.slice(1)],
-  });
   const lluvia = {
     scale: { type:'breakpoint', unit:'mm/h', ...corteSeco(mmW, cc.map(([c,a]) => hexRGBA(c, a))) },
     desde: 1,
