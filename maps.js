@@ -249,10 +249,24 @@ async function conPasado(meta, modelo) {
       break;
     }
   }
-  meta.valid_times = [...nuevas, ...meta.valid_times];
+  /* ── Y HACIA DELANTE, LO QUE LA PASADA NUEVA NO CUBRE (19-10-2026) ──
+     Suyo, con ICON-EU: «solo me deja ver hasta el martes». Sus pasadas de 03/09/15/21 UTC llegan a 30 h y las de 00/12 a 5 días: si la
+     última es corta, el mapa se acababa en 30 h teniendo al lado una pasada de 3 h antes que llega al viernes. Cada hora de después
+     del final sale de la pasada MÁS RECIENTE que la tiene (las pasadas van de la más nueva a la más vieja). */
+  const ultimo = Math.max(...meta.valid_times.map(t => new Date(t).getTime()).filter(Number.isFinite));
+  const despues = [];
+  for (const x of pasadas) {
+    for (const v of x.f.valid_times) {
+      const H = new Date(v).getTime();
+      if (!(H > ultimo) || pasadaDe[H]) continue;
+      pasadaDe[H] = new Date(x.ms).toISOString();
+      despues.push(v);
+    }
+  }
+  meta.valid_times = [...nuevas, ...meta.valid_times, ...despues];
   ordenarHoras(meta);
   meta.pasadaDe = pasadaDe;
-  meta._pasado = { horas: nuevas.length };
+  meta._pasado = { horas: nuevas.length, despues: despues.length };
   return meta;
 }
 
@@ -2591,11 +2605,14 @@ const Maps = {
       const antes = m.valid_times.length;
       await conPasado(m, modelo);
       if (this.meta !== m || this.model !== modelo || (this.usando?.meta && this.usando.meta !== m)) return;   // se cambió de modelo
+      const sl = document.querySelector('#mapTime');
+      if (sl) sl.max = Math.max(0, m.valid_times.length - 1);
       if (m.valid_times.length === antes) return;
       const i = m.valid_times.findIndex(t => new Date(t).getTime() === mirada);
       if (i >= 0) this.t = i;
       this._idx = null;
       this.ajustarSlider();
+      this.ui();                 // los botones de modelo, con los días que llega ahora (ICON-EU: de «1.3d» a 5 días)
       this.stamp?.();
     } catch { /* sin pasado no pasa nada: la tira se queda como estaba */ }
   },
@@ -2914,7 +2931,10 @@ const Maps = {
     const m = modelo === this.model ? this.meta : this.metaCache[modelo];
     const vt = m?.valid_times;
     if (!vt?.length) return null;
-    const h = (new Date(vt[vt.length - 1]) - new Date(vt[0])) / 3600000;
+    /* Cuánto llega HACIA DELANTE, desde la pasada: con las 24 h de antes (conPasado) contar desde la primera hora daba «AROME HD 3.1d»
+       a un modelo que llega a 2 días (19-10-2026). */
+    const desde = m.reference_time ? new Date(m.reference_time) : new Date(vt[0]);
+    const h = (new Date(vt[vt.length - 1]) - desde) / 3600000;
     return Math.round(h / 24 * 10) / 10;
   },
 
@@ -4113,7 +4133,7 @@ const Maps = {
       ? new Date(metaUsada.reference_time).toLocaleString('es',
           { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
       : '—';
-    const dias = (T.length && new Date(T[T.length-1]) - new Date(T[0])) / 864e5;
+    const dias = (T.length && new Date(T[T.length-1]) - new Date(metaUsada.reference_time ?? T[0])) / 864e5;   // hacia delante, desde la pasada
     // Paso de 3 h en una capa de lluvia o nieve: se dice que va por hora.
     const L_ = TLAYERS.find(l => l.id === this.layer);
     const h = (esAcumulada(L_?.v) || esAcumulada(L_?.encima)) ? horasDelPaso(T, this.t) : 1;

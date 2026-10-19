@@ -13903,11 +13903,13 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
         const i16 = meta.valid_times.findIndex(t => new Date(t).getTime() === Date.parse('2026-10-18T16:00Z'));
         const i3 = meta.valid_times.findIndex(t => new Date(t).getTime() === Date.parse('2026-10-19T03:00Z'));
         const i18 = meta.valid_times.findIndex(t => new Date(t).getTime() === Date.parse('2026-10-18T18:00Z'));
+        const i20 = meta.valid_times.findIndex(t => new Date(t).getTime() === Date.parse('2026-10-20T12:00Z'));
         return { n: meta.valid_times.length, primera: meta.valid_times[0], horas: meta._pasado.horas,
                  url16: Maps.omUrl('precipitation', i16, 'meteofrance_arome_france_hd', meta),
                  url3: Maps.omUrl('precipitation', i3, 'meteofrance_arome_france_hd', meta),
                  url18: Maps.omUrl('precipitation', i18, 'meteofrance_arome_france_hd', meta),
-                 urlHoy: Maps.omUrl('precipitation', meta.valid_times.length - 1, 'meteofrance_arome_france_hd', meta),
+                 url20: Maps.omUrl('precipitation', i20, 'meteofrance_arome_france_hd', meta), despues: meta._pasado.despues,
+                 urlHoy: Maps.omUrl('precipitation', meta.valid_times.findIndex(t => new Date(t).getTime() === Date.parse('2026-10-19T05:00Z')), 'meteofrance_arome_france_hd', meta),
                  idx0: Maps.indices(meta)[0] };
       })()`, caja);
     } catch (e) { err = e; }
@@ -13916,10 +13918,14 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
     ok('   la hora de arranque de la pasada actual (03Z) sale de la ANTERIOR (00Z), que sí tiene lluvia; y lo de después, de la actual',
        !!r && /\/2026\/10\/19\/0000Z\/2026-10-19T0300\.om/.test(r.url3 || '') && /\/2026\/10\/19\/0300Z\/2026-10-19T0500\.om/.test(r.urlHoy || ''),
        r ? `${r.url3?.slice(60, 140)} · ${r.urlHoy?.slice(60, 140)}` : '');
+    ok('   y HACIA DELANTE: si la pasada nueva es corta (ICON-EU de 03Z, 30 h), lo que no cubre sale de la anterior que llega (el martes 20 a las 12Z, de la de 00Z)',
+       !!r && r.despues > 0 && /\/2026\/10\/19\/0000Z\/2026-10-20T1200\.om/.test(r.url20 || ''), r ? `${r.despues} · ${r.url20?.slice(60, 140)}` : '');
     ok('   una hora que es el ARRANQUE de otra pasada (18Z de ayer) sale de la de antes (15Z), no de su arranque, que no trae lluvia',
        !!r && /\/2026\/10\/18\/1500Z\/2026-10-18T1800\.om/.test(r.url18 || ''), r?.url18?.slice(60, 140));
     ok('   y con las horas de antes, la tira de la lluvia empieza por la primera de ellas (ya no se salta nada)', !!r && r.idx0 === 0, String(r?.idx0));
   })());
+  ok('   la etiqueta de días del modelo cuenta HACIA DELANTE desde la pasada, no desde las horas de ayer («AROME HD 3.1d» con 2 días)',
+     /const desde = m\.reference_time \? new Date\(m\.reference_time\) : new Date\(vt\[0\]\);/.test(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8')));
   ok('   la barra dice que una hora de antes es lo que PREVEÍA una pasada anterior, no lo que cayó',
      /HORA PASADA: lo que PREVEÍA la pasada de las/.test(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8')));
   ok('   y el cartel de «trozos sin cargar» dice el motivo del último que falló',
