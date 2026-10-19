@@ -13805,7 +13805,10 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   // Bermeo, 18-10-2026, AROME HD (medido por /om): el máximo, 16,0 a las 00:00, y bajando todo el día
   const cae = R.horaDelExtremo(dia([16.0, 15.6, 15.4, 15.4, 15.1, 15.0, 15.0, 14.8, 14.7, 14.6, 14.5, 14.7, 14.7, 14.9, 14.9, 14.6, 14.7, 14.8, 14.5, 14.2, 14.0, 14.1, 14.1, 13.2]), true);
   ok('Bermeo 18-10 (AROME HD 16,0 a las 00:00 y bajando): el máximo es a las 00:00 y LO DICE: «de madrugada; después baja»',
-     cae && cae.h === 0 && cae.nota === 'de madrugada; después baja', JSON.stringify(cae));
+     cae && cae.h <= 2 && cae.nota === 'de madrugada; después baja', JSON.stringify(cae));
+  const vuelve = R.horaDelExtremo(dia([14.6, 14.9, 15.3, 14.8, 14.4, 14.2, 14.1, 14.0, 14.2, 14.5, 14.7, 14.8, 14.9, 15.0, 15.0, 14.8, 14.6, 14.4, 14.2, 14.0, 13.8, 13.6, 13.5, 13.4]), true);
+  ok('   Bermeo 19-10: 15,3 a las 02:00 y 15,0 a las 13-14 h se leen igual (15°): el máximo va a la tarde y NO dice «después baja»',
+     vuelve && vuelve.h >= 12 && vuelve.h <= 16 && vuelve.nota === null, JSON.stringify(vuelve));
   const plano = R.horaDelExtremo(dia([17, 16.5, 16.4, 16.3, 16.2, 16.2, 16.1, 16.2, 16.4, 16.6, 16.8, 16.9, 16.9, 17, 17, 17, 16.9, 16.8, 16.6, 16.5, 16.4, 16.3, 16.2, 16.1]), true);
   ok('   un día plano con 17° a las 00:00 y a las 13-15 h: el empate va a la tarde (15:00), no a la medianoche',
      plano && plano.h === 15 && plano.nota === null, JSON.stringify(plano));

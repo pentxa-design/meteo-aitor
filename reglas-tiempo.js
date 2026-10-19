@@ -864,7 +864,7 @@ const ReglasTiempo = (() => {
      como un fallo; y en un día plano (16-17°) varias horas empatan y salía
      la primera, la de las 00:00, aunque la de la tarde valiera lo mismo.
 
-     Entre las horas que empatan (a 0,15° del extremo) gana la más cercana a
+     Entre las horas que empatan (las que se leen con el mismo grado) gana la más cercana a
      la hora típica —15:00 el máximo, 06:00 el mínimo—; y si aun así el
      extremo cae en el borde del día (00-02 h o 21-23 h) lo dice: «de
      madrugada, después baja/sube» o «a última hora». `serie` = [{ h, t }]. */
@@ -873,7 +873,9 @@ const ReglasTiempo = (() => {
     if (!v.length) return null;
     const ex = esMax ? Math.max(...v.map(x => x.t)) : Math.min(...v.map(x => x.t));
     const tipica = esMax ? 15 : 6;
-    const mejor = v.filter(x => Math.abs(x.t - ex) <= 0.15)
+    /* Empatan las que SE LEEN igual (el grado redondeado), no las que se parecen en décimas: con 15,3 a las 02:00 y 15,0 a las
+       14:00 la tarjeta decía «Máx 15° a las 02:00, de madrugada; después baja» con 15° en pantalla a esa misma hora (19-10-2026). */
+    const mejor = v.filter(x => Math.round(x.t) === Math.round(ex))
       .reduce((a, b) => (Math.abs(b.h - tipica) < Math.abs(a.h - tipica) ? b : a));
     const borde = mejor.h <= 2 ? 'madrugada' : mejor.h >= 21 ? 'noche' : null;
     return { h: mejor.h, valor: ex, borde,
