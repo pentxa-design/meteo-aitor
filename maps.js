@@ -433,9 +433,9 @@ const TLAYERS = [
     desc:'Hasta ahora, lo que ha caído (radar); después, lo que viene según el modelo (reflectividad estimada), en la misma tira' },
 
   { id:'sat_ir', g:'Satélite', name:'Nubes (infrarrojo)', v:null, unit:'', sat:'ir',
-    desc:'Meteosat en infrarrojo — la nube que HAY, de día y de noche. Cuanto más blanco, más alto el tope: más potente la nube' },
+    desc:'Meteosat nuevo en infrarrojo, cada 10 min — la nube que HAY, de día y de noche. Cuanto más blanco, más alto el tope: más potente la nube' },
   { id:'sat_conv', g:'Satélite', name:'Tormentas', v:null, unit:'', sat:'convection', sol:true,
-    desc:'Meteosat, combinación para convección — distingue la nube que está creciendo. Solo sirve de día' },
+    desc:'Meteosat (el viejo: el nuevo no publica esta combinación), para convección — distingue la nube que está creciendo. Solo sirve de día. Puede ir una hora atrasado: mira la hora de la pasada' },
   /* 19-10-2026, suyo con EUMETView delante: «utilízala» · «si hay algo más, añades». Lo del Meteosat nuevo (MTG) que le sirve. */
   { id:'sat_rayos', g:'Satélite', name:'Rayos (satélite)', v:null, unit:'', sat:'rayos',
     desc:'Rayos que ve el Meteosat nuevo desde arriba, en bloques de 5 minutos, de día y de noche (también los de dentro de la nube). Llega con unos 15 min de retraso, antes que el mapa de AEMET. Sin puntos no es «no hay rayos» si la hora es vieja: mira la hora de la pasada' },
@@ -448,7 +448,7 @@ const TLAYERS = [
   { id:'sat_geo', g:'Satélite', name:'GeoColour', v:null, unit:'', sat:'geocolor',
     desc:'La foto del satélite de día y las nubes de noche sobre el mapa con las luces de las ciudades: el vistazo general' },
   { id:'sat_vis', g:'Satélite', name:'Visible', v:null, unit:'', sat:'visible', sol:true,
-    desc:'Meteosat en visible de alta resolución — la foto tal cual. Solo de día' },
+    desc:'Meteosat nuevo en visible de alta resolución, cada 10 min — la foto tal cual. Solo de día' },
 
   { id:'gusts',  g:'Viento', name:'Ráfagas', v:'wind_gusts_10m', unit:'km/h', vientoApi: true,
     escala:'rafagas', rumbo: true,
@@ -1178,6 +1178,9 @@ function vientoDeUV(u, v) {
    sigue siendo la racha. Y el botón «Peor 12 h» cambia las flechas por la
    racha más fuerte de las 12 horas siguientes en cada punto, en km/h, con
    su hora y el color de SUS listones. */
+/* Cada cuánto se vuelve a preguntar a EUMETSAT qué imágenes hay (19-10-2026). Publica cada 5-10 min; /satelite no se guarda en copia. */
+const SAT_CATALOGO_MS = 5 * 60e3;
+
 const MODELO_EN_API = {
   ecmwf_ifs: 'ecmwf_ifs', ecmwf_ifs025: 'ecmwf_ifs025',
   meteofrance_arome_france_hd: 'meteofrance_arome_france_hd',
@@ -2669,6 +2672,29 @@ const Maps = {
     return best;
   },
 
+  /** ¿Se está mirando lo más reciente? En una capa observada, su última imagen; en una de modelo, la hora de ahora (±1 h). */
+  enLoUltimo() {
+    const tira = this.tiraObservada();
+    if (tira?.length) return this.t >= tira.length - 1;
+    const h = this.horaMirada();
+    return !h || Math.abs(h.getTime() - Date.now()) <= 3600e3;
+  },
+
+  /** El sello y la barra de estado de una imagen de satélite: la hora, y CUÁNTO hace, con el número de AHORA. */
+  selloSat(L_, hora) {
+    const st = document.querySelector('#mapStamp');
+    const d = new Date(hora);
+    const min = Math.round((Date.now() - d.getTime()) / 60000);
+    if (st) {
+      st.textContent = d.toLocaleString('es', { weekday:'short', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+      st.style.color = min > 60 ? 'var(--warn)' : '';
+      st.title = `Pasada de hace ${min} minutos`;
+    }
+    const cat = this._satCat, C = this._sat;
+    if (cat && C) this.status(`${esc(cat.fuente)} · ${C.wms} · cada ${C.pasoMin} min · pasada de hace ${min} min`);
+    this.avisoNoche(L_, d);
+  },
+
   /** La hora que se está mirando ahora mismo, como fecha real.
    *
    *  Se lee de la lista del modelo QUE PINTA, que en una capa sustituida
@@ -3429,7 +3455,9 @@ const Maps = {
     const st = document.querySelector('#mapStamp');
     const sl = document.querySelector('#mapTime');
     try {
-      // El catálogo se pide una vez y vale para las tres capas
+      /* El catálogo vale para todas las capas, pero CADUCA (19-10-2026). Antes se pedía una vez por sesión: con la app abierta
+         una hora, la última imagen era la de cuando entraste. EUMETSAT publica cada 5-10 min. */
+      if (this._satCat && !(Date.now() - (this._satCatT ?? 0) < SAT_CATALOGO_MS)) this._satCat = null;
       if (!this._satCat) {
         /* Mientras llega (la primera vez, ~6 s medidos el 06-10-2026) no
            se deja la leyenda ni la hora de la capa de ANTES encima del
@@ -3440,6 +3468,7 @@ const Maps = {
         if (st) { st.textContent = 'cargando…'; st.style.color = ''; st.title = ''; }
         this.status('leyendo el catálogo de EUMETSAT…');
         this._satCat = await jget(API.sat, { n: 12 }, { timeout: 15000 });
+        this._satCatT = Date.now();
       }
       const cat = this._satCat;
       if (cat?.error || !cat?.capas?.[L_.sat]) {
@@ -3449,7 +3478,8 @@ const Maps = {
       this._sat = C;
 
       sl.max = C.horas.length - 1;
-      this.t = this.pasoEnTira(C.horas.map(h => new Date(h).getTime()));
+      if (this._satAlFinal) { this.t = C.horas.length - 1; this.horaPedida = null; this._satAlFinal = false; }
+      else this.t = this.pasoEnTira(C.horas.map(h => new Date(h).getTime()));
       if (this.t >= C.horas.length) this.t = C.horas.length - 1;
       sl.value = this.t;
 
@@ -3474,16 +3504,16 @@ const Maps = {
         paint: { ...vivo, 'raster-fade-duration': 0 } },
         this.firstLabelLayer());
 
-      const d = new Date(hora);
-      st.textContent = d.toLocaleString('es', { weekday:'short', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
-      // Lo que se ve es de hace un rato: la última pasada tarda en salir
-      const min = Math.round((Date.now() - d.getTime()) / 60000);
-      st.style.color = min > 60 ? 'var(--warn)' : '';
-      st.title = `Pasada de hace ${min} minutos`;
-
       document.querySelector('#mapLegend').hidden = true;
-      this.avisoNoche(L_, d);
-      this.status(`${esc(cat.fuente)} · ${C.wms} · cada ${C.pasoMin} min · pasada de hace ${min} min`);
+      this.selloSat(L_, hora);   // lo que se ve es de hace un rato: la última pasada tarda en salir
+
+      /* EN VIVO: si estás en la última imagen, cuando caduque el catálogo se pide otra vez y se pasa sola a la nueva. Si te has
+         ido a una hora pasada o le has dado al play, no se te mueve nada. */
+      clearTimeout(this._satVivo);
+      this._satVivo = setTimeout(() => {
+        const sigue = TLAYERS.find(l => l.id === this.layer)?.sat === L_.sat;
+        if (sigue && !this.playing && this._sat === C && this.t === C.horas.length - 1) { this._satAlFinal = true; this.apply(); }
+      }, SAT_CATALOGO_MS + 1000);
     } catch (err) {
       ['satLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
       ['satSrc'].forEach(id => { if (this.map.getSource(id)) this.map.removeSource(id); });
@@ -6282,6 +6312,12 @@ const Maps = {
     // y saltar solo al "ahora" obligaba a recolocar el deslizador cada vez.
     // La resuelve apply(), que es quien sabe qué modelo acaba pintando.
     this.horaPedida = this.horaMirada();
+    /* ── AL SATÉLITE, SI MIRABAS LO ÚLTIMO, SE ENTRA EN LO ÚLTIMO (19-10-2026) ──
+       Suyo: «lleva 1 hora de retraso» · «media hora de retraso». Cada capa de satélite acaba a una hora distinta (medido a las
+       13:02 UTC: lluvia 12:10, GeoColour 12:40, rayos 12:50), y pasar de Lluvia a GeoColour te dejaba en las 12:10 —la hora de
+       la otra— con GeoColour teniendo media hora más. Si estabas en la última imagen (o en el «ahora» del modelo), se entra en
+       la última de la capa nueva; si estabas mirando una hora pasada a propósito, se respeta esa hora. */
+    this._satAlFinal = !!TLAYERS.find(l => l.id === id)?.sat && this.enLoUltimo();
     this.cerrarPopups();
     /* ── SE CORTA LA PRECARGA DE LA CAPA QUE DEJAS ────────────────────
        `cancelarPrecarga()` llevaba escrita desde el principio —con su
@@ -6487,10 +6523,9 @@ const Maps = {
         const src = this.map.getSource('satSrc');
         const nueva = src.tiles[0].replace(/time=[^&]*/, 'time=' + encodeURIComponent(hora));
         src.setTiles([nueva]);
-        const d = new Date(hora);
-        const st = document.querySelector('#mapStamp');
-        if (st) st.textContent = d.toLocaleString('es', { weekday:'short', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
-        this.avisoNoche(L_, d);
+        /* Antes solo cambiaba la hora del sello: abajo seguía el «pasada de hace 144 min» de la imagen de antes con «14:30»
+           encima (su captura del 19-10-2026 a las 15:04). */
+        this.selloSat(L_, hora);
         return;
       } catch { /* si falla, se rehace entera abajo */ }
     }

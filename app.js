@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.19-1357';
+const BUILD = '2026.10.19-1521';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -12436,6 +12436,26 @@ function renderRayos() {
   cargarRayosSatelite();
 }
 
+/** El radar de Windy en directo (su visor oficial para incrustar), centrado en el sitio. Se carga solo al entrar en Radar. */
+function radarWindyUrl(p, capa = 'radar') {
+  const q = new URLSearchParams({ lat: p.lat.toFixed(3), lon: p.lon.toFixed(3), detailLat: p.lat.toFixed(3), detailLon: p.lon.toFixed(3),
+    zoom: capa === 'radar' ? '7' : '6', level: 'surface', overlay: capa, product: capa, menu: '', message: 'true', marker: 'true', calendar: 'now',
+    type: 'map', location: 'coordinates', metricWind: 'km/h', metricTemp: '°C' });
+  return `https://embed.windy.com/embed2.html?${q}`;
+}
+function pintarRadarWindy() {
+  const p = S.place || { lat: 43.42, lon: -2.72, name: 'Bermeo' };
+  for (const [sel, capa, que] of [['#radarWindy', 'radar', 'Radar'], ['#sateliteWindy', 'satellite', 'Satélite']]) {
+    const el = $(sel);
+    if (!el) continue;
+    const url = radarWindyUrl(p, capa);
+    if (el.dataset.en === url) continue;      // ya está en ese sitio
+    el.dataset.en = url;
+    el.innerHTML = `<iframe src="${esc(url)}" loading="lazy" referrerpolicy="no-referrer"
+        title="${que} de Windy en directo cerca de ${esc(p.name || '')}"></iframe>`;
+  }
+}
+
 /** El mapa en vivo. Se carga solo al entrar en la pestaña. */
 function pintarRayosVivo() {
   const el = $('#rayos');
@@ -18733,7 +18753,7 @@ function setView(v) {
   if (v === 'days')   renderDays();
   if (v === 'sea')    cargarMareas().then(() => { if (S.view === 'sea') pintarMareas(); });
   const abrir = () => {
-    if (v === 'radar'  && typeof Radar !== 'undefined') Radar.open();
+    if (v === 'radar') { seguro('radar de Windy', pintarRadarWindy); if (typeof Radar !== 'undefined') Radar.open(); }
     if (v === 'models' && typeof Maps  !== 'undefined') {
       Maps.open();
       // Encajar el mapa en lo que quede de pantalla, para que el

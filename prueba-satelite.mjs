@@ -58,7 +58,7 @@ ${dim === null ? '' : `<Dimension name="time" default="2026-09-05T03:00:00Z" uni
 </Layer>`).join('\n')}
 </Layer></Capability></WMS_Capabilities>`;
 
-const IR = 'msg_fes:ir108', CONV = 'msg_fes:rgb_convection', VIS = 'msg_fes:rgb_eview';
+const IR = 'mtg_fd:ir105_hrfi', CONV = 'msg_fes:rgb_convection', VIS = 'mtg_fd:vis06_hrfi';   // 19-10-2026: ir y visible, del MTG
 const INTERVALO_REAL = '2020-09-01T00:00:00.000Z/2026-09-05T03:00:00.000Z/PT15M';
 
 console.log('\n  extraerTiempo(): lo que declara el catálogo, tal cual\n');

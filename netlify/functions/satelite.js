@@ -61,9 +61,12 @@ const CAPS = WMS + '?service=WMS&version=1.3.0&request=GetCapabilities';
 
 // Las capas que se ofrecen, con su nombre en cristiano.
 const CAPAS = {
-  ir:         { wms: 'msg_fes:ir108',        nombre: 'Satélite infrarrojo' },
+  /* Infrarrojo y visible, del Meteosat NUEVO (MTG) desde el 19-10-2026. Suyo: «lleva 1 hora de retraso». MEDIDO a las 13:02 UTC en
+     el catálogo: el viejo (msg_fes:ir108, rgb_eview) acababa en las 12:00 —una hora— y el nuevo (ir105_hrfi, vis06_hrfi) en las
+     12:40, y más fino. Tormentas sigue en el viejo porque el nuevo no publica esa combinación: su sello dice la hora que trae. */
+  ir:         { wms: 'mtg_fd:ir105_hrfi',    nombre: 'Satélite infrarrojo (MTG)' },
   convection: { wms: 'msg_fes:rgb_convection', nombre: 'Satélite tormentas' },
-  visible:    { wms: 'msg_fes:rgb_eview',    nombre: 'Satélite visible' },
+  visible:    { wms: 'mtg_fd:vis06_hrfi',    nombre: 'Satélite visible (MTG)' },
   /* 19-10-2026, suyo con EUMETView delante: «utilízala» · «si hay algo más, añades». Meteosat de tercera generación (MTG), sin clave.
      `sinComprobar`: una imagen SIN rayos o SIN lluvia es pequeña y vacía de verdad, y la comprobación de abajo la daría por «no
      servida»; lo que evita pedir una pasada aún no publicada es no pasar del fin que declara el catálogo (como `?rayos=1`). */

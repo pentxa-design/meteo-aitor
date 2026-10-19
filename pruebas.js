@@ -14002,9 +14002,121 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
    arranca /satelite con un EUMETSAT de mentira: la hora de los rayos se
    ofrece aunque su imagen venga VACÍA (sin rayos es vacía de verdad), y el
    resto de capas siguen comprobándose como siempre. */
+
+/* ═══ EL RADAR EN DIRECTO, DE WINDY (19-10-2026) ═══════════════════════════
+   Suyo: «pues pilla de Windy y punto» · «quiero ver lo que viene y como mucho lo que está en directo». Se ejecuta lo que pinta la
+   pestaña Radar con un DOM de mentira: tiene que salir el visor de Windy con el RADAR, en AHORA y en el sitio que tienes puesto. */
+{
+  grupo('La pestaña Radar abre con el radar de Windy en directo, en tu sitio');
+  const caja = { innerHTML: '', dataset: {} }, cajaSat = { innerHTML: '', dataset: {} };
+  let r = null, rs = null, err = null;
+  try {
+    const $ = sel => (sel === '#radarWindy' ? caja : sel === '#sateliteWindy' ? cajaSat : null);
+    const S = { place: { lat: 43.4206, lon: -2.7224, name: 'BI BERMEO' } };
+    const esc = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    eval(sacar('function radarWindyUrl(p, capa = \'radar\') {') + sacar('function pintarRadarWindy() {') + '; pintarRadarWindy();');
+    const src = (caja.innerHTML.match(/src="([^"]+)"/) || [])[1]?.replace(/&amp;/g, '&');
+    r = src ? Object.fromEntries(new URL(src).searchParams) : null;
+    r && (r.host = new URL(src).host);
+    const srcS = (cajaSat.innerHTML.match(/src="([^"]+)"/) || [])[1]?.replace(/&amp;/g, '&');
+    rs = srcS ? Object.fromEntries(new URL(srcS).searchParams) : null;
+  } catch (e) { err = e; }
+  ok('   y debajo el SATÉLITE de Windy, también en AHORA y en el sitio',
+     !err && rs?.overlay === 'satellite' && rs.calendar === 'now' && rs.lat === '43.421', err ? String(err) : JSON.stringify(rs));
+  ok('sale el visor de Windy, con el RADAR, en AHORA y centrado en el sitio (Bermeo)',
+     !err && r?.host === 'embed.windy.com' && r.overlay === 'radar' && r.calendar === 'now' && r.lat === '43.421' && r.lon === '-2.722',
+     err ? String(err) : JSON.stringify(r));
+  const Ax = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8'), Hx = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  ok('   y se llama al entrar en la pestaña Radar, donde está su hueco',
+     /v === 'radar'\)\s*\{[^}]*pintarRadarWindy/.test(Ax) && /data-v="radar">[\s\S]{0,900}id="radarWindy"/.test(Hx));
+}
+
+/* ═══ EL SATÉLITE, AL DÍA (19-10-2026) ═════════════════════════════════════
+   Suyo: «lleva 1 hora de retraso» · «media hora de retraso», con Windy al lado. Tres fallos nuestros, cazados en su captura de
+   GeoColour («14:30» abajo y «pasada de hace 144 min» a la derecha, a las 15:04): (1) al cambiar de capa de satélite se quedaba
+   en la hora de la otra; (2) el catálogo se pedía UNA vez por sesión; (3) al mover la barra no se rehacía el «hace X min».
+   Se EJECUTA applySatelite() y setT() de maps.js, con un mapa y un reloj de mentira. */
+{
+  grupo('El satélite entra en su última imagen, se refresca y dice bien cuánto hace');
+  const vm = require('vm');
+  const nada = () => {};
+  const cualquiera = () => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => '' : cualquiera()), apply: () => cualquiera(), construct: () => cualquiera() });
+  let ahora = Date.parse('2026-10-19T13:04:00Z');
+  class Reloj extends Date { constructor(...a) { super(...(a.length ? a : [ahora])); } static now() { return ahora; } }
+  const els = {};
+  const el = sel => (els[sel] ??= { textContent: '', style: {}, hidden: false, value: 0, max: 0, title: '' });
+  let pedidas = 0, catalogo = null;
+  const caja = { console: { log: nada, warn: nada, error: nada, info: nada }, setTimeout: () => 0, clearTimeout: nada, setInterval: () => 0, clearInterval: nada,
+    URL, URLSearchParams, Intl, Date: Reloj, Math, JSON, Promise, AbortController, document: { querySelector: el, querySelectorAll: () => [], getElementById: id => el('#' + id), addEventListener: nada, createElement: () => cualquiera() },
+    navigator: { userAgent: 'node' }, localStorage: { getItem: () => null, setItem: nada, removeItem: nada }, sessionStorage: { getItem: () => null, setItem: nada, removeItem: nada },
+    location: { search: '', href: 'https://x/', origin: 'https://x' }, fetch: async () => ({ ok: false }), maplibregl: cualquiera(),
+    OMWeatherMapLayer: cualquiera(), addEventListener: nada, matchMedia: () => ({ matches: false, addEventListener: nada }),
+    requestAnimationFrame: nada, performance: { now: () => 0 }, Blob: function () {}, Image: function () {},
+    API: { sat: '/satelite' }, esc: x => String(x), jget: async () => { pedidas++; return JSON.parse(JSON.stringify(catalogo)); } };
+  caja.window = caja; caja.globalThis = caja; caja.self = caja;
+  const horas = (fin, n, paso) => Array.from({ length: n }, (_, k) => new Date(Date.parse(fin) - (n - 1 - k) * paso * 60e3).toISOString());
+  const cat = (finGeo, finLluvia) => ({ wms: 'https://w', fuente: 'EUMETSAT', capas: {
+    geocolor: { wms: 'mtg_fd:rgb_geocolour', pasoMin: 10, horas: horas(finGeo, 12, 10) },
+    lluvia: { wms: 'mtg_fd:h40b', pasoMin: 10, horas: horas(finLluvia, 12, 10) } } });
+  let r = null, err = null;
+  try {
+    vm.createContext(caja);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'reglas-tiempo.js'), 'utf8'), caja);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8'), caja, { filename: 'maps.js' });
+    const M = vm.runInContext('Maps', caja);
+    const fuentes = {}, capas = {};
+    M.map = { getLayer: id => capas[id], removeLayer: id => { delete capas[id]; }, getSource: id => fuentes[id], removeSource: id => { delete fuentes[id]; },
+      addSource: (id, d) => { fuentes[id] = { tiles: d.tiles, setTiles(t) { this.tiles = t; } }; }, addLayer: d => { capas[d.id] = d; } };
+    M.firstLabelLayer = () => undefined; M.avisoNoche = nada; M.rayos = nada;
+    let estado = ''; M.status = t => { estado = t; };
+    const TL = vm.runInContext('TLAYERS', caja);
+    const G = TL.find(l => l.id === 'sat_geo'), Ll = TL.find(l => l.id === 'sat_lluvia');
+    r = { };
+    // (1) Mirando la última de Lluvia (12:10) se pasa a GeoColour, que llega a las 12:40: se entra en las 12:40, no en las 12:10.
+    catalogo = cat('2026-10-19T12:40:00Z', '2026-10-19T12:10:00Z');
+    M.layer = 'sat_lluvia';
+    (globalThis.__pendientes ??= []).push((async () => {
+      try {
+        M._satAlFinal = true;   // se llega desde el «ahora» del modelo
+        await M.applySatelite(Ll);
+        r.lluviaFin = M._sat.horas[M.t];
+        M.horaPedida = M.horaMirada(); M._satAlFinal = M.enLoUltimo(); M.layer = 'sat_geo';
+        await M.applySatelite(G);
+        r.geoAlEntrar = M._sat.horas[M.t];
+        // y si estabas en una hora pasada a propósito (lluvia 11:30), GeoColour respeta esa hora
+        M.layer = 'sat_lluvia'; await M.applySatelite(Ll); M.t = 4; r.lluviaPasada = M._sat.horas[M.t];
+        M.horaPedida = M.horaMirada(); M._satAlFinal = M.enLoUltimo(); M.layer = 'sat_geo';
+        await M.applySatelite(G); r.geoPasada = M._sat.horas[M.t];
+        // (2) Diez minutos después hay imagen nueva (12:50): con el catálogo caducado se pide otra vez y se ve.
+        const antes = pedidas;
+        ahora += 10 * 60e3; catalogo = cat('2026-10-19T12:50:00Z', '2026-10-19T12:20:00Z');
+        M._satAlFinal = true; await M.applySatelite(G);
+        r.pedidasDespues = pedidas - antes; r.geoNueva = M._sat.horas[M.t];
+        // (3) Se mueve la barra a la imagen de las 12:30 (hace 44 min a las 13:14): el estado lo dice con ESE número.
+        M.setT(M._sat.horas.indexOf('2026-10-19T12:30:00.000Z'));
+        r.estado = estado; r.sello = el('#mapStamp').title;
+      } catch (e) { err = e; }
+      ok('(1) de Lluvia en su última imagen (12:10) a GeoColour: entra en la ÚLTIMA de GeoColour (12:40), no en la hora de la otra capa',
+         !err && r.lluviaFin === '2026-10-19T12:10:00.000Z' && r.geoAlEntrar === '2026-10-19T12:40:00.000Z', err ? String(err) : JSON.stringify(r));
+      ok('   y si estabas en una hora pasada a propósito, se respeta esa hora',
+         !err && r.geoPasada === r.lluviaPasada && r.geoPasada !== '2026-10-19T12:40:00.000Z', JSON.stringify(r));
+      ok('(2) el catálogo caduca: diez minutos después se pide otra vez y sale la imagen nueva (12:50)',
+         !err && r.pedidasDespues === 1 && r.geoNueva === '2026-10-19T12:50:00.000Z', JSON.stringify(r));
+      ok('(3) al mover la barra, el «hace X min» es el de la imagen que se ve (12:30 a las 13:14 → 44 min), no el de la de antes',
+         !err && /pasada de hace 44 min/.test(r.estado || '') && /hace 44 minutos/.test(r.sello || ''), JSON.stringify({ estado: r.estado, sello: r.sello }));
+    })());
+  } catch (e) { err = e; ok('el satélite al día: maps.js se carga en la caja', false, String(e)); }
+}
+
+
 {
   grupo('Rayos, lluvia, nieve, niebla y GeoColour del Meteosat nuevo, en el mapa');
   const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  /* Suyo, 19-10-2026: «lleva 1 hora de retraso». Medido: el Meteosat viejo acababa una hora atrás y el nuevo a los 20 min. */
+  const SatS = fs.readFileSync(path.join(__dirname, 'netlify', 'functions', 'satelite.js'), 'utf8');
+  ok('Nubes (infrarrojo) y Visible salen del Meteosat NUEVO, no del viejo que iba una hora atrasado (19-10-2026)',
+     /\bir:\s*\{\s*wms:\s*'mtg_fd:ir105_hrfi'/.test(SatS) && /\bvisible:\s*\{\s*wms:\s*'mtg_fd:vis06_hrfi'/.test(SatS),
+     (SatS.match(/\b(ir|visible):\s*\{\s*wms:\s*'[^']+'/g) || []).join(' · '));
   ok('las cinco capas están en el grupo Satélite del mapa',
      ['sat_rayos', 'sat_lluvia', 'sat_nieve', 'sat_niebla', 'sat_geo'].every(id => new RegExp(`\\{ id:'${id}', g:'Satélite'`).test(Mx)));
   (globalThis.__pendientes ??= []).push((async () => {
@@ -14012,7 +14124,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
     const redondo = (ms, min) => new Date(Math.floor(ms / (min * 60e3)) * min * 60e3).toISOString();
     const finRayos = redondo(Date.now() - 15 * 60e3, 5), inicio = redondo(Date.now() - 2 * 864e5, 60);
     const capa = (n, fin, paso) => `<Layer><Name>${n}</Name><Dimension name="time">${inicio}/${fin}/PT${paso}M</Dimension></Layer>`;
-    const xml = '<WMS_Capabilities>' + capa('msg_fes:ir108', redondo(Date.now() - 30 * 60e3, 15), 15) + capa('mtg_fd:li_afa', finRayos, 5)
+    const xml = '<WMS_Capabilities>' + capa('mtg_fd:ir105_hrfi', redondo(Date.now() - 30 * 60e3, 10), 10) + capa('mtg_fd:li_afa', finRayos, 5)
       + capa('mtg_fd:rgb_snow', redondo(Date.now() - 20 * 60e3, 10), 10) + '</WMS_Capabilities>';
     const fetchViejo = globalThis.fetch;
     globalThis.fetch = async (u) => /GetCapabilities/.test(String(u))
