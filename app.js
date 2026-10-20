@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.19-1529';
+const BUILD = '2026.10.20-1032';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -1538,6 +1538,7 @@ function comoLlueve(h, thr = S.thr) {
 
    Misma regla que ya se aplica al agua en `lluviaQueNoVesTu()`: se dice
    quién lo ve y quién no, y decide él. */
+const NIEBLA_CODIGOS = new Set([45, 48]);   // los dos códigos de niebla de la OMM
 function cieloRaro(nubes) {
   const C = deEsteSitio(S.comparativa)?.hourly;   // la de ESTE sitio, no la del anterior
   if (!C?.time || !has(nubes)) return null;
@@ -5237,7 +5238,7 @@ function renderTower() {
       }
       const otro = lluviaQueNoVesTu(c);
       const base = [L.k === 'sirimiri' ? 'No marca en el pluviómetro, pero moja'
-                      : (cieloVisto(c).txt ?? '') + avisoCielo(c.cloud, { corto: true }),
+                      : (cieloVisto(c).txt ?? '') + avisoCielo(c.cloud, { corto: true, codigo: cieloVisto(c).code }),
                     has(c.pop) ? `probabilidad ${c.pop} %` : null].filter(Boolean).join(' · ');
       /* Si otro modelo ve agua y el tuyo no, se dice AQUÍ y en naranja.
          No se toca el número: se le quita el «no llueve» de encima. */
@@ -14321,7 +14322,7 @@ function renderNow() {
      del dueño del cielo, y la nota salía con otro número que el icono y que la
      tarjeta de Mis estaciones. `conAhora` ya mete en `c` lo de `current` cuando
      el cielo es propio. */
-  $('#nowDesc').innerHTML = esc(textoCielo(codVisto, V.dia)) + avisoCielo(c.cloud);
+  $('#nowDesc').innerHTML = esc(textoCielo(codVisto, V.dia)) + avisoCielo(c.cloud, { codigo: codVisto });
   /* ── EL NÚMERO GRANDE ES EL AIRE, Y LA SENSACIÓN SOLO SI APORTA ────
      Suyo, 01-09-2026 con la cabecera delante: *«¿por qué pone sensación?
      yo quiero la temperatura real»*. Y llevaba razón en lo que se lee:
@@ -14715,7 +14716,7 @@ function renderNow() {
         (sel[0].date.getHours() <= new Date().getHours()
          && new Date().getHours() <= sel[sel.length - 1].date.getHours()
          && sel[0].date.toDateString() === new Date().toDateString())
-          ? avisoCielo(sel[0].cloud, { corto: true }) : ''}${
+          ? avisoCielo(sel[0].cloud, { corto: true, codigo: cieloVisto(sel[0]).code }) : ''}${
         /* LA LLUVIA SIEMPRE, TAMBIÉN CUANDO ES CERO. Suyo, 28-08-2026,
            señalando estos tres recuadros: *«ahí falta precipitación, 0 o
            en mm; no hay dentro de los recuadros»*.
@@ -18110,7 +18111,13 @@ const ckey  = p => `${key(p)}#${S.model}`;
    · si uno se descuelga  → «los otros ven X %», que es la mediana
    · si el abanico es ancho → «van de X a Y», que es lo que de verdad
      hay: los modelos no se ponen de acuerdo sobre el cielo.           */
-function avisoCielo(nubes, { corto = false } = {}) {
+function avisoCielo(nubes, { corto = false, codigo = null } = {}) {
+  /* ── CON NIEBLA NO SE COMPARAN NUBES (20-10-2026) ─────────────────
+     Su captura, BI ZORNOTZA a las 10:28: «Niebla ⚠ los otros ven 0 % de nubes», con la estación de Amorebieta al 99 % de humedad y
+     él dentro de la niebla. La niebla es nube PEGADA AL SUELO: se ve en la visibilidad, y el resto de modelos la cuentan como cielo
+     despejado por encima. «Los otros ven 0 %» no la contradice —es justo el sol de encima de la niebla de valle— y ponerle un ⚠
+     al lado la hacía parecer dudosa cuando era lo único que acertaba. */
+  if (NIEBLA_CODIGOS.has(+codigo)) return '';
   const r = cieloRaro(nubes);
   if (!r) return '';
   /* `cuantos` es cuántos se separan 45 puntos o más de lo que él ve. Si

@@ -9237,7 +9237,8 @@ grupo('El aviso del cielo salta poco y por lo que importa (02-09-2026)');
 grupo('El aviso del cielo dice POR QUÉ ha saltado (02-09-2026)');
 {
   const fn = new Function('cieloRaro', `
-    ${sacar('function avisoCielo(nubes, { corto = false } = {}) {')}
+    ${sacarConst('NIEBLA_CODIGOS')}
+    ${sacar('function avisoCielo(nubes, { corto = false, codigo = null } = {}) {')}
     return avisoCielo;`);
 
   /* ── ESTE DOBLE ERA LA TRAMPA DEL ✓ ───────────────────────────────
@@ -14002,6 +14003,27 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
    arranca /satelite con un EUMETSAT de mentira: la hora de los rayos se
    ofrece aunque su imagen venga VACÍA (sin rayos es vacía de verdad), y el
    resto de capas siguen comprobándose como siempre. */
+
+/* ═══ CON NIEBLA NO SE COMPARAN NUBES (20-10-2026) ═══════════════════════
+   Su captura de BI ZORNOTZA a las 10:28: «Niebla ⚠ los otros ven 0 % de nubes», dentro de la niebla de valle, con el sol encima.
+   Se ejecuta avisoCielo() con un cieloRaro() que SIEMPRE salta: con niebla tiene que callarse, y sin niebla tiene que seguir hablando. */
+{
+  grupo('Con niebla, el aviso de nubes de los otros modelos se calla');
+  let r = null, err = null;
+  try {
+    const esc = x => String(x);
+    const cieloRaro = () => ({ mediana: 0, bajo: 0, alto: 100, porAbismo: false, cuantos: 3 });
+    const fn = new Function('esc', 'cieloRaro', sacarConst('NIEBLA_CODIGOS') + ';' + sacar('function avisoCielo(nubes, { corto = false, codigo = null } = {}) {') + '; return avisoCielo;')(esc, cieloRaro);
+    r = { niebla: fn(100, { codigo: 45 }), escarcha: fn(100, { corto: true, codigo: 48 }), cubierto: fn(100, { codigo: 3 }), sinCodigo: fn(100) };
+  } catch (e) { err = e; }
+  ok('«Niebla» (45) y niebla con escarcha (48): sin ⚠ de nubes — los otros ven el sol de ENCIMA de la niebla, no la contradicen',
+     !err && r.niebla === '' && r.escarcha === '', err ? String(err) : JSON.stringify(r));
+  ok('   y con el cielo cubierto (3) o sin código, el aviso sigue saliendo',
+     !err && /⚠/.test(r.cubierto) && /⚠/.test(r.sinCodigo), JSON.stringify(r));
+  const Ax = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  ok('   y los tres sitios que lo pintan (Ahora, Mis estaciones y la franja en curso) le pasan el código que enseñan',
+     (Ax.match(/avisoCielo\([^)]*codigo:/g) || []).length === 3);
+}
 
 /* ═══ EL RADAR EN DIRECTO, DE WINDY (19-10-2026) ═══════════════════════════
    Suyo: «pues pilla de Windy y punto» · «quiero ver lo que viene y como mucho lo que está en directo». Se ejecuta lo que pinta la
