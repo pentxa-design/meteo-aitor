@@ -30,7 +30,7 @@ import { verificar, cargar as cargarRegistro, resumen as resumenVerificacion, RU
 import { leer, guardar } from './suscribir.mjs';
 import { ReglasTiempo } from '../lib/reglas.mjs';
 import { lectorDeRayosServidor } from '../lib/rayos-png.mjs';
-import { lluviaMeteocat, cuotaMeteocat, pruebaXema } from '../lib/meteocat.mjs';
+import { lluviaMeteocat, cuotaMeteocat, pruebaXema, episodioMeteocat } from '../lib/meteocat.mjs';
 
 const ESTADO = 'avisos/vigilante.json';
 const APP = 'https://weather-app-ochre-one-76.vercel.app';
@@ -1204,6 +1204,14 @@ export default async function handler(req, res) {
   if (req.method === 'GET' && req.query?.meteocat === '1') {
     res.setHeader('Cache-Control', 'no-store');
     if (req.query?.prueba === '1') return res.status(200).json(await pruebaXema().catch(e => ({ error: String(e?.message || e) })));
+    /* Un episodio pasado: ?meteocat=1&dias=AAAA-MM-DD,…(hasta 4)&puntos=lat,lon;…(hasta 10). Ver episodioMeteocat. */
+    if (req.query?.dias) {
+      const dias = [...new Set(String(req.query.dias).split(',').filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)))].slice(0, 4);
+      const puntos = String(req.query.puntos || '').split(';').map(s => s.split(',').map(Number))
+        .filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b)).slice(0, 10).map(([lat, lon]) => ({ lat, lon }));
+      if (!dias.length) return res.status(400).json({ error: 'dias=AAAA-MM-DD,AAAA-MM-DD' });
+      return res.status(200).json(await episodioMeteocat(dias, puntos).catch(e => ({ error: String(e?.message || e).slice(0, 120) })));
+    }
     const cuota = await cuotaMeteocat().catch(e => ({ error: String(e?.message || e) }));   // puede no entrar en el plan: se enseña y se sigue
     try {
       const cat = PUNTOS_CONTRASTE.filter(x => /Tarragona|Barcelona|Girona/.test(x.n));

@@ -44,7 +44,7 @@ globalThis.fetch = async (u) => {
       { data: `${hoy}T11:00Z`, valor: 1.0, estat: 'N' }] }] }]);
   return { ok: false, status: 404, text: async () => '' };
 };
-const { lluviaMeteocat } = await import(pathToFileURL(path.join(tmp, 'lib', 'meteocat.mjs')).href);
+const { lluviaMeteocat, episodioMeteocat } = await import(pathToFileURL(path.join(tmp, 'lib', 'meteocat.mjs')).href);
 console.log('\n  los pluviómetros de Meteocat\n');
 
 const BCN = { lat: 41.39, lon: 2.17 }, BERMEO = { lat: 43.413, lon: -2.718 };
@@ -58,6 +58,15 @@ ok('repetirlo enseguida no gasta: 0 consultas nuevas (la lista y el día, del al
 const n2 = consultas.length;
 const r3 = await lluviaMeteocat([BERMEO], [hoy]);
 ok('pedir solo Bermeo no gasta ni una consulta', consultas.length === n2 && r3[0] === null);
+
+/* Un episodio entero (21-10-2026): suma las horas validadas del día, ordena por litros y da la más cercana a cada punto. */
+{
+  const e = await episodioMeteocat([hoy], [BCN]);
+  ok('episodio: el Raval suma 0,5 l (la lectura sin validar no cuenta) y va el primero de las que más',
+     e?.mas?.[0]?.estacion === 'Barcelona - el Raval' && e.mas[0].litros === 0.5 && e.estaciones === 1, JSON.stringify(e));
+  ok('   y junto a Barcelona da esa estación, con su distancia y sus litros',
+     e?.junto?.[0]?.estacion === 'Barcelona - el Raval' && e.junto[0].litros === 0.5 && e.junto[0].km < 2, JSON.stringify(e?.junto));
+}
 globalThis.__ALMACEN.set('meteocat/cuenta.json', JSON.stringify({ mes: new Date().toISOString().slice(0, 7), n: 600 }));
 globalThis.__ALMACEN.delete(`meteocat/lluvia-${hoy}.json`);
 let err = null; try { await lluviaMeteocat([BCN], [hoy]); } catch (e) { err = String(e.message); }
