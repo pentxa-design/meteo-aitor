@@ -1058,20 +1058,35 @@ const AEMET_RADAR = {
   },
 
   /** Nombres de los últimos N fotogramas, de más antiguo a más reciente. */
-  ficheros(n = 8) {
+  ficheros(n = 8, saltar = 2) {
     const p = v => String(v).padStart(2, '0');
     const base = Math.floor(Date.now() / 600000) * 600000;
     const out = [];
     // MEDIDO (22 ago 2026, 20:05Z): AEMET publica con unos 20 MINUTOS de
     // retraso, no 10. Los dos fotogramas más recientes daban 404 y el
     // último de la tira salía siempre en blanco. Se saltan los dos.
-    for (let i = n + 1; i >= 2; i--) {
+    // (21-10-2026: ya NO siempre — ver `vigentes()`, que pregunta.)
+    for (let i = n - 1 + saltar; i >= saltar; i--) {
       const d = new Date(base - i * 600000);
       const nombre = `radw${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}`
                    + `${p(d.getUTCHours())}${p(d.getUTCMinutes())}_3857.png`;
       out.push({ t: d.getTime(), nombre, url: this.via(nombre) });
     }
     return out;
+  },
+
+  /** LAS ÚLTIMAS QUE EXISTEN DE VERDAD (21-10-2026). Suyo, a las 10:26: el mapa enseñaba AEMET de las 10:00 y a las 10:27 AEMET
+   *  ya tenía la de las 10:20 (MEDIDO: 7 min de retraso, no los 20 de agosto). Saltar dos fijos tiraba 20 minutos sin motivo. Se
+   *  piden los huecos más nuevos y se quitan los que AEMET aún no tiene; si no responde nadie, se queda la tira de siempre. */
+  async vigentes(n = 8, pedir = fetch) {
+    const F = this.ficheros(n + 2, 0);
+    for (let k = 0; k < 3 && F.length > n; k++) {
+      let hay = false;
+      try { hay = (await pedir(F[F.length - 1].url, { cache: 'no-store' })).ok; } catch { /* sin red: se decide abajo */ }
+      if (hay) break;
+      F.pop();
+    }
+    return F.slice(-n);
   },
 };
 
@@ -2670,6 +2685,16 @@ const Maps = {
     return best;
   },
 
+  /** EN VIVO: si se está en la última imagen de una capa observada, cuando caduque su lista se pide otra y se pasa sola a la
+   *  nueva. Si te has ido a una hora pasada, has cambiado de capa o le has dado al play, no se te mueve nada. */
+  seguirEnVivo(capa, tira) {
+    clearTimeout(this._vivo);
+    this._vivo = setTimeout(() => {
+      const T = tira() || [];
+      if (this.layer === capa && !this.playing && T.length && this.t === T.length - 1) { this._alFinal = true; this.apply(); }
+    }, SAT_CATALOGO_MS + 1000);
+  },
+
   /** ¿Se está mirando lo más reciente? En una capa observada, su última imagen; en una de modelo, la hora de ahora (±1 h). */
   enLoUltimo() {
     const tira = this.tiraObservada();
@@ -2760,6 +2785,7 @@ const Maps = {
    *  nunca se inventa un fotograma que no existe.                     */
   pasoEnTira(horas) {
     if (!horas?.length) return 0;
+    if (this._alFinal) { this._alFinal = false; this.horaPedida = null; return horas.length - 1; }   // ver setLayer
     if (!this.horaPedida) return Math.min(this.t, horas.length - 1);
     const objetivo = this.horaPedida.getTime();
     this.horaPedida = null;
@@ -3476,8 +3502,7 @@ const Maps = {
       this._sat = C;
 
       sl.max = C.horas.length - 1;
-      if (this._satAlFinal) { this.t = C.horas.length - 1; this.horaPedida = null; this._satAlFinal = false; }
-      else this.t = this.pasoEnTira(C.horas.map(h => new Date(h).getTime()));
+      this.t = this.pasoEnTira(C.horas.map(h => new Date(h).getTime()));
       if (this.t >= C.horas.length) this.t = C.horas.length - 1;
       sl.value = this.t;
 
@@ -3507,11 +3532,7 @@ const Maps = {
 
       /* EN VIVO: si estás en la última imagen, cuando caduque el catálogo se pide otra vez y se pasa sola a la nueva. Si te has
          ido a una hora pasada o le has dado al play, no se te mueve nada. */
-      clearTimeout(this._satVivo);
-      this._satVivo = setTimeout(() => {
-        const sigue = TLAYERS.find(l => l.id === this.layer)?.sat === L_.sat;
-        if (sigue && !this.playing && this._sat === C && this.t === C.horas.length - 1) { this._satAlFinal = true; this.apply(); }
-      }, SAT_CATALOGO_MS + 1000);
+      this.seguirEnVivo(this.layer, () => (this._sat === C ? C.horas : []));
     } catch (err) {
       ['satLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
       ['satSrc'].forEach(id => { if (this.map.getSource(id)) this.map.removeSource(id); });
@@ -3675,7 +3696,10 @@ const Maps = {
   /** Radar de AEMET como superposición de imagen, dentro de la app. */
   async applyAemet() {
     try {
-      if (!this._aemet) this._aemet = AEMET_RADAR.ficheros(8);
+      /* La lista CADUCA (21-10-2026): antes se hacía una vez por sesión y con la app abierta una hora se quedaba en la de entrar. */
+      if (!this._aemet || !(Date.now() - (this._aemetT ?? 0) < SAT_CATALOGO_MS)) {
+        this._aemet = await AEMET_RADAR.vigentes(8); this._aemetT = Date.now();
+      }
       const F = this._aemet;
       const sl = document.querySelector('#mapTime');
       sl.max = F.length - 1;
@@ -3733,6 +3757,7 @@ const Maps = {
         ? 'sin eco en toda la península: no está lloviendo en ningún sitio'
         : `eco de lluvia en el ${pc < 0.1 ? '<0,1' : pc.toFixed(1)} % del territorio`;
       this.status(`Radar AEMET · compuesto nacional · observación real, no previsión · ${cuanto}`);
+      this.seguirEnVivo('aemet', () => this._aemet);
     } catch (e) {
       this.status('radar de AEMET no disponible: ' + e.message);
     }
@@ -3744,10 +3769,11 @@ const Maps = {
      reflectividad hasta 24 h. Cada paso sabe lo que es. */
   async applyMixta() {
     try {
-      if (!this.radarFrames) {
+      if (!this.radarFrames || !(Date.now() - (this._radarT ?? 0) < SAT_CATALOGO_MS)) {
         const d = await jget(API.rain, {}, { timeout:12000 });
         this.radarHost = d.host;
         this.radarFrames = [...(d.radar?.past ?? []), ...(d.radar?.nowcast ?? [])];
+        this._radarT = Date.now();
       }
       const LR = TLAYERS.find(l => l.id === 'refl');
       const R = await this.resolverModelo(LR);
@@ -3832,10 +3858,12 @@ const Maps = {
   /* Radar observado, dentro del mismo mapa (sin salir de la app). */
   async applyRadar() {
     try {
-      if (!this.radarFrames) {
+      /* La lista CADUCA (21-10-2026), como la del satélite: RainViewer saca imagen cada 10 min. */
+      if (!this.radarFrames || !(Date.now() - (this._radarT ?? 0) < SAT_CATALOGO_MS)) {
         const d = await jget(API.rain, {}, { timeout:12000 });
         this.radarHost = d.host;
         this.radarFrames = [...(d.radar?.past ?? []), ...(d.radar?.nowcast ?? [])];
+        this._radarT = Date.now();
       }
       const F = this.radarFrames;
       if (!F.length) throw new Error('sin imágenes');
@@ -3861,6 +3889,7 @@ const Maps = {
       st.style.color = pasado ? '' : 'var(--warn)';
       st.title = pasado ? 'Observado' : 'Extrapolación a corto plazo';
       this.status(`radar observado · ${F.length} imágenes · RainViewer`);
+      this.seguirEnVivo('radar', () => this.radarFrames);
       document.querySelector('#mapLegend').hidden = true;
     } catch (e) {
       this.status('radar no disponible: ' + e.message);
@@ -6315,7 +6344,9 @@ const Maps = {
        13:02 UTC: lluvia 12:10, GeoColour 12:40, rayos 12:50), y pasar de Lluvia a GeoColour te dejaba en las 12:10 —la hora de
        la otra— con GeoColour teniendo media hora más. Si estabas en la última imagen (o en el «ahora» del modelo), se entra en
        la última de la capa nueva; si estabas mirando una hora pasada a propósito, se respeta esa hora. */
-    this._satAlFinal = !!TLAYERS.find(l => l.id === id)?.sat && this.enLoUltimo();
+    this._alFinal = (!!TLAYERS.find(l => l.id === id)?.sat || id === 'radar' || id === 'aemet') && this.enLoUltimo();
+    /* 21-10-2026: lo mismo con los dos radares. Su captura de las 10:26: de Radar AEMET (10:00) a Radar observado, y RainViewer
+       se quedaba en las 10:00 teniendo la de las 10:20. */
     this.cerrarPopups();
     /* ── SE CORTA LA PRECARGA DE LA CAPA QUE DEJAS ────────────────────
        `cancelarPrecarga()` llevaba escrita desde el principio —con su

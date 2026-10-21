@@ -14067,14 +14067,15 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   class Reloj extends Date { constructor(...a) { super(...(a.length ? a : [ahora])); } static now() { return ahora; } }
   const els = {};
   const el = sel => (els[sel] ??= { textContent: '', style: {}, hidden: false, value: 0, max: 0, title: '' });
-  let pedidas = 0, catalogo = null;
+  let pedidas = 0, catalogo = null, pedidasRadar = 0, radarCat = null;
   const caja = { console: { log: nada, warn: nada, error: nada, info: nada }, setTimeout: () => 0, clearTimeout: nada, setInterval: () => 0, clearInterval: nada,
     URL, URLSearchParams, Intl, Date: Reloj, Math, JSON, Promise, AbortController, document: { querySelector: el, querySelectorAll: () => [], getElementById: id => el('#' + id), addEventListener: nada, createElement: () => cualquiera() },
     navigator: { userAgent: 'node' }, localStorage: { getItem: () => null, setItem: nada, removeItem: nada }, sessionStorage: { getItem: () => null, setItem: nada, removeItem: nada },
     location: { search: '', href: 'https://x/', origin: 'https://x' }, fetch: async () => ({ ok: false }), maplibregl: cualquiera(),
     OMWeatherMapLayer: cualquiera(), addEventListener: nada, matchMedia: () => ({ matches: false, addEventListener: nada }),
     requestAnimationFrame: nada, performance: { now: () => 0 }, Blob: function () {}, Image: function () {},
-    API: { sat: '/satelite' }, esc: x => String(x), jget: async () => { pedidas++; return JSON.parse(JSON.stringify(catalogo)); } };
+    API: { sat: '/satelite', rain: '/rain' }, esc: x => String(x),
+    jget: async (u) => { if (u === '/rain') { pedidasRadar++; return JSON.parse(JSON.stringify(radarCat)); } pedidas++; return JSON.parse(JSON.stringify(catalogo)); } };
   caja.window = caja; caja.globalThis = caja; caja.self = caja;
   const horas = (fin, n, paso) => Array.from({ length: n }, (_, k) => new Date(Date.parse(fin) - (n - 1 - k) * paso * 60e3).toISOString());
   const cat = (finGeo, finLluvia) => ({ wms: 'https://w', fuente: 'EUMETSAT', capas: {
@@ -14099,24 +14100,45 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
     M.layer = 'sat_ir';
     (globalThis.__pendientes ??= []).push((async () => {
       try {
-        M._satAlFinal = true;   // se llega desde el «ahora» del modelo
+        M._alFinal = true;   // se llega desde el «ahora» del modelo
         await M.applySatelite(Ll);
         r.lluviaFin = M._sat.horas[M.t];
-        M.horaPedida = M.horaMirada(); M._satAlFinal = M.enLoUltimo(); M.layer = 'sat_geo';
+        M.horaPedida = M.horaMirada(); M._alFinal = M.enLoUltimo(); M.layer = 'sat_geo';
         await M.applySatelite(G);
         r.geoAlEntrar = M._sat.horas[M.t];
         // y si estabas en una hora pasada a propósito (lluvia 11:30), GeoColour respeta esa hora
         M.layer = 'sat_ir'; await M.applySatelite(Ll); M.t = 4; r.lluviaPasada = M._sat.horas[M.t];
-        M.horaPedida = M.horaMirada(); M._satAlFinal = M.enLoUltimo(); M.layer = 'sat_geo';
+        M.horaPedida = M.horaMirada(); M._alFinal = M.enLoUltimo(); M.layer = 'sat_geo';
         await M.applySatelite(G); r.geoPasada = M._sat.horas[M.t];
         // (2) Diez minutos después hay imagen nueva (12:50): con el catálogo caducado se pide otra vez y se ve.
         const antes = pedidas;
         ahora += 10 * 60e3; catalogo = cat('2026-10-19T12:50:00Z', '2026-10-19T12:20:00Z');
-        M._satAlFinal = true; await M.applySatelite(G);
+        M._alFinal = true; await M.applySatelite(G);
         r.pedidasDespues = pedidas - antes; r.geoNueva = M._sat.horas[M.t];
         // (3) Se mueve la barra a la imagen de las 12:30 (hace 44 min a las 13:14): el estado lo dice con ESE número.
         M.setT(M._sat.horas.indexOf('2026-10-19T12:30:00.000Z'));
         r.estado = estado; r.sello = el('#mapStamp').title;
+        /* LOS RADARES (21-10-2026, su captura de las 10:26): de AEMET en su última a Radar observado, y RainViewer se quedaba
+           en las 10:00 teniendo la de las 10:20. Y su lista también se pedía una vez por sesión. */
+        const marcos = fin => Array.from({ length: 13 }, (_, k) => ({ time: (Date.parse(fin) - (12 - k) * 600e3) / 1000, path: '/p' + k }));
+        radarCat = { host: 'https://h', radar: { past: marcos('2026-10-19T13:10:00Z'), nowcast: [] } };
+        M.radarFrames = null; M._alFinal = true; M.horaPedida = new Date('2026-10-19T12:00:00Z'); M.layer = 'radar';
+        await M.applyRadar();
+        r.radarFin = new Date(M.radarFrames[M.t].time * 1000).toISOString();
+        const nr = pedidasRadar;
+        ahora += 10 * 60e3; radarCat = { host: 'https://h', radar: { past: marcos('2026-10-19T13:20:00Z'), nowcast: [] } };
+        M._alFinal = true; await M.applyRadar();
+        r.radarNuevas = pedidasRadar - nr; r.radarNueva = new Date(M.radarFrames[M.t].time * 1000).toISOString();
+        /* AEMET: a las 13:27 UTC ya tiene la de las 13:20 (medido: 7 min). Se coge esa, no la de las 13:00. */
+        ahora = Date.parse('2026-10-19T13:27:00Z');
+        const AR = vm.runInContext('AEMET_RADAR', caja);
+        const hora = u => { const m = String(u).match(/radw(\d{4})(\d\d)(\d\d)(\d\d)(\d\d)_/); return Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5]); };
+        const publicadaHasta = fin => async u => ({ ok: hora(u) <= Date.parse(fin) });
+        const ult = F => new Date(F.at(-1).t).toISOString();
+        r.aemet7 = ult(await AR.vigentes(8, publicadaHasta('2026-10-19T13:20:00Z')));
+        r.aemet20 = ult(await AR.vigentes(8, publicadaHasta('2026-10-19T13:00:00Z')));
+        r.aemetSinRed = ult(await AR.vigentes(8, async () => { throw new Error('sin red'); }));
+        r.aemetN = (await AR.vigentes(8, publicadaHasta('2026-10-19T13:20:00Z'))).length;
       } catch (e) { err = e; }
       ok('(1) de Lluvia en su última imagen (12:10) a GeoColour: entra en la ÚLTIMA de GeoColour (12:40), no en la hora de la otra capa',
          !err && r.lluviaFin === '2026-10-19T12:10:00.000Z' && r.geoAlEntrar === '2026-10-19T12:40:00.000Z', err ? String(err) : JSON.stringify(r));
@@ -14124,6 +14146,14 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
          !err && r.geoPasada === r.lluviaPasada && r.geoPasada !== '2026-10-19T12:40:00.000Z', JSON.stringify(r));
       ok('(2) el catálogo caduca: diez minutos después se pide otra vez y sale la imagen nueva (12:50)',
          !err && r.pedidasDespues === 1 && r.geoNueva === '2026-10-19T12:50:00.000Z', JSON.stringify(r));
+      ok('(4) de un radar en su última imagen a Radar observado: entra en la ÚLTIMA de RainViewer (13:10), no en la hora de antes',
+         !err && r.radarFin === '2026-10-19T13:10:00.000Z', JSON.stringify(r));
+      ok('   y su lista caduca: diez minutos después se pide otra vez y sale la imagen nueva (13:20)',
+         !err && r.radarNuevas === 1 && r.radarNueva === '2026-10-19T13:20:00.000Z', JSON.stringify(r));
+      ok('(5) AEMET con 7 min de retraso: la última es la de las 13:20 a las 13:27, no la de las 13:00 (saltaba dos fijos)',
+         !err && r.aemet7 === '2026-10-19T13:20:00.000Z' && r.aemetN === 8, JSON.stringify(r));
+      ok('   con el retraso de agosto (20 min) se queda en las 13:00, y sin red no inventa: la tira de siempre (13:00)',
+         !err && r.aemet20 === '2026-10-19T13:00:00.000Z' && r.aemetSinRed === '2026-10-19T13:00:00.000Z', JSON.stringify(r));
       ok('(3) al mover la barra, el «hace X min» es el de la imagen que se ve (12:30 a las 13:14 → 44 min), no el de la de antes',
          !err && /pasada de hace 44 min/.test(r.estado || '') && /hace 44 minutos/.test(r.sello || ''), JSON.stringify({ estado: r.estado, sello: r.sello }));
     })());
