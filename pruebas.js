@@ -14044,6 +14044,27 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      (Ax.match(/avisoCielo\([^)]*codigo:/g) || []).length === 3);
 }
 
+/* ═══ EL APARATO VA POR ENCIMA DE LA PREVISIÓN (23-10-2026) ══════════════════
+   Matxitxako, 23-10: 104 km/h medidos con la previsión en 75-83. Se EJECUTA rachaPorEncima() con datos de ese día. */
+{
+  grupo('Si el anemómetro mide bastante más racha que la prevista, se dice');
+  let r = null, err = null;
+  try {
+    const t = new Date('2026-10-23T05:00:00Z');
+    const S = { data: { hours: [{ date: t, gust10: 79 }] } };
+    const esc = x => String(x), wtxt = (v, u) => `${Math.round(v)}${u ? ' km/h' : ''}`, listonRafaga = () => ({ warn: 60, no: 90 });
+    eval(sacarConst('RACHA_POR_ENCIMA') + ';' + sacar('function rachaPorEncima(e) {'));
+    const base = { nombre: 'MATXITXAKO', km: 4.4, medidoEn: '2026-10-23T05:00:00Z' };
+    r = { fuerte: rachaPorEncima({ ...base, racha: 104 }), poco: rachaPorEncima({ ...base, racha: 88 }),
+          lejos: rachaPorEncima({ ...base, racha: 104, km: 25 }), flojo: rachaPorEncima({ ...base, racha: 50 }) };
+    S.data.hours[0].gust10 = 30; r.flojo = rachaPorEncima({ ...base, racha: 50 });
+  } catch (e) { err = e; }
+  ok('Matxitxako 104 km/h con 79 previstos: sale el aviso con los 25 km/h de diferencia',
+     !err && /va por encima de la previsión/.test(r.fuerte) && /25 km\/h más/.test(r.fuerte), err ? String(err) : JSON.stringify(r));
+  ok('   y se calla con poca diferencia (88 contra 79), con el aparato lejos (25 km) o por debajo de su aviso (50 contra 30)',
+     !err && r.poco === '' && r.lejos === '' && r.flojo === '' && /\+ rachaPorEncima\(e\);/.test(src), JSON.stringify(r));
+}
+
 /* ═══ «REINTENTAR» PIDE SIN CACHÉ (23-10-2026) ═══════════════════════════════
    El 22-10, «N trozos del mapa sin cargar» con ICON-EU que no se arreglaba al reintentar. Se EJECUTA el envoltorio de fetch de
    maps.js con un fetch de mentira: antes de Reintentar, la URL de siempre; después, otra URL y `cache: 'reload'`. */

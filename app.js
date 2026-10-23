@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.23-1927';
+const BUILD = '2026.10.23-1931';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -14203,7 +14203,27 @@ async function pintarMedidoCerca(p) {
     + (has(e.racha) ? ` · racha <b>${wtxt(e.racha, true)}</b>` : '')
     + (has(e.humedad) ? ` · HR ${Math.min(100, Math.round(e.humedad))} %${e.humedad > 100 ? ` (el aparato marca ${Math.round(e.humedad)})` : ''}` : '')
     + (has(e.lluvia) ? ` · ${mmTxt(e.lluvia)} mm en la hora` : '')
-    + (hm ? ` · a las ${hm}${vieja ? ` <b>(${vieja})</b>` : ''}` : '');
+    + (hm ? ` · a las ${hm}${vieja ? ` <b>(${vieja})</b>` : ''}` : '')
+    + rachaPorEncima(e);
+}
+
+/* ── EL APARATO VA POR ENCIMA DE LA PREVISIÓN (23-10-2026) ─────────────
+   Suyo, de la lista de ideas: «todos». El 23-10 Matxitxako midió 104 km/h de
+   racha con los modelos en 75-83. Si el anemómetro (a menos de 10 km) marca
+   15 km/h o más por encima de la racha prevista a 10 m para ESA hora, y ya
+   pasa su aviso, se dice: la previsión se está quedando corta ahora mismo.
+   Es la comparación que él pidió, y solo esa; lo demás no se mezcla. */
+const RACHA_POR_ENCIMA = 15;   // km/h
+function rachaPorEncima(e) {
+  if (!has(e?.racha) || !e?.medidoEn || !(e.km <= 10)) return '';
+  const t = new Date(e.medidoEn); t.setMinutes(0, 0, 0);
+  const h = (S.data?.hours || []).find(x => x.date?.getTime?.() === t.getTime());
+  if (!has(h?.gust10)) return '';
+  const dif = Math.round(e.racha - h.gust10);
+  const aviso = listonRafaga()?.warn ?? 60;
+  if (dif < RACHA_POR_ENCIMA || e.racha < aviso) return '';
+  return `<div class="ojo">⚠ <b>El aparato va por encima de la previsión:</b> ${esc(e.nombre)} marca ${wtxt(e.racha, true)} de racha
+    y la previsión daba ${wtxt(h.gust10, true)} a esa hora (a 10 m): <b>${dif} km/h más</b>. Hoy la previsión se está quedando corta.</div>`;
 }
 
 /* ── LA PORTADA DE SU ESTACIÓN EN MIS ESTACIONES (20-09-2026) ─────────
