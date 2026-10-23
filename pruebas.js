@@ -14044,6 +14044,71 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      (Ax.match(/avisoCielo\([^)]*codigo:/g) || []).length === 3);
 }
 
+/* ═══ «REINTENTAR» PIDE SIN CACHÉ (23-10-2026) ═══════════════════════════════
+   El 22-10, «N trozos del mapa sin cargar» con ICON-EU que no se arreglaba al reintentar. Se EJECUTA el envoltorio de fetch de
+   maps.js con un fetch de mentira: antes de Reintentar, la URL de siempre; después, otra URL y `cache: 'reload'`. */
+{
+  grupo('Reintentar el mapa vuelve a pedir los bloques sin caché');
+  const vm = require('vm');
+  const nada = () => {};
+  const cualquiera = () => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => '' : cualquiera()), apply: () => cualquiera(), construct: () => cualquiera() });
+  const pedidas = [];
+  const caja = { console: { log: nada, warn: nada, error: nada, info: nada }, setTimeout: () => 0, clearTimeout: nada, setInterval: () => 0, clearInterval: nada,
+    URL, URLSearchParams, Intl, Date, Math, JSON, Promise, AbortController, Headers, Response,
+    document: { querySelector: () => ({ style: {} }), querySelectorAll: () => [] },
+    navigator: { userAgent: 'node' }, localStorage: { getItem: () => null, setItem: nada, removeItem: nada }, sessionStorage: { getItem: () => null, setItem: nada, removeItem: nada },
+    location: { search: '', href: 'https://x/', origin: 'https://x' }, maplibregl: cualquiera(),
+    OMWeatherMapLayer: cualquiera(), addEventListener: nada, matchMedia: () => ({ matches: false, addEventListener: nada }),
+    requestAnimationFrame: nada, performance: { now: () => 0 }, Blob: function () {}, Image: function () {} };
+  caja.window = caja; caja.globalThis = caja; caja.self = caja;
+  caja.fetch = async (u, init) => { pedidas.push({ u: String(u), cache: init?.cache }); return new Response('x'); };
+  let r = null, err = null;
+  (globalThis.__pendientes ??= []).push((async () => {
+    try {
+      vm.createContext(caja);
+      vm.runInContext(fs.readFileSync(path.join(__dirname, 'reglas-tiempo.js'), 'utf8'), caja);
+      vm.runInContext(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8'), caja, { filename: 'maps.js' });
+      const PROXY = vm.runInContext('TILES_PROXY', caja);
+      const fich = `${PROXY}/dwd_icon_eu/2026/10/22/1500Z/2026-10-22T1600.om`;
+      const pide = () => caja.window.fetch(fich, { method: 'GET', headers: { range: 'bytes=0-99' } });
+      await pide();
+      const M = vm.runInContext('Maps', caja);
+      M.apply = nada; M.recargarCapa();
+      await pide();
+      await caja.window.fetch('https://openmeteo.s3.amazonaws.com/data_spatial/x.om', {});
+      r = pedidas;
+    } catch (e) { err = e; }
+    ok('antes de Reintentar, el bloque va por su URL de siempre (que la caché sirva)',
+       !err && /\?rango=0-99$/.test(r[0].u) && !r[0].cache, err ? String(err) : JSON.stringify(r));
+    ok('   y después, durante un minuto, con otra URL y sin caché: por el intermediario (&fresco=) y directo (reload)',
+       !err && /\?rango=0-99&fresco=\d+$/.test(r[1].u) && r[1].cache === 'reload' && r[2].cache === 'reload', JSON.stringify(r));
+  })());
+}
+
+/* ═══ POSICIÓN DUDOSA DEL EMPLAZAMIENTO, DICHA (23-10-2026) ═══════════════════
+   El DIA de Bermeo (204602) venía en Amurrio: sol en pantalla con Bermeo a 86 km/h. Se EJECUTA avisoNoEsTuSitio() con un
+   sitio marcado como dudoso en el catálogo: tiene que salir el cartel. Y el catálogo lleva la marca en los que la tienen. */
+{
+  grupo('Un emplazamiento con la posición dudosa lo dice');
+  const caja = { innerHTML: '' };
+  let r = null, err = null;
+  try {
+    const $ = sel => (sel === '#noEsTuSitio' ? caja : null);
+    const esc = x => String(x);
+    const S = { place: { name: 'BI EDIFICIO IBM GETXO · 91328', lat: 43.684, lon: -2.862722, dudosa: true }, saved: [] };
+    eval(sacar('function avisoNoEsTuSitio() {'));
+    avisoNoEsTuSitio();
+    r = caja.innerHTML;
+  } catch (e) { err = e; }
+  ok('abrir un emplazamiento con posición dudosa saca el cartel con su punto y manda a Argos',
+     !err && /posición de este emplazamiento es dudosa/.test(r) && /43\.684, -2\.863/.test(r) && /Argos/.test(r), err ? String(err) : r);
+  const cat = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'estaciones.json'), 'utf8'));
+  const de = c => cat.find(e => e.c === c) || {};
+  ok('   el catálogo marca los que caen en el mar o en otro pueblo (IBM Getxo, Galdakao Iberdrola…) y el DIA de Bermeo ya está en Bermeo',
+     de('91328').d === 1 && de('83661').d === 1 && de('204602').d !== 1 && Math.abs(de('204602').lat - 43.422) < 0.01
+     && /est: true, \.\.\.\(e\.d \? \{ dudosa: true \} : \{\}\)/.test(src));
+}
+
 /* ═══ WINDY COMO CAPA DEL MAPA, Y EL RADAR CON FUERZA (23-10-2026) ═════════════
    Suyo: «lo de Windy pónmelo en satélite, en capas» · «algo pálido los colores» (radar observado a las 16:08). Se EJECUTA
    applyWindy() con un mapa de mentira: sale su visor centrado donde se mira, y al cambiar de capa se quita. */

@@ -105,12 +105,18 @@ const RECUERDA_MS = 6 * 3600e3;
    app. Si no hay `window.fetch` (jsdom de abrir.cjs), no hace nada.
    ═══════════════════════════════════════════════════════════════════ */
 const RANGO_BYTES = /^bytes=(\d+)-(\d+)$/;
+/* «REINTENTAR» DE VERDAD (23-10-2026). El 22-10 le salió «N trozos sin cargar» con ICON-EU y yo no lo pude reproducir: una
+   respuesta a medias guardada en la caché del CDN o del navegador se servía igual al reintentar. Durante un minuto después de
+   pulsar Reintentar, los bloques se piden SIN caché: por el intermediario con otra URL (`&fresco=`) y directos con `reload`. */
+let FRESCO_HASTA = 0;
 function instalarBloquesPorUrl() {
   if (typeof window === 'undefined' || typeof window.fetch !== 'function' || window.fetch.bloquesPorUrl) return false;
   const original = window.fetch.bind(window);
   const envuelto = async function (entrada, init) {
     const url = typeof entrada === 'string' ? entrada
               : (entrada instanceof URL ? entrada.href : entrada && entrada.url);
+    const fresco = Date.now() < FRESCO_HASTA;
+    if (url && fresco && url.endsWith('.om') && !url.startsWith(TILES_PROXY + '/')) return original(entrada, { ...(init || {}), cache: 'reload' });
     if (!url || !url.startsWith(TILES_PROXY + '/') || !url.endsWith('.om')) return original(entrada, init);
     const metodo = String((init && init.method) || (entrada && entrada.method) || 'GET').toUpperCase();
     const señal = (init && init.signal) || (entrada && entrada.signal) || undefined;
@@ -127,7 +133,7 @@ function instalarBloquesPorUrl() {
     }
     const cab = new Headers((init && init.headers) || (entrada && entrada.headers) || undefined);
     const m = metodo === 'GET' ? RANGO_BYTES.exec(cab.get('range') || '') : null;
-    if (m) return original(`${url}?rango=${m[1]}-${m[2]}`, { signal: señal });
+    if (m) return original(`${url}?rango=${m[1]}-${m[2]}${fresco ? `&fresco=${FRESCO_HASTA}` : ''}`, { signal: señal, ...(fresco ? { cache: 'reload' } : {}) });
     return original(entrada, init);
   };
   envuelto.bloquesPorUrl = true;
@@ -4457,6 +4463,8 @@ const Maps = {
   /** Vuelve a pedir la capa desde cero, borrando lo que ya hay pintado. */
   recargarCapa() {
     this._fallosCerrados = false;
+    FRESCO_HASTA = Date.now() + 60e3;                         // ver instalarBloquesPorUrl: un minuto sin cachés
+    try { OMWeatherMapLayer.clearBlockCache?.(); } catch {}   // y sin los bloques ya guardados en memoria
     Peticiones.reset();
     this._fuente = null;
     this.apply();

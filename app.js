@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.23-1913';
+const BUILD = '2026.10.23-1927';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -13406,6 +13406,18 @@ function avisoNoEsTuSitio() {
   const el = $('#noEsTuSitio');
   if (!el) return;
   el.innerHTML = '';
+  /* ── LA POSICIÓN DEL EMPLAZAMIENTO ES DUDOSA (23-10-2026) ────────────
+     El DIA de Bermeo venía puesto en Amurrio, a 41 km: sol y 39 km/h en
+     pantalla con Bermeo lloviendo y a 86. El catálogo (Centro Operativo,
+     de Argos) marca «coordenadas dudosas» y hay otros que caen en el mar.
+     Mientras no estén las buenas, se DICE: un tiempo de otro sitio con el
+     nombre de este es el peor fallo que puede tener la ficha. */
+  if (S.place?.dudosa) {
+    el.innerHTML = `<div class="ojo"><b>Ojo: la posición de este emplazamiento es dudosa en el catálogo.</b>
+      El tiempo que ves es el de ${has(S.place.lat) ? `${S.place.lat.toFixed(3)}, ${S.place.lon.toFixed(3)}` : 'su punto'},
+      que puede no ser donde está de verdad. Compruébalo en Argos antes de decidir con esto.</div>`;
+    return;
+  }
   if (!S.place || !S.saved?.length) return;
   /* Si lo que miras ES uno de los tuyos, no hay nada que decir. */
   if (S.saved.some(p => key(p) === key(S.place))) return;
@@ -17402,7 +17414,7 @@ function buscarEstaciones(term) {
   return cand.slice(0, 8).map(({ e }) => ({
     name: e.n && e.n !== e.c ? `${e.n} · ${e.c}` : e.c,
     admin1: [e.o, titulo(e.m)].filter(Boolean).join(' · '),
-    country: '', lat: e.lat, lon: e.lon, est: true,
+    country: '', lat: e.lat, lon: e.lon, est: true, ...(e.d ? { dudosa: true } : {}),
   }));
 }
 
