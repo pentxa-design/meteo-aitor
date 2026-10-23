@@ -7843,6 +7843,24 @@ grupo('RÁFAGAS: colores vivos y con SUS listones (01-09-2026)');
   }
   ok('está registrada, si no la capa se queda sin color',
      /presion, visibilidad, niebla, tempc, t850, rafagas,/.test(M));
+  /* 22-10-2026, suyo con Windy al lado: «mi mapa no pinta rojo y debería» · «rojo y morado» · «lo quiero así». Se EJECUTA la
+     rampa con sus listones de hoy (60/90) y se mira el COLOR que cae en Bermeo a 83 km/h y a 95: rojo y morado, no naranja. */
+  {
+    const trozo = (M.match(/const LR = [\s\S]*?const rfm = creciente\(\[[\s\S]*?\]\);/) || [])[0];
+    const rfmDe = (warn, no) => new Function('listonRafaga', `${trozo} return rfm;`)(() => ({ warn, no }));
+    const colsR = ((M.match(/const rfc = \[([\s\S]*?)\];/) || [])[1] || '').match(/#[0-9a-f]{6}/g) || [];
+    const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+    const colorDe = (v, warn, no) => { const r = rfmDe(warn, no); let k = 0; r.forEach((c, i) => { if (v >= c) k = i; }); return rgb(colsR[k]); };
+    const rojo = ([r, g, b]) => r > 180 && g < 60 && b < 80, morado = ([r, g, b]) => b >= 90 && r > 90 && g < 60 && b > g * 2;
+    const naranja = ([r, g, b]) => r > 200 && g > 120 && b < 130;
+    ok('ráfagas como Windy: 83 km/h con su aviso en 60 sale ROJO, no naranja (Bermeo, viernes 23-10)',
+       rojo(colorDe(83, 60, 90)) && rojo(colorDe(60, 60, 90)), JSON.stringify(colorDe(83, 60, 90)));
+    ok('   y desde su límite (90) CIRUELA-MORADO; justo por debajo de su aviso, naranja suave; y nada de amarillo ni verde (el «arcoíris»)',
+       morado(colorDe(90, 60, 90)) && morado(colorDe(95, 60, 90)) && naranja(colorDe(59, 60, 90)) && [18, 27, 36].every(v => { const [r, g, b] = colorDe(v, 60, 90); return b > r && b > g * 0.9; }), JSON.stringify([colorDe(95, 60, 90), colorDe(59, 60, 90)]));
+    const op = new Function(`${(M.match(/const ESCALAS_BLANCAS = [^\n]*/) || [''])[0]}\n${(M.match(/const CON_SUELO_NEGRO = [^\n]*/) || [''])[0]}\nconst CLARO_OPACIDAD = 0.65;\n${(M.match(/const SIN_ACLARAR = [^\n]*/) || [''])[0]}\n${(M.match(/function opacidadDeCapa[\s\S]*?\n\}/) || [''])[0]}\nreturn opacidadDeCapa;`)();
+    ok('   y la capa de ráfagas va fuerte (≥0,88) en cualquier fondo, como Windy: a 0,75 salía «pálida»; las demás se aclaran en Claro',
+       op({ escala: 'rafagas' }, 'claro', 0.75) >= 0.88 && op({ escala: 'rafagas' }, 'color', 0.75) >= 0.88 && op({ escala: 'tempc' }, 'claro', 0.75) < 0.75);
+  }
   /* 15-09-2026 19:55 (portátil): la tesela trae la racha en m/s. Con la escala propia se
      perdió la conversión y el mapa marcaba «7» en Madrid con 27 km/h en la API: los
      cortes en m/s y el número por `conv`, como presión y visibilidad. */
@@ -11212,7 +11230,7 @@ grupo('El viento vuelve a tener rumbo en el mapa, de la API, y la peor racha de 
       const o4 = B(doc, base(false, { pausa: true, G: D.G }));
       await o4.barbasDeApi(cont, { id: 'gusts', vientoApi: true });
       ok('y si se acaba el cupo de la hora, lo dice y nombra al vigilante que comparte el cupo',
-         cont.innerHTML === '' && /vigilante/.test(pie.textContent), pie.textContent);
+         /en pausa hasta las/.test(cont.innerHTML) && /vigilante/.test(pie.textContent), pie.textContent);   // 22-10: ahora también encima del mapa
     })().catch(e => ok('el pintado de flechas con el mapa de mentira no revienta', false, e.message)));
   }
 
@@ -11244,7 +11262,7 @@ grupo('El viento vuelve a tener rumbo en el mapa, de la API, y la peor racha de 
      parando la publicación si falla. */
   const bApi = M.slice(M.indexOf('\n  async barbasDeApi('), M.indexOf('\n  async particulasDeApi('));
   ok('sin flechas por la API caída o por el cupo, el pie lo dice: un mapa sin flechas nunca callado',
-     /if \(D\?\.pausa\) \{[\s\S]{0,120}cont\.innerHTML = '';[\s\S]{0,80}decir\('↗ Flechas en pausa/.test(bApi)
+     /if \(D\?\.pausa\) \{[\s\S]{0,900}cont\.innerHTML = `<div class="barbas-pausa"[\s\S]{0,600}decir\(`↗ Flechas y movimiento en pausa/.test(bApi)
      && /if \(!D \|\| D\.error \|\| !D\.T\) \{[\s\S]{0,120}decir\(`↗ Sin flechas: la API de pronóstico no ha contestado/.test(bApi)
      && /No es calma/.test(bApi));
   ok('el pie del viento existe en la página (#mapViento), que un pie sin sitio es un aviso mudo',
@@ -13419,7 +13437,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /if \(conservarAcum && id === 'acumLayer'\) return;/.test(M) && /if \(conservarAcum && id === 'acumSrc'\) return;/.test(M));
   ok('las capas de datos van más vivas (suyo, 16-10: «sosos»): el modelo y la acumulada llevan raster-saturation y raster-contrast, y las nubes blancas quedan fuera',
      /const VIVOS = \{ 'raster-saturation': 0\.[3-9]\d*, 'raster-contrast': 0\.\d+ \};/.test(M)
-     && /\.\.\.\(ESCALAS_BLANCAS\.has\(L_\.escala\) \? \(this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)\s*: \(this\.base === 'claro' && !CON_SUELO_NEGRO\.has\(L_\.escala\)\) \? CLARO_SUAVE : VIVOS\)/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
+     && /\.\.\.\(ESCALAS_BLANCAS\.has\(L_\.escala\) \? \(this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)\s*: \(this\.base === 'claro' && !CON_SUELO_NEGRO\.has\(L_\.escala\) && !SIN_ACLARAR\.has\(L_\.escala\)\) \? CLARO_SUAVE : VIVOS\)/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
   ok('la rampa es EXACTAMENTE la «Acumulación de lluvia» de Windy (tabla leída de windy.com/colors el 16-10-2026): cortes 0·1·5·10·30·50·80·120·200·320·600 y sus once colores, todos opacos desde 5 litros',
      (() => { const t = M.slice(M.indexOf('const acc = ['), M.indexOf('];', M.indexOf('const acc = [')));
        const hx = [...t.matchAll(/'#([0-9a-f]{6})',(\.?\d+)/g)];
@@ -13983,8 +14001,9 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   grupo('Claro se distingue de Color, y Color y Oscuro no cambian');
   const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
   const cuerpo = (/function opacidadDeCapa\([\s\S]*?\n\}/.exec(M) || [])[0];
-  const f = cuerpo ? new Function('ESCALAS_BLANCAS', 'CON_SUELO_NEGRO', 'CLARO_OPACIDAD', cuerpo + '\nreturn opacidadDeCapa;')(
-    new Set(['nubes', 'niebla']), new Set(['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul', 'espesor']), Number((/const CLARO_OPACIDAD = ([\d.]+);/.exec(M) || [])[1])) : null;
+  const f = cuerpo ? new Function('ESCALAS_BLANCAS', 'CON_SUELO_NEGRO', 'CLARO_OPACIDAD', 'SIN_ACLARAR', cuerpo + '\nreturn opacidadDeCapa;')(
+    new Set(['nubes', 'niebla']), new Set(['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul', 'espesor']), Number((/const CLARO_OPACIDAD = ([\d.]+);/.exec(M) || [])[1]),
+    new Set(['rafagas'])) : null;
   ok('temperatura con el deslizador a 0,92: en Color 0,92 (como siempre) y en Claro más suave (0,6), para que se vea el mapa claro debajo',
      !!f && f({ escala: 'tempc' }, 'color', 0.92) === 0.92 && Math.abs(f({ escala: 'tempc' }, 'claro', 0.92) - 0.598) < 0.001
      && f({ escala: 'tempc' }, 'oscuro', 0.92) === 0.92);
@@ -13993,7 +14012,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('   y el deslizador CAPA usa la misma cuenta (si no, al moverlo en Claro la capa volvería a taparlo todo)',
      /setPaintProperty\('omLayer', 'raster-opacity', opacidadDeCapa\(L_, this\.base, o\)\)/.test(M));
   ok('   en Claro las nubes van en gris (sin suelo ocre) y el resto menos saturado; en Color, VIVOS como siempre',
-     /this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)/.test(M) && /\(this\.base === 'claro' && !CON_SUELO_NEGRO\.has\(L_\.escala\)\) \? CLARO_SUAVE : VIVOS/.test(M));
+     /this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)/.test(M) && /\(this\.base === 'claro' && !CON_SUELO_NEGRO\.has\(L_\.escala\) && !SIN_ACLARAR\.has\(L_\.escala\)\) \? CLARO_SUAVE : VIVOS/.test(M));
 }
 
 
@@ -14023,6 +14042,182 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   const Ax = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
   ok('   y los tres sitios que lo pintan (Ahora, Mis estaciones y la franja en curso) le pasan el código que enseñan',
      (Ax.match(/avisoCielo\([^)]*codigo:/g) || []).length === 3);
+}
+
+/* ═══ WINDY COMO CAPA DEL MAPA, Y EL RADAR CON FUERZA (23-10-2026) ═════════════
+   Suyo: «lo de Windy pónmelo en satélite, en capas» · «algo pálido los colores» (radar observado a las 16:08). Se EJECUTA
+   applyWindy() con un mapa de mentira: sale su visor centrado donde se mira, y al cambiar de capa se quita. */
+{
+  grupo('Windy en directo como capa del mapa; el radar observado no sale pálido');
+  const vm = require('vm');
+  const nada = () => {};
+  const cualquiera = () => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => '' : cualquiera()), apply: () => cualquiera(), construct: () => cualquiera() });
+  const els = {}, el = sel => (els[sel] ??= { textContent: '', style: {}, hidden: false, title: '' });
+  const caja = { console: { log: nada, warn: nada, error: nada, info: nada }, setTimeout: () => 0, clearTimeout: nada, setInterval: () => 0, clearInterval: nada,
+    URL, URLSearchParams, Intl, Date, Math, JSON, Promise, AbortController,
+    document: { querySelector: el, querySelectorAll: () => [], createElement: () => ({ dataset: {}, innerHTML: '', className: '' }) },
+    navigator: { userAgent: 'node' }, localStorage: { getItem: () => null, setItem: nada, removeItem: nada }, sessionStorage: { getItem: () => null, setItem: nada, removeItem: nada },
+    location: { search: '', href: 'https://x/', origin: 'https://x' }, fetch: async () => ({ ok: false }), maplibregl: cualquiera(),
+    OMWeatherMapLayer: cualquiera(), addEventListener: nada, matchMedia: () => ({ matches: false, addEventListener: nada }),
+    requestAnimationFrame: nada, performance: { now: () => 0 }, Blob: function () {}, Image: function () {} };
+  caja.window = caja; caja.globalThis = caja; caja.self = caja;
+  let r = null, err = null;
+  try {
+    vm.createContext(caja);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'reglas-tiempo.js'), 'utf8'), caja);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8'), caja, { filename: 'maps.js' });
+    caja.esc = x => String(x).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');   // lo pone app.js
+    const M = vm.runInContext('Maps', caja);
+    const hijos = [];
+    const cont = { querySelector: () => hijos.find(k => k.className === 'mapa-windy') || null,
+                   appendChild: k => { hijos.push(k); k.remove = () => hijos.splice(hijos.indexOf(k), 1); } };
+    M.map = { getContainer: () => cont, getCenter: () => ({ lat: 43.4209, lng: -2.7215 }), getZoom: () => 7.4 };
+    let estado = ''; M.status = t => { estado = t; };
+    const TL = vm.runInContext('TLAYERS', caja);
+    const sat = TL.find(l => l.id === 'sat_windy'), rad = TL.find(l => l.id === 'radar_windy');
+    M.applyWindy(sat);
+    const src = ((hijos[0]?.innerHTML || '').match(/src="([^"]+)"/) || [])[1]?.replace(/&amp;/g, '&');
+    const q = src ? Object.fromEntries(new URL(src).searchParams) : {};
+    M.quitarWindy();
+    M.applyWindy(rad);
+    const srcR = ((hijos[0]?.innerHTML || '').match(/src="([^"]+)"/) || [])[1]?.replace(/&amp;/g, '&');
+    r = { host: src && new URL(src).host, q, quitado: true, radar: srcR && new URL(srcR).searchParams.get('overlay'),
+          estado, sello: el('#mapStamp').textContent, grupoSat: sat?.g, grupoRad: rad?.g };
+    M.quitarWindy(); r.quitado = hijos.length === 0;
+  } catch (e) { err = e; }
+  ok('«Windy en directo» está en el grupo Satélite y «Radar Windy» en Lluvia, y al elegirla sale SU visor centrado donde se mira, en ahora',
+     !err && r.grupoSat === 'Satélite' && r.grupoRad === 'Lluvia' && r.host === 'embed.windy.com' && r.q.overlay === 'satellite'
+     && r.q.calendar === 'now' && r.q.lat === '43.421' && r.q.lon === '-2.721' && r.radar === 'radar', err ? String(err) : JSON.stringify(r));
+  ok('   y lo dice (sello «en directo», y que la barra de horas no lo mueve), y al cambiar de capa se quita',
+     !err && r.sello === 'en directo' && /barra de horas de abajo no lo mueve/.test(r.estado) && r.quitado
+     && /if \(L_\.windy\) \{ this\.applyWindy\(L_\); return; \}\n    this\.quitarWindy\(\);/.test(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8')), JSON.stringify(r));
+  const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  ok('el radar observado va con fuerza: opacidad mínima 0,92 y algo más saturado, al pintarlo (radar y radar+previsión) y con el deslizador',
+     (Mx.match(/paint:\{ \.\.\.RADAR_FUERTE, 'raster-opacity': Math\.max\(this\.opacity, RADAR_OPACIDAD_MIN\) \}/g) || []).length === 2
+     && /setPaintProperty\('radarLayer', 'raster-opacity', Math\.max\(o, RADAR_OPACIDAD_MIN\)\)/.test(Mx) && /const RADAR_OPACIDAD_MIN = 0\.9\d*;/.test(Mx));
+}
+
+/* ═══ CAMBIAR A UN MODELO CON LA CAPA SUSTITUIDA NO MUEVE LA HORA (22-10-2026) ══
+   Suyo: «cambias modelo etc. y se va a donde le da la gana el slider de horas». MEDIDO en su panel: Ráfagas el viernes a las
+   09:00 y GFS → jueves 13:00; ECMWF 25 km → miércoles 20:00 (los dos sin racha en teselas: la pinta ICON-EU). Se EJECUTA
+   setModel() con una lista de GFS distinta de la de ICON-EU: la hora tiene que pedirse como HORA, no como posición. */
+{
+  grupo('Cambiar de modelo deja la misma hora aunque la capa la pinte otro');
+  const vm = require('vm');
+  const nada = () => {};
+  const cualquiera = () => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => '' : cualquiera()), apply: () => cualquiera(), construct: () => cualquiera() });
+  const caja = { console: { log: nada, warn: nada, error: nada, info: nada }, setTimeout: () => 0, clearTimeout: nada, setInterval: () => 0, clearInterval: nada,
+    URL, URLSearchParams, Intl, Date, Math, JSON, Promise, AbortController, document: { querySelector: () => ({ max: 0, value: 0, style: {} }), querySelectorAll: () => [] },
+    navigator: { userAgent: 'node' }, localStorage: { getItem: () => null, setItem: nada, removeItem: nada }, sessionStorage: { getItem: () => null, setItem: nada, removeItem: nada },
+    location: { search: '', href: 'https://x/', origin: 'https://x' }, fetch: async () => ({ ok: false }), maplibregl: cualquiera(),
+    OMWeatherMapLayer: cualquiera(), addEventListener: nada, matchMedia: () => ({ matches: false, addEventListener: nada }),
+    requestAnimationFrame: nada, performance: { now: () => 0 }, Blob: function () {}, Image: function () {} };
+  caja.window = caja; caja.globalThis = caja; caja.self = caja;
+  const horas = (desde, n, paso = 1) => Array.from({ length: n }, (_, k) => new Date(Date.parse(desde) + k * paso * 3600e3).toISOString());
+  let r = null, err = null;
+  (globalThis.__pendientes ??= []).push((async () => {
+    try {
+      vm.createContext(caja);
+      vm.runInContext(fs.readFileSync(path.join(__dirname, 'reglas-tiempo.js'), 'utf8'), caja);
+      vm.runInContext(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8'), caja, { filename: 'maps.js' });
+      const M = vm.runInContext('Maps', caja);
+      caja.LS = { get: (k, d) => d, set: nada };                                     // lo pone app.js
+      const iconEu = { valid_times: horas('2026-10-21T16:00:00Z', 113) };            // la que pinta (con su pasado)
+      const gfs = { valid_times: horas('2026-10-22T12:00:00Z', 60, 3) };             // la elegida: otra lista, de 3 en 3 h
+      M.model = 'dwd_icon_eu'; M.meta = iconEu; M.usando = { modelo: 'dwd_icon_eu', meta: iconEu, sustituido: false }; M.layer = 'gusts';
+      M.t = iconEu.valid_times.indexOf('2026-10-23T07:00:00.000Z');                // viernes 09:00
+      for (const f of ['cerrarPopups', 'cancelarPrecarga', 'soltarMemoria', 'pause', 'avisoAlcance']) M[f] = nada;
+      M.loadMeta = async () => { M.meta = gfs; };
+      let pedida = null;
+      M.apply = () => { pedida = M.horaPedida; };
+      await M.setModel('ncep_gfs013');
+      r = { pedida: pedida ? new Date(pedida).toISOString() : null };
+    } catch (e) { err = e; }
+    ok('cambiar a GFS en el viernes a las 09:00: se pide el VIERNES 09:00 como hora, y apply() la busca en la lista del modelo que pinta (no la posición de la lista de GFS)',
+       !err && r.pedida === '2026-10-23T07:00:00.000Z', err ? String(err) : JSON.stringify(r));
+  })());
+}
+
+/* ═══ FLECHAS EN PAUSA, A LA VISTA; Y LOS MODELOS DE ZONA LO DICEN (22-10-2026) ══
+   Suyo: «le doy a flechas y movimiento y nada» (el cupo de la hora se gastó y el aviso iba en un pie fuera de la pantalla) ·
+   «viento a 10 m con HARMONIE mal» (media España en blanco: su dominio no llega). Se EJECUTA barbasDeApi() con la rejilla en pausa. */
+{
+  grupo('Flechas en pausa se dicen encima del mapa; los modelos de zona avisan de su borde');
+  const vm = require('vm');
+  const nada = () => {};
+  const cualquiera = () => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => '' : cualquiera()), apply: () => cualquiera(), construct: () => cualquiera() });
+  const els = {}, el = sel => (els[sel] ??= { innerHTML: '', textContent: '' });
+  const caja = { console: { log: nada, warn: nada, error: nada, info: nada }, setTimeout: () => 0, clearTimeout: nada, setInterval: () => 0, clearInterval: nada,
+    URL, URLSearchParams, Intl, Date, Math, JSON, Promise, AbortController, document: { querySelector: el, querySelectorAll: () => [] },
+    navigator: { userAgent: 'node' }, localStorage: { getItem: () => null, setItem: nada, removeItem: nada }, sessionStorage: { getItem: () => null, setItem: nada, removeItem: nada },
+    location: { search: '', href: 'https://x/', origin: 'https://x' }, fetch: async () => ({ ok: false }), maplibregl: cualquiera(),
+    OMWeatherMapLayer: cualquiera(), addEventListener: nada, matchMedia: () => ({ matches: false, addEventListener: nada }),
+    requestAnimationFrame: nada, performance: { now: () => 0 }, Blob: function () {}, Image: function () {} };
+  caja.window = caja; caja.globalThis = caja; caja.self = caja;
+  let r = null, err = null;
+  (globalThis.__pendientes ??= []).push((async () => {
+    try {
+      vm.createContext(caja);
+      vm.runInContext(fs.readFileSync(path.join(__dirname, 'reglas-tiempo.js'), 'utf8'), caja);
+      vm.runInContext(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8'), caja, { filename: 'maps.js' });
+      const M = vm.runInContext('Maps', caja);
+      M.map = {}; M.usando = { modelo: 'dwd_icon_eu', meta: {} }; M.verBarbas = true;
+      M._vientoCupo = [Date.parse('2026-10-22T18:10:00Z')];
+      M.rejillaDeApi = async () => ({ pausa: true });
+      const cont = { innerHTML: '' };
+      await M.barbasDeApi(cont, {});
+      r = { mapa: cont.innerHTML, pie: el('#mapViento').textContent, cupo: vm.runInContext('VIENTO_CUPO_HORA', caja),
+            zona: vm.runInContext("TMODELS.filter(m => m.zona).map(m => m.id).join(',')", caja) };
+    } catch (e) { err = e; }
+    ok('flechas en pausa: el aviso sale ENCIMA del mapa, con la hora a la que vuelven (no solo en un pie fuera de la vista)',
+       !err && /Flechas y movimiento en pausa hasta las \d\d:\d\d/.test(r.mapa) && /en pausa hasta las/.test(r.pie), err ? String(err) : JSON.stringify(r));
+    ok('   y el cupo de la hora es 20 rejillas, no 12 (una tarde de uso se lo comía)', !err && r.cupo === 20, String(r?.cupo));
+    ok('AROME HD, ICON-D2 y HARMONIE son modelos de zona, y la barra de estado dice que lo blanco es que no llegan',
+       !err && r.zona === 'meteofrance_arome_france_hd,dwd_icon_d2,knmi_harmonie_arome_europe'
+       && /M\.zona \? ' · modelo de zona: donde no pinta es que NO LLEGA, no que haya calma'/.test(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8')),
+       r?.zona);
+  })());
+}
+
+/* ═══ CAMBIAR DE MODELO NO TE DEVUELVE AL JUEVES (22-10-2026) ═══════════════
+   Suyo: «cuando pongo viernes a las 6 y cambio de modelo me pasa al jueves otra vez» · «estás en viernes, cambias algo y salta
+   a jueves». Se EJECUTA anadirPasado() de maps.js: el pasado se pide con el deslizador en «ahora» (jueves), se le lleva al
+   viernes, y cuando llega el pasado tiene que seguir en el viernes. */
+{
+  grupo('Al llegar las horas de antes, el mapa se queda en la hora que miras');
+  const vm = require('vm');
+  const nada = () => {};
+  const cualquiera = () => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => '' : cualquiera()), apply: () => cualquiera(), construct: () => cualquiera() });
+  const caja = { console: { log: nada, warn: nada, error: nada, info: nada }, setTimeout: () => 0, clearTimeout: nada, setInterval: () => 0, clearInterval: nada,
+    URL, URLSearchParams, Intl, Date, Math, JSON, Promise, AbortController, document: { querySelector: () => ({ max: 0, value: 0, style: {} }), querySelectorAll: () => [] },
+    navigator: { userAgent: 'node' }, localStorage: { getItem: () => null, setItem: nada, removeItem: nada }, sessionStorage: { getItem: () => null, setItem: nada, removeItem: nada },
+    location: { search: '', href: 'https://x/', origin: 'https://x' }, fetch: async () => ({ ok: false }), maplibregl: cualquiera(),
+    OMWeatherMapLayer: cualquiera(), addEventListener: nada, matchMedia: () => ({ matches: false, addEventListener: nada }),
+    requestAnimationFrame: nada, performance: { now: () => 0 }, Blob: function () {}, Image: function () {} };
+  caja.window = caja; caja.globalThis = caja; caja.self = caja;
+  const horas = (desde, n) => Array.from({ length: n }, (_, k) => new Date(Date.parse(desde) + k * 3600e3).toISOString());
+  let antes = null, despues = null, err = null;
+  (globalThis.__pendientes ??= []).push((async () => {
+    try {
+      vm.createContext(caja);
+      vm.runInContext(fs.readFileSync(path.join(__dirname, 'reglas-tiempo.js'), 'utf8'), caja);
+      vm.runInContext(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8'), caja, { filename: 'maps.js' });
+      let soltar = null;
+      caja.__pasado = horas('2026-10-21T18:00:00Z', 24);
+      vm.runInContext(`conPasado = (meta) => new Promise(r => { globalThis.__soltar = () => { meta.valid_times = [...__pasado, ...meta.valid_times]; r(meta); }; });`, caja);
+      const M = vm.runInContext('Maps', caja);
+      const m = { valid_times: horas('2026-10-22T18:00:00Z', 30) };      // de jueves 20:00 a sábado
+      M.meta = m; M.model = 'dwd_icon_eu'; M.usando = null; M.t = 0;    // el deslizador en «ahora», jueves
+      M.ajustarSlider = nada; M.ui = nada; M.stamp = nada;
+      const pide = M.anadirPasado(m);
+      M.t = m.valid_times.indexOf('2026-10-23T04:00:00.000Z');          // setModel le lleva al viernes 06:00
+      antes = m.valid_times[M.t];
+      caja.__soltar(); await pide;
+      despues = m.valid_times[M.t];
+    } catch (e) { err = e; }
+    ok('cambiar de modelo en el viernes a las 06:00: cuando llega el pasado sigue en el viernes 06:00, no vuelve al jueves',
+       !err && antes === '2026-10-23T04:00:00.000Z' && despues === antes, err ? String(err) : JSON.stringify({ antes, despues }));
+  })());
 }
 
 /* ═══ EL RADAR EN DIRECTO, DE WINDY (19-10-2026) ═══════════════════════════
@@ -14103,12 +14298,12 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
         M._alFinal = true;   // se llega desde el «ahora» del modelo
         await M.applySatelite(Ll);
         r.lluviaFin = M._sat.horas[M.t];
-        M.horaPedida = M.horaMirada(); M._alFinal = M.enLoUltimo(); M.layer = 'sat_geo';
+        M.horaPedida = M.horaMirada(); M._alFinal = true; M.layer = 'sat_geo';
         await M.applySatelite(G);
         r.geoAlEntrar = M._sat.horas[M.t];
         // y si estabas en una hora pasada a propósito (lluvia 11:30), GeoColour respeta esa hora
         M.layer = 'sat_ir'; await M.applySatelite(Ll); M.t = 4; r.lluviaPasada = M._sat.horas[M.t];
-        M.horaPedida = M.horaMirada(); M._alFinal = M.enLoUltimo(); M.layer = 'sat_geo';
+        M.horaPedida = M.horaMirada(); M._alFinal = true; M.layer = 'sat_geo';
         await M.applySatelite(G); r.geoPasada = M._sat.horas[M.t];
         // (2) Diez minutos después hay imagen nueva (12:50): con el catálogo caducado se pide otra vez y se ve.
         const antes = pedidas;
@@ -14142,8 +14337,8 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
       } catch (e) { err = e; }
       ok('(1) de Lluvia en su última imagen (12:10) a GeoColour: entra en la ÚLTIMA de GeoColour (12:40), no en la hora de la otra capa',
          !err && r.lluviaFin === '2026-10-19T12:10:00.000Z' && r.geoAlEntrar === '2026-10-19T12:40:00.000Z', err ? String(err) : JSON.stringify(r));
-      ok('   y si estabas en una hora pasada a propósito, se respeta esa hora',
-         !err && r.geoPasada === r.lluviaPasada && r.geoPasada !== '2026-10-19T12:40:00.000Z', JSON.stringify(r));
+      ok('   y aunque vinieras de una hora pasada, entra en la ÚLTIMA (23-10, suyo: «el pasado no me sirve», radar en las 14:00 a las 16:08)',
+         !err && r.geoPasada === '2026-10-19T12:40:00.000Z' && /this\._alFinal = !!TLAYERS\.find\(l => l\.id === id\)\?\.sat \|\| id === 'radar' \|\| id === 'aemet';/.test(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8')), JSON.stringify(r));
       ok('(2) el catálogo caduca: diez minutos después se pide otra vez y sale la imagen nueva (12:50)',
          !err && r.pedidasDespues === 1 && r.geoNueva === '2026-10-19T12:50:00.000Z', JSON.stringify(r));
       ok('(4) de un radar en su última imagen a Radar observado: entra en la ÚLTIMA de RainViewer (13:10), no en la hora de antes',

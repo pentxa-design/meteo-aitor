@@ -273,19 +273,19 @@ async function conPasado(meta, modelo) {
 const TMODELS = [
   { id:'ecmwf_ifs', name:'ECMWF HRES', res:'9 km',
     desc:'Centro Europeo, alta resolución — 6 días hora a hora. El de referencia' },
-  { id:'meteofrance_arome_france_hd', name:'AROME HD', res:'1,3 km',
+  { id:'meteofrance_arome_france_hd', name:'AROME HD', res:'1,3 km', zona: true,
     desc:'La mayor resolución que cubre Euskadi. Viento nativo a 20 y 50 m' },
   // MEDIDO el 26-08-2026: NO LLEGA A EUSKADI. Ninguno de los doce
   // emplazamientos tiene dato («No data is available for this location»).
   // El texto decía «muy fino para tormentas» y no decía esto, que es lo
   // único que le importa a quien lo va a pulsar desde aquí.
-  { id:'dwd_icon_d2', name:'ICON-D2', res:'2 km',
+  { id:'dwd_icon_d2', name:'ICON-D2', res:'2 km', zona: true,
     desc:'DWD alemán de área limitada — 2 días, muy fino para tormentas. '
        + 'OJO: NO cubre Euskadi, su dominio se queda al norte. Para Alemania y Centroeuropa' },
   { id:'meteofrance_arpege_europe', name:'ARPEGE', res:'11 km',
     desc:'Météo-France Europa — 4 días. Viento nativo a 50 y 100 m' },
   { id:'dwd_icon_eu', name:'ICON-EU', res:'7 km', desc:'DWD alemán sobre Europa' },
-  { id:'knmi_harmonie_arome_europe', name:'HARMONIE', res:'2 km',
+  { id:'knmi_harmonie_arome_europe', name:'HARMONIE', res:'2 km', zona: true,
     desc:'KNMI holandés de alta resolución sobre Europa occidental' },
   { id:'ncep_gfs013', name:'GFS', res:'13 km',
     desc:'NOAA — llega a 16 días, útil para planificar la semana' },
@@ -423,6 +423,8 @@ const TLAYERS = [
     desc:'Lluvia del modelo convertida a dBZ (Marshall-Palmer) — ESTIMADA, no es eco de radar. Como en AguaceroWx: negro donde no hay eco, color desde 5 dBZ' },
   { id:'radar', g:'Lluvia', name:'Radar observado', v:null, unit:'',
     desc:'Lo que YA está cayendo (RainViewer) — observación, no previsión' },
+  { id:'radar_windy', g:'Lluvia', name:'Radar Windy (directo)', v:null, unit:'', windy:'radar',
+    desc:'El radar de Windy al minuto (su visor oficial), centrado donde mirabas; con su play, la hora que viene' },
   /* ── RADAR + PREVISIÓN EN UNA TIRA (09-09-2026) ──────────────────────
      Suyo, en Calpe con la tormenta subiendo por la costa: «como Windy lo
      ve quiero». Una sola tira: hasta ahora el radar observado (RainViewer,
@@ -444,6 +446,10 @@ const TLAYERS = [
      es la misma foto que GeoColour—. «Nieve y niebla» se queda solo con lo que no da otra capa: la nieve en el suelo. */
   { id:'sat_nieve', g:'Satélite', name:'Nieve (satélite)', v:null, unit:'', sat:'nieve', sol:true,
     desc:'Solo de día: la NIEVE en el suelo sale en rojo (lo blanco son nubes bajas). Para ver si los montes y las pistas tienen nieve' },
+  /* WINDY EN DIRECTO, COMO CAPA (23-10-2026, suyo: «lo de Windy pónmelo en satélite, en capas»). Su visor oficial para
+     incrustar, encima del mapa y centrado donde mires. */
+  { id:'sat_windy', g:'Satélite', name:'Windy en directo', v:null, unit:'', windy:'satellite',
+    desc:'El satélite de Windy al minuto (su visor oficial), centrado donde mirabas. Para moverte y ver la hora que viene, sus propios mandos' },
   { id:'sat_geo', g:'Satélite', name:'GeoColour', v:null, unit:'', sat:'geocolor',
     desc:'La foto del satélite de día y las nubes de noche sobre el mapa con las luces de las ciudades: el vistazo general' },
 
@@ -453,7 +459,7 @@ const TLAYERS = [
        rojo a los 60» con los listones en 49/70, y esta misma mañana
        pasaron a 70/90. Un pie con cifras se queda viejo sin avisar; la
        barra de la leyenda ya enseña los cortes de verdad. */
-    desc:'Racha máxima — la capa que decide el ascenso. El color cambia en TUS listones: naranja en tu aviso, rojo en tu límite. Al pinchar, también de dónde viene el viento' },
+    desc:'Racha máxima — la capa que decide el ascenso. El color cambia en TUS listones: rojo en tu aviso, morado en tu límite (como Windy). Al pinchar, también de dónde viene el viento' },
   { id:'viento10', g:'Viento', name:'Viento 10 m', v:'wind_speed_10m', unit:'km/h', vientoApi: true, escala:'viento', rumbo: true,
     desc:'Viento MEDIO a 10 m, en km/h, con las flechas de dónde viene (↗ Flechas) y el movimiento. A 40 m de torre pega más fuerte, y la ráfaga más todavía: para decidir si se sube, mira Ráfagas' },
   /* ── LAS CUATRO CAPAS DE BARBAS, RETIRADAS EL 21-09-2026 ────────────
@@ -723,8 +729,14 @@ const NUBE_EN_CLARO = { 'raster-brightness-max': 0.72 };
 const CLARO_OPACIDAD = 0.65;
 const CLARO_SUAVE = { 'raster-saturation': 0.2 };
 /** La opacidad de la capa de datos para la capa y el fondo que haya: una sola cuenta, para pintar y para el deslizador. */
+/* La capa que decide no se aclara en Claro (22-10-2026): con la opacidad ×0,65 su rojo salía salmón y su naranja, crema. */
+const SIN_ACLARAR = new Set(['rafagas', 'viento']);
+/* El radar observado, con fuerza (23-10-2026, suyo: «algo pálido los colores»): a 0,75 sobre el fondo Claro sus azules no se veían. */
+const RADAR_OPACIDAD_MIN = 0.92;
+const RADAR_FUERTE = { 'raster-saturation': 0.35, 'raster-contrast': 0.15 };   // y el viento medio (22-10-2026, suyo: «y los colores pálidos»)
 function opacidadDeCapa(L_, base, o) {
   if (ESCALAS_BLANCAS.has(L_?.escala)) return Math.max(o, 0.92);
+  if (SIN_ACLARAR.has(L_?.escala)) return Math.max(o, 0.88);   // fuerte, como Windy: a 0,75 salía pálida (probado en pantalla)
   if (CON_SUELO_NEGRO.has(L_?.escala)) return Math.max(o, 0.95);
   return base === 'claro' ? o * CLARO_OPACIDAD : o;
 }
@@ -1204,7 +1216,10 @@ const MODELO_EN_API = {
 };
 const modeloEnApi = m => MODELO_EN_API[m] ?? null;
 /** Peticiones de rejilla de viento por hora y por aparato (ver arriba). */
-const VIENTO_CUPO_HORA = 12;
+/* 20, no 12 (22-10-2026). Suyo: «le doy a flechas y movimiento y nada». Una tarde cambiando de modelo, de hora y de zona gastó
+   las 12 y se quedó sin flechas ni movimiento. Cada rejilla son ~100 puntos de la API: 20 a la hora son ~2.000 consultas, lejos
+   de lo que comparte con el vigilante. */
+const VIENTO_CUPO_HORA = 20;
 /** Horas de la «peor racha»: las mismas 12 que enseña Windy por defecto. */
 const RACHA_VENTANA_H = 12;
 
@@ -1752,9 +1767,18 @@ function escalasPropias() {
      igual: azules hasta 48, NARANJA desde 48-49 (justo su listón ámbar, que
      allí también es el primer salto de color), rojo en 70, granate, morado.
      El verde-amarillo del medio se va: en la suya no existe. */
-  const rfc = [['#2f4fb0',0], ['#3f6fd0',0.4], ['#5aa8e8',0.65], ['#8fcbf0',0.85],
-               ['#b8e0f5',0.95], ['#f0a050',1], ['#ef7a30',1], ['#ea5a28',1],
-               ['#d82020',1], ['#8f1d1d',1], ['#6a1b9a',1], ['#4a1070',1]];
+  /* ── ROJO EN SU AVISO, MORADO EN SU LÍMITE, COMO WINDY (22-10-2026) ──
+     Suyo, con Windy al lado y la borrasca del viernes encima: «mi mapa no pinta rojo y debería» · «solo naranja» · «rojo y
+     morado» · «lo quiero así». Con su aviso en 60 y su límite en 90, el naranja iba de 60 a 89: Bermeo a 83 km/h salía naranja
+     y Windy, rojo. Los SALTOS siguen en sus dos listones (eso es suyo y no se toca); lo que cambia es el color de cada tramo:
+     verdes-amarillos por debajo, ROJO desde su aviso y MORADO desde su límite, la paleta de Windy (35 amarillo-naranja, 55-70
+     rojo, 100 morado). */
+  /* Y AFINADO (22-10-2026, el mismo rato: «está apagado el nuestro» · «pálido» → y con verdes y amarillos: «afínalo, eso parece
+     un arcoíris» · «morado raro»). Probado en pantalla con sus datos del viernes antes de ponerlo: azules en la calma, un
+     naranja suave solo pegado a su aviso, ROJO desde su aviso y un CIRUELA que se va a MORADO desde su límite, sin rosa. */
+  const rfc = [['#4a6fd0',0], ['#5a9ee0',0.3], ['#7fbfe8',0.45], ['#a8d4ee',0.6],
+               ['#f2a46a',0.85], ['#e23a3c',1], ['#cf2f3a',1], ['#b0263e',1],
+               ['#962a5e',1], ['#7a2c80',1], ['#5e2a86',1], ['#432070',1]];
   /* ── LA TESELA DE RACHA VIENE EN m/s, NO EN km/h (15-09-2026, 19:55) ──
      Cazado desde el portátil comparando con AguaceroWx: a las 16:00 de hoy
      el mapa marcaba «7» en Madrid y «8» en Andorra y salía casi transparente,
@@ -2628,10 +2652,14 @@ const Maps = {
   /** Añade a la tira las 24 h anteriores a la pasada (ver `conPasado`) y deja el deslizador en la MISMA hora que se miraba. */
   async anadirPasado(m) {
     try {
-      const modelo = this.model, mirada = new Date(m.valid_times?.[this.t]).getTime();
+      const modelo = this.model, viejas = [...(m.valid_times || [])];
       const antes = m.valid_times.length;
       await conPasado(m, modelo);
       if (this.meta !== m || this.model !== modelo || (this.usando?.meta && this.usando.meta !== m)) return;   // se cambió de modelo
+      /* La hora que se mira se lee AHORA, cuando llega el pasado, no al pedirlo (22-10-2026). Suyo: «estás en viernes, cambias
+         algo y salta a jueves». Al cambiar de modelo, loadMeta() pedía el pasado con el deslizador aún en «ahora» (jueves) y
+         setModel() le llevaba después al viernes; al llegar el pasado se volvía a la hora apuntada al pedirlo: el jueves. */
+      const mirada = new Date(viejas[this.t]).getTime();
       const sl = document.querySelector('#mapTime');
       if (sl) sl.max = Math.max(0, m.valid_times.length - 1);
       if (m.valid_times.length === antes) return;
@@ -2695,13 +2723,7 @@ const Maps = {
     }, SAT_CATALOGO_MS + 1000);
   },
 
-  /** ¿Se está mirando lo más reciente? En una capa observada, su última imagen; en una de modelo, la hora de ahora (±1 h). */
-  enLoUltimo() {
-    const tira = this.tiraObservada();
-    if (tira?.length) return this.t >= tira.length - 1;
-    const h = this.horaMirada();
-    return !h || Math.abs(h.getTime() - Date.now()) <= 3600e3;
-  },
+
 
   /** El sello y la barra de estado de una imagen de satélite: la hora, y CUÁNTO hace, con el número de AHORA. */
   selloSat(L_, hora) {
@@ -3244,6 +3266,9 @@ const Maps = {
 
     /* Los rayos van encima de cualquier capa, también de las dos que
        salen por aquí antes de llegar al final de apply() (09-09-2026). */
+    /* Windy en directo: su visor encima del mapa; cualquier otra capa lo quita (23-10-2026). */
+    if (L_.windy) { this.applyWindy(L_); return; }
+    this.quitarWindy();
     if (L_.id === 'radar') { this.applyRadar(); setTimeout(() => this.rayos(), 600); return; }
     if (L_.id === 'radarprev') { this.applyMixta(); setTimeout(() => this.rayos(), 600); return; }
     if (L_.id === 'aemet') { this.applyAemet(); setTimeout(() => this.rayos(), 600); return; }
@@ -3336,7 +3361,7 @@ const Maps = {
         id:'omLayer', type:'raster', source:'omSrc',
         paint:{ 'raster-opacity': op, 'raster-fade-duration': 120,
                 'raster-resampling': 'linear', ...(ESCALAS_BLANCAS.has(L_.escala) ? (this.base === 'claro' ? NUBE_EN_CLARO : {})
-                    : (this.base === 'claro' && !CON_SUELO_NEGRO.has(L_.escala)) ? CLARO_SUAVE : VIVOS) },
+                    : (this.base === 'claro' && !CON_SUELO_NEGRO.has(L_.escala) && !SIN_ACLARAR.has(L_.escala)) ? CLARO_SUAVE : VIVOS) },
       }, this.firstLabelLayer());
       /* La sombra del terreno, POR ENCIMA del color y rebajada: así el
          cordal y el valle se siguen leyendo sin lavar la capa. */
@@ -3825,7 +3850,7 @@ const Maps = {
            cajitas grises. Con 7, el mapa estira la de z7. */
         this.map.addSource('radarSrc', { type:'raster', tileSize:256, maxzoom:RAINVIEWER_ZMAX, tiles:[url] });
           this.map.addLayer({ id:'radarLayer', type:'raster', source:'radarSrc',
-            paint:{ 'raster-opacity': this.opacity } }, this.firstLabelLayer());
+            paint:{ ...RADAR_FUERTE, 'raster-opacity': Math.max(this.opacity, RADAR_OPACIDAD_MIN) } }, this.firstLabelLayer());
         }
         if (this.map.getLayer('omLayer')) this.map.setLayoutProperty('omLayer', 'visibility', 'none');
         this.map.setLayoutProperty('radarLayer', 'visibility', 'visible');
@@ -3880,7 +3905,7 @@ const Maps = {
         tiles:[`${this.radarHost}${f.path}/256/{z}/{x}/{y}/4/1_1.png`],
       });
       this.map.addLayer({ id:'radarLayer', type:'raster', source:'radarSrc',
-        paint:{ 'raster-opacity': this.opacity } }, this.firstLabelLayer());
+        paint:{ ...RADAR_FUERTE, 'raster-opacity': Math.max(this.opacity, RADAR_OPACIDAD_MIN) } }, this.firstLabelLayer());
 
       const d = new Date(f.time * 1000);
       const st = document.querySelector('#mapStamp');
@@ -3952,6 +3977,29 @@ const Maps = {
      enseñaba el eco del radar sobre el satélite mientras la leyenda
      ponía «Ráfagas · kt» y las ráfagas quedaban debajo, tapadas. Leer
      una capa creyendo que es otra es peor que no tener mapa. */
+  /** Windy en directo, como capa (23-10-2026): su visor oficial para incrustar, encima del mapa y centrado donde se mira. */
+  applyWindy(L_) {
+    const cont = this.map?.getContainer?.();
+    if (!cont) return;
+    const c = this.map.getCenter(), z = Math.max(4, Math.min(11, Math.round(this.map.getZoom())));
+    const q = new URLSearchParams({ lat: c.lat.toFixed(3), lon: c.lng.toFixed(3), zoom: String(z), level: 'surface',
+      overlay: L_.windy, product: L_.windy, menu: '', message: 'true', marker: '', calendar: 'now', type: 'map',
+      location: 'coordinates', metricWind: 'km/h', metricTemp: '°C' });
+    const url = `https://embed.windy.com/embed2.html?${q}`;
+    let el = cont.querySelector('.mapa-windy');
+    if (!el) { el = document.createElement('div'); el.className = 'mapa-windy'; cont.appendChild(el); }
+    if (el.dataset.en !== url) {
+      el.dataset.en = url;
+      el.innerHTML = `<iframe src="${esc(url)}" loading="lazy" referrerpolicy="no-referrer" title="${esc(L_.name)}"></iframe>`;
+    }
+    document.querySelector('#mapLegend').hidden = true;
+    const st = document.querySelector('#mapStamp');
+    if (st) { st.textContent = 'en directo'; st.style.color = ''; st.title = 'Windy, al minuto'; }
+    this.status(`Windy · ${L_.windy === 'radar' ? 'radar' : 'satélite'} en directo, su visor oficial, centrado donde mirabas. `
+      + 'Para moverte o ver la hora que viene, sus propios mandos; la barra de horas de abajo no lo mueve.');
+  },
+  quitarWindy() { this.map?.getContainer?.()?.querySelector('.mapa-windy')?.remove(); },
+
   quitarCapasDeDatos(conservarAcum = false) {
     const CAPAS  = ['omLayer', 'omLayer2', 'radarLayer', 'satLayer', 'aemetLayer', 'acumLayer',
                     'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'];
@@ -4218,6 +4266,8 @@ const Maps = {
     this.status(`${M.name} · ${M.res} · pasada de las ${ref} · ${T.length} pasos (${dias.toFixed(0)} días)${deAntes}`
       + (h > 1 ? ` · paso de ${h} h: ${this.layer === 'nieve' ? 'la nieve' : this.layer === 'tipo' ? 'la lluvia y la nieve' : 'la lluvia'} se enseña POR HORA (la suma de ${h} h ÷ ${h})` : '')
       + (this.usando?.sustituido ? ' · CAPA SUSTITUIDA' : '')
+      /* Un modelo de ZONA deja en blanco lo que no cubre (22-10-2026: HARMONIE, media España sin color en «Viento 10 m»). */
+      + (M.zona ? ' · modelo de zona: donde no pinta es que NO LLEGA, no que haya calma' : '')
       + (this._sinEncima ? ` · SIN ${this._sinEncima === 'snowfall_water_equivalent' ? 'NIEVE' : this._sinEncima.toUpperCase()}: este modelo no la publica, solo se pinta la lluvia` : ''));
   },
 
@@ -5803,8 +5853,12 @@ const Maps = {
     const D = await this.rejillaDeApi(R);
     if (!vigente()) return;
     if (D?.pausa) {
-      cont.innerHTML = '';
-      decir('↗ Flechas en pausa esta hora: ya se han pedido muchas rejillas de viento y el vigilante de avisos '
+      /* EN EL MAPA, no solo en el pie (22-10-2026): el pie le quedaba fuera de la pantalla y pulsaba Flechas y Movimiento sin
+         que pasara nada ni le dijera nada. Se dice encima del mapa y con la hora a la que vuelven. */
+      const vuelve = new Date(Math.min(...(this._vientoCupo || [Date.now()])) + 3600e3)
+        .toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+      cont.innerHTML = `<div class="barbas-pausa">↗ Flechas y movimiento en pausa hasta las ${vuelve} · el rumbo sale al pulsar</div>`;
+      decir(`↗ Flechas y movimiento en pausa hasta las ${vuelve}: ya se han pedido muchas rejillas de viento esta hora y el vigilante de avisos `
         + 'tira del mismo cupo de la API. Vuelven solas; el rumbo sigue saliendo al pulsar.');
       return;
     }
@@ -6344,7 +6398,10 @@ const Maps = {
        13:02 UTC: lluvia 12:10, GeoColour 12:40, rayos 12:50), y pasar de Lluvia a GeoColour te dejaba en las 12:10 —la hora de
        la otra— con GeoColour teniendo media hora más. Si estabas en la última imagen (o en el «ahora» del modelo), se entra en
        la última de la capa nueva; si estabas mirando una hora pasada a propósito, se respeta esa hora. */
-    this._alFinal = (!!TLAYERS.find(l => l.id === id)?.sat || id === 'radar' || id === 'aemet') && this.enLoUltimo();
+    /* SIEMPRE en lo último (23-10-2026). Suyo: «quiero ver lo que viene y como mucho lo que está en directo, el resto no me sirve».
+       Su captura de las 16:08: Radar observado en las 14:00, la imagen más vieja, porque venía de una hora del modelo que no era
+       «ahora». En las capas observadas no se arrastra la hora de antes: se entra en la última imagen. */
+    this._alFinal = !!TLAYERS.find(l => l.id === id)?.sat || id === 'radar' || id === 'aemet';
     /* 21-10-2026: lo mismo con los dos radares. Su captura de las 10:26: de Radar AEMET (10:00) a Radar observado, y RainViewer
        se quedaba en las 10:00 teniendo la de las 10:20. */
     this.cerrarPopups();
@@ -6431,10 +6488,12 @@ const Maps = {
           hora actual. Para ir a 7 días, usa <b>ECMWF</b> o <b>GFS</b>.`);
       } else {
         this.avisoAlcance(null);
-        // Ir a la hora equivalente, no al mismo número de paso
-        this.t = this.indiceDeHora(this.meta, horaMirada) ?? 0;
-        const sl = document.querySelector('#mapTime');
-        if (sl) sl.value = this.t;
+        /* Ir a la hora equivalente, no al mismo número de paso, y EN LA LISTA DEL MODELO QUE PINTA (22-10-2026). Suyo: «cambias
+           modelo y se va a donde le da la gana el slider de horas». MEDIDO en su panel con Ráfagas el viernes a las 09:00: GFS y
+           ECMWF 25 km no publican la racha en teselas y la capa la pinta ICON-EU; el índice se sacaba de la lista de GFS y se
+           aplicaba a la de ICON-EU → jueves 13:00 con GFS, miércoles 20:00 con ECMWF 25 km. Ahora la hora la resuelve apply()
+           sobre la lista del que pinta (`horaPedida`), igual que al cambiar de capa. */
+        this.horaPedida = horaMirada;
         this.apply();
       }
     }
@@ -6617,7 +6676,7 @@ const Maps = {
     const L_ = TLAYERS.find(l => l.id === this.layer);
     // (el velo de las densas murió el 31-08: la sombra va encima del color)
     if (this.map?.getLayer('omLayer')) this.map.setPaintProperty('omLayer', 'raster-opacity', opacidadDeCapa(L_, this.base, o));   // la misma cuenta que al pintar
-    if (this.map?.getLayer('radarLayer')) this.map.setPaintProperty('radarLayer', 'raster-opacity', o);
+    if (this.map?.getLayer('radarLayer')) this.map.setPaintProperty('radarLayer', 'raster-opacity', Math.max(o, RADAR_OPACIDAD_MIN));
   },
 
   /** Cuántos pasos tiene la capa activa. Cada tipo lleva su propia tira. */

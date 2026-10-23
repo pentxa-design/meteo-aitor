@@ -84,6 +84,16 @@ const ORTO = 8 * 60 + 1, OCASO = 20 * 60 + 10;          // 08:01 y 20:10: el dí
 const p2 = n => String(n).padStart(2, '0');
 const iso = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:00`;
 const dia = d => iso(d).slice(0, 10);
+/* ── COMO OPEN-METEO, TAMBIÉN CON CAMBIO DE HORA (23-10-2026) ──────────
+   Open-Meteo da UN solo `utc_offset_seconds` por respuesta (el de ahora) y
+   escribe TODAS las horas con él, también las de después del cambio de
+   hora; la app las pone en su reloj con horasAlReloj() (18-10-2026). La
+   trampa escribía las horas ya en hora local con 7200 fijo: el 23-10, con
+   la tira de 48 h cruzando el domingo 25, las 07:00 de después salían
+   corridas y esta guardia paró una publicación por un fallo SUYO. Ahora
+   escribe como Open-Meteo: el desfase del momento falso, y cada hora con él. */
+const offsetDe = ms => -new Date(ms).getTimezoneOffset() * 60;
+const isoCon = (d, off) => new Date(d.getTime() + off * 1000).toISOString().slice(0, 16);
 const coma = v => v.toFixed(1).replace('.', ',');
 
 const SITIOS = [{ name: 'BI BERMEO', lat: 43.413, lon: -2.7183 },
@@ -127,6 +137,7 @@ const RACHA_DIA = [30, 90, 60, 35, 40, 45, 50, 25, 20, 30];   // hoy: tormenta c
 
 /* ── LOS DATOS TRAMPA, construidos alrededor del reloj falso ────────── */
 function trampa(fijo, hh) {
+  const OFF = offsetDe(fijo);                 // el desfase del momento falso, como Open-Meteo (ver isoCon)
   const ahora = new Date(fijo);
   const hoy0 = new Date(fijo); hoy0.setHours(0, 0, 0, 0);
   const horaEnCurso = new Date(fijo); horaEnCurso.setMinutes(0, 0, 0);
@@ -177,8 +188,8 @@ function trampa(fijo, hh) {
   };
   const diario = (campo, d, i) => {          // i = 0 es HOY
     switch (campo) {
-      case 'sunrise': return `${dia(d)}T08:01`;
-      case 'sunset':  return `${dia(d)}T20:10`;
+      case 'sunrise': { const s = new Date(d); s.setHours(8, 1, 0, 0); return isoCon(s, OFF); }    // 08:01 de su reloj, escrito como Open-Meteo
+      case 'sunset':  { const s = new Date(d); s.setHours(20, 10, 0, 0); return isoCon(s, OFF); }
       case 'temperature_2m_max': return 24;
       case 'temperature_2m_min': return 14;
       case 'precipitation_sum': return 0;
@@ -217,7 +228,7 @@ function trampa(fijo, hh) {
     const D = []; for (let i = -pastD; i < fdays; i++) D.push(new Date(hoy0.getTime() + i * 86400e3));
     const uno = (lat, lon) => {
       const out = { latitude: +lat, longitude: +lon, elevation: 30, timezone: 'Europe/Madrid',
-                    utc_offset_seconds: 7200, hourly: { time: T.map(iso) } };
+                    utc_offset_seconds: OFF, hourly: { time: T.map(d => isoCon(d, OFF)) } };
       if (multi) {
         for (const om of modelos) for (const k of hq) out.hourly[`${k}_${om}`] = T.map(d => valor(om, k, d));
         if (dq.length) {
@@ -228,7 +239,7 @@ function trampa(fijo, hh) {
         const om = modelos[0];
         for (const k of hq) out.hourly[k] = T.map(d => valor(om, k, d));
         if (cq.length) {
-          const c = { time: `${iso(ahora).slice(0, 14)}${p2(ahora.getMinutes())}`, interval: 900 };
+          const c = { time: `${isoCon(ahora, OFF).slice(0, 14)}${p2(ahora.getMinutes())}`, interval: 900 };
           for (const k of cq) c[k] = valor(om, k, ahora);
           if (hh === HORA_CURRENT_DISTINTO) {
             if (cq.includes('weather_code')) c.weather_code = 3;
@@ -256,19 +267,19 @@ function trampa(fijo, hh) {
   const ola   = T3.map((_, i) => (i === 1 ? 3.0 : i >= 24 ? 2.0 : 1.0));
   const fondo = T3.map(d => Math.round((d.getHours() + 1) * 10) / 100);   // 00:00→0,1 · 07:00→0,8 · 20:00→2,1
   const iAhora = T3.findIndex(d => dia(d) === dia(ahora) && d.getHours() === ahora.getHours());
-  const current = { time: iso(ahora), interval: 900, wave_height: 1.0, wave_period: 9, wave_direction: 320,
+  const current = { time: isoCon(ahora, OFF), interval: 900, wave_height: 1.0, wave_period: 9, wave_direction: 320,
                     sea_surface_temperature: 20, swell_wave_period: 8.5, wind_wave_height: 0.25, ocean_current_velocity: 1 };
   /* A una de las horas `current` NO trae la mar de fondo, y la app tiene
      que leerla de la serie EN LA HORA EN CURSO, no en la medianoche. */
   if (hh !== HORA_SIN_FONDO) current.swell_wave_height = fondo[iAhora];
   const marine = {
-    latitude: 43.42, longitude: -2.72, utc_offset_seconds: 7200, timezone: 'Europe/Madrid', elevation: 11,
+    latitude: 43.42, longitude: -2.72, utc_offset_seconds: OFF, timezone: 'Europe/Madrid', elevation: 11,
     current_units: { wave_height: 'm', wave_period: 's', wave_direction: '°', sea_surface_temperature: '°C',
                      swell_wave_height: 'm', swell_wave_period: 's', wind_wave_height: 'm', ocean_current_velocity: 'km/h' },
     current,
     hourly_units: { wave_height: 'm', wave_period: 's', swell_wave_height: 'm', swell_wave_period: 's',
                     sea_level_height_msl: 'm', wind_wave_height: 'm', wave_direction: '°' },
-    hourly: { time: T3.map(iso), sea_level_height_msl: T3.map(() => 0), wave_height: ola,
+    hourly: { time: T3.map(d => isoCon(d, OFF)), sea_level_height_msl: T3.map(() => 0), wave_height: ola,
               wave_period: T3.map(() => 9), wave_direction: T3.map(() => 320), swell_wave_height: fondo,
               swell_wave_period: T3.map(() => 8.5), wind_wave_height: T3.map(() => 0.25) },
   };
