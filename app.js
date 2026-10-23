@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.23-1854';
+const BUILD = '2026.10.23-1913';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -1108,9 +1108,11 @@ function icon(code, day = 1) {
          débil (0,6 mm/h)» con tres gotas: «se ponen menos gotitas, así
          parece que va a caer 200 litros». Dos gotas de lluvia (no las
          cortitas del sirimiri), tres para la lluvia y cuatro para la fuerte. */
-      debil:  { xs: [10.5, 14.5],           largo: 2.2, grosor: 1.9, y: 20.5 },
-      media:  { xs: [9, 13, 17],            largo: 2.4, grosor: 2.0, y: 20.4 },
-      fuerte: { xs: [7.5, 11, 14.5, 18],    largo: 3.3, grosor: 2.4, y: 19.9 },
+      /* Y UNA MENOS OTRA VEZ (23-10-2026). Suyo, con 0,6-1,7 mm en pantalla: «parecen de aguacero» · «si no es tanta lluvia,
+         menos gotas, ¿no?». Débil, UNA gota; moderada, dos; fuerte, tres. El sirimiri, sus rayitas finas de siempre. */
+      debil:  { xs: [12.5],                 largo: 2.2, grosor: 1.9, y: 20.5 },
+      media:  { xs: [10.5, 14.5],           largo: 2.4, grosor: 2.0, y: 20.4 },
+      fuerte: { xs: [9, 13, 17],            largo: 3.3, grosor: 2.4, y: 19.9 },
     }[cuanta];
     const d = P.xs.map(x => `M${x} ${P.y}l-${(P.largo * 0.42).toFixed(2)} ${P.largo}`).join('');
     return `<g stroke="${f}" stroke-width="${P.grosor}" stroke-linecap="round"><path d="${d}"/></g>`;

@@ -8651,12 +8651,12 @@ grupo('Los dibujos distinguen el peligro: hielo, granizo y nieve (01-09-2026)');
 
   /* LAS GOTAS SEGÚN LA LLUVIA (06-10-2026, suyo: «lluvia débil y pone una
      nube con muchas gotas… se ponen menos gotitas, así parece que va a caer
-     200 litros»). Se cuentan las gotas del dibujo: débil 2, lluvia 3, fuerte 4. */
+     200 litros»). Y otra menos el 23-10 («parecen de aguacero» · «si no es tanta lluvia, menos gotas»): débil 1, lluvia 2, fuerte 3. */
   const gotas = c => { const m = icon(c, 1).match(/stroke-linecap="round"><path d="([^"]+)"/); return m ? (m[1].match(/M/g) || []).length : 0; };
-  ok('la lluvia DÉBIL (61) y el chubasco débil (80) llevan 2 gotas, no 3: «así parece que va a caer 200 litros»',
-     gotas(61) === 2 && gotas(80) === 2, `61: ${gotas(61)} · 80: ${gotas(80)}`);
-  ok('   la lluvia (63, 81) 3 y la fuerte (65, 82) 4: el dibujo dice cuánta agua',
-     gotas(63) === 3 && gotas(81) === 3 && gotas(65) === 4 && gotas(82) === 4, `63:${gotas(63)} 81:${gotas(81)} 65:${gotas(65)} 82:${gotas(82)}`);
+  ok('la lluvia DÉBIL (61) y el chubasco débil (80) llevan UNA gota (23-10: con dos «parecen de aguacero»)',
+     gotas(61) === 1 && gotas(80) === 1, `61: ${gotas(61)} · 80: ${gotas(80)}`);
+  ok('   la lluvia (63, 81) 2 y la fuerte (65, 82) 3: el dibujo dice cuánta agua',
+     gotas(63) === 2 && gotas(81) === 2 && gotas(65) === 3 && gotas(82) === 3, `63:${gotas(63)} 81:${gotas(81)} 65:${gotas(65)} 82:${gotas(82)}`);
   const hielo = c => icon(c, 1).includes('#bcd4ff');
   ok('los cuatro códigos de HIELO llevan su marca: 48, 56, 57, 66 y 67',
      [48, 56, 57, 66, 67].every(hielo),
