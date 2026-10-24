@@ -1816,8 +1816,11 @@ function escalasPropias() {
      naranja y rojo en la dorsal cálida (sobre 5.700). El valor de la tesela viene en metros: los cortes, en metros. */
   /* Y COMO AGUACEROWX (24-10-2026, su captura «Alturas geopotenciales en 500 mb»): azul intenso en la vaguada, cian, casi
      blanco hacia 564 dam, amarillo, naranja, rojo y magenta en la dorsal (588 dam y más). Cortes en metros (1 dam = 10 m). */
-  const gpm = [4800, 5100, 5300, 5400, 5480, 5560, 5640, 5720, 5780, 5840, 5880, 5920, 5960];
-  const gpc = ['#3a1f9a', '#2438e0', '#1f5cff', '#0a3dff', '#00c8ff', '#7fe6f0', '#e4e2ee', '#f2e27a', '#f7b733', '#f56a1e', '#f0301c', '#e0208a', '#e21a78'];
+  /* La clásica, la de su segunda captura de AguaceroWx (18:12, «woww»): morado y azul en lo frío (450-500 dam), cian hacia
+     530-546, amarillo a 564, naranja, rojo a 582 y granate en la dorsal (590+). */
+  const gpm = [4500, 4720, 4860, 5040, 5160, 5280, 5400, 5460, 5520, 5580, 5640, 5700, 5760, 5820, 5880, 5950];
+  const gpc = ['#b05ad6', '#6a3fd0', '#2c3fd8', '#1f6fff', '#2fa8ff', '#4fd0f5', '#9fe8f0', '#bfeef0', '#e9f2c0', '#f7e04a',
+               '#f9b233', '#f47a24', '#e9461c', '#cf231a', '#a8121a', '#7a0a14'];
   const geopot = {
     scale: { type:'breakpoint', unit:'m', breakpoints: gpm, colors: gpc.map(c => hexRGBA(c, 1)) },
     eje: gpm, unidad: 'm', pos: gpm.map((_, i) => i),
