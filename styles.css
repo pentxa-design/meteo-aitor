@@ -3072,3 +3072,7 @@ body.sin-scroll{overflow:hidden}
 /* Lo medido ahora, bajo el nombre del emplazamiento (24-10-2026) */
 .tor__med{display:block;margin-top:4px;font-size:.82rem;color:#7fd3ff;line-height:1.35}
 .tor__med b{color:#fff}
+
+/* La tabla de modelos contra estación, plegada (24-10-2026) */
+.pt__plegado{margin-top:8px}
+.pt__plegado>summary{cursor:pointer;font-size:.85rem;color:#9fb3d1;padding:6px 0}

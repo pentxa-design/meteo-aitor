@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.24-1835';
+const BUILD = '2026.10.24-1839';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -9774,7 +9774,9 @@ function renderParte() {
           ? ` <span class="pt__veredicto__ojo">— con ${Math.abs(desn)} m de desnivel entre los dos</span>` : ''}</div>`
       : '';
 
-    return `<div class="pt__comp">
+    /* PLEGADA (24-10-2026). Suyo: «ya pone más abajo… ¿entraría ahí? Y así no ocupa tanto y está más a mano». Lo medido
+       ya va arriba, bajo el nombre (medidoAhoraLinea); la tabla entera de modelos contra estación queda aquí, plegada. */
+    return `<details class="pt__plegado"><summary>Modelos y estación, al detalle</summary><div class="pt__comp">
       <table class="pt__tab">
         <thead><tr>
           <th>ESTA HORA</th>
@@ -9852,7 +9854,7 @@ function renderParte() {
       </table>
       ${veredicto}
       ${unoPorUno(p)}
-    </div>`;
+    </div></details>`;
   };
 
   /* ── CADA MODELO CON SU NÚMERO ──────────────────────────────────────
@@ -17941,7 +17943,10 @@ function medidoAhoraLinea(M) {
     has(M.humedad) ? `HR ${Math.min(100, Math.round(M.humedad))} %` : null,
   ].filter(Boolean);
   const hace = M.medidoEn ? haceTxt(M.medidoEn) : '';
-  return `<span class="tor__med">Medido ahora · ${esc(M.fuente || '')} ${esc(M.nombre || '')} (${kmTxt(M.km)} km${hace ? `, ${esc(hace)}` : ''}): ${partes.join(' · ') || 'sin datos'}</span>`;
+  /* Dónde está y a qué altura mide: 37 km/h medidos a 65 m (Matxitxako) no son 37 a 10 m. */
+  const donde = [`${kmTxt(M.km)} km`, has(M.altitud) ? `${M.altitud} m` : null,
+                 M.alturaAnemometro ? `mide a ${M.alturaAnemometro} m` : null, hace || null].filter(Boolean).join(' · ');
+  return `<span class="tor__med">Medido ahora · ${esc(M.fuente || '')} ${esc(M.nombre || '')} (${esc(donde)}): ${partes.join(' · ') || 'sin datos'}</span>`;
 }
 
 /* ── LA COPIA DE LAS TORRES, PARA CUANDO EL SERVIDOR NO CONTESTA ──────

@@ -14065,16 +14065,18 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
     const esc = x => String(x), mmTxt = v => v.toFixed(1).replace('.', ','), kmTxt = v => v.toFixed(1).replace('.', ',');
     const rumboLargo = () => 'noroeste', haceTxt = () => '';
     eval(sacar('function medidoAhoraLinea(M) {'));
-    r = { con: medidoAhoraLinea({ fuente: 'Euskalmet', nombre: 'Sollube', km: 1.2, temperatura: 11.4, racha: 31, viento: 12, direccion: 315, lluvia: 0, humedad: 88 }),
+    r = { con: medidoAhoraLinea({ fuente: 'Euskalmet', nombre: 'Sollube', km: 1.2, altitud: 433, alturaAnemometro: 65, temperatura: 11.4, racha: 31, viento: 12, direccion: 315, lluvia: 0, humedad: 88 }),
           sin: medidoAhoraLinea(null) };
     S.medidoTorres = null; r.esperando = medidoAhoraLinea(null);
   } catch (e) { err = e; }
   ok('sale «Medido ahora · Euskalmet Sollube (1,2 km): 11,4° · racha 31 km/h · viento 12 km/h del noroeste · 0,0 mm en la hora · HR 88 %»',
-     !err && /Medido ahora · Euskalmet Sollube \(1,2 km\)/.test(r.con) && /11,4°/.test(r.con) && /racha <b>31 km\/h/.test(r.con)
+     !err && /Medido ahora · Euskalmet Sollube \(1,2 km · 433 m · mide a 65 m\)/.test(r.con) && /11,4°/.test(r.con) && /racha <b>31 km\/h/.test(r.con)
      && /0,0 mm en la hora/.test(r.con) && /HR 88 %/.test(r.con), err ? String(err) : r.con);
   ok('   y si no hay estación o aún no ha llegado, lo dice (nunca un hueco)',
      !err && /ninguna estación cerca/.test(r.sin) && /preguntando a la estación/.test(r.esperando)
      && /\$\{medidoAhoraLinea\(S\.medidoTorres\?\.get\(key\(t\.place\)\)\)\}/.test(src), JSON.stringify(r));
+  ok('   y la tabla grande de modelos contra estación va PLEGADA («así no ocupa tanto»)',
+     /<details class="pt__plegado"><summary>Modelos y estación, al detalle<\/summary><div class="pt__comp">/.test(src) && /<\/div><\/details>`;\n  \};/.test(src));
 }
 
 /* ═══ BUSCADOR DE CÁMARAS (24-10-2026) ════════════════════════════════════════
