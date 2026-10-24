@@ -523,7 +523,7 @@ const TLAYERS = [
     desc:'Lifted Index, en °C. NEGATIVO es malo: de −2 a −5 tormentas probables, '
        + 'por debajo de −5 tormenta fuerte. Positivo, aire estable' },
   { id:'gh500', densa:true, g:'Tormenta', name:'Geopotencial 500', v:'geopotential_height_500hPa', unit:'m', contours:true,
-    desc:'Configuración sinóptica en altura' },
+    escala:'geopot', desc:'Configuración sinóptica en altura' },
 
   /* «Nubes + lluvia» (clouds_rain) se quitó el 15-09-2026 a las 19:00: era
      otra capa de nubes que no decía lo mismo que «Nubes total» (verde con
@@ -736,7 +736,7 @@ const CLARO_OPACIDAD = 0.65;
 const CLARO_SUAVE = { 'raster-saturation': 0.2 };
 /** La opacidad de la capa de datos para la capa y el fondo que haya: una sola cuenta, para pintar y para el deslizador. */
 /* La capa que decide no se aclara en Claro (22-10-2026): con la opacidad ×0,65 su rojo salía salmón y su naranja, crema. */
-const SIN_ACLARAR = new Set(['rafagas', 'viento']);
+const SIN_ACLARAR = new Set(['rafagas', 'viento', 'geopot']);   // y el geopotencial (24-10-2026, suyo: «sosa, desaturada, dale vida»)
 /* De quién salen las isobaras cuando el modelo de la capa no publica la presión (AROME HD, GFS): el europeo de 9 km. */
 const ISO_PRESTADAS = 'ecmwf_ifs';
 /* Las isobaras encima de otra capa, con menos detalle: la presión es una superficie suave y así no se duplica el trabajo. */
@@ -1810,6 +1810,17 @@ function escalasPropias() {
     eje: rfm, unidad: 'km/h', pos: rfm.map((_, i) => i),
   };
 
+  /* ── GEOPOTENCIAL 500, CON VIDA (24-10-2026) ──────────────────────────
+     Suyo: «esta capa está sosa, desaturada, dale vida». Iba con la escala de fábrica y aclarada en el fondo Claro. Ahora la
+     de los mapas sinópticos (Windy, Meteoblue): morado y azul en la vaguada fría (bajo 5.300 m), verde en medio, amarillo,
+     naranja y rojo en la dorsal cálida (sobre 5.700). El valor de la tesela viene en metros: los cortes, en metros. */
+  const gpm = [4800, 4950, 5100, 5200, 5300, 5400, 5500, 5600, 5700, 5800, 5880, 5950];
+  const gpc = ['#4b1f8f', '#5b3fc4', '#3f6fd8', '#2f9be0', '#22c0c8', '#2fc27a', '#8fd13a', '#e6dc2a', '#f5a623', '#f06a2a', '#d9302f', '#a3123a'];
+  const geopot = {
+    scale: { type:'breakpoint', unit:'m', breakpoints: gpm, colors: gpc.map(c => hexRGBA(c, 1)) },
+    eje: gpm, unidad: 'm', pos: gpm.map((_, i) => i),
+  };
+
   /* ── VIENTO MEDIO A 10 m (18-10-2026, suyo: «en torres falta la capa de viento, solo está la de ráfagas» · «antes había») ──
      Había «Viento 10/20/50/100 m · barbas» y se retiraron el 21-09 porque las barbas apuntaban TODAS al suroeste (la librería no
      da la componente norte-sur). Las flechas ya vuelven por la API en Ráfagas, y enseñan el viento MEDIO: esta capa es la misma
@@ -2262,7 +2273,7 @@ function escalasPropias() {
     // la misma cuenta de Marshall-Palmer con la que está hecha la escala.
     dbz: { scale: ESCALA_DBZ, eje: DBZ, unidad: 'dBZ',
            conv: v => v > 0 ? 10 * Math.log10(200 * Math.pow(v, 1.6)) : 0 },
-    presion, visibilidad, niebla, tempc, t850, rafagas, viento, espesor, capeE, tapa, agua, isocero, sinColor, nubes, sombraLluvia,
+    presion, visibilidad, niebla, tempc, t850, rafagas, viento, geopot, espesor, capeE, tapa, agua, isocero, sinColor, nubes, sombraLluvia,
     ola, periodo, acum,
   };
   return _escalas;

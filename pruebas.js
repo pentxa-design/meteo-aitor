@@ -11497,7 +11497,7 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
     && canales(hexDe(nb[7])).every(v => v <= 0xe6 && v >= 0xd0);
   ok('la escala «nubes» va de transparente (0 %) a blanco casi opaco (100 %): blanca como Windy, un gris ligero solo cerrada, y neutra, no azul',
      alfa.length >= 6 && alfa[0] === 0 && alfa[alfa.length - 1] >= 0.9 && alfa.every((a, i) => i === 0 || a >= alfa[i - 1]) && clara
-     && /const nubes = \{/.test(M) && /presion, visibilidad, niebla, tempc, t850, rafagas, viento, espesor, capeE, tapa, agua, isocero, sinColor, nubes,/.test(M),
+     && /const nubes = \{/.test(M) && /presion, visibilidad, niebla, tempc, t850, rafagas, viento, geopot, espesor, capeE, tapa, agua, isocero, sinColor, nubes,/.test(M),
      JSON.stringify({ alfa, clara }));
   ok('las nubes piden degradado continuo (color_blend), como la reflectividad',
      /const ESCALAS_SUAVES = new Set\(\[[^\]]*'nubes'[^\]]*\]\);/.test(M));
@@ -14042,6 +14042,38 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   const Ax = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
   ok('   y los tres sitios que lo pintan (Ahora, Mis estaciones y la franja en curso) le pasan el código que enseñan',
      (Ax.match(/avisoCielo\([^)]*codigo:/g) || []).length === 3);
+}
+
+/* ═══ GEOPOTENCIAL 500 CON VIDA (24-10-2026) ══════════════════════════════════
+   Suyo: «esta capa está sosa, desaturada, dale vida». Se EJECUTA escalasPropias(): la capa tiene su escala sinóptica, en
+   metros, de morado (vaguada) a rojo (dorsal), y no se aclara en el fondo Claro. */
+{
+  grupo('Geopotencial 500 con colores vivos');
+  const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const vm = require('vm'); const nada = () => {};
+  const cualquiera = () => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => '' : cualquiera()), apply: () => cualquiera(), construct: () => cualquiera() });
+  const caja = { console: { log: nada, warn: nada, error: nada, info: nada }, setTimeout: () => 0, clearTimeout: nada, setInterval: () => 0, clearInterval: nada,
+    URL, URLSearchParams, Intl, Date, Math, JSON, Promise, AbortController, document: cualquiera(), navigator: { userAgent: 'node' },
+    localStorage: { getItem: () => null, setItem: nada, removeItem: nada }, sessionStorage: { getItem: () => null, setItem: nada, removeItem: nada },
+    location: { search: '', href: 'https://x/', origin: 'https://x' }, fetch: async () => ({ ok: false }), maplibregl: cualquiera(),
+    OMWeatherMapLayer: cualquiera(), addEventListener: nada, matchMedia: () => ({ matches: false, addEventListener: nada }),
+    requestAnimationFrame: nada, performance: { now: () => 0 }, Blob: function () {}, Image: function () {} };
+  caja.window = caja; caja.globalThis = caja; caja.self = caja;
+  let G = null, err = null;
+  try {
+    vm.createContext(caja);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'reglas-tiempo.js'), 'utf8'), caja);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8'), caja, { filename: 'maps.js' });
+    G = vm.runInContext('escalasPropias().geopot', caja);
+  } catch (e) { err = e; }
+  const cols = G?.scale?.colors || [];
+  const rgb = c => (String(c).match(/\d+(\.\d+)?/g) || []).map(Number);
+  const azulBajo = (() => { const [r, g, b] = rgb(cols[0]); return b > r && b > g; })();
+  const rojoAlto = (() => { const [r, g, b] = rgb(cols.at(-1)); return r > g && r > b; })();
+  ok('el geopotencial lleva su escala en METROS, de morado-azul (vaguada) a rojo (dorsal), y la capa la usa',
+     !err && G?.scale?.unit === 'm' && G.scale.breakpoints[0] <= 5000 && G.scale.breakpoints.at(-1) >= 5900 && azulBajo && rojoAlto
+     && /id:'gh500'[\s\S]{0,200}escala:'geopot'/.test(Mx), err ? String(err) : JSON.stringify(G?.scale?.breakpoints));
+  ok('   y no se aclara en el fondo Claro (estaba «sosa, desaturada»)', /const SIN_ACLARAR = new Set\(\[[^\]]*'geopot'/.test(Mx));
 }
 
 /* ═══ ISOBARAS ENCIMA DE CUALQUIER CAPA (24-10-2026) ═══════════════════════════
