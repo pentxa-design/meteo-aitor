@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.24-1826';
+const BUILD = '2026.10.24-1830';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -13503,6 +13503,31 @@ function pintarOeste() {
 
   if (el.dataset.listo) return;
   el.dataset.listo = '1';
+  /* BUSCADOR DE CÁMARAS (24-10-2026). Escribe un pueblo o ciudad, se busca con el mismo buscador de sitios de la app
+     (Open-Meteo, España primero) y salen las cámaras de Windy alrededor, como con la línea del oeste. */
+  $('#camsBusca')?.addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const q = $('#camsBuscaQ')?.value.trim();
+    const av = $('#camsAviso');
+    if (!q || q.length < 2) return;
+    av.textContent = `Buscando «${q}»…`;
+    try {
+      const d = await jget(API.geo, { name: q, count: 8, language: 'es', format: 'json' });
+      const r = (d?.results || []).find(x => x.country_code === 'ES') || d?.results?.[0];
+      if (!r) { av.textContent = `No encuentro ningún sitio llamado «${q}».`; return; }
+      const p = { lat: r.latitude, lon: r.longitude, name: r.name };
+      $$('.oeste').forEach(x => x.classList.remove('is-on'));
+      av.textContent = `Buscando cámaras cerca de ${r.name}${r.admin1 ? ` (${r.admin1})` : ''}…`;
+      const { cams, falta } = await camsCercanas(p, CAMS_RADIO_OESTE);
+      av.textContent = (cams.length
+        ? `${cams.length} cámaras a menos de ${CAMS_RADIO_OESTE} km de ${r.name}${r.admin1 ? ` (${r.admin1})` : ''}.`
+        : `Windy no tiene cámaras a menos de ${CAMS_RADIO_OESTE} km de ${r.name}.`)
+        + (falta ? ` ⚠ Y puede haber más que no han llegado: ${falta}.` : '');
+      pintarCams(cams.length ? cams : CAMS);
+    } catch (e) {
+      av.textContent = `No se ha podido buscar «${q}» (${e.message}).`;
+    }
+  });
   el.addEventListener('click', async ev => {
     const b = ev.target.closest('[data-oeste]');
     if (!b) return;

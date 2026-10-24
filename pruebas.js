@@ -14014,7 +14014,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   const cuerpo = (/function opacidadDeCapa\([\s\S]*?\n\}/.exec(M) || [])[0];
   const f = cuerpo ? new Function('ESCALAS_BLANCAS', 'CON_SUELO_NEGRO', 'CLARO_OPACIDAD', 'SIN_ACLARAR', cuerpo + '\nreturn opacidadDeCapa;')(
     new Set(['nubes', 'niebla']), new Set(['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul', 'espesor']), Number((/const CLARO_OPACIDAD = ([\d.]+);/.exec(M) || [])[1]),
-    new Set(['rafagas', 'viento', 'geopot', 'tempc'])) : null;
+    new Set(['rafagas', 'viento', 'geopot', 'tempc', 't850'])) : null;
   ok('temperatura con el deslizador a 0,92: en Color 0,92 (como siempre) y en Claro más suave (0,6), para que se vea el mapa claro debajo',
      !!f && f({ escala: 'presion' }, 'color', 0.92) === 0.92 && Math.abs(f({ escala: 'presion' }, 'claro', 0.92) - 0.598) < 0.001
      && f({ escala: 'presion' }, 'oscuro', 0.92) === 0.92);
@@ -14053,6 +14053,38 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   const Ax = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
   ok('   y los tres sitios que lo pintan (Ahora, Mis estaciones y la franja en curso) le pasan el código que enseñan',
      (Ax.match(/avisoCielo\([^)]*codigo:/g) || []).length === 3);
+}
+
+/* ═══ BUSCADOR DE CÁMARAS (24-10-2026) ════════════════════════════════════════
+   Suyo: «en cámaras pon un buscador, que ponga Santander y salgan todas». Se EJECUTA el manejador con un DOM y una red de
+   mentira: busca el sitio, pide las cámaras alrededor y las pinta. */
+{
+  grupo('Buscador de cámaras por pueblo o ciudad');
+  const H = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  let r = null, err = null;
+  (globalThis.__pendientes ??= []).push((async () => {
+    try {
+      const els = {}; const el = id => (els[id] ??= { textContent: '', value: '', dataset: {}, innerHTML: '', classList: { remove() {}, toggle() {} },
+        addEventListener(t, f) { this['on' + t] = f; } });
+      const $ = s => el(s); const $$ = () => [];
+      const S = { place: { lat: 43.42, lon: -2.72, name: 'Bermeo' } };
+      const OESTE = []; const esc = x => String(x); const kmEntre = () => 0; const margenHoras = () => '';
+      const API = { geo: '/geo' }; const CAMS = [{ id: 'fija' }]; const CAMS_RADIO_OESTE = 45;
+      let pedidoGeo = null, pedidoCams = null, pintadas = null;
+      const jget = async (u, q) => { pedidoGeo = q; return { results: [{ name: 'Santander', admin1: 'Cantabria', country_code: 'ES', latitude: 43.46, longitude: -3.80 }] }; };
+      const camsCercanas = async (p, radio) => { pedidoCams = { p, radio }; return { cams: [{ id: 'a' }, { id: 'b' }], falta: null }; };
+      const pintarCams = c => { pintadas = c; };
+      eval(sacar('function pintarOeste() {'));
+      pintarOeste();
+      el('#camsBuscaQ').value = 'Santander';
+      await el('#camsBusca').onsubmit({ preventDefault() {} });
+      r = { geo: pedidoGeo?.name, cams: pedidoCams, pintadas: pintadas?.length, aviso: el('#camsAviso').textContent };
+    } catch (e) { err = e; }
+    ok('escribir «Santander» busca el sitio, pide las cámaras de alrededor (45 km) y las pinta, y lo dice',
+       !err && r.geo === 'Santander' && Math.abs(r.cams.p.lat - 43.46) < 0.01 && r.cams.radio === 45 && r.pintadas === 2
+       && /2 cámaras a menos de 45 km de Santander \(Cantabria\)/.test(r.aviso) && /id="camsBusca"/.test(H) && /id="camsBuscaQ"/.test(H),
+       err ? String(err) : JSON.stringify(r));
+  })());
 }
 
 /* ═══ GEOPOTENCIAL 500 CON VIDA (24-10-2026) ══════════════════════════════════

@@ -741,7 +741,7 @@ const CLARO_OPACIDAD = 0.65;
 const CLARO_SUAVE = { 'raster-saturation': 0.2 };
 /** La opacidad de la capa de datos para la capa y el fondo que haya: una sola cuenta, para pintar y para el deslizador. */
 /* La capa que decide no se aclara en Claro (22-10-2026): con la opacidad ×0,65 su rojo salía salmón y su naranja, crema. */
-const SIN_ACLARAR = new Set(['rafagas', 'viento', 'geopot', 'tempc']);   // y la temperatura (24-10: «no se ve nada» al lado de AguaceroWx)   // y el geopotencial (24-10-2026, suyo: «sosa, desaturada, dale vida»)
+const SIN_ACLARAR = new Set(['rafagas', 'viento', 'geopot', 'tempc', 't850']);   // y la temperatura (24-10: «no se ve nada» al lado de AguaceroWx)   // y el geopotencial (24-10-2026, suyo: «sosa, desaturada, dale vida»)
 /* De quién salen las isobaras cuando el modelo de la capa no publica la presión (AROME HD, GFS): el europeo de 9 km. */
 const ISO_PRESTADAS = 'ecmwf_ifs';
 /* Las isobaras encima de otra capa, con menos detalle: la presión es una superficie suave y así no se duplica el trabajo. */

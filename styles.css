@@ -3064,3 +3064,7 @@ body.sin-scroll{overflow:hidden}
 /* Windy en directo como capa del mapa (23-10-2026): su visor encima del mapa, a todo su tamaño. */
 .mapa-windy{position:absolute;inset:0;z-index:4;background:#0b1020}
 .mapa-windy iframe{width:100%;height:100%;border:0;display:block}
+
+/* Buscador de cámaras (24-10-2026) */
+.cams-busca{display:flex;gap:8px;margin:10px 0 6px}
+.cams-busca input{flex:1;min-width:0;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:inherit;font:inherit}

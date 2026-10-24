@@ -752,6 +752,11 @@ html[data-bloqueado]{overflow:hidden}
 
   <div class="card">
     <h2 class="ch">Cámaras</h2>
+    <!-- Buscador de cámaras (24-10-2026, suyo: «en cámaras pon un buscador, que ponga Santander y salgan todas») -->
+    <form class="cams-busca" id="camsBusca" autocomplete="off">
+      <input type="search" id="camsBuscaQ" placeholder="Buscar cámaras de otro sitio: Santander, Laredo, Gernika…" aria-label="Buscar cámaras por pueblo o ciudad">
+      <button type="submit" class="btn">Buscar</button>
+    </form>
     <p class="note" id="camsAviso"></p>
     <div id="cams"></div>
     <p class="note">Cada cámara se abre solo cuando la pides: son vídeo en
