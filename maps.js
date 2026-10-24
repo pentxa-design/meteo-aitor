@@ -741,7 +741,7 @@ const CLARO_OPACIDAD = 0.65;
 const CLARO_SUAVE = { 'raster-saturation': 0.2 };
 /** La opacidad de la capa de datos para la capa y el fondo que haya: una sola cuenta, para pintar y para el deslizador. */
 /* La capa que decide no se aclara en Claro (22-10-2026): con la opacidad ×0,65 su rojo salía salmón y su naranja, crema. */
-const SIN_ACLARAR = new Set(['rafagas', 'viento', 'geopot']);   // y el geopotencial (24-10-2026, suyo: «sosa, desaturada, dale vida»)
+const SIN_ACLARAR = new Set(['rafagas', 'viento', 'geopot', 'tempc']);   // y la temperatura (24-10: «no se ve nada» al lado de AguaceroWx)   // y el geopotencial (24-10-2026, suyo: «sosa, desaturada, dale vida»)
 /* De quién salen las isobaras cuando el modelo de la capa no publica la presión (AROME HD, GFS): el europeo de 9 km. */
 const ISO_PRESTADAS = 'ecmwf_ifs';
 /* Las isobaras encima de otra capa, con menos detalle: la presión es una superficie suave y así no se duplica el trabajo. */
@@ -1726,11 +1726,13 @@ function escalasPropias() {
      Euskadi (y en Calpe, y en Gijón), con los cortes pegados a lo que
      decide: 30 naranja, 34 rojo, 38 granate, 42+ morado — los colores
      de «día de aires acondicionados sufriendo en las casetas». */
-  const tpm = [-20, -10, 0, 5, 10, 15, 20, 25, 30, 34, 38, 42, 46];
-  const tpc = [['#4b1e8f',1], ['#2447d6',1], ['#1f8fe8',1], ['#2fc9b8',1],
-               ['#2fb84a',1], ['#8fd026',1], ['#f5d800',1], ['#ff9d00',1],
-               ['#f95c00',1], ['#e11400',1], ['#a80016',1], ['#700024',1],
-               ['#3f001f',1]];
+  /* COMO AGUACEROWX (24-10-2026, suyo con las dos capturas al lado: «no se ve nada» · «iguálalo al menos» · «esto es una
+     chapuza»). La de antes ponía el amarillo en 20° y con 15° en Bilbao salía un verde pálido. Ahora, como la suya: cian en lo
+     frío de montaña (4-8°), verde hacia 12°, amarillo a 18°, naranja a 21-24°, rojo desde 28°. Y sin aclarar en Claro. */
+  const tpm = [-20, -10, 0, 4, 8, 12, 15, 18, 21, 24, 28, 32, 36, 40, 46];
+  const tpc = [['#4b1e8f',1], ['#2447d6',1], ['#7fc8ff',1], ['#2fc9d8',1], ['#1fb39a',1], ['#3fbf4a',1],
+               ['#b9dc2a',1], ['#ffe11a',1], ['#ffb21a',1], ['#ff8a10',1], ['#f5520c',1], ['#e11a0c',1],
+               ['#b5001a',1], ['#7a0024',1], ['#3f001f',1]];
   /* ── RÁFAGAS: LA CAPA QUE DECIDE, CON SUS LISTONES DENTRO ──────────
      Suyo, 01-09-2026: *«los colores de los mapas hay que mejorarlos sí o
      sí: más contraste y más vivos»*, comparando con AguaceroWx, Meteored

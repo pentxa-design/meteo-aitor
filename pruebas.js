@@ -7690,8 +7690,19 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
      esas altas temperaturas» — con la escala planetaria (−80..50), los
      41° de la ola del viernes salían amarillo pálido. */
   ok('la temperatura tiene escala propia de −20 a 46, no la planetaria',
-     /const tpm = \[-20, -10, 0, 5, 10, 15, 20, 25, 30, 34, 38, 42, 46\]/.test(M)
+     /const tpm = \[-20, -10, 0, 4, 8, 12, 15, 18, 21, 24, 28, 32, 36, 40, 46\]/.test(M)
      && /escala:'tempc'/.test(M));
+  /* 24-10-2026, al lado de AguaceroWx: amarillo a 18°, rojo desde 28°, y sin aclarar en Claro («no se ve nada»). */
+  {
+    const cols = ((M.match(/const tpc = \[([\s\S]*?)\];/) || [])[1] || '').match(/#[0-9a-f]{6}/g) || [];
+    const cortes = [-20, -10, 0, 4, 8, 12, 15, 18, 21, 24, 28, 32, 36, 40, 46];
+    const de = v => { let k = 0; cortes.forEach((c, i) => { if (v >= c) k = i; }); return cols[k]; };
+    const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+    const [r18, g18, b18] = rgb(de(18)), [r28, g28, b28] = rgb(de(28));
+    ok('   18° sale AMARILLO y 28° ROJO-NARANJA (como AguaceroWx), y la temperatura no se aclara en el fondo Claro',
+       r18 > 200 && g18 > 200 && b18 < 80 && r28 > 200 && g28 < 120 && /const SIN_ACLARAR = new Set\(\[[^\]]*'tempc'/.test(M),
+       JSON.stringify({ 18: de(18), 28: de(28) }));
+  }
   /* «En la 850 quisiera ver los cambios de verde a rojo… en nuestro
      mapa no se nota nada, entonces esa capa no pinta nada». La capa de
      las masas de aire con la escala de las masas de aire. */
@@ -7859,7 +7870,7 @@ grupo('RÁFAGAS: colores vivos y con SUS listones (01-09-2026)');
        morado(colorDe(90, 60, 90)) && morado(colorDe(95, 60, 90)) && naranja(colorDe(59, 60, 90)) && [18, 27, 36].every(v => { const [r, g, b] = colorDe(v, 60, 90); return b > r && b > g * 0.9; }), JSON.stringify([colorDe(95, 60, 90), colorDe(59, 60, 90)]));
     const op = new Function(`${(M.match(/const ESCALAS_BLANCAS = [^\n]*/) || [''])[0]}\n${(M.match(/const CON_SUELO_NEGRO = [^\n]*/) || [''])[0]}\nconst CLARO_OPACIDAD = 0.65;\n${(M.match(/const SIN_ACLARAR = [^\n]*/) || [''])[0]}\n${(M.match(/function opacidadDeCapa[\s\S]*?\n\}/) || [''])[0]}\nreturn opacidadDeCapa;`)();
     ok('   y la capa de ráfagas va fuerte (≥0,88) en cualquier fondo, como Windy: a 0,75 salía «pálida»; las demás se aclaran en Claro',
-       op({ escala: 'rafagas' }, 'claro', 0.75) >= 0.88 && op({ escala: 'rafagas' }, 'color', 0.75) >= 0.88 && op({ escala: 'tempc' }, 'claro', 0.75) < 0.75);
+       op({ escala: 'rafagas' }, 'claro', 0.75) >= 0.88 && op({ escala: 'rafagas' }, 'color', 0.75) >= 0.88 && op({ escala: 'presion' }, 'claro', 0.75) < 0.75);
   }
   /* 15-09-2026 19:55 (portátil): la tesela trae la racha en m/s. Con la escala propia se
      perdió la conversión y el mapa marcaba «7» en Madrid con 27 km/h en la API: los
@@ -14003,10 +14014,10 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   const cuerpo = (/function opacidadDeCapa\([\s\S]*?\n\}/.exec(M) || [])[0];
   const f = cuerpo ? new Function('ESCALAS_BLANCAS', 'CON_SUELO_NEGRO', 'CLARO_OPACIDAD', 'SIN_ACLARAR', cuerpo + '\nreturn opacidadDeCapa;')(
     new Set(['nubes', 'niebla']), new Set(['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul', 'espesor']), Number((/const CLARO_OPACIDAD = ([\d.]+);/.exec(M) || [])[1]),
-    new Set(['rafagas'])) : null;
+    new Set(['rafagas', 'viento', 'geopot', 'tempc'])) : null;
   ok('temperatura con el deslizador a 0,92: en Color 0,92 (como siempre) y en Claro más suave (0,6), para que se vea el mapa claro debajo',
-     !!f && f({ escala: 'tempc' }, 'color', 0.92) === 0.92 && Math.abs(f({ escala: 'tempc' }, 'claro', 0.92) - 0.598) < 0.001
-     && f({ escala: 'tempc' }, 'oscuro', 0.92) === 0.92);
+     !!f && f({ escala: 'presion' }, 'color', 0.92) === 0.92 && Math.abs(f({ escala: 'presion' }, 'claro', 0.92) - 0.598) < 0.001
+     && f({ escala: 'presion' }, 'oscuro', 0.92) === 0.92);
   ok('   las nubes y la lluvia no se aclaran (se leerían peor): 0,92 y 0,95 en cualquier fondo',
      !!f && f({ escala: 'nubes' }, 'claro', 0.5) === 0.92 && f({ escala: 'lluvia' }, 'claro', 0.5) === 0.95);
   ok('   y el deslizador CAPA usa la misma cuenta (si no, al moverlo en Claro la capa volvería a taparlo todo)',
