@@ -737,16 +737,54 @@ const NUBE_EN_CLARO = { 'raster-brightness-max': 0.72 };
    oscuro» · «en color y oscuro déjalo como está». La capa de datos iba casi opaca y tapaba el fondo entero, así que Claro y Color eran
    el mismo mapa. En Claro: el color de la capa más suave (opacidad ×0,65, menos saturado) con el mapa claro visible debajo, la lluvia
    sin suelo negro y las nubes sin suelo ocre y en gris. Probado en su navegador antes de ponerlo. Color y Oscuro, sin tocar. */
-const CLARO_OPACIDAD = 0.65;
-const CLARO_SUAVE = { 'raster-saturation': 0.2 };
+/* ── Y EL 24-10-2026, VIVAS EN TODOS LOS FONDOS ─────────────────────────────
+   Suyo, con AguaceroWx al lado: «así quiero» · «COLORES VIVOS ETC CADA CAPA». El aclarado ×0,65 de Claro lavaba todas las capas
+   que no estaban en SIN_ACLARAR, y encima el relieve de Esri (casi blanco en lo llano) echaba un velo gris. Ahora toda capa de
+   modelo va fuerte (≥0,95) y con VIVOS_FUERTES en cualquier fondo; Claro se distingue de Color por el MAPA (mar, nombres, sin
+   suelo ocre bajo las nubes), no por lavar el dato. Las nubes siguen en gris en Claro. */
 /** La opacidad de la capa de datos para la capa y el fondo que haya: una sola cuenta, para pintar y para el deslizador. */
 /* La capa que decide no se aclara en Claro (22-10-2026): con la opacidad ×0,65 su rojo salía salmón y su naranja, crema. */
-const SIN_ACLARAR = new Set(['rafagas', 'viento', 'geopot', 'tempc', 't850']);
-/* El sombreado del relieve: debajo (como siempre) o encima del color sin lavarlo (24-10-2026, ver relieveSegunCapa). */
+/* El sombreado del relieve DEBAJO (satélite, Windy, sin capa): el de Esri, como siempre. */
 const RELIEVE_DEBAJO = { 'raster-opacity': 0.45, 'raster-saturation': -1, 'raster-contrast': 0.15, 'raster-brightness-max': 1 };
+/* ── Y ENCIMA DEL COLOR, OTRO SOMBREADO (24-10-2026, noche) ─────────────────
+   Suyo, con T850 de ECMWF delante: «repara eso que se ve mal» · «relieves etc faltan», y AguaceroWx al lado: «así quiero».
+   MEDIDO en su pantalla: el orden era bueno (color → relieve → costa) y las 10 teselas de Esri cargadas, pero el sombreado de
+   Esri es CASI BLANCO en lo llano y a escala de España casi no tiene sombra: encima del color no marcaba los montes, echaba un
+   velo gris parejo que lavaba la capa (al 100 % se veía blanco con cuatro sombras). Encima va ahora el `hillshade` del propio
+   MapLibre, calculado de las alturas abiertas de AWS (Terrarium): TRANSPARENTE en lo llano, oscurece solo las laderas a la
+   sombra. Probado en su pantalla antes de ponerlo: Pirineos y Cordillera Cantábrica marcados sin tocar el color. */
+/* La lluvia (las de suelo negro), NI TOCAR: «la capa de precipitaciones ni tocar, esa me gusta» (suyo, 24-10-2026, 19:45).
+   Para ellas sigue el relieve de Esri encima con esta pintura, su VIVOS y su costa azul marino, como estaban. */
 const RELIEVE_ENCIMA = { 'raster-opacity': 0.45, 'raster-saturation': -1, 'raster-contrast': 0.3, 'raster-brightness-max': 0.6 };
+const DEM_TESELAS = 'tierra://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
+/* ── SIN EL FONDO DEL MAR (24-10-2026, visto en pantalla antes de publicar) ─────────────────────────────────────────────
+   Esas alturas traen batimetría: el sombreado pintaba las fosas del Cantábrico y del Atlántico como rayas sobre el mar. Antes
+   de sombrear, todo lo que está bajo el nivel del mar se pone a 0 m. En Terrarium la altura es R·256 + G + B/256 − 32768, así
+   que «bajo el mar» es exactamente R < 128, y 0 m es (128, 0, 0). */
+let protocoloTierraPuesto = false;
+function demSinMar(d) {
+  for (let i = 0; i < d.length; i += 4) if (d[i] < 128) { d[i] = 128; d[i + 1] = 0; d[i + 2] = 0; }
+  return d;
+}
+function ponerProtocoloTierra() {
+  if (protocoloTierraPuesto || typeof maplibregl === 'undefined' || !maplibregl.addProtocol) return;
+  protocoloTierraPuesto = true;
+  maplibregl.addProtocol('tierra', async (params, ac) => {
+    const r = await fetch(params.url.replace(/^tierra:\/\//, 'https://'), { signal: ac?.signal });
+    if (!r.ok) throw new Error(`relieve ${r.status}`);
+    const bmp = await createImageBitmap(await r.blob(), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+    const c = new OffscreenCanvas(bmp.width, bmp.height), x = c.getContext('2d', { willReadFrequently: true });
+    x.drawImage(bmp, 0, 0);
+    const im = x.getImageData(0, 0, bmp.width, bmp.height);
+    demSinMar(im.data);
+    x.putImageData(im, 0, 0);
+    return { data: await (await c.convertToBlob({ type: 'image/png' })).arrayBuffer() };
+  });
+}
+const SOMBRA_ENCIMA = { 'hillshade-shadow-color': 'rgba(0,0,0,0.55)', 'hillshade-highlight-color': 'rgba(255,255,255,0.08)',
+                        'hillshade-accent-color': 'rgba(0,0,0,0.25)', 'hillshade-exaggeration': 0.6, 'hillshade-illumination-direction': 315 };
 /* Las capas de color fuerte, más saturadas: con el relieve encima («todavía pálido, pero vas bien», 24-10, probado en su pantalla). */
-const VIVOS_FUERTES = { 'raster-saturation': 0.75, 'raster-contrast': 0.25 };   // y la temperatura (24-10: «no se ve nada» al lado de AguaceroWx)   // y el geopotencial (24-10-2026, suyo: «sosa, desaturada, dale vida»)
+const VIVOS_FUERTES = { 'raster-saturation': 0.75, 'raster-contrast': 0.25 };   // todas desde el 24-10-2026 noche; antes la temperatura (24-10: «no se ve nada» al lado de AguaceroWx)   // y el geopotencial (24-10-2026, suyo: «sosa, desaturada, dale vida»)
 /* De quién salen las isobaras cuando el modelo de la capa no publica la presión (AROME HD, GFS): el europeo de 9 km. */
 const ISO_PRESTADAS = 'ecmwf_ifs';
 /* Las isobaras encima de otra capa, con menos detalle: la presión es una superficie suave y así no se duplica el trabajo. */
@@ -756,9 +794,8 @@ const RADAR_OPACIDAD_MIN = 0.92;
 const RADAR_FUERTE = { 'raster-saturation': 0.35, 'raster-contrast': 0.15 };   // y el viento medio (22-10-2026, suyo: «y los colores pálidos»)
 function opacidadDeCapa(L_, base, o) {
   if (ESCALAS_BLANCAS.has(L_?.escala)) return Math.max(o, 0.92);
-  if (SIN_ACLARAR.has(L_?.escala)) return Math.max(o, 0.95);   // fuerte, como Windy y AguaceroWx: el relieve va encima (relieveSegunCapa)
-  if (CON_SUELO_NEGRO.has(L_?.escala)) return Math.max(o, 0.95);
-  return base === 'claro' ? o * CLARO_OPACIDAD : o;
+  if (CON_SUELO_NEGRO.has(L_?.escala)) return Math.max(o, 0.95);   // la lluvia, como estaba («ni tocar»)
+  return 1;   // opaca del todo en todas, como AguaceroWx: el relieve y la costa van encima (relieveSegunCapa) — 24-10-2026
 }
 /* Desde qué zoom la costa es la detallada de CARTO; por debajo, Natural Earth
    (ver costaEncima: los cortes de tesela de CARTO salían como rayas). */
@@ -3400,7 +3437,7 @@ const Maps = {
         id:'omLayer', type:'raster', source:'omSrc',
         paint:{ 'raster-opacity': op, 'raster-fade-duration': 120,
                 'raster-resampling': 'linear', ...(ESCALAS_BLANCAS.has(L_.escala) ? (this.base === 'claro' ? NUBE_EN_CLARO : {})
-                    : (this.base === 'claro' && !CON_SUELO_NEGRO.has(L_.escala) && !SIN_ACLARAR.has(L_.escala)) ? CLARO_SUAVE : SIN_ACLARAR.has(L_.escala) ? VIVOS_FUERTES : VIVOS) },
+                    : CON_SUELO_NEGRO.has(L_.escala) ? VIVOS : VIVOS_FUERTES) },
       }, this.firstLabelLayer());
       /* La sombra del terreno, POR ENCIMA del color y rebajada: así el
          cordal y el valle se siguen leyendo sin lavar la capa. */
@@ -4243,11 +4280,19 @@ const Maps = {
     if (!m?.getLayer('hillLayer')) return;
     const L_ = TLAYERS.find(l => l.id === this.layer);
     const encima = !!L_ && !L_.sat && !L_.windy && (m.getLayer('omLayer') || m.getLayer('radarLayer') || m.getLayer('aemetLayer'));
-    const P = encima ? RELIEVE_ENCIMA : RELIEVE_DEBAJO;
+    const lluvia = encima && CON_SUELO_NEGRO.has(L_.escala);   // como estaba: Esri encima (ver RELIEVE_ENCIMA)
+    const nuevo = encima && !lluvia;
     try {
+      const P = lluvia ? RELIEVE_ENCIMA : RELIEVE_DEBAJO;
       for (const k of Object.keys(P)) m.setPaintProperty('hillLayer', k, P[k]);
-      if (encima) m.moveLayer('hillLayer', this.firstLabelLayer(true));
-      else {
+      /* Encima: el de Esri se apaga (su velo lavaba el color) y se enciende el sombreado transparente en lo llano. */
+      m.setLayoutProperty('hillLayer', 'visibility', nuevo ? 'none' : 'visible');
+      if (m.getLayer('sombraLayer')) {
+        m.setLayoutProperty('sombraLayer', 'visibility', nuevo ? 'visible' : 'none');
+        if (nuevo) m.moveLayer('sombraLayer', this.firstLabelLayer(true));
+      }
+      if (lluvia) m.moveLayer('hillLayer', this.firstLabelLayer(true));
+      else if (!encima) {
         /* Justo DEBAJO de la capa de datos que haya (satélite, Windy…); si no hay ninguna, antes de la primera línea del mapa. */
         const ls = m.getStyle().layers || [];
         const datos = ['satLayer', 'omLayer', 'radarLayer', 'aemetLayer'].find(id => m.getLayer(id));
@@ -4261,10 +4306,14 @@ const Maps = {
     if (!this.map?.getSource('carto')) return;
     this.relieveSegunCapa();
     const oscuro = this.base === 'oscuro';
+    const lluvia = CON_SUELO_NEGRO.has(TLAYERS.find(l => l.id === this.layer)?.escala);   // la lluvia, como estaba
+    /* Negra y más gruesa en Claro y Color, como AguaceroWx (24-10-2026, su captura: «así quiero»): la azul marino de 0,7 px
+       se perdía sobre los verdes y azules de la temperatura. */
     const paint = {
-      'line-color': oscuro ? 'rgba(225,235,245,0.9)' : 'rgba(18,38,66,0.85)',
-      'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.7, 7, 1.2, 10, 1.9],
+      'line-color': oscuro ? 'rgba(225,235,245,0.9)' : lluvia ? 'rgba(18,38,66,0.85)' : 'rgba(0,0,0,0.9)',
+      'line-width': lluvia ? ['interpolate', ['linear'], ['zoom'], 4, 0.7, 7, 1.2, 10, 1.9] : ['interpolate', ['linear'], ['zoom'], 4, 1.1, 7, 1.5, 10, 2.2],
     };
+    this.fronterasEncima(oscuro, lluvia);
     /* ── SIN LAS RAYAS DE LOS CORTES DE TESELA (17-10-2026) ──────────────
        Con el mapa alejado (zoom ≤ 6) salía una raya recta en el mar, de la
        costa hacia arriba (sus capturas del 10-10 y del 17-10, junto a
@@ -4292,9 +4341,38 @@ const Maps = {
     } catch (e) { console.warn('costa: no se ha podido poner encima', e); }
   },
 
+  /* ── LAS FRONTERAS, ENCIMA DEL COLOR (24-10-2026) ─────────────────────────
+     Las de CARTO van en rosa pálido y las de comunidad, DEBAJO de la capa de color (posición 8 de 95): sobre T850 no se veía
+     dónde acababa España ni Euskadi. Como en AguaceroWx: país en negro, comunidad en gris oscuro fino, encima del color y
+     debajo de los nombres. En Oscuro, en claro. */
+  fronterasEncima(oscuro, lluvia = false) {
+    const m = this.map;
+    if (!m?.getSource('carto')) return;
+    if (lluvia) {   // la lluvia, como estaba: sin estas líneas
+      for (const id of ['fronteraPaisLayer', 'fronteraRegionLayer']) if (m.getLayer(id)) m.removeLayer(id);
+      return;
+    }
+    const capas = [
+      ['fronteraPaisLayer', 2, oscuro ? 'rgba(235,240,245,0.85)' : 'rgba(0,0,0,0.85)', ['interpolate', ['linear'], ['zoom'], 4, 0.9, 7, 1.4, 10, 2]],
+      ['fronteraRegionLayer', 4, oscuro ? 'rgba(235,240,245,0.5)' : 'rgba(0,0,0,0.45)', ['interpolate', ['linear'], ['zoom'], 4, 0.5, 7, 0.9, 10, 1.3]],
+    ];
+    try {
+      for (const [id, nivel, color, ancho] of capas) {
+        if (m.getLayer(id)) {
+          m.setPaintProperty(id, 'line-color', color); m.setPaintProperty(id, 'line-width', ancho);
+          m.moveLayer(id, this.firstLabelLayer(true));
+        } else {
+          m.addLayer({ id, type: 'line', source: 'carto', 'source-layer': 'boundary', minzoom: nivel === 4 ? 4 : 0,
+            filter: ['all', ['==', 'admin_level', nivel], ['==', 'maritime', 0]],
+            layout: { 'line-join': 'round' }, paint: { 'line-color': color, 'line-width': ancho } }, this.firstLabelLayer(true));
+        }
+      }
+    } catch (e) { console.warn('fronteras: no se han podido poner encima', e); }
+  },
+
   firstLabelLayer(porEncimaDeLasPropias = false) {
     const ls = this.map.getStyle()?.layers || [];
-    const PROPIAS = /^(omLayer2?|satLayer|radarLayer|aemetLayer|acumLayer|hillLayer)$/;
+    const PROPIAS = /^(omLayer2?|satLayer|radarLayer|aemetLayer|acumLayer|hillLayer|sombraLayer)$/;
     const RELLENO = new Set(['background', 'fill', 'fill-extrusion', 'raster']);
     let ultimo = -1;
     ls.forEach((x, i) => { if (!PROPIAS.test(x.id) && RELLENO.has(x.type)) ultimo = i; });
@@ -5337,15 +5415,26 @@ const Maps = {
           id:'hillLayer', type:'raster', source:'hillSrc',
           paint:{ ...RELIEVE_DEBAJO },
         }, primeraLinea ? primeraLinea.id : undefined);
-        this.relieveSegunCapa();
       }
-    } catch {}
+      if (!this.map.getSource('demSrc')) {
+        ponerProtocoloTierra();
+        this.map.addSource('demSrc', { type:'raster-dem', tiles:[DEM_TESELAS], encoding:'terrarium', tileSize:256, maxzoom:12,
+          attribution:'Relieve: Terrain Tiles (AWS Open Data)' });
+      }
+      if (!this.map.getLayer('sombraLayer')) {
+        this.map.addLayer({ id:'sombraLayer', type:'hillshade', source:'demSrc', layout:{ visibility:'none' },
+          paint:{ ...SOMBRA_ENCIMA } }, this.firstLabelLayer(true));
+      }
+      this.relieveSegunCapa();
+    } catch (e) { console.warn('relieve: no se ha podido poner', e); }
   },
 
   quitarRelieve() {
     try {
       if (this.map?.getLayer('hillLayer')) this.map.removeLayer('hillLayer');
       if (this.map?.getSource('hillSrc'))  this.map.removeSource('hillSrc');
+      if (this.map?.getLayer('sombraLayer')) this.map.removeLayer('sombraLayer');
+      if (this.map?.getSource('demSrc'))  this.map.removeSource('demSrc');
     } catch {}
   },
 

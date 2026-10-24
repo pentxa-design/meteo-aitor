@@ -58,7 +58,7 @@ const NAVEGADOR = [
   'CustomEvent','TextDecoder','TextEncoder','atob','btoa','structuredClone','matchMedia',
   'getComputedStyle','caches','self','alert','confirm','FileReader','File','FormData',
   'DOMParser','Notification','screen','history','addEventListener','removeEventListener',
-  'createImageBitmap','crypto','indexedDB','WebSocket','Worker','queueMicrotask','reportError',
+  'createImageBitmap','OffscreenCanvas','crypto','indexedDB','WebSocket','Worker','queueMicrotask','reportError',
 ].reduce((a, k) => (a[k] = 'readonly', a), {});
 
 // Librerías que se cargan por <script> antes que la app

@@ -7700,7 +7700,7 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
     const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
     const [r18, g18, b18] = rgb(de(18)), [r28, g28, b28] = rgb(de(28));
     ok('   18° sale AMARILLO y 28° ROJO-NARANJA (como AguaceroWx), y la temperatura no se aclara en el fondo Claro',
-       r18 > 200 && g18 > 200 && b18 < 80 && r28 > 200 && g28 < 120 && /const SIN_ACLARAR = new Set\(\[[^\]]*'tempc'/.test(M),
+       r18 > 200 && g18 > 200 && b18 < 80 && r28 > 200 && g28 < 120 && /: CON_SUELO_NEGRO\.has\(L_\.escala\) \? VIVOS : VIVOS_FUERTES\) \}/.test(M),
        JSON.stringify({ 18: de(18), 28: de(28) }));
   }
   /* «En la 850 quisiera ver los cambios de verde a rojo… en nuestro
@@ -7868,9 +7868,9 @@ grupo('RÁFAGAS: colores vivos y con SUS listones (01-09-2026)');
        rojo(colorDe(83, 60, 90)) && rojo(colorDe(60, 60, 90)), JSON.stringify(colorDe(83, 60, 90)));
     ok('   y desde su límite (90) CIRUELA-MORADO; justo por debajo de su aviso, naranja suave; y nada de amarillo ni verde (el «arcoíris»)',
        morado(colorDe(90, 60, 90)) && morado(colorDe(95, 60, 90)) && naranja(colorDe(59, 60, 90)) && [18, 27, 36].every(v => { const [r, g, b] = colorDe(v, 60, 90); return b > r && b > g * 0.9; }), JSON.stringify([colorDe(95, 60, 90), colorDe(59, 60, 90)]));
-    const op = new Function(`${(M.match(/const ESCALAS_BLANCAS = [^\n]*/) || [''])[0]}\n${(M.match(/const CON_SUELO_NEGRO = [^\n]*/) || [''])[0]}\nconst CLARO_OPACIDAD = 0.65;\n${(M.match(/const SIN_ACLARAR = [^\n]*/) || [''])[0]}\n${(M.match(/function opacidadDeCapa[\s\S]*?\n\}/) || [''])[0]}\nreturn opacidadDeCapa;`)();
-    ok('   y la capa de ráfagas va fuerte (≥0,88) en cualquier fondo, como Windy: a 0,75 salía «pálida»; las demás se aclaran en Claro',
-       op({ escala: 'rafagas' }, 'claro', 0.75) >= 0.95 && op({ escala: 'rafagas' }, 'color', 0.75) >= 0.95 && op({ escala: 'presion' }, 'claro', 0.75) < 0.75);
+    const op = new Function(`${(M.match(/const ESCALAS_BLANCAS = [^\n]*/) || [''])[0]}\n${(M.match(/const CON_SUELO_NEGRO = [^\n]*/) || [''])[0]}\n${(M.match(/function opacidadDeCapa[\s\S]*?\n\}/) || [''])[0]}\nreturn opacidadDeCapa;`)();
+    ok('   y la capa de ráfagas va fuerte en cualquier fondo, como Windy: a 0,75 salía «pálida»; y desde el 24-10 todas (la presión también)',
+       op({ escala: 'rafagas' }, 'claro', 0.75) >= 0.95 && op({ escala: 'rafagas' }, 'color', 0.75) >= 0.95 && op({ escala: 'presion' }, 'claro', 0.75) >= 0.95);
   }
   /* 15-09-2026 19:55 (portátil): la tesela trae la racha en m/s. Con la escala propia se
      perdió la conversión y el mapa marcaba «7» en Madrid con 27 km/h en la API: los
@@ -13448,7 +13448,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /if \(conservarAcum && id === 'acumLayer'\) return;/.test(M) && /if \(conservarAcum && id === 'acumSrc'\) return;/.test(M));
   ok('las capas de datos van más vivas (suyo, 16-10: «sosos»): el modelo y la acumulada llevan raster-saturation y raster-contrast, y las nubes blancas quedan fuera',
      /const VIVOS = \{ 'raster-saturation': 0\.[3-9]\d*, 'raster-contrast': 0\.\d+ \};/.test(M)
-     && /\.\.\.\(ESCALAS_BLANCAS\.has\(L_\.escala\) \? \(this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)\s*: \(this\.base === 'claro' && !CON_SUELO_NEGRO\.has\(L_\.escala\) && !SIN_ACLARAR\.has\(L_\.escala\)\) \? CLARO_SUAVE : SIN_ACLARAR\.has\(L_\.escala\) \? VIVOS_FUERTES : VIVOS\)/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
+     && /\.\.\.\(ESCALAS_BLANCAS\.has\(L_\.escala\) \? \(this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? VIVOS : VIVOS_FUERTES\) \}/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
   ok('la rampa es EXACTAMENTE la «Acumulación de lluvia» de Windy (tabla leída de windy.com/colors el 16-10-2026): cortes 0·1·5·10·30·50·80·120·200·320·600 y sus once colores, todos opacos desde 5 litros',
      (() => { const t = M.slice(M.indexOf('const acc = ['), M.indexOf('];', M.indexOf('const acc = [')));
        const hx = [...t.matchAll(/'#([0-9a-f]{6})',(\.?\d+)/g)];
@@ -14009,21 +14009,19 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
    Suyo: «en temperatura o en cualquier capa no había diferencia, solo contra
    el oscuro» · «en color y oscuro déjalo como está». */
 {
-  grupo('Claro se distingue de Color, y Color y Oscuro no cambian');
+  grupo('Todas las capas vivas en todos los fondos (24-10-2026), la lluvia como estaba');
   const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
   const cuerpo = (/function opacidadDeCapa\([\s\S]*?\n\}/.exec(M) || [])[0];
-  const f = cuerpo ? new Function('ESCALAS_BLANCAS', 'CON_SUELO_NEGRO', 'CLARO_OPACIDAD', 'SIN_ACLARAR', cuerpo + '\nreturn opacidadDeCapa;')(
-    new Set(['nubes', 'niebla']), new Set(['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul', 'espesor']), Number((/const CLARO_OPACIDAD = ([\d.]+);/.exec(M) || [])[1]),
-    new Set(['rafagas', 'viento', 'geopot', 'tempc', 't850'])) : null;
-  ok('temperatura con el deslizador a 0,92: en Color 0,92 (como siempre) y en Claro más suave (0,6), para que se vea el mapa claro debajo',
-     !!f && f({ escala: 'presion' }, 'color', 0.92) === 0.92 && Math.abs(f({ escala: 'presion' }, 'claro', 0.92) - 0.598) < 0.001
-     && f({ escala: 'presion' }, 'oscuro', 0.92) === 0.92);
-  ok('   las nubes y la lluvia no se aclaran (se leerían peor): 0,92 y 0,95 en cualquier fondo',
-     !!f && f({ escala: 'nubes' }, 'claro', 0.5) === 0.92 && f({ escala: 'lluvia' }, 'claro', 0.5) === 0.95);
-  ok('   y el deslizador CAPA usa la misma cuenta (si no, al moverlo en Claro la capa volvería a taparlo todo)',
+  const f = cuerpo ? new Function('ESCALAS_BLANCAS', 'CON_SUELO_NEGRO', cuerpo + '\nreturn opacidadDeCapa;')(
+    new Set(['nubes', 'niebla']), new Set(['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul', 'espesor'])) : null;
+  ok('presión, CAPE, temperatura… opacas del todo (1) en Claro, Color y Oscuro: «colores vivos cada capa», como AguaceroWx',
+     !!f && ['claro', 'color', 'oscuro'].every(b => ['presion', 'cape', 'tempc', 't850', 'humedad'].every(e => f({ escala: e }, b, 0.6) === 1)));
+  ok('   la lluvia NO cambia («ni tocar, esa me gusta»): 0,95 como estaba; y las nubes 0,92',
+     !!f && f({ escala: 'lluvia' }, 'claro', 0.5) === 0.95 && f({ escala: 'nubes' }, 'claro', 0.5) === 0.92);
+  ok('   y el deslizador CAPA usa la misma cuenta',
      /setPaintProperty\('omLayer', 'raster-opacity', opacidadDeCapa\(L_, this\.base, o\)\)/.test(M));
-  ok('   en Claro las nubes van en gris (sin suelo ocre) y el resto menos saturado; en Color, VIVOS como siempre',
-     /this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)/.test(M) && /\(this\.base === 'claro' && !CON_SUELO_NEGRO\.has\(L_\.escala\) && !SIN_ACLARAR\.has\(L_\.escala\)\) \? CLARO_SUAVE : SIN_ACLARAR\.has\(L_\.escala\) \? VIVOS_FUERTES : VIVOS/.test(M));
+  ok('   color: VIVOS_FUERTES en todas, VIVOS en la lluvia, y las nubes en gris en Claro',
+     /this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)/.test(M) && /: CON_SUELO_NEGRO\.has\(L_\.escala\) \? VIVOS : VIVOS_FUERTES\) \}/.test(M));
 }
 
 
@@ -14075,26 +14073,41 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
     vm.runInContext(fs.readFileSync(path.join(__dirname, 'reglas-tiempo.js'), 'utf8'), caja);
     vm.runInContext(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8'), caja, { filename: 'maps.js' });
     const M = vm.runInContext('Maps', caja);
-    let capas = [{ id: 'fondo', type: 'background' }, { id: 'hillLayer', type: 'raster' }, { id: 'agua', type: 'fill' }, { id: 'omLayer', type: 'raster' }, { id: 'ríos', type: 'line' }];
-    const pintura = {};
-    M.map = { getLayer: id => capas.find(l => l.id === id), getStyle: () => ({ layers: capas }), setPaintProperty: (id, k, v) => { pintura[k] = v; },
+    let capas = [{ id: 'fondo', type: 'background' }, { id: 'hillLayer', type: 'raster' }, { id: 'sombraLayer', type: 'hillshade' }, { id: 'agua', type: 'fill' }, { id: 'omLayer', type: 'raster' }, { id: 'ríos', type: 'line' }];
+    const pintura = {}, vis = {};
+    M.map = { getLayer: id => capas.find(l => l.id === id), getStyle: () => ({ layers: capas }), setPaintProperty: (id, k, v) => { if (id === 'hillLayer') pintura[k] = v; },
+      setLayoutProperty: (id, k, v) => { if (k === 'visibility') vis[id] = v; },
       moveLayer: (id, antes) => { const l = capas.find(x => x.id === id); capas = capas.filter(x => x.id !== id); const i = antes ? capas.findIndex(x => x.id === antes) : capas.length; capas.splice(i < 0 ? capas.length : i, 0, l); } };
     M.layer = 'temp'; M.relieveSegunCapa();
-    const orden1 = capas.map(l => l.id).join(','), p1 = { ...pintura };
+    const orden1 = capas.map(l => l.id).join(','), p1 = { ...pintura }, v1 = { ...vis };
+    M.layer = 'precipitation'; M.relieveSegunCapa();
+    const ordenL = capas.map(l => l.id).join(','), pL = { ...pintura }, vL = { ...vis };
     M.layer = 'sat_geo'; M.relieveSegunCapa();
-    r = { orden1, p1, orden2: capas.map(l => l.id).join(','), p2: { ...pintura } };
+    r = { orden1, p1, v1, ordenL, pL, vL, orden2: capas.map(l => l.id).join(','), p2: { ...pintura }, v2: { ...vis } };
+    const demSinMar = vm.runInContext('demSinMar', caja);
+    /* Terrarium: altura = R·256 + G + B/256 − 32768. −2.000 m (fosa del Cantábrico) = (120, 48, 0); 1.000 m (Gorbeia) = (131, 232, 0). */
+    r.mar = [...demSinMar(new Uint8ClampedArray([120, 48, 0, 255, 131, 232, 0, 255, 127, 255, 255, 255, 128, 0, 0, 255]))];
     /* El orden de su pantalla (24-10): costa YA colocada debajo del color. Lo de «encima» tiene que salir DETRÁS de omLayer. */
     capas = [{ id: 'fondo', type: 'background' }, { id: 'agua', type: 'fill' }, { id: 'hillLayer', type: 'raster' },
              { id: 'costaLayerNE', type: 'line' }, { id: 'costaLayer', type: 'line' }, { id: 'omLayer', type: 'raster' }, { id: 'frontera', type: 'line' }];
     r.encimaDe = M.firstLabelLayer(true);
   } catch (e) { err = e; }
-  ok('con Temperatura (o cualquier capa de modelo) el relieve va ENCIMA del color, oscuro y a media opacidad',
-     !err && r.orden1.indexOf('omLayer') < r.orden1.indexOf('hillLayer') && r.p1['raster-brightness-max'] < 0.8 && r.p1['raster-opacity'] >= 0.35,
+  ok('con Temperatura (o cualquier capa de modelo) el sombreado nuevo va ENCIMA del color y el de Esri se apaga (su velo lavaba el color, 24-10 noche)',
+     !err && r.orden1.indexOf('omLayer') < r.orden1.indexOf('sombraLayer') && r.v1.sombraLayer === 'visible' && r.v1.hillLayer === 'none',
      err ? String(err) : JSON.stringify(r));
+  ok('   con la PRECIPITACIÓN, como estaba («ni tocar»): Esri encima, oscuro y a media opacidad, y el sombreado nuevo apagado',
+     !err && r.ordenL.indexOf('omLayer') < r.ordenL.indexOf('hillLayer') && r.pL['raster-brightness-max'] < 0.8 && r.pL['raster-opacity'] >= 0.35
+     && r.vL.hillLayer === 'visible' && r.vL.sombraLayer === 'none', JSON.stringify(r));
+  ok('   el fondo del mar se aplana antes de sombrear (sin las rayas de la fosa del Cantábrico): bajo 0 m → 0 m, la tierra intacta',
+     !err && JSON.stringify(r.mar) === JSON.stringify([128, 0, 0, 255, 131, 232, 0, 255, 128, 0, 0, 255, 128, 0, 0, 255]), JSON.stringify(r?.mar));
   ok('   «encima de las capas propias» es DETRÁS de la capa de color, aunque la costa estuviera debajo (fallo antiguo: costa y relieve tapados)',
      !err && r.encimaDe === 'frontera', JSON.stringify(r?.encimaDe));
   ok('   y con el satélite vuelve DEBAJO, con su pintura de siempre (la foto ya trae el terreno)',
-     !err && r.orden2.indexOf('hillLayer') < r.orden2.indexOf('omLayer') && r.p2['raster-brightness-max'] === 1, JSON.stringify(r));
+     !err && r.orden2.indexOf('hillLayer') < r.orden2.indexOf('omLayer') && r.p2['raster-brightness-max'] === 1 && r.v2.hillLayer === 'visible' && r.v2.sombraLayer === 'none', JSON.stringify(r));
+  const Mf = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  ok('   costa NEGRA y fronteras de país y comunidad encima del color en Claro y Color (como AguaceroWx); en la lluvia, la costa de antes y sin fronteras',
+     /lluvia \? 'rgba\(18,38,66,0\.85\)' : 'rgba\(0,0,0,0\.9\)'/.test(Mf) && /this\.fronterasEncima\(oscuro, lluvia\);/.test(Mf)
+     && /\['fronteraPaisLayer', 2,/.test(Mf) && /\['fronteraRegionLayer', 4,/.test(Mf) && /\['==', 'maritime', 0\]/.test(Mf));
 }
 
 /* ═══ LO MEDIDO AHORA BAJO EL NOMBRE DEL EMPLAZAMIENTO (24-10-2026) ════════════
@@ -14182,7 +14195,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('el geopotencial lleva su escala en METROS, de morado-azul (vaguada) a rojo (dorsal), y la capa la usa',
      !err && G?.scale?.unit === 'm' && G.scale.breakpoints[0] <= 5000 && G.scale.breakpoints.at(-1) >= 5900 && azulBajo && rojoAlto
      && /id:'gh500'[\s\S]{0,200}escala:'geopot'/.test(Mx), err ? String(err) : JSON.stringify(G?.scale?.breakpoints));
-  ok('   y no se aclara en el fondo Claro (estaba «sosa, desaturada»)', /const SIN_ACLARAR = new Set\(\[[^\]]*'geopot'/.test(Mx));
+  ok('   y no se aclara en el fondo Claro (estaba «sosa, desaturada»): ninguna se aclara desde el 24-10', /\n  return 1;   \/\/ opaca del todo en todas/.test(Mx));
 }
 
 /* ═══ ISOBARAS ENCIMA DE CUALQUIER CAPA (24-10-2026) ═══════════════════════════
