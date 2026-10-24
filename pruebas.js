@@ -14067,12 +14067,18 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
     const M = vm.runInContext('Maps', caja);
     M.layer = 'clouds_total'; M.t = 1;
     u = M.isoUrl({ modelo: 'ecmwf_ifs', meta: { reference_time: '2026-10-24T00:00:00Z', valid_times: ['2026-10-24T11:00Z', '2026-10-24T12:00Z'] } });
+    M.metaCache = { ecmwf_ifs: { reference_time: '2026-10-24T00:00:00Z', variables: ['pressure_msl'], valid_times: ['2026-10-24T10:00Z', '2026-10-24T11:00Z', '2026-10-24T12:00Z'] } };
+    var uArome = M.isoUrl({ modelo: 'meteofrance_arome_france_hd', meta: { reference_time: '2026-10-24T05:00:00Z', variables: ['precipitation'], valid_times: ['2026-10-24T11:00Z', '2026-10-24T12:00Z'] } });
+    var deArome = M._isoDe;
   } catch (e) { err = e; }
   const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
   ok('con otra capa puesta, las isobaras piden la PRESIÓN con sus líneas, del mismo modelo y la misma hora (12:00)',
      !err && /ecmwf_ifs\/2026\/10\/24\/0000Z\/2026-10-24T1200\.om\?/.test(u || '') && /variable=pressure_msl/.test(u) && /contours=true/.test(u), err ? String(err) : u);
+  ok('   con AROME HD, que no publica la presión, salen las del EUROPEO a la misma hora (no se pide lo que no existe) y se dice',
+     !err && /ecmwf_ifs\/2026\/10\/24\/0000Z\/2026-10-24T1200\.om\?/.test(uArome || '') && deArome === 'ECMWF HRES'
+     && /isobaras de \$\{this\._isoDe\} \(\$\{M\.name\} no publica la presión\)/.test(Mx), err ? String(err) : `${uArome} · ${deArome}`);
   ok('   y se dibujan en apply() y siguen a la hora en setT(); el botón, solo en capas de modelo sin líneas propias',
-     /else if \(this\.verIsobaras\) \{ const u = this\.isoUrl\(R\); if \(u\) this\.isobaras\(u\); \}/.test(Mx)
+     /else if \(this\.verIsobaras\) \{ const u = this\.isoUrl\(R\); if \(u\) this\.isobaras\(u, ISO_ZMAX\); \}/.test(Mx)
      && /const ui = L_\.contours \? url : this\.isoUrl\(this\.usando\)/.test(Mx) && /\(L_act\?\.v && !L_act\?\.contours\s*\? `<button class="mbtn\$\{this\.verIsobaras/.test(Mx)
      && /if \(b\.dataset\.tiso\) Maps\.setIsobaras\(!Maps\.verIsobaras\);/.test(src));
 }

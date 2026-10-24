@@ -737,6 +737,10 @@ const CLARO_SUAVE = { 'raster-saturation': 0.2 };
 /** La opacidad de la capa de datos para la capa y el fondo que haya: una sola cuenta, para pintar y para el deslizador. */
 /* La capa que decide no se aclara en Claro (22-10-2026): con la opacidad ×0,65 su rojo salía salmón y su naranja, crema. */
 const SIN_ACLARAR = new Set(['rafagas', 'viento']);
+/* De quién salen las isobaras cuando el modelo de la capa no publica la presión (AROME HD, GFS): el europeo de 9 km. */
+const ISO_PRESTADAS = 'ecmwf_ifs';
+/* Las isobaras encima de otra capa, con menos detalle: la presión es una superficie suave y así no se duplica el trabajo. */
+const ISO_ZMAX = 6;
 /* El radar observado, con fuerza (23-10-2026, suyo: «algo pálido los colores»): a 0,75 sobre el fondo Claro sus azules no se veían. */
 const RADAR_OPACIDAD_MIN = 0.92;
 const RADAR_FUERTE = { 'raster-saturation': 0.35, 'raster-contrast': 0.15 };   // y el viento medio (22-10-2026, suyo: «y los colores pálidos»)
@@ -3413,7 +3417,7 @@ const Maps = {
          Las de Presión y Geopotencial salen solas; en el resto, con el botón «Isobaras»: presión a nivel del mar del MISMO
          modelo y la MISMA hora que pinta la capa. Si ese modelo no la publica, no se dibujan y se dice. */
       if (L_.contours) this.isobaras(url);
-      else if (this.verIsobaras) { const u = this.isoUrl(R); if (u) this.isobaras(u); }
+      else if (this.verIsobaras) { const u = this.isoUrl(R); if (u) this.isobaras(u, ISO_ZMAX); }
       this.costaEncima();
       /* Los nombres, legibles en cualquier capa: se rehacen aquí porque
          al cambiar de capa o de fondo el estilo se vuelve a montar. */
@@ -3953,27 +3957,33 @@ const Maps = {
      Los números salen de los glifos de CARTO, que son de fuera: sin
      cobertura se quedan las líneas sin etiquetar. Las líneas, que son el
      dato, se dibujan igual.                                            */
-  isobaras(url) {
+  isobaras(url, zmax = 12) {
     try {
       if (this.map.getSource('isoSrc')) return;
       this.map.addSource('isoSrc', {
-        type:'vector', tiles:[`${url}/{z}/{x}/{y}`], maxzoom:12 });
+        type:'vector', tiles:[`${url}/{z}/{x}/{y}`], maxzoom:zmax });
       const antes = this.firstLabelLayer();
+      /* COMO WINDY Y METEOBLUE (24-10-2026, suyo: «las isobaras más profesionales, tipo Windy o Meteoblue», con sus capturas):
+         línea FINA, sin el borde blanco grueso de antes, y el número pequeño encima. Oscura sobre el fondo claro (Meteoblue) y
+         clara sobre el oscuro (Windy). El 1013, la presión media, un pelo más marcada, como hace Meteoblue. */
+      const osc = this.base === 'oscuro';
+      const tinta = osc ? '#e8eef8' : '#2b3446', halo = osc ? 'rgba(10,16,30,.85)' : 'rgba(255,255,255,.9)';
+      const media = ['all', ['>=', ['to-number', ['get', 'value']], 1012], ['<=', ['to-number', ['get', 'value']], 1014]];
       this.map.addLayer({ id:'isoBorde', type:'line', source:'isoSrc',
         'source-layer':'contours',
         layout:{ 'line-join':'round' },
-        paint:{ 'line-color':'#ffffff', 'line-width':2.6, 'line-opacity':0.45 } }, antes);
+        paint:{ 'line-color':halo, 'line-width':['case', media, 2.2, 1.6], 'line-opacity':0.35 } }, antes);
       this.map.addLayer({ id:'isoLinea', type:'line', source:'isoSrc',
         'source-layer':'contours',
-        layout:{ 'line-join':'round' },
-        paint:{ 'line-color':'#1b2740', 'line-width':1.1, 'line-opacity':0.8 } }, antes);
+        layout:{ 'line-join':'round', 'line-cap':'round' },
+        paint:{ 'line-color':tinta, 'line-width':['case', media, 1.6, 1.0], 'line-opacity':0.9 } }, antes);
       this.map.addLayer({ id:'isoLbl', type:'symbol', source:'isoSrc',
         'source-layer':'contours',
-        layout:{ 'symbol-placement':'line', 'symbol-spacing':240,
-                 'text-field':['to-string', ['get','value']], 'text-size':11,
-                 'text-font':['Open Sans Bold','Arial Unicode MS Bold'],
-                 'text-allow-overlap':false, 'text-padding':4 },
-        paint:{ 'text-color':'#1b2740', 'text-halo-color':'#ffffff', 'text-halo-width':1.1 } },
+        layout:{ 'symbol-placement':'line', 'symbol-spacing':320,
+                 'text-field':['to-string', ['get','value']], 'text-size':10,
+                 'text-font':['Open Sans Semibold','Arial Unicode MS Regular'],
+                 'text-allow-overlap':false, 'text-padding':6, 'text-keep-upright':true },
+        paint:{ 'text-color':tinta, 'text-halo-color':halo, 'text-halo-width':1.4 } },
         antes);
     } catch (e) {
       // Sin isobaras se sigue viendo el color: no se tira la capa entera.
@@ -4277,6 +4287,7 @@ const Maps = {
     this.status(`${M.name} · ${M.res} · pasada de las ${ref} · ${T.length} pasos (${dias.toFixed(0)} días)${deAntes}`
       + (h > 1 ? ` · paso de ${h} h: ${this.layer === 'nieve' ? 'la nieve' : this.layer === 'tipo' ? 'la lluvia y la nieve' : 'la lluvia'} se enseña POR HORA (la suma de ${h} h ÷ ${h})` : '')
       + (this.usando?.sustituido ? ' · CAPA SUSTITUIDA' : '')
+      + (this.verIsobaras && this._isoDe ? ` · isobaras de ${this._isoDe} (${M.name} no publica la presión)` : '')
       /* Un modelo de ZONA deja en blanco lo que no cubre (22-10-2026: HARMONIE, media España sin color en «Viento 10 m»). */
       + (M.zona ? ' · modelo de zona: donde no pinta es que NO LLEGA, no que haya calma' : '')
       + (this._sinEncima ? ` · SIN ${this._sinEncima === 'snowfall_water_equivalent' ? 'NIEVE' : this._sinEncima.toUpperCase()}: este modelo no la publica, solo se pinta la lluvia` : ''));
@@ -6247,7 +6258,19 @@ const Maps = {
   /** La plantilla de la presión con isobaras (`contours=true`) del modelo que pinta, a la hora mirada. */
   isoUrl(R) {
     const LP = TLAYERS.find(l => l.id === 'pres');
-    return R?.meta && LP ? this.omUrl(LP.v, this.t, R.modelo, R.meta, LP) : null;
+    if (!R?.meta || !LP) return null;
+    /* SI EL MODELO NO PUBLICA LA PRESIÓN, LA DEL EUROPEO (24-10-2026). Su captura: AROME HD con «Isobaras» y «Variable:
+       pressure_msl not found» en el cartel de trozos sin cargar, y el mapa lentísimo de reintentos. AROME HD y GFS no la dan
+       en las teselas (MEDIDO en sus latest.json). Se piden las de ECMWF HRES a la MISMA hora, y se dice en la barra. */
+    const tiene = m => !Array.isArray(m?.variables) || m.variables.includes(LP.v);
+    this._isoDe = null;
+    if (tiene(R.meta)) return this.omUrl(LP.v, this.t, R.modelo, R.meta, LP);
+    const alt = this.metaCache?.[ISO_PRESTADAS], vt = R.meta.valid_times?.[this.t];
+    if (!alt || !tiene(alt) || !vt) return null;
+    const i = (alt.valid_times || []).findIndex(x => new Date(x).getTime() === new Date(vt).getTime());
+    if (i < 0) return null;
+    this._isoDe = TMODELS.find(m => m.id === ISO_PRESTADAS)?.name || ISO_PRESTADAS;
+    return this.omUrl(LP.v, i, ISO_PRESTADAS, alt, LP);
   },
   setIsobaras(on) {
     this.verIsobaras = !!on; LS.set('tiso', this.verIsobaras);
