@@ -2360,6 +2360,7 @@ const Maps = {
     /* Claves NUEVAS el 29-09-2026: las viejas podían guardar el «apagado»
        de cuando las flechas mentían, y entonces no volverían nunca. */
     this.verBarbas  = LS.get('tbarbs2', true);
+    this.verIsobaras = LS.get('tiso', false);   // isobaras encima de cualquier capa (24-10-2026)
     this.verParticulas = LS.get('tpart2', true);
     this.verPeor = LS.get('tpeor', false);
     /* 17-09-2026, 10:50, suyo con el radar, el satélite y la
@@ -3408,7 +3409,11 @@ const Maps = {
         }
       }
 
+      /* ISOBARAS ENCIMA DE CUALQUIER CAPA (24-10-2026). Suyo, con Meteoblue delante: «las isobaras me gustaría que tenga».
+         Las de Presión y Geopotencial salen solas; en el resto, con el botón «Isobaras»: presión a nivel del mar del MISMO
+         modelo y la MISMA hora que pinta la capa. Si ese modelo no la publica, no se dibujan y se dice. */
       if (L_.contours) this.isobaras(url);
+      else if (this.verIsobaras) { const u = this.isoUrl(R); if (u) this.isobaras(u); }
       this.costaEncima();
       /* Los nombres, legibles en cualquier capa: se rehacen aquí porque
          al cambiar de capa o de fondo el estilo se vuelve a montar. */
@@ -6239,6 +6244,15 @@ const Maps = {
    botones, porque no podían encender nada verdadero. VUELVEN el 29-09-2026
    con el rumbo traído de la API de pronóstico (ver MODELO_EN_API), y con
    ellos «Peor 12 h». Los tres botones solo salen en la capa que los usa. */
+  /** La plantilla de la presión con isobaras (`contours=true`) del modelo que pinta, a la hora mirada. */
+  isoUrl(R) {
+    const LP = TLAYERS.find(l => l.id === 'pres');
+    return R?.meta && LP ? this.omUrl(LP.v, this.t, R.modelo, R.meta, LP) : null;
+  },
+  setIsobaras(on) {
+    this.verIsobaras = !!on; LS.set('tiso', this.verIsobaras);
+    this.ui(); this.apply();
+  },
   setBarbas(on) {
     this.verBarbas = !!on; LS.set('tbarbs2', this.verBarbas);
     this.ui(); this.barbas();
@@ -6308,6 +6322,10 @@ const Maps = {
       BASEMAPS.map(b => `<button class="mbtn${b.id === this.base ? ' is-on' : ''}" data-tb="${b.id}">${b.name}</button>`).join('') +
       `<button class="mbtn${this.terrain ? ' is-on' : ''}" data-tr="1" title="Sombreado del terreno (Esri/USGS)">Relieve</button>` +
       `<button class="mbtn${this.verValores ? ' is-on' : ''}" data-tv="1" title="Números del modelo sobre las ciudades">Valores</button>` +
+      /* Isobaras encima de cualquier capa del modelo (24-10-2026); en las observadas (radar, satélite, Windy) no hay modelo que las dé. */
+      (L_act?.v && !L_act?.contours
+        ? `<button class="mbtn${this.verIsobaras ? ' is-on' : ''}" data-tiso="1" title="Isobaras (presión a nivel del mar, cada 4 hPa) del mismo modelo, encima de la capa. Juntas = mucho viento; separadas = poco">≈ Isobaras</button>`
+        : '') +
       /* Flechas, Movimiento y Peor 12 h (29-09-2026): SOLO en la capa que
          los usa. Un botón que no hace nada es de los que hacen dudar de
          todo lo demás (por eso se quitaron el 21-09, cuando mentían). */
@@ -6636,7 +6654,7 @@ const Maps = {
     try {
       this.map.getSource('omSrc').setTiles([`${url}/{z}/{x}/{y}`]);
       // Las isobaras son del mismo fichero: se mueven con la hora.
-      if (this.map.getSource('isoSrc')) this.map.getSource('isoSrc').setTiles([`${url}/{z}/{x}/{y}`]);
+      if (this.map.getSource('isoSrc')) { const ui = L_.contours ? url : this.isoUrl(this.usando); if (ui) this.map.getSource('isoSrc').setTiles([`${ui}/{z}/{x}/{y}`]); }
       if (L_.encima && this.map.getSource('omSrc2')) {
         const u2 = this.omUrl(L_.encima, this.t, this.usando.modelo, this.usando.meta, L_.encimaEscala ? { escala: L_.encimaEscala } : null);
         if (u2) this.map.getSource('omSrc2').setTiles([`${u2}/{z}/{x}/{y}`]);

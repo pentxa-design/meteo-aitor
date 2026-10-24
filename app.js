@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.23-1931';
+const BUILD = '2026.10.24-1334';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -19153,6 +19153,7 @@ function bind() {
        traído de la API de pronóstico (se quitaron el 21-09 porque la
        librería de teselas no sabe dar la componente norte-sur). */
     if (b.dataset.tbb) Maps.setBarbas(!Maps.verBarbas);
+    if (b.dataset.tiso) Maps.setIsobaras(!Maps.verIsobaras);
     if (b.dataset.tmv) Maps.setParticulas(!Maps.verParticulas);
     if (b.dataset.tpr) Maps.setPeor(!Maps.verPeor);
     if (b.dataset.tl) Maps.setRayos(!Maps.verRayos);

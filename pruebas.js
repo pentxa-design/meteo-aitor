@@ -14044,6 +14044,39 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      (Ax.match(/avisoCielo\([^)]*codigo:/g) || []).length === 3);
 }
 
+/* ═══ ISOBARAS ENCIMA DE CUALQUIER CAPA (24-10-2026) ═══════════════════════════
+   Suyo, con Meteoblue: «las isobaras me gustaría que tenga». Se EJECUTA isoUrl() de maps.js: la presión a nivel del mar, con
+   las líneas pedidas (`contours=true`), del modelo y la hora que pinta la capa. Y el botón sale solo donde sirve. */
+{
+  grupo('Isobaras encima de cualquier capa del modelo');
+  const vm = require('vm');
+  const nada = () => {};
+  const cualquiera = () => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => '' : cualquiera()), apply: () => cualquiera(), construct: () => cualquiera() });
+  const caja = { console: { log: nada, warn: nada, error: nada, info: nada }, setTimeout: () => 0, clearTimeout: nada, setInterval: () => 0, clearInterval: nada,
+    URL, URLSearchParams, Intl, Date, Math, JSON, Promise, AbortController, document: { querySelector: () => null, querySelectorAll: () => [] },
+    navigator: { userAgent: 'node' }, localStorage: { getItem: () => null, setItem: nada, removeItem: nada }, sessionStorage: { getItem: () => null, setItem: nada, removeItem: nada },
+    location: { search: '', href: 'https://x/', origin: 'https://x' }, fetch: async () => ({ ok: false }), maplibregl: cualquiera(),
+    OMWeatherMapLayer: cualquiera(), addEventListener: nada, matchMedia: () => ({ matches: false, addEventListener: nada }),
+    requestAnimationFrame: nada, performance: { now: () => 0 }, Blob: function () {}, Image: function () {} };
+  caja.window = caja; caja.globalThis = caja; caja.self = caja;
+  let u = null, err = null;
+  try {
+    vm.createContext(caja);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'reglas-tiempo.js'), 'utf8'), caja);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8'), caja, { filename: 'maps.js' });
+    const M = vm.runInContext('Maps', caja);
+    M.layer = 'clouds_total'; M.t = 1;
+    u = M.isoUrl({ modelo: 'ecmwf_ifs', meta: { reference_time: '2026-10-24T00:00:00Z', valid_times: ['2026-10-24T11:00Z', '2026-10-24T12:00Z'] } });
+  } catch (e) { err = e; }
+  const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  ok('con otra capa puesta, las isobaras piden la PRESIÓN con sus líneas, del mismo modelo y la misma hora (12:00)',
+     !err && /ecmwf_ifs\/2026\/10\/24\/0000Z\/2026-10-24T1200\.om\?/.test(u || '') && /variable=pressure_msl/.test(u) && /contours=true/.test(u), err ? String(err) : u);
+  ok('   y se dibujan en apply() y siguen a la hora en setT(); el botón, solo en capas de modelo sin líneas propias',
+     /else if \(this\.verIsobaras\) \{ const u = this\.isoUrl\(R\); if \(u\) this\.isobaras\(u\); \}/.test(Mx)
+     && /const ui = L_\.contours \? url : this\.isoUrl\(this\.usando\)/.test(Mx) && /\(L_act\?\.v && !L_act\?\.contours\s*\? `<button class="mbtn\$\{this\.verIsobaras/.test(Mx)
+     && /if \(b\.dataset\.tiso\) Maps\.setIsobaras\(!Maps\.verIsobaras\);/.test(src));
+}
+
 /* ═══ EL APARATO VA POR ENCIMA DE LA PREVISIÓN (23-10-2026) ══════════════════
    Matxitxako, 23-10: 104 km/h medidos con la previsión en 75-83. Se EJECUTA rachaPorEncima() con datos de ese día. */
 {
