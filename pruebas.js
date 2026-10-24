@@ -7700,7 +7700,7 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
     const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
     const [r18, g18, b18] = rgb(de(18)), [r28, g28, b28] = rgb(de(28));
     ok('   18° sale AMARILLO y 28° ROJO-NARANJA (como AguaceroWx), y la temperatura no se aclara en el fondo Claro',
-       r18 > 200 && g18 > 200 && b18 < 80 && r28 > 200 && g28 < 120 && /: CON_SUELO_NEGRO\.has\(L_\.escala\) \? VIVOS : VIVOS_FUERTES\) \}/.test(M),
+       r18 > 200 && g18 > 200 && b18 < 80 && r28 > 200 && g28 < 120 && /: CON_SUELO_NEGRO\.has\(L_\.escala\) \? VIVOS : COPIADAS_TAL_CUAL\.has\(L_\.escala\) \? \{\} : VIVOS_FUERTES\) \}/.test(M),
        JSON.stringify({ 18: de(18), 28: de(28) }));
   }
   /* «En la 850 quisiera ver los cambios de verde a rojo… en nuestro
@@ -7783,7 +7783,7 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
      /opacity:0\.75,/.test(M));
 
   ok('los colores van a opacidad plena: sin alphas que laven el rojo a rosa',
-     !/'#[0-9a-f]{6}',\.95\]/.test(M.slice(M.indexOf('const tpm'), M.indexOf('const humedad'))),
+     !/'#[0-9a-f]{6}',\.95\]/.test(M.slice(M.indexOf('const tpm'), M.indexOf('const tempc = {'))) && M.indexOf('const tempc = {') > M.indexOf('const tpm'),
      '«rosa… y sigue pálido»: el 0,85 de capa por 0,95 de color sobre fondo claro');
 
   ok('pasar el ratón por un botón de capa ya precalienta esa capa',
@@ -11431,11 +11431,15 @@ grupo('El mapa se ve debajo del color: costa por encima, opacidad 0,75 y el «no
 grupo('Agua precipitable en Lluvia, presión por bandas de 4 hPa y HRES solo de cerca (14-09-2026)');
 {
   const M = mapsSrc;
-  ok('Agua precipitable está en el grupo Lluvia y con escala propia (transparente donde el aire va seco)',
+  ok('Agua precipitable está en el grupo Lluvia y con escala propia (la de AguaceroWx desde el 24-10-2026: marrón seco → verde → azul cargado)',
      /id:'tcwv', densa:true, g:'Lluvia', name:'Agua precipitable'[^\n]*escala:'agua'/.test(M)
-     && M.indexOf("id:'tcwv'") < M.indexOf("id:'refl'") && /const agua = \{/.test(M)
-     && /const agm = \[0, 10, 15, 20, 25, 30, 35, 40, 50, 60\];/.test(M) && /\['#e6f4ff',0\]/.test(M),
+     && M.indexOf("id:'tcwv'") < M.indexOf("id:'refl'") && /const agua = deAguacero\(\[\[0,'#966c6c'\][^\n]*\[35,'#239064'\][^\n]*\[65,'#4d9be6'\]/.test(M),
      'era el azul oscuro plano de la librería, en el grupo Aire');
+  ok('humedad, rocío y radiación llevan las escalas de AguaceroWx, fundidas, y CAPE y tapa siguen con sus listones',
+     /const humedad = deAguacero\(\[\[0,'#fbb955'\][^\n]*\n[^\n]*\[90,'#4d9be6'\]/.test(M) && /const rocio = deAguacero\(\[\[-30,'#966c6c'\][^\n]*\[10,'#1fbc73'\]/.test(M)
+     && /const radiacion = deAguacero\([^\n]*\[500,'#f9c22b'\]/.test(M) && /'humedad', 'rocio', 'radiacion',/.test(M)
+     && /escala:'rocio'/.test(M) && /escala:'radiacion'/.test(M)
+     && /const cnm = \[0, 10, 25, 50, 75, 100, 150, 200, 300, 500\];/.test(M) && /comb: \(typeof CAPE_COMBINACION/.test(M));
   ok('la presión va en bandas de 4 hPa de 976 a 1044, que se leen como isobaras (las de la librería no llegan)',
      /const hpa = \[976, 980, 984, 988, 992, 996, 1000, 1004, 1008, 1012, 1016, 1020, 1024, 1028, 1032, 1036, 1040, 1044\];/.test(M)
      && /breakpoints: hpa,/.test(M) && /conv: v => \(v > 10000 \? v \/ 100 : v\)/.test(M),
@@ -13448,7 +13452,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /if \(conservarAcum && id === 'acumLayer'\) return;/.test(M) && /if \(conservarAcum && id === 'acumSrc'\) return;/.test(M));
   ok('las capas de datos van más vivas (suyo, 16-10: «sosos»): el modelo y la acumulada llevan raster-saturation y raster-contrast, y las nubes blancas quedan fuera',
      /const VIVOS = \{ 'raster-saturation': 0\.[3-9]\d*, 'raster-contrast': 0\.\d+ \};/.test(M)
-     && /\.\.\.\(ESCALAS_BLANCAS\.has\(L_\.escala\) \? \(this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? VIVOS : VIVOS_FUERTES\) \}/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
+     && /\.\.\.\(ESCALAS_BLANCAS\.has\(L_\.escala\) \? \(this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? VIVOS : COPIADAS_TAL_CUAL\.has\(L_\.escala\) \? \{\} : VIVOS_FUERTES\) \}/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
   ok('la rampa es EXACTAMENTE la «Acumulación de lluvia» de Windy (tabla leída de windy.com/colors el 16-10-2026): cortes 0·1·5·10·30·50·80·120·200·320·600 y sus once colores, todos opacos desde 5 litros',
      (() => { const t = M.slice(M.indexOf('const acc = ['), M.indexOf('];', M.indexOf('const acc = [')));
        const hx = [...t.matchAll(/'#([0-9a-f]{6})',(\.?\d+)/g)];
@@ -14021,7 +14025,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('   y el deslizador CAPA usa la misma cuenta',
      /setPaintProperty\('omLayer', 'raster-opacity', opacidadDeCapa\(L_, this\.base, o\)\)/.test(M));
   ok('   color: VIVOS_FUERTES en todas, VIVOS en la lluvia, y las nubes en gris en Claro',
-     /this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)/.test(M) && /: CON_SUELO_NEGRO\.has\(L_\.escala\) \? VIVOS : VIVOS_FUERTES\) \}/.test(M));
+     /this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)/.test(M) && /: CON_SUELO_NEGRO\.has\(L_\.escala\) \? VIVOS : COPIADAS_TAL_CUAL\.has\(L_\.escala\) \? \{\} : VIVOS_FUERTES\) \}/.test(M));
 }
 
 
@@ -14112,6 +14116,15 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('   y con el satélite vuelve DEBAJO, con su pintura de siempre (la foto ya trae el terreno)',
      !err && r.orden2.indexOf('hillLayer') < r.orden2.indexOf('omLayer') && r.p2['raster-brightness-max'] === 1 && r.v2.hillLayer === 'visible' && r.v2.sombraLayer === 'none', JSON.stringify(r));
   const Mf = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  let E4 = null, e4 = null;
+  try { E4 = vm.runInContext('escalasPropias()', caja); } catch (e) { e4 = e; }
+  const c4 = (E, v) => { const k = E.scale.breakpoints.indexOf(v); return k < 0 ? null : JSON.stringify(E.scale.colors[k]); };
+  ok('humedad, rocío, agua precipitable y radiación con las escalas de AguaceroWx (leídas de su página el 24-10-2026), opacas y fundidas',
+     !e4 && E4 && c4(E4.humedad, 90) === JSON.stringify(vm.runInContext("hexRGBA('#4d9be6', 1)", caja)) && c4(E4.rocio, 10) === JSON.stringify(vm.runInContext("hexRGBA('#1fbc73', 1)", caja))
+     && c4(E4.agua, 35) === JSON.stringify(vm.runInContext("hexRGBA('#239064', 1)", caja)) && c4(E4.radiacion, 500) === JSON.stringify(vm.runInContext("hexRGBA('#f9c22b', 1)", caja))
+     && /escala:'rocio'/.test(Mf) && /escala:'radiacion'/.test(Mf) && /'humedad', 'rocio', 'radiacion',/.test(Mf), e4 ? String(e4) : '');
+  ok('   y CAPE y tapa NO se copian: siguen con sus listones (la combinación de 700, las palabras de la tapa)',
+     !e4 && E4 && E4.capeE.scale.breakpoints.includes(700) && E4.tapa.scale.breakpoints.join() === '0,10,25,50,75,100,150,200,300,500');
   ok('el rótulo grande del mapa (como AguaceroWx) dice modelo y hora, y se QUITA: apply() lo borra antes de pintar y solo lo pone stamp(), que es de las capas de modelo',
      !err && r.rotPuesto.vis && /Válido/.test(r.rotPuesto.l2) && !r.rotQuitado.vis && r.rotQuitado.l1 === ''
      && /if \(!L_\) return;\n    this\.rotulo\(null\);/.test(Mf) && /this\.rotulo\(`\$\{M\.name\}/.test(Mf), JSON.stringify([r?.rotPuesto, r?.rotQuitado]));

@@ -546,7 +546,7 @@ const TLAYERS = [
      blanca donde baja de 2 km, más opaca cuanto más cerrada, y nada donde se ve bien. */
   { id:'niebla', g:'Cielo', name:'Niebla', v:'visibility', unit:'m', escala:'niebla',
     desc:'Niebla: blanca donde la visibilidad baja de 2 km, más opaca cuanto más cerrada (como Windy)' },
-  { id:'swr', densa:true, g:'Cielo', name:'Radiación solar', v:'shortwave_radiation', unit:'W/m²',
+  { id:'swr', densa:true, g:'Cielo', name:'Radiación solar', v:'shortwave_radiation', unit:'W/m²', escala:'radiacion',
     desc:'Radiación de onda corta en superficie' },
 
   { id:'temp', densa:true, temp:true, g:'Aire', name:'Temperatura 2 m', v:'temperature_2m', unit:'°C', escala:'tempc',
@@ -557,7 +557,7 @@ const TLAYERS = [
   // la publica en el servicio de teselas, así que la capa daba error en
   // todas. La sensación con viento sigue estando en la pestaña Torre, que
   // usa la API de puntos, donde sí existe.
-  { id:'dew', densa:true, temp:true,  g:'Aire', name:'Punto de rocío', v:'dew_point_2m', unit:'°C',
+  { id:'dew', densa:true, temp:true,  g:'Aire', name:'Punto de rocío', v:'dew_point_2m', unit:'°C', escala:'rocio',
     desc:'Si se acerca a la temperatura, hay niebla o rocío sobre la estructura: resbala' },
   { id:'rh', densa:true,   g:'Aire', name:'Humedad', v:'relative_humidity_2m', unit:'%', escala:'humedad',
     desc:'Humedad relativa. Cerca del 100 % hay niebla o rocío: la estructura resbala' },
@@ -682,6 +682,8 @@ const ESCALAS_SUAVES = new Set(['dbz', 'basecv', 'topecv', 'tapa', 'agua', 'isoc
      AguaceroWx («colores de interpolación» marcado). Sus cortes (0,1 ·
      0,3 · 1 · 4…) no son listones suyos, son la escala de intensidad. */
   'lluvia', 'lluviaVerde', 'nieveAzul',
+  /* 24-10-2026: las copiadas de AguaceroWx, fundidas entre sus puntos como allí. */
+  'humedad', 'rocio', 'radiacion',
   /* 18-10-2026: el viento medio y el espesor de nieve, también con degradado continuo. */
   'viento', 'espesor']);
 /* Capas que se interpolan con cúbica monótona entre nodos (ver omUrl). */
@@ -785,6 +787,9 @@ const SOMBRA_ENCIMA = { 'hillshade-shadow-color': 'rgba(0,0,0,0.55)', 'hillshade
                         'hillshade-accent-color': 'rgba(0,0,0,0.25)', 'hillshade-exaggeration': 0.6, 'hillshade-illumination-direction': 315 };
 /* Las capas de color fuerte, más saturadas: con el relieve encima («todavía pálido, pero vas bien», 24-10, probado en su pantalla). */
 const VIVOS_FUERTES = { 'raster-saturation': 0.75, 'raster-contrast': 0.25 };   // todas desde el 24-10-2026 noche; antes la temperatura (24-10: «no se ve nada» al lado de AguaceroWx)   // y el geopotencial (24-10-2026, suyo: «sosa, desaturada, dale vida»)
+/* Las escalas copiadas de AguaceroWx van con SUS colores, sin el refuerzo de saturación: con él su gris verdoso del 50 %
+   salía lima chillón (visto en pantalla el 24-10-2026 antes de publicar). */
+const COPIADAS_TAL_CUAL = new Set(['humedad', 'rocio', 'agua', 'radiacion']);
 /* De quién salen las isobaras cuando el modelo de la capa no publica la presión (AROME HD, GFS): el europeo de 9 km. */
 const ISO_PRESTADAS = 'ecmwf_ifs';
 /* Las isobaras encima de otra capa, con menos detalle: la presión es una superficie suave y así no se duplica el trabajo. */
@@ -1714,14 +1719,8 @@ function escalasPropias() {
   /* ── AGUA PRECIPITABLE (14-09-2026) ──────────────────────────────────
      kg/m² = mm de lluvia si cayera toda. Transparente hasta 10 (aire
      seco), y sube a azules y morados: 30 ya es aire cargado, 40+ es lo
-     de las tormentas gordas. Antes iba con el azul plano de la librería. */
-  const agm = [0, 10, 15, 20, 25, 30, 35, 40, 50, 60];
-  const agc = [['#e6f4ff',0], ['#bfe3ff',0.3], ['#8fcbff',0.5], ['#54a8f0',0.7], ['#2f7fe0',0.85],
-               ['#2a55c8',1], ['#4a3aa8',1], ['#7a2a9e',1], ['#b0207a',1], ['#e01060',1]];
-  const agua = {
-    scale: { type:'breakpoint', unit:'kg/m²', breakpoints: agm, colors: agc.map(([c,a2]) => hexRGBA(c, a2)) },
-    eje: agm, unidad: 'kg/m²', pos: agm.map((_, i) => i),
-  };
+     de las tormentas gordas. Antes iba con el azul plano de la librería.
+     SUSTITUIDA el 24-10-2026 por la de AguaceroWx (ver deAguacero, más abajo). */
 
   /* ── ISOCERO: EL ROJO ABAJO (14-09-2026) ─────────────────────────────
      La escala de fábrica iba de -5200 a 5200 y con el verano a 4500-4900
@@ -1751,9 +1750,7 @@ function escalasPropias() {
   // distinguir 40 de 50, es ver de un golpe dónde el aire está saturado,
   // que es donde hay niebla y rocío y la torre resbala. Por eso el color
   // arranca de verdad en el 70 y el 95-100 salta a la vista.
-  const hm  = [0, 40, 55, 70, 80, 88, 94, 98, 101];
-  const hc  = [['#7fc9b0',0], ['#7fc9b0',.10], ['#7fc9b0',.22], ['#63b8c9',.38],
-               ['#4a9fd4',.55], ['#3f7fc8',.70], ['#3a5fbf',.85], ['#5b3fb0',1], ['#5b3fb0',1]];
+  // SUSTITUIDA el 24-10-2026 por la de AguaceroWx (ver deAguacero, más abajo).
   /* ── TEMPERATURA CON EL ROJO DONDE QUEMA ────────────────────────────
      Suyo, 31-08-2026, con la ola del viernes en pantalla y Windy al
      lado: *«el color del mapa tristón comparado con Meteored y Windy,
@@ -2022,11 +2019,6 @@ function escalasPropias() {
     eje: acm.slice(), unidad: 'litros/m²', pos: acm.map((_, k) => k),     // por tramos, como la lluvia: lineal se comía media barra el 600
   };
 
-  const humedad = {
-    scale: { type:'breakpoint', unit:'%', breakpoints: hm,
-             colors: hc.map(([c,a]) => hexRGBA(c, a)) },
-    eje: hm.slice(0, -1), unidad: '%', pos: hm.slice(0, -1).map((_, i) => i),
-  };
 
   // Visibilidad: escala pensada para trabajo en altura. Lo que importa no
   // es distinguir 30 de 40 km, es ver de un vistazo dónde no se ve la
@@ -2319,8 +2311,25 @@ function escalasPropias() {
     eje: pm_, unidad: 's', pos: pm_.map((_, i) => i),
   };
 
+  /* ── CUATRO ESCALAS COPIADAS DE AGUACEROWX (24-10-2026) ──────────────────────
+     Suyo, con su cuenta abierta en el navegador: «copia lo que puedas» · «me gusta su interfaz». Leídas de su propia página
+     (su tabla de escalas: valor y color de cada punto, fundido entre puntos, como allí): humedad (`r`), punto de rocío (`d`),
+     agua precipitable (`pwat_0`) y radiación (`ssrd_0`). NO se copian CAPE ni tapa, que llevan SUS listones (300, la
+     combinación de 700 con tapa < 75 y las palabras de textoTapa), ni la isocero (el rojo en el hielo bajo) ni la presión
+     (allí son solo isobaras negras, que ya están en «≈ Isobaras»). */
+  const deAguacero = (anclas, unidad) => {
+    const bp = anclas.map(a => a[0]);
+    return { scale: { type:'breakpoint', unit: unidad, breakpoints: bp, colors: anclas.map(a => hexRGBA(a[1], 1)) },
+             eje: bp, unidad, pos: bp.map((_, i) => i) };
+  };
+  const humedad = deAguacero([[0,'#fbb955'], [10,'#cd683e'], [20,'#9e4539'], [25,'#7f708a'], [50,'#c7dcd0'], [55,'#cddf6c'],
+                              [75,'#1fbc73'], [85,'#0c8a8f'], [90,'#4d9be6'], [100,'#8fd3fe']], '%');
+  const rocio = deAguacero([[-30,'#966c6c'], [0,'#c7dcd0'], [5,'#cddf6c'], [10,'#1fbc73'], [16,'#4d65b4'], [22,'#4d9be6'], [30,'#8fd3fe']], '°C');
+  const agua = deAguacero([[0,'#966c6c'], [10,'#9babb2'], [25,'#c7dcd0'], [35,'#239064'], [55,'#323353'], [65,'#4d9be6'], [75,'#fdcbb0']], 'kg/m²');
+  const radiacion = deAguacero([[0,'#1a1a2e'], [50,'#16213e'], [150,'#0f3460'], [300,'#e94560'], [500,'#f9c22b'], [800,'#fff3b0'], [1100,'#ffffff']], 'W/m²');
+
   _escalas = {
-    basecv, topecv, humedad,
+    basecv, topecv, humedad, rocio, radiacion,
     elevacion,
     lluvia, lluviaVerde, nieveAzul,
     // La tesela trae mm/h; lo que se lee es dBZ, así que se convierte con
@@ -3438,7 +3447,7 @@ const Maps = {
         id:'omLayer', type:'raster', source:'omSrc',
         paint:{ 'raster-opacity': op, 'raster-fade-duration': 120,
                 'raster-resampling': 'linear', ...(ESCALAS_BLANCAS.has(L_.escala) ? (this.base === 'claro' ? NUBE_EN_CLARO : {})
-                    : CON_SUELO_NEGRO.has(L_.escala) ? VIVOS : VIVOS_FUERTES) },
+                    : CON_SUELO_NEGRO.has(L_.escala) ? VIVOS : COPIADAS_TAL_CUAL.has(L_.escala) ? {} : VIVOS_FUERTES) },
       }, this.firstLabelLayer());
       /* La sombra del terreno, POR ENCIMA del color y rebajada: así el
          cordal y el valle se siguen leyendo sin lavar la capa. */
