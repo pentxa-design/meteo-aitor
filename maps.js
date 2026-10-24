@@ -3313,6 +3313,7 @@ const Maps = {
     if (!this.map || !this.meta) return;
     const L_ = TLAYERS.find(l => l.id === this.layer);
     if (!L_) return;
+    this.rotulo(null);   // solo lo vuelve a poner stamp(), que es de las capas de modelo: nunca la hora de un modelo sobre el satélite
 
     Peticiones.reset();
     this._fallosCerrados = false;
@@ -4400,7 +4401,7 @@ const Maps = {
     const T = (this.usando?.meta ?? this.meta)?.valid_times ?? [];
     const iso = T[this.t];
     const st = document.querySelector('#mapStamp');
-    if (!iso) { st.textContent = '—'; return; }
+    if (!iso) { st.textContent = '—'; this.rotulo(null); return; }
     const d = new Date(iso);
     st.textContent = d.toLocaleString('es', { weekday:'short', day:'2-digit', month:'short',
                                               hour:'2-digit', minute:'2-digit' });
@@ -4424,6 +4425,8 @@ const Maps = {
     const deAntes = metaUsada.pasadaDe?.[vtAhora] && vtAhora < new Date(metaUsada.reference_time).getTime()
       ? ` · HORA PASADA: lo que PREVEÍA la pasada de las ${new Date(metaUsada.pasadaDe[vtAhora]).toLocaleString('es', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}, no lo que cayó (lo medido, en las estaciones)`
       : '';
+    this.rotulo(`${M.name} · ${L_?.name ?? ''} · pasada ${ref}`,
+      `${deAntes ? 'HORA PASADA · ' : ''}Válido: ${d.toLocaleString('es', { weekday:'short', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}`);
     this.status(`${M.name} · ${M.res} · pasada de las ${ref} · ${T.length} pasos (${dias.toFixed(0)} días)${deAntes}`
       + (h > 1 ? ` · paso de ${h} h: ${this.layer === 'nieve' ? 'la nieve' : this.layer === 'tipo' ? 'la lluvia y la nieve' : 'la lluvia'} se enseña POR HORA (la suma de ${h} h ÷ ${h})` : '')
       + (this.usando?.sustituido ? ' · CAPA SUSTITUIDA' : '')
@@ -5006,6 +5009,15 @@ const Maps = {
      de la capa es imposible. `status()` puede llamarse después de
      `valores()`, así que el aviso se guarda aparte y se vuelve a poner
      cada vez que se reescribe la línea. */
+  /** El rótulo grande de encima del mapa (24-10-2026, como AguaceroWx). null lo quita. */
+  rotulo(l1, l2 = '') {
+    const r = document.querySelector('#mapRotulo');
+    if (!r) return;
+    r.hidden = !l1;
+    document.querySelector('#mapRotulo1').textContent = l1 || '';
+    document.querySelector('#mapRotulo2').textContent = l2 || '';
+  },
+
   status(t) {
     this._statusBase = t;
     const e = document.querySelector('#mapStatus');

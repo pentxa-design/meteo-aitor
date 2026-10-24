@@ -14086,6 +14086,13 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
     r = { orden1, p1, v1, ordenL, pL, vL, orden2: capas.map(l => l.id).join(','), p2: { ...pintura }, v2: { ...vis } };
     const demSinMar = vm.runInContext('demSinMar', caja);
     /* Terrarium: altura = R·256 + G + B/256 − 32768. −2.000 m (fosa del Cantábrico) = (120, 48, 0); 1.000 m (Gorbeia) = (131, 232, 0). */
+    /* El rótulo grande (24-10-2026): se pone y se QUITA. Un rótulo de modelo colgado sobre el satélite diría una hora que no es. */
+    const els = { '#mapRotulo': { hidden: true }, '#mapRotulo1': { textContent: '' }, '#mapRotulo2': { textContent: '' } };
+    caja.document = { querySelector: q => els[q] || null };
+    M.rotulo('ECMWF 25 km · Temp. 850 hPa · pasada 24 oct, 08:00', 'Válido: sáb, 24 oct, 20:00');
+    r.rotPuesto = { vis: !els['#mapRotulo'].hidden, l2: els['#mapRotulo2'].textContent };
+    M.rotulo(null);
+    r.rotQuitado = { vis: !els['#mapRotulo'].hidden, l1: els['#mapRotulo1'].textContent };
     r.mar = [...demSinMar(new Uint8ClampedArray([120, 48, 0, 255, 131, 232, 0, 255, 127, 255, 255, 255, 128, 0, 0, 255]))];
     /* El orden de su pantalla (24-10): costa YA colocada debajo del color. Lo de «encima» tiene que salir DETRÁS de omLayer. */
     capas = [{ id: 'fondo', type: 'background' }, { id: 'agua', type: 'fill' }, { id: 'hillLayer', type: 'raster' },
@@ -14105,6 +14112,9 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('   y con el satélite vuelve DEBAJO, con su pintura de siempre (la foto ya trae el terreno)',
      !err && r.orden2.indexOf('hillLayer') < r.orden2.indexOf('omLayer') && r.p2['raster-brightness-max'] === 1 && r.v2.hillLayer === 'visible' && r.v2.sombraLayer === 'none', JSON.stringify(r));
   const Mf = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  ok('el rótulo grande del mapa (como AguaceroWx) dice modelo y hora, y se QUITA: apply() lo borra antes de pintar y solo lo pone stamp(), que es de las capas de modelo',
+     !err && r.rotPuesto.vis && /Válido/.test(r.rotPuesto.l2) && !r.rotQuitado.vis && r.rotQuitado.l1 === ''
+     && /if \(!L_\) return;\n    this\.rotulo\(null\);/.test(Mf) && /this\.rotulo\(`\$\{M\.name\}/.test(Mf), JSON.stringify([r?.rotPuesto, r?.rotQuitado]));
   ok('   costa NEGRA y fronteras de país y comunidad encima del color en Claro y Color (como AguaceroWx); en la lluvia, la costa de antes y sin fronteras',
      /lluvia \? 'rgba\(18,38,66,0\.85\)' : 'rgba\(0,0,0,0\.9\)'/.test(Mf) && /this\.fronterasEncima\(oscuro, lluvia\);/.test(Mf)
      && /\['fronteraPaisLayer', 2,/.test(Mf) && /\['fronteraRegionLayer', 4,/.test(Mf) && /\['==', 'maritime', 0\]/.test(Mf));
