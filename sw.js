@@ -10,7 +10,7 @@
      pantalla con la hora de la descarga.
    ═══════════════════════════════════════════════════════════════════ */
 
-const V     = 'torre-2026.10.24-2138';
+const V     = 'torre-2026.10.24-2256';
 const SHELL = [
   './', './index.html', './styles.css', './reglas-tiempo.js', './app.js', './maps.js',
   './manifest.webmanifest',
@@ -19,6 +19,7 @@ const SHELL = [
   './data/estaciones.json',
   // La costa del mapa alejado (17-10-2026, ver costaEncima en maps.js): 141 KB.
   './data/costa.geojson',
+  './data/ciudades.geojson',   // las ciudades del mapa alejado (24-10-2026), también sin cobertura
   './icons/icon-192.png?v=20260827', './icons/icon-512.png?v=20260827', './icons/badge-96.png?v=20260930',
   // Las librerías del mapa. Sin ellas, sin cobertura no hay mapa: ni
   // modelos, ni radar, ni satélite. Son 3,8 MB y se bajan una vez por

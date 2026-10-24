@@ -13451,7 +13451,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      /quitarCapasDeDatos\(conservarAcum = false\)/.test(M) && /this\.quitarCapasDeDatos\(!!TLAYERS\.find\(l => l\.id === this\.layer\)\?\.acum\);/.test(M)
      && /if \(conservarAcum && id === 'acumLayer'\) return;/.test(M) && /if \(conservarAcum && id === 'acumSrc'\) return;/.test(M));
   ok('las capas de datos van más vivas (suyo, 16-10: «sosos»): el modelo y la acumulada llevan raster-saturation y raster-contrast, y las nubes blancas quedan fuera',
-     /const VIVOS = \{ 'raster-saturation': 0\.[3-9]\d*, 'raster-contrast': 0\.\d+ \};/.test(M)
+     /const VIVOS = \{ 'raster-saturation': 0\.(6[5-9]|[7-9])\d*, 'raster-contrast': 0\.\d+ \};/.test(M)
      && /\.\.\.\(ESCALAS_BLANCAS\.has\(L_\.escala\) \? \(this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? VIVOS : COPIADAS_TAL_CUAL\.has\(L_\.escala\) \? \{\} : VIVOS_FUERTES\) \}/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
   ok('la rampa es EXACTAMENTE la «Acumulación de lluvia» de Windy (tabla leída de windy.com/colors el 16-10-2026): cortes 0·1·5·10·30·50·80·120·200·320·600 y sus once colores, todos opacos desde 5 litros',
      (() => { const t = M.slice(M.indexOf('const acc = ['), M.indexOf('];', M.indexOf('const acc = [')));
@@ -14097,6 +14097,16 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
     r.rotPuesto = { vis: !els['#mapRotulo'].hidden, l2: els['#mapRotulo2'].textContent };
     M.rotulo(null);
     r.rotQuitado = { vis: !els['#mapRotulo'].hidden, l1: els['#mapRotulo1'].textContent };
+    /* Más nombres (24-10-2026): se EJECUTA masNombres() con un mapa de mentira que apunta lo que se le pide. */
+    const pedido = { rangos: {}, texto: {}, capas: [], fuentes: [] };
+    const capasMN = ['place_town', 'place_villages', 'place_state', 'place_city_dot_r7', 'place_city_dot_r4', 'place_city_dot_r2', 'place_country_1'].map(id => ({ id, type: 'symbol' }));
+    const M2 = Object.create(M);
+    M2.map = { getLayer: id => capasMN.find(l => l.id === id) || pedido.capas.find(l => l.id === id), getSource: id => pedido.fuentes.includes(id),
+      getStyle: () => ({ layers: capasMN }), setLayerZoomRange: (id, a, b) => { pedido.rangos[id] = [a, b]; }, setFilter: () => {},
+      setLayoutProperty: (id, k, v) => { if (k === 'text-field') pedido.texto[id] = JSON.stringify(v); },
+      addSource: (id, o) => { pedido.fuentes.push(id); pedido.datos = o.data; }, addLayer: o => pedido.capas.push(o) };
+    M2.masNombres();
+    r.nombres = pedido;
     r.mar = [...demSinMar(new Uint8ClampedArray([120, 48, 0, 255, 131, 232, 0, 255, 127, 255, 255, 255, 128, 0, 0, 255]))];
     /* El orden de su pantalla (24-10): costa YA colocada debajo del color. Lo de «encima» tiene que salir DETRÁS de omLayer. */
     capas = [{ id: 'fondo', type: 'background' }, { id: 'agua', type: 'fill' }, { id: 'hillLayer', type: 'raster' },
@@ -14116,6 +14126,15 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('   y con el satélite vuelve DEBAJO, con su pintura de siempre (la foto ya trae el terreno)',
      !err && r.orden2.indexOf('hillLayer') < r.orden2.indexOf('omLayer') && r.p2['raster-brightness-max'] === 1 && r.v2.hillLayer === 'visible' && r.v2.sombraLayer === 'none', JSON.stringify(r));
   const Mf = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const ciu = (() => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'ciudades.geojson'), 'utf8')).features; } catch { return []; } })();
+  const hay = n => ciu.some(f => f.properties.n === n && f.geometry.coordinates[0] > -10 && f.geometry.coordinates[0] < 4 && f.geometry.coordinates[1] > 36 && f.geometry.coordinates[1] < 44);
+  ok('alejado se ven las capitales de provincia (suyo: «si alejas un poco, nada»): data/ciudades.geojson las trae y masNombres() las pinta por debajo del zoom de los pueblos',
+     !err && ['León', 'Soria', 'Huesca', 'Lleida', 'Teruel', 'Cuenca', 'Segovia', 'Ávila', 'Zamora', 'Bilbao', 'Vitoria-Gasteiz'].every(hay)
+     && r.nombres.datos === 'data/ciudades.geojson' && r.nombres.capas.some(c => c.id === 'ciudadesPlace' && c.maxzoom === r.nombres.rangos.place_town?.[0])
+     && fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf8').includes("'./data/ciudades.geojson'"), JSON.stringify(r?.nombres?.rangos));
+  ok('   pueblos antes que en CARTO, regiones solo de cerca, y los nombres en el del SITIO, no en inglés (Sevilla, no «Seville»)',
+     !err && r.nombres.rangos.place_town[0] < 8 && r.nombres.rangos.place_villages[0] < 10 && r.nombres.rangos.place_state[0] >= 7
+     && /name:latin/.test(r.nombres.texto.place_town || '') && /name:latin/.test(r.nombres.texto.place_state || ''), JSON.stringify(r?.nombres?.texto));
   let E4 = null, e4 = null;
   try { E4 = vm.runInContext('escalasPropias()', caja); } catch (e) { e4 = e; }
   const c4 = (E, v) => { const k = E.scale.breakpoints.indexOf(v); return k < 0 ? null : JSON.stringify(E.scale.colors[k]); };

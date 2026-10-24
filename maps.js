@@ -787,6 +787,8 @@ const SOMBRA_ENCIMA = { 'hillshade-shadow-color': 'rgba(0,0,0,0.55)', 'hillshade
                         'hillshade-accent-color': 'rgba(0,0,0,0.25)', 'hillshade-exaggeration': 0.6, 'hillshade-illumination-direction': 315 };
 /* Las capas de color fuerte, más saturadas: con el relieve encima («todavía pálido, pero vas bien», 24-10, probado en su pantalla). */
 const VIVOS_FUERTES = { 'raster-saturation': 0.75, 'raster-contrast': 0.25 };   // todas desde el 24-10-2026 noche; antes la temperatura (24-10: «no se ve nada» al lado de AguaceroWx)   // y el geopotencial (24-10-2026, suyo: «sosa, desaturada, dale vida»)
+/* Desde qué zoom salen los nombres (ver masNombres): pueblos y aldeas antes que en CARTO, y más ciudades a escala de España. */
+const NOMBRES_DESDE = { pueblo: 6.5, aldea: 8.5, rangoCiudad: 10, regiones: 7 };
 /* Las escalas copiadas de AguaceroWx van con SUS colores, sin el refuerzo de saturación: con él su gris verdoso del 50 %
    salía lima chillón (visto en pantalla el 24-10-2026 antes de publicar). */
 const COPIADAS_TAL_CUAL = new Set(['humedad', 'rocio', 'agua', 'radiacion']);
@@ -932,7 +934,10 @@ const ACUM_RESPALDO = 'ecmwf_ifs';
 /** Viveza de las capas de datos (suyo, 16-10-2026: «están sosos… más saturación… colores fuertes me gustan»). Se aplica a la
     capa entera con las propiedades del propio mapa: no se toca ningún corte ni ningún color de las escalas. Las nubes quedan fuera
     (son blancas: el contraste las apagaría). */
-const VIVOS = { 'raster-saturation': 0.5, 'raster-contrast': 0.2 };
+/* Desde el 24-10-2026 solo la usan las capas de lluvia (las demás van con VIVOS_FUERTES), y «un poco» más saturada (suyo,
+   22:52, con la precipitación delante: «satura esta capa un poco · los colores · lluvia etc»; antes 0,5 y 0,2). Solo el
+   color: su opacidad, su relieve y su costa siguen como estaban. */
+const VIVOS = { 'raster-saturation': 0.65, 'raster-contrast': 0.22 };
 const ACUM_PUNTOS = 150;                      // la cuota de la API es POR MINUTO y cuenta cada punto: con 250 y una petición por cambio de hora saltó el 429 (16-10-2026) y se llevó por delante a la ficha
 const mercY = lat => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI / 180) / 2));
 const latDeMerc = y => (2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180 / Math.PI;
@@ -3759,7 +3764,7 @@ const Maps = {
       if (src) this.map.removeSource('acumSrc');
       this.map.addSource('acumSrc', { type: 'image', url, coordinates: coords });
       this.map.addLayer({ id: 'acumLayer', type: 'raster', source: 'acumSrc',
-        paint: { 'raster-opacity': 1, 'raster-fade-duration': 0, 'raster-resampling': 'linear', ...VIVOS } },   // colores fuertes, suyo (16-10-2026)
+        paint: { 'raster-opacity': 1, 'raster-fade-duration': 0, 'raster-resampling': 'linear', ...VIVOS } },   // colores fuertes, suyo (16-10-2026; un poco más el 24-10)
         this.firstLabelLayer());
     }
     if (!this.map.getLayer('sueloLluviaLayer')) this.sueloParaLluvia(true);
@@ -4212,6 +4217,7 @@ const Maps = {
      que si no, al restaurar se inventaría un color que no era. */
   etiquetasLegibles() {
     if (!this.map) return;
+    this.masNombres();
     /* ── UNA SOLA REGLA, QUE VALE EN TODAS LAS CAPAS ─────────────────
        El primer intento fue «claro cuando el suelo de la lluvia está
        puesto», y con sus cinco pantallazos delante se ve que no basta:
@@ -5396,6 +5402,49 @@ const Maps = {
     if (!vigente()) return;
     cap.innerHTML = frag.join('');
     this.avisoRango(imposible);
+  },
+
+  /* ── MÁS CIUDADES Y PUEBLOS, EN TODOS LOS MAPAS (24-10-2026) ───────────────────────────
+     Suyo, con AguaceroWx al lado: «igual hay que meter más ciudades, pueblos» · «en general en todos los mapas». CARTO
+     esconde los pueblos (Gernika, Durango, Mungia son «town») hasta el zoom 8 y las aldeas hasta el 10, y a escala de
+     España solo pone punto a las ciudades de rango ≤ 7: León, Soria o Huesca no salían. Se adelantan; los que se pisan
+     los quita el propio mapa (detección de choques), así que no se amontonan. Es del mapa base: vale en todas las capas y
+     en los tres fondos. */
+  masNombres() {
+    const m = this.map;
+    const zoom = (id, a, b) => { if (m.getLayer(id)) m.setLayerZoomRange(id, a, b); };
+    try {
+      zoom('place_town', NOMBRES_DESDE.pueblo, 14);
+      zoom('place_villages', NOMBRES_DESDE.aldea, 16);
+      zoom('place_city_dot_r4', 4, 7);
+      if (m.getLayer('place_city_dot_r7')) {
+        m.setFilter('place_city_dot_r7', ['all', ['==', 'class', 'city'], ['<=', 'rank', NOMBRES_DESDE.rangoCiudad]]);
+        m.setLayerZoomRange('place_city_dot_r7', 5, 7);
+      }
+      /* Las regiones (CANTABRIA, LA RIOJA, ARAGON…) en grande les quitaban el sitio a León, Soria o Huesca: AguaceroWx no
+         las pone. Desde el zoom 7, cuando ya caben. */
+      zoom('place_state', NOMBRES_DESDE.regiones, 10);
+      /* Y en el nombre del SITIO, no en inglés: CARTO ponía «Seville», «Lisbon», «Castile-La Mancha». `name:latin` es el
+         nombre local en letra latina (Sevilla, Lisboa, A Coruña, Donostia / San Sebastián, Vitoria-Gasteiz, Casablanca sin
+         el árabe y el tifinag que trae `name`); `name:es` daba exónimos viejos (Orense, La Coruña, Santurce). */
+      const local = ['coalesce', ['get', 'name:latin'], ['get', 'name']];
+      for (const l of m.getStyle().layers || [])
+        if (l.type === 'symbol' && /^place_/.test(l.id)) m.setLayoutProperty(l.id, 'text-field', local);
+      /* ── ALEJADO, LAS CIUDADES SON NUESTRAS ──────────────────────────────────────────────────
+         Medido el 24-10-2026: a zoom 4 las teselas de CARTO solo traen las ciudades de rango 1-5 — NUEVE en toda la
+         península—; no es que se tapen, es que no vienen. Por debajo del zoom de los pueblos se pinta data/ciudades.geojson
+         (las ciudades que el propio CARTO trae de cerca, recogidas de su mapa: 127 en la península, todas las capitales de
+         provincia), con prioridad a las grandes (`symbol-sort-key` = rango) y quitando las que chocan. Los puntos de
+         ciudad de CARTO pasan a salir solo desde ese zoom, para no rotular dos veces. */
+      for (const id of ['place_city_dot_r2', 'place_city_dot_r4', 'place_city_dot_r7']) zoom(id, NOMBRES_DESDE.pueblo, 7);
+      if (!m.getSource('ciudadesSrc')) m.addSource('ciudadesSrc', { type: 'geojson', data: 'data/ciudades.geojson' });
+      if (!m.getLayer('ciudadesPlace')) {
+        m.addLayer({ id: 'ciudadesPlace', type: 'symbol', source: 'ciudadesSrc', maxzoom: NOMBRES_DESDE.pueblo,
+          layout: { 'text-field': ['get', 'n'], 'text-font': ['Montserrat Medium', 'Open Sans Bold', 'Noto Sans Regular', 'HanWangHeiLight Regular', 'NanumBarunGothic Regular'],
+                    'text-size': ['interpolate', ['linear'], ['zoom'], 3, 10, 6, 12], 'symbol-sort-key': ['get', 'r'],
+                    'icon-image': 'circle-11', 'icon-size': 0.4, 'text-anchor': 'left', 'text-offset': [0.6, 0], 'text-padding': 1 } });
+      }
+    } catch (e) { console.warn('nombres: no se han podido adelantar', e); }
   },
 
   capasEtiqueta() {
