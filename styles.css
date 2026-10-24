@@ -3068,3 +3068,7 @@ body.sin-scroll{overflow:hidden}
 /* Buscador de cámaras (24-10-2026) */
 .cams-busca{display:flex;gap:8px;margin:10px 0 6px}
 .cams-busca input{flex:1;min-width:0;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:inherit;font:inherit}
+
+/* Lo medido ahora, bajo el nombre del emplazamiento (24-10-2026) */
+.tor__med{display:block;margin-top:4px;font-size:.82rem;color:#7fd3ff;line-height:1.35}
+.tor__med b{color:#fff}

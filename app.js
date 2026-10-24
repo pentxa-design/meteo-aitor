@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.24-1830';
+const BUILD = '2026.10.24-1835';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11404,6 +11404,7 @@ function renderTorres() {
              (medido el 26-09-2026 contra los datos de 15 min). */
           return `a las ${z(d.getHours())}${cola}`;
         })()}</span>
+        ${medidoAhoraLinea(S.medidoTorres?.get(key(t.place)))}
       </div>
       <div class="tor__ds">${(() => {
         /* Los tres números grandes cambian según lo que vayas a hacer.
@@ -17921,6 +17922,26 @@ function adoptarConfig(torres) {
     cambios++;
   }
   return cambios;
+}
+
+/* ── LO QUE MARCA AHORA LA ESTACIÓN, BAJO EL NOMBRE (24-10-2026) ──────
+   Suyo, con la tarjeta de Sollube delante: «más sencillo, aquí quiero que salga lo de AEMET o Euskalmet, lo que está
+   marcando, seguido, nada más; ya hay sitio». Una línea con lo MEDIDO (nunca un número de modelo: van separados), de
+   quién es, a cuántos km y de hace cuánto. Si aún no ha llegado o no hay estación, se dice. */
+function medidoAhoraLinea(M) {
+  if (S.medidoTorres == null) return `<span class="tor__med">Medido: ${S.medidoFallo ? 'no se ha podido leer' : 'preguntando a la estación…'}</span>`;
+  if (!M) return `<span class="tor__med">Medido: ninguna estación cerca</span>`;
+  const f = (v, d = 0) => has(v) ? Number(v).toFixed(d).replace('.', ',') : null;
+  const partes = [
+    has(M.temperatura) ? `<b>${f(M.temperatura, 1)}°</b>` : null,
+    has(M.racha) ? `racha <b>${f(M.racha)} km/h</b>` : null,
+    has(M.viento) ? `viento ${f(M.viento)} km/h${has(M.direccion) ? ` del ${esc(rumboLargo(M.direccion))}` : ''}` : null,
+    has(M.lluvia) ? `${mmTxt(M.lluvia)} mm en la hora`
+      : M.lluviaDe ? `${mmTxt(M.lluviaDe.lluvia)} mm (${esc(M.lluviaDe.nombre)})` : null,
+    has(M.humedad) ? `HR ${Math.min(100, Math.round(M.humedad))} %` : null,
+  ].filter(Boolean);
+  const hace = M.medidoEn ? haceTxt(M.medidoEn) : '';
+  return `<span class="tor__med">Medido ahora · ${esc(M.fuente || '')} ${esc(M.nombre || '')} (${kmTxt(M.km)} km${hace ? `, ${esc(hace)}` : ''}): ${partes.join(' · ') || 'sin datos'}</span>`;
 }
 
 /* ── LA COPIA DE LAS TORRES, PARA CUANDO EL SERVIDOR NO CONTESTA ──────
