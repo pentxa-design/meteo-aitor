@@ -1814,8 +1814,10 @@ function escalasPropias() {
      Suyo: «esta capa está sosa, desaturada, dale vida». Iba con la escala de fábrica y aclarada en el fondo Claro. Ahora la
      de los mapas sinópticos (Windy, Meteoblue): morado y azul en la vaguada fría (bajo 5.300 m), verde en medio, amarillo,
      naranja y rojo en la dorsal cálida (sobre 5.700). El valor de la tesela viene en metros: los cortes, en metros. */
-  const gpm = [4800, 4950, 5100, 5200, 5300, 5400, 5500, 5600, 5700, 5800, 5880, 5950];
-  const gpc = ['#4b1f8f', '#5b3fc4', '#3f6fd8', '#2f9be0', '#22c0c8', '#2fc27a', '#8fd13a', '#e6dc2a', '#f5a623', '#f06a2a', '#d9302f', '#a3123a'];
+  /* Y COMO AGUACEROWX (24-10-2026, su captura «Alturas geopotenciales en 500 mb»): azul intenso en la vaguada, cian, casi
+     blanco hacia 564 dam, amarillo, naranja, rojo y magenta en la dorsal (588 dam y más). Cortes en metros (1 dam = 10 m). */
+  const gpm = [4800, 5100, 5300, 5400, 5480, 5560, 5640, 5720, 5780, 5840, 5880, 5920, 5960];
+  const gpc = ['#3a1f9a', '#2438e0', '#1f5cff', '#0a3dff', '#00c8ff', '#7fe6f0', '#e4e2ee', '#f2e27a', '#f7b733', '#f56a1e', '#f0301c', '#e0208a', '#e21a78'];
   const geopot = {
     scale: { type:'breakpoint', unit:'m', breakpoints: gpm, colors: gpc.map(c => hexRGBA(c, 1)) },
     eje: gpm, unidad: 'm', pos: gpm.map((_, i) => i),
