@@ -741,7 +741,12 @@ const CLARO_OPACIDAD = 0.65;
 const CLARO_SUAVE = { 'raster-saturation': 0.2 };
 /** La opacidad de la capa de datos para la capa y el fondo que haya: una sola cuenta, para pintar y para el deslizador. */
 /* La capa que decide no se aclara en Claro (22-10-2026): con la opacidad ×0,65 su rojo salía salmón y su naranja, crema. */
-const SIN_ACLARAR = new Set(['rafagas', 'viento', 'geopot', 'tempc', 't850']);   // y la temperatura (24-10: «no se ve nada» al lado de AguaceroWx)   // y el geopotencial (24-10-2026, suyo: «sosa, desaturada, dale vida»)
+const SIN_ACLARAR = new Set(['rafagas', 'viento', 'geopot', 'tempc', 't850']);
+/* El sombreado del relieve: debajo (como siempre) o encima del color sin lavarlo (24-10-2026, ver relieveSegunCapa). */
+const RELIEVE_DEBAJO = { 'raster-opacity': 0.45, 'raster-saturation': -1, 'raster-contrast': 0.15, 'raster-brightness-max': 1 };
+const RELIEVE_ENCIMA = { 'raster-opacity': 0.45, 'raster-saturation': -1, 'raster-contrast': 0.3, 'raster-brightness-max': 0.6 };
+/* Las capas de color fuerte, más saturadas: con el relieve encima («todavía pálido, pero vas bien», 24-10, probado en su pantalla). */
+const VIVOS_FUERTES = { 'raster-saturation': 0.75, 'raster-contrast': 0.25 };   // y la temperatura (24-10: «no se ve nada» al lado de AguaceroWx)   // y el geopotencial (24-10-2026, suyo: «sosa, desaturada, dale vida»)
 /* De quién salen las isobaras cuando el modelo de la capa no publica la presión (AROME HD, GFS): el europeo de 9 km. */
 const ISO_PRESTADAS = 'ecmwf_ifs';
 /* Las isobaras encima de otra capa, con menos detalle: la presión es una superficie suave y así no se duplica el trabajo. */
@@ -751,7 +756,7 @@ const RADAR_OPACIDAD_MIN = 0.92;
 const RADAR_FUERTE = { 'raster-saturation': 0.35, 'raster-contrast': 0.15 };   // y el viento medio (22-10-2026, suyo: «y los colores pálidos»)
 function opacidadDeCapa(L_, base, o) {
   if (ESCALAS_BLANCAS.has(L_?.escala)) return Math.max(o, 0.92);
-  if (SIN_ACLARAR.has(L_?.escala)) return Math.max(o, 0.88);   // fuerte, como Windy: a 0,75 salía pálida (probado en pantalla)
+  if (SIN_ACLARAR.has(L_?.escala)) return Math.max(o, 0.95);   // fuerte, como Windy y AguaceroWx: el relieve va encima (relieveSegunCapa)
   if (CON_SUELO_NEGRO.has(L_?.escala)) return Math.max(o, 0.95);
   return base === 'claro' ? o * CLARO_OPACIDAD : o;
 }
@@ -3301,7 +3306,7 @@ const Maps = {
     /* Los rayos van encima de cualquier capa, también de las dos que
        salen por aquí antes de llegar al final de apply() (09-09-2026). */
     /* Windy en directo: su visor encima del mapa; cualquier otra capa lo quita (23-10-2026). */
-    if (L_.windy) { this.applyWindy(L_); return; }
+    if (L_.windy) { this.applyWindy(L_); this.relieveSegunCapa(); return; }
     this.quitarWindy();
     if (L_.id === 'radar') { this.applyRadar(); setTimeout(() => this.rayos(), 600); return; }
     if (L_.id === 'radarprev') { this.applyMixta(); setTimeout(() => this.rayos(), 600); return; }
@@ -3395,7 +3400,7 @@ const Maps = {
         id:'omLayer', type:'raster', source:'omSrc',
         paint:{ 'raster-opacity': op, 'raster-fade-duration': 120,
                 'raster-resampling': 'linear', ...(ESCALAS_BLANCAS.has(L_.escala) ? (this.base === 'claro' ? NUBE_EN_CLARO : {})
-                    : (this.base === 'claro' && !CON_SUELO_NEGRO.has(L_.escala) && !SIN_ACLARAR.has(L_.escala)) ? CLARO_SUAVE : VIVOS) },
+                    : (this.base === 'claro' && !CON_SUELO_NEGRO.has(L_.escala) && !SIN_ACLARAR.has(L_.escala)) ? CLARO_SUAVE : SIN_ACLARAR.has(L_.escala) ? VIVOS_FUERTES : VIVOS) },
       }, this.firstLabelLayer());
       /* La sombra del terreno, POR ENCIMA del color y rebajada: así el
          cordal y el valle se siguen leyendo sin lavar la capa. */
@@ -3592,6 +3597,7 @@ const Maps = {
 
       document.querySelector('#mapLegend').hidden = true;
       this.selloSat(L_, hora);   // lo que se ve es de hace un rato: la última pasada tarda en salir
+      this.relieveSegunCapa();
 
       /* EN VIVO: si estás en la última imagen, cuando caduque el catálogo se pide otra vez y se pasa sola a la nueva. Si te has
          ido a una hora pasada o le has dado al play, no se te mueve nada. */
@@ -3820,6 +3826,7 @@ const Maps = {
         ? 'sin eco en toda la península: no está lloviendo en ningún sitio'
         : `eco de lluvia en el ${pc < 0.1 ? '<0,1' : pc.toFixed(1)} % del territorio`;
       this.status(`Radar AEMET · compuesto nacional · observación real, no previsión · ${cuanto}`);
+      this.relieveSegunCapa(); this.costaEncima();
       this.seguirEnVivo('aemet', () => this._aemet);
     } catch (e) {
       this.status('radar de AEMET no disponible: ' + e.message);
@@ -3952,6 +3959,7 @@ const Maps = {
       st.style.color = pasado ? '' : 'var(--warn)';
       st.title = pasado ? 'Observado' : 'Extrapolación a corto plazo';
       this.status(`radar observado · ${F.length} imágenes · RainViewer`);
+      this.costaEncima();
       this.seguirEnVivo('radar', () => this.radarFrames);
       document.querySelector('#mapLegend').hidden = true;
     } catch (e) {
@@ -4224,8 +4232,34 @@ const Maps = {
      costa: el contorno del agua del propio fondo (CARTO), como hacen Windy
      y Ventusky. Se vuelve a poner en cada apply(): al cambiar de capa se
      tiran las capas propias y al cambiar de fondo se rehace el estilo. */
+  /* ── EL RELIEVE ENCIMA DEL COLOR, COMO AGUACEROWX (24-10-2026) ──────────
+     Suyo: «fallo grave, no se ve relieve» · «así tienen que quedar todos los mapas y capas». Al quitar el aclarado para dar
+     color (rachas, temperatura, geopotencial…) la capa quedaba opaca y tapaba el relieve, que iba DEBAJO. Ahora, en las
+     capas de modelo y de radar, el sombreado va ENCIMA del color, oscuro y a media opacidad: solo deja las sombras de los
+     montes sin lavar el color (probado en su pantalla: 0,5 de opacidad, brillo máximo 0,55). En satélite y Windy, que ya
+     traen su propia foto, vuelve debajo como siempre. */
+  relieveSegunCapa() {
+    const m = this.map;
+    if (!m?.getLayer('hillLayer')) return;
+    const L_ = TLAYERS.find(l => l.id === this.layer);
+    const encima = !!L_ && !L_.sat && !L_.windy && (m.getLayer('omLayer') || m.getLayer('radarLayer') || m.getLayer('aemetLayer'));
+    const P = encima ? RELIEVE_ENCIMA : RELIEVE_DEBAJO;
+    try {
+      for (const k of Object.keys(P)) m.setPaintProperty('hillLayer', k, P[k]);
+      if (encima) m.moveLayer('hillLayer', this.firstLabelLayer(true));
+      else {
+        /* Justo DEBAJO de la capa de datos que haya (satélite, Windy…); si no hay ninguna, antes de la primera línea del mapa. */
+        const ls = m.getStyle().layers || [];
+        const datos = ['satLayer', 'omLayer', 'radarLayer', 'aemetLayer'].find(id => m.getLayer(id));
+        const pl = ls.find(l => l.type === 'line' || l.type === 'symbol');
+        m.moveLayer('hillLayer', datos || pl?.id);
+      }
+    } catch (e) { console.warn('relieve: no se ha podido colocar', e); }
+  },
+
   costaEncima() {
     if (!this.map?.getSource('carto')) return;
+    this.relieveSegunCapa();
     const oscuro = this.base === 'oscuro';
     const paint = {
       'line-color': oscuro ? 'rgba(225,235,245,0.9)' : 'rgba(18,38,66,0.85)',
@@ -4269,7 +4303,12 @@ const Maps = {
     // montadas (nube, sombra, relieve): es lo que necesita la costa, que
     // tiene que verse POR ENCIMA del color (15-09-2026).
     if (!porEncimaDeLasPropias) return ls[ultimo + 1]?.id;
-    return ls.slice(ultimo + 1).find(x => !PROPIAS.test(x.id))?.id;
+    /* DETRÁS DE LA ÚLTIMA CAPA PROPIA, no de la primera (24-10-2026). Buscaba «la primera que no sea propia» desde el último
+       relleno del mapa base, y la costa ya colocada antes (debajo del color) se devolvía a sí misma: costa y relieve
+       quedaban DEBAJO de la capa de color. Medido en su pantalla: hillLayer, costaLayerNE, costaLayer, omLayer. */
+    let ultPropia = ultimo;
+    ls.forEach((x, i) => { if (PROPIAS.test(x.id) && i > ultPropia) ultPropia = i; });
+    return ls.slice(ultPropia + 1).find(x => !PROPIAS.test(x.id))?.id;
   },
 
   /** La capa que va justo detrás de `id`: para montar algo ENCIMA de ella. */
@@ -5296,8 +5335,9 @@ const Maps = {
         const primeraLinea = ls.find(l => l.type === 'line' || l.type === 'symbol');
         this.map.addLayer({
           id:'hillLayer', type:'raster', source:'hillSrc',
-          paint:{ 'raster-opacity': 0.45, 'raster-saturation': -1, 'raster-contrast': 0.15 },
+          paint:{ ...RELIEVE_DEBAJO },
         }, primeraLinea ? primeraLinea.id : undefined);
+        this.relieveSegunCapa();
       }
     } catch {}
   },

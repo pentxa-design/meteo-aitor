@@ -7870,7 +7870,7 @@ grupo('RÁFAGAS: colores vivos y con SUS listones (01-09-2026)');
        morado(colorDe(90, 60, 90)) && morado(colorDe(95, 60, 90)) && naranja(colorDe(59, 60, 90)) && [18, 27, 36].every(v => { const [r, g, b] = colorDe(v, 60, 90); return b > r && b > g * 0.9; }), JSON.stringify([colorDe(95, 60, 90), colorDe(59, 60, 90)]));
     const op = new Function(`${(M.match(/const ESCALAS_BLANCAS = [^\n]*/) || [''])[0]}\n${(M.match(/const CON_SUELO_NEGRO = [^\n]*/) || [''])[0]}\nconst CLARO_OPACIDAD = 0.65;\n${(M.match(/const SIN_ACLARAR = [^\n]*/) || [''])[0]}\n${(M.match(/function opacidadDeCapa[\s\S]*?\n\}/) || [''])[0]}\nreturn opacidadDeCapa;`)();
     ok('   y la capa de ráfagas va fuerte (≥0,88) en cualquier fondo, como Windy: a 0,75 salía «pálida»; las demás se aclaran en Claro',
-       op({ escala: 'rafagas' }, 'claro', 0.75) >= 0.88 && op({ escala: 'rafagas' }, 'color', 0.75) >= 0.88 && op({ escala: 'presion' }, 'claro', 0.75) < 0.75);
+       op({ escala: 'rafagas' }, 'claro', 0.75) >= 0.95 && op({ escala: 'rafagas' }, 'color', 0.75) >= 0.95 && op({ escala: 'presion' }, 'claro', 0.75) < 0.75);
   }
   /* 15-09-2026 19:55 (portátil): la tesela trae la racha en m/s. Con la escala propia se
      perdió la conversión y el mapa marcaba «7» en Madrid con 27 km/h en la API: los
@@ -13448,7 +13448,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && /if \(conservarAcum && id === 'acumLayer'\) return;/.test(M) && /if \(conservarAcum && id === 'acumSrc'\) return;/.test(M));
   ok('las capas de datos van más vivas (suyo, 16-10: «sosos»): el modelo y la acumulada llevan raster-saturation y raster-contrast, y las nubes blancas quedan fuera',
      /const VIVOS = \{ 'raster-saturation': 0\.[3-9]\d*, 'raster-contrast': 0\.\d+ \};/.test(M)
-     && /\.\.\.\(ESCALAS_BLANCAS\.has\(L_\.escala\) \? \(this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)\s*: \(this\.base === 'claro' && !CON_SUELO_NEGRO\.has\(L_\.escala\) && !SIN_ACLARAR\.has\(L_\.escala\)\) \? CLARO_SUAVE : VIVOS\)/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
+     && /\.\.\.\(ESCALAS_BLANCAS\.has\(L_\.escala\) \? \(this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)\s*: \(this\.base === 'claro' && !CON_SUELO_NEGRO\.has\(L_\.escala\) && !SIN_ACLARAR\.has\(L_\.escala\)\) \? CLARO_SUAVE : SIN_ACLARAR\.has\(L_\.escala\) \? VIVOS_FUERTES : VIVOS\)/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
   ok('la rampa es EXACTAMENTE la «Acumulación de lluvia» de Windy (tabla leída de windy.com/colors el 16-10-2026): cortes 0·1·5·10·30·50·80·120·200·320·600 y sus once colores, todos opacos desde 5 litros',
      (() => { const t = M.slice(M.indexOf('const acc = ['), M.indexOf('];', M.indexOf('const acc = [')));
        const hx = [...t.matchAll(/'#([0-9a-f]{6})',(\.?\d+)/g)];
@@ -14023,7 +14023,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('   y el deslizador CAPA usa la misma cuenta (si no, al moverlo en Claro la capa volvería a taparlo todo)',
      /setPaintProperty\('omLayer', 'raster-opacity', opacidadDeCapa\(L_, this\.base, o\)\)/.test(M));
   ok('   en Claro las nubes van en gris (sin suelo ocre) y el resto menos saturado; en Color, VIVOS como siempre',
-     /this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)/.test(M) && /\(this\.base === 'claro' && !CON_SUELO_NEGRO\.has\(L_\.escala\) && !SIN_ACLARAR\.has\(L_\.escala\)\) \? CLARO_SUAVE : VIVOS/.test(M));
+     /this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)/.test(M) && /\(this\.base === 'claro' && !CON_SUELO_NEGRO\.has\(L_\.escala\) && !SIN_ACLARAR\.has\(L_\.escala\)\) \? CLARO_SUAVE : SIN_ACLARAR\.has\(L_\.escala\) \? VIVOS_FUERTES : VIVOS/.test(M));
 }
 
 
@@ -14053,6 +14053,48 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   const Ax = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
   ok('   y los tres sitios que lo pintan (Ahora, Mis estaciones y la franja en curso) le pasan el código que enseñan',
      (Ax.match(/avisoCielo\([^)]*codigo:/g) || []).length === 3);
+}
+
+/* ═══ EL RELIEVE ENCIMA DEL COLOR (24-10-2026) ════════════════════════════════
+   Suyo: «fallo grave, no se ve relieve» · «así tienen que quedar todos los mapas y capas». Se EJECUTA relieveSegunCapa() con un
+   mapa de mentira: con una capa de modelo, el sombreado sube ENCIMA del color con su pintura oscura; con satélite, vuelve debajo. */
+{
+  grupo('El relieve se ve encima de las capas de color');
+  const vm = require('vm'); const nada = () => {};
+  const cualquiera = () => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => '' : cualquiera()), apply: () => cualquiera(), construct: () => cualquiera() });
+  const caja = { console: { log: nada, warn: nada, error: nada, info: nada }, setTimeout: () => 0, clearTimeout: nada, setInterval: () => 0, clearInterval: nada,
+    URL, URLSearchParams, Intl, Date, Math, JSON, Promise, AbortController, document: cualquiera(), navigator: { userAgent: 'node' },
+    localStorage: { getItem: () => null, setItem: nada, removeItem: nada }, sessionStorage: { getItem: () => null, setItem: nada, removeItem: nada },
+    location: { search: '', href: 'https://x/', origin: 'https://x' }, fetch: async () => ({ ok: false }), maplibregl: cualquiera(),
+    OMWeatherMapLayer: cualquiera(), addEventListener: nada, matchMedia: () => ({ matches: false, addEventListener: nada }),
+    requestAnimationFrame: nada, performance: { now: () => 0 }, Blob: function () {}, Image: function () {} };
+  caja.window = caja; caja.globalThis = caja; caja.self = caja;
+  let r = null, err = null;
+  try {
+    vm.createContext(caja);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'reglas-tiempo.js'), 'utf8'), caja);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8'), caja, { filename: 'maps.js' });
+    const M = vm.runInContext('Maps', caja);
+    let capas = [{ id: 'fondo', type: 'background' }, { id: 'hillLayer', type: 'raster' }, { id: 'agua', type: 'fill' }, { id: 'omLayer', type: 'raster' }, { id: 'ríos', type: 'line' }];
+    const pintura = {};
+    M.map = { getLayer: id => capas.find(l => l.id === id), getStyle: () => ({ layers: capas }), setPaintProperty: (id, k, v) => { pintura[k] = v; },
+      moveLayer: (id, antes) => { const l = capas.find(x => x.id === id); capas = capas.filter(x => x.id !== id); const i = antes ? capas.findIndex(x => x.id === antes) : capas.length; capas.splice(i < 0 ? capas.length : i, 0, l); } };
+    M.layer = 'temp'; M.relieveSegunCapa();
+    const orden1 = capas.map(l => l.id).join(','), p1 = { ...pintura };
+    M.layer = 'sat_geo'; M.relieveSegunCapa();
+    r = { orden1, p1, orden2: capas.map(l => l.id).join(','), p2: { ...pintura } };
+    /* El orden de su pantalla (24-10): costa YA colocada debajo del color. Lo de «encima» tiene que salir DETRÁS de omLayer. */
+    capas = [{ id: 'fondo', type: 'background' }, { id: 'agua', type: 'fill' }, { id: 'hillLayer', type: 'raster' },
+             { id: 'costaLayerNE', type: 'line' }, { id: 'costaLayer', type: 'line' }, { id: 'omLayer', type: 'raster' }, { id: 'frontera', type: 'line' }];
+    r.encimaDe = M.firstLabelLayer(true);
+  } catch (e) { err = e; }
+  ok('con Temperatura (o cualquier capa de modelo) el relieve va ENCIMA del color, oscuro y a media opacidad',
+     !err && r.orden1.indexOf('omLayer') < r.orden1.indexOf('hillLayer') && r.p1['raster-brightness-max'] < 0.8 && r.p1['raster-opacity'] >= 0.35,
+     err ? String(err) : JSON.stringify(r));
+  ok('   «encima de las capas propias» es DETRÁS de la capa de color, aunque la costa estuviera debajo (fallo antiguo: costa y relieve tapados)',
+     !err && r.encimaDe === 'frontera', JSON.stringify(r?.encimaDe));
+  ok('   y con el satélite vuelve DEBAJO, con su pintura de siempre (la foto ya trae el terreno)',
+     !err && r.orden2.indexOf('hillLayer') < r.orden2.indexOf('omLayer') && r.p2['raster-brightness-max'] === 1, JSON.stringify(r));
 }
 
 /* ═══ LO MEDIDO AHORA BAJO EL NOMBRE DEL EMPLAZAMIENTO (24-10-2026) ════════════
@@ -14314,7 +14356,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && r.q.calendar === 'now' && r.q.lat === '43.421' && r.q.lon === '-2.721' && r.radar === 'radar', err ? String(err) : JSON.stringify(r));
   ok('   y lo dice (sello «en directo», y que la barra de horas no lo mueve), y al cambiar de capa se quita',
      !err && r.sello === 'en directo' && /barra de horas de abajo no lo mueve/.test(r.estado) && r.quitado
-     && /if \(L_\.windy\) \{ this\.applyWindy\(L_\); return; \}\n    this\.quitarWindy\(\);/.test(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8')), JSON.stringify(r));
+     && /if \(L_\.windy\) \{ this\.applyWindy\(L_\); this\.relieveSegunCapa\(\); return; \}\n    this\.quitarWindy\(\);/.test(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8')), JSON.stringify(r));
   const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
   ok('el radar observado va con fuerza: opacidad mínima 0,92 y algo más saturado, al pintarlo (radar y radar+previsión) y con el deslizador',
      (Mx.match(/paint:\{ \.\.\.RADAR_FUERTE, 'raster-opacity': Math\.max\(this\.opacity, RADAR_OPACIDAD_MIN\) \}/g) || []).length === 2
