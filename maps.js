@@ -445,6 +445,11 @@ const TLAYERS = [
   { id:'sat_conv', g:'Satélite', name:'Tormentas', v:null, unit:'', sat:'convection', sol:true,
     desc:'Meteosat (el viejo: el nuevo no publica esta combinación), para convección — distingue la nube que está creciendo. Solo sirve de día. Puede ir una hora atrasado: mira la hora de la pasada' },
   /* 19-10-2026, suyo con EUMETView delante: «utilízala» · «si hay algo más, añades». Lo del Meteosat nuevo (MTG) que le sirve. */
+  /* TOPES FRÍOS EN COLOR (24-10-2026). Suyo, con AguaceroWx («Tope nuboso, banda 11») delante: «la lluvia para ver? eumesat».
+     El mismo infrarrojo del Meteosat nuevo con el estilo de color de EUMETSAT (style_02, visto antes de ponerlo): nube templada
+     en gris, y los topes fríos —los que llueven y tronan— en azul, cian, verde y amarillo. */
+  { id:'sat_irc', g:'Satélite', name:'Topes fríos (color)', v:null, unit:'', sat:'ir', satEstilo:'mtg_fd_ir105_hrfi_style_02',
+    desc:'Infrarrojo del Meteosat en color: lo gris es nube templada; azul, cian, verde y amarillo son topes cada vez más fríos y altos, donde llueve y truena. Cada 10 min' },
   { id:'sat_rayos', g:'Satélite', name:'Rayos (satélite)', v:null, unit:'', sat:'rayos',
     desc:'Rayos que ve el Meteosat nuevo desde arriba, en bloques de 5 minutos, de día y de noche (también los de dentro de la nube). Llega con unos 15 min de retraso, antes que el mapa de AEMET. Sin puntos no es «no hay rayos» si la hora es vieja: mira la hora de la pasada' },
   /* 19-10-2026, suyo: «tengo capas de niebla etc. repetidas, deja las válidas solo». Fuera Lluvia (satélite) —una hora tarde, y la
@@ -3565,7 +3570,7 @@ const Maps = {
       const hora = C.horas[this.t];
       const q = new URLSearchParams({
         service: 'WMS', version: '1.1.1', request: 'GetMap',
-        layers: C.wms, styles: '', format: 'image/png', transparent: 'true',
+        layers: C.wms, styles: L_.satEstilo || '', format: 'image/png', transparent: 'true',
         srs: 'EPSG:3857', width: '512', height: '512', time: hora,
       });
       const url = `${cat.wms}?${q}&bbox={bbox-epsg-3857}`;

@@ -14470,6 +14470,9 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
         // (3) Se mueve la barra a la imagen de las 12:30 (hace 44 min a las 13:14): el estado lo dice con ESE número.
         M.setT(M._sat.horas.indexOf('2026-10-19T12:30:00.000Z'));
         r.estado = estado; r.sello = el('#mapStamp').title;
+        /* Topes fríos en color (24-10-2026): la misma imagen del infrarrojo con el estilo de color de EUMETSAT. */
+        M.layer = 'sat_irc'; await M.applySatelite(TL.find(l => l.id === 'sat_irc'));
+        r.irc = decodeURIComponent(M.map.getSource('satSrc')?.tiles?.[0] || '');
         /* LOS RADARES (21-10-2026, su captura de las 10:26): de AEMET en su última a Radar observado, y RainViewer se quedaba
            en las 10:00 teniendo la de las 10:20. Y su lista también se pedía una vez por sesión. */
         const marcos = fin => Array.from({ length: 13 }, (_, k) => ({ time: (Date.parse(fin) - (12 - k) * 600e3) / 1000, path: '/p' + k }));
@@ -14506,6 +14509,8 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
          !err && r.aemet7 === '2026-10-19T13:20:00.000Z' && r.aemetN === 8, JSON.stringify(r));
       ok('   con el retraso de agosto (20 min) se queda en las 13:00, y sin red no inventa: la tira de siempre (13:00)',
          !err && r.aemet20 === '2026-10-19T13:00:00.000Z' && r.aemetSinRed === '2026-10-19T13:00:00.000Z', JSON.stringify(r));
+      ok('«Topes fríos (color)» pide el infrarrojo del Meteosat con el estilo de color de EUMETSAT (style_02)',
+         !err && /layers=mtg_fd:ir105_hrfi/.test(r.irc || '') && /styles=mtg_fd_ir105_hrfi_style_02/.test(r.irc || ''), r.irc);
       ok('(3) al mover la barra, el «hace X min» es el de la imagen que se ve (12:30 a las 13:14 → 44 min), no el de la de antes',
          !err && /pasada de hace 44 min/.test(r.estado || '') && /hace 44 minutos/.test(r.sello || ''), JSON.stringify({ estado: r.estado, sello: r.sello }));
     })());
