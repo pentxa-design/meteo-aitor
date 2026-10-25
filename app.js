@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.25-1656';
+const BUILD = '2026.10.25-1702';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -5078,9 +5078,11 @@ function renderTower() {
     const cifras = TRAMOS.map(([n, et]) => {
       const x = enHoras(S.data.hours, n);
       if (!x || !has(x.gust)) return null;
-      return `${et || `a las ${hh(x.date)}`} <b>${esc(wtxt(x.gust, true))}</b>`;
+      /* Con la lluvia y el CAPE de cada hora (25-10-2026, suyo: «lo que pasa ahora y lo que viene en un rato: CAPE, viento,
+         lluvia… todo en un mismo sitio»), que con el resto plegado ya no están en otra parte de la pantalla. */
+      return `${et || `a las ${hh(x.date)}`} <b>racha ${esc(wtxt(x.gust, true))}</b>${has(x.prec) ? ` · ${esc(mmTxt(x.prec))} mm` : ''}${has(x.cape) ? ` · CAPE ${Math.round(x.cape)}` : ''}`;
     }).filter(Boolean);
-    if (cifras.length) trozos.push(`<span class="vc__c">Racha: ${cifras.join(' · ')}</span>`);
+    if (cifras.length) trozos.push(`<span class="vc__c">${cifras.join(' │ ')}</span>`);
     hc.hidden = !trozos.length;
     /* Cada trozo en su renglón: las franjas y la racha son dos cosas
        distintas, y unidas con « · » dejaban un punto colgando al final

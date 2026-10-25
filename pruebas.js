@@ -14847,6 +14847,11 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      && ['<small>ahora</small>', '<div class="tor__res">${resumenTorre(t.horas)}</div>', '${lineaLlegada}', '<div class="tor__medv">${medidoAhoraLinea(', 'avisoDeHoy(key(t.place), t.horas)', '<div class="tor__tl">${tiras}'].every(k => { const i = plantilla.indexOf(k); return i > 0 && i < iDet; })
      && /\$\{conOjo\} con OJO/.test(src) && /const dueno = d\.dueno\?\.nombre && !d\.apagado/.test(src));
   const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const vNow = html.slice(html.search(/<section class="view[^"]*" data-v="now">/), html.search(/<section class="view[^"]*" data-v="hours">/));
+  ok('Ahora: a la vista el veredicto con «Antes de salir»; lo demás (modelo, cifras, coinciden, ventana 48 h, perfil, detalles) plegado en «Ver más» («con esto me vale, todo lo demás sobra», 25-10)',
+     vNow.indexOf('id="verdict"') > 0 && vNow.indexOf('id="verdict"') < vNow.indexOf('<details class="card ahora__mas" id="ahoraMas">')
+     && ['id="msel"', 'id="kpis"', 'id="det"'].every(k => vNow.indexOf(k) > vNow.indexOf('id="ahoraMas"')) && /<\/details>\s*<\/section>/.test(vNow)
+     && /<b>racha \$\{esc\(wtxt\(x\.gust, true\)\)\}<\/b>\$\{has\(x\.prec\)[^\n]*CAPE \$\{Math\.round\(x\.cape\)\}/.test(src));
   ok('   y fuera «Quién acierta en tus estaciones» («esto sobra», 25-10): el bloque va oculto y ni se pide al servidor',
      /<div class="card" id="marcCard" hidden>\s*<h2 class="ch">Quién acierta en tus estaciones/.test(html) && /if \(!el \|\| el\.closest\('\[hidden\]'\)\) return;/.test(src));
 }

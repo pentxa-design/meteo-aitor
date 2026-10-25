@@ -3098,3 +3098,7 @@ body.sin-scroll{overflow:hidden}
 
 .tor__medv{grid-column:1/-1;font-size:0.875rem}
 .tor__medv .tor__med{display:block;margin:0}
+
+/* Ahora: lo demás plegado (25-10-2026) */
+.ahora__mas>summary{cursor:pointer;color:var(--dim);font-size:0.875rem;padding:2px 0}
+.ahora__mas[open]>summary{margin-bottom:10px}
