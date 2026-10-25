@@ -825,7 +825,9 @@ html[data-bloqueado]{overflow:hidden}
        el viento al refrescar. Esto lleva la cuenta de todas las veces, y
        por estación — nunca en promedio, que el error cambia de signo en
        ocho kilómetros. -->
-  <div class="card">
+  <!-- OCULTO el 25-10-2026, suyo: «esto sobra» · «esto no me sirve, ocupa». Mis estaciones es para ver de un vistazo; el recuento
+       se sigue apuntando por detrás (api/marcador) y se puede volver a enseñar quitando `hidden`. -->
+  <div class="card" id="marcCard" hidden>
     <h2 class="ch">Quién acierta en tus estaciones
       <small class="dim" id="marcHint"></small></h2>
     <p class="dim">Cada vez que abres la app, lo de arriba se apunta. Esto es

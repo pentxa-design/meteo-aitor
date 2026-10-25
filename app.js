@@ -2163,7 +2163,7 @@ async function contrastarConModelos(estaciones) {
       y de ahí salió el fallo del «tope de 9.000 m» que estuvo tres horas
       publicado. */
 async function cargarMarcador() {
-  const el = $('#marcador'); if (!el) return;
+  const el = $('#marcador'); if (!el || el.closest('[hidden]')) return;   // oculto (25-10-2026, «esto sobra»): ni se pide
   const hint = $('#marcHint');
   try {
     const r = await fetch('/api/marcador');
