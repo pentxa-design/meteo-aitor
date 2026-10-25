@@ -264,7 +264,9 @@ function trampa(fijo, hh) {
 
   /* La mar: la serie empieza a las 00:00 de HOY, como la de verdad. */
   const T3 = []; for (let i = 0; i < 72; i++) T3.push(new Date(hoy0.getTime() + i * 3600e3));
-  const ola   = T3.map((_, i) => (i === 1 ? 3.0 : i >= 24 ? 2.0 : 1.0));
+  /* Hoy 1,0 m y mañana 2,0 m POR EL RELOJ, no «las 24 primeras horas»: el 25-10-2026 (cambio de hora) el día tuvo 25 h, la
+     hora 24 eran las 23:00 de HOY y la guardia esperaba 1,0 donde la serie ya daba 2,0 (la app enseñaba bien la serie). */
+  const ola   = T3.map((d, i) => (i === 1 ? 3.0 : dia(d) !== dia(hoy0) ? 2.0 : 1.0));
   const fondo = T3.map(d => Math.round((d.getHours() + 1) * 10) / 100);   // 00:00→0,1 · 07:00→0,8 · 20:00→2,1
   const iAhora = T3.findIndex(d => dia(d) === dia(ahora) && d.getHours() === ahora.getHours());
   const current = { time: isoCon(ahora, OFF), interval: 900, wave_height: 1.0, wave_period: 9, wave_direction: 320,

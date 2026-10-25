@@ -787,6 +787,9 @@ const SOMBRA_ENCIMA = { 'hillshade-shadow-color': 'rgba(0,0,0,0.55)', 'hillshade
                         'hillshade-accent-color': 'rgba(0,0,0,0.25)', 'hillshade-exaggeration': 0.6, 'hillshade-illumination-direction': 315 };
 /* Las capas de color fuerte, más saturadas: con el relieve encima («todavía pálido, pero vas bien», 24-10, probado en su pantalla). */
 const VIVOS_FUERTES = { 'raster-saturation': 0.75, 'raster-contrast': 0.25 };   // todas desde el 24-10-2026 noche; antes la temperatura (24-10: «no se ve nada» al lado de AguaceroWx)   // y el geopotencial (24-10-2026, suyo: «sosa, desaturada, dale vida»)
+/* La única letra que el servidor de CARTO sirve tal cual (la de sus propios rótulos). Cualquier otra da 404 y MapLibre tira la
+   tesela ENTERA de esa fuente, no solo el texto: así se perdieron las isobaras (ver isobaras()). Toda capa de texto, con esta. */
+const LETRA_CARTO = ['Montserrat Medium', 'Open Sans Bold', 'Noto Sans Regular', 'HanWangHeiLight Regular', 'NanumBarunGothic Regular'];
 /* Desde qué zoom salen los nombres (ver masNombres): pueblos y aldeas antes que en CARTO, y más ciudades a escala de España. */
 const NOMBRES_DESDE = { pueblo: 6.5, aldea: 8.5, rangoCiudad: 10, regiones: 7 };
 /* Las escalas copiadas de AguaceroWx van con SUS colores, sin el refuerzo de saturación: con él su gris verdoso del 50 %
@@ -794,6 +797,24 @@ const NOMBRES_DESDE = { pueblo: 6.5, aldea: 8.5, rangoCiudad: 10, regiones: 7 };
 const COPIADAS_TAL_CUAL = new Set(['humedad', 'rocio', 'agua', 'radiacion']);
 /* De quién salen las isobaras cuando el modelo de la capa no publica la presión (AROME HD, GFS): el europeo de 9 km. */
 const ISO_PRESTADAS = 'ecmwf_ifs';
+/* ── UNA CAPA DE COLOR Y OTRA DE LÍNEAS, COMO AGUACEROWX (25-10-2026) ──────────────────────────────────────────────
+   Suyo: «me gusta su interfaz» · «sí, hazlo con una capa de color y otra de líneas». Allí se apilan capas sin límite; aquí,
+   a propósito, UNA de líneas encima del color: cada capa más es otra rejilla que descodificar, y con ECMWF HRES el mapa ya
+   se queda sin memoria al 5.º cambio de capa (medido el 30-08). Las líneas son teselas vectoriales (`contours`) en los
+   valores de `intervals`: isobaras cada 4 hPa (los cortes de la escala de presión), isotermas de 850 cada 4 °C y
+   geopotencial de 500 cada 60 m, rotulado en decámetros (576, 582…) como en AguaceroWx. */
+const LINEAS = {
+  iso:  { capa: 'pres',  nombre: 'Isobaras',   corto: 'isobaras',
+          titulo: 'Isobaras (presión a nivel del mar, cada 4 hPa) encima de la capa. Juntas = mucho viento; separadas = poco' },
+  /* `prestada`: de quién se piden si el modelo de la capa no las publica. MEDIDO el 25-10-2026 en sus latest.json: ECMWF HRES
+     (9 km) y ARPEGE solo dan la presión; AROME HD y GFS 13 km, nada de las tres; ECMWF 25 km, ICON, HARMONIE y GFS 25 km, las tres. */
+  t850: { capa: 't850',  nombre: 'Isotermas 850', corto: 'isotermas de 850 hPa', prestada: 'ecmwf_ifs025', intervals: [-24, -20, -16, -12, -8, -4, 0, 4, 8, 12, 16, 20, 24, 28, 32],
+          rotulo: ['concat', ['to-string', ['get', 'value']], '°'],
+          titulo: 'Isotermas de 850 hPa (aire a ~1500 m), cada 4 °C, encima de la capa: dónde entra el aire frío o el africano' },
+  z500: { capa: 'gh500', nombre: 'Geopot. 500', corto: 'geopotencial de 500 hPa', prestada: 'ecmwf_ifs025', intervals: Array.from({ length: 21 }, (_, k) => 4980 + 60 * k),
+          rotulo: ['to-string', ['round', ['/', ['to-number', ['get', 'value']], 10]]],
+          titulo: 'Geopotencial de 500 hPa (decámetros), cada 60 m, encima de la capa: vaguadas (bajo) y dorsales (alto)' },
+};
 /* Las isobaras encima de otra capa, con menos detalle: la presión es una superficie suave y así no se duplica el trabajo. */
 const ISO_ZMAX = 6;
 /* El radar observado, con fuerza (23-10-2026, suyo: «algo pálido los colores»): a 0,75 sobre el fondo Claro sus azules no se veían. */
@@ -2443,7 +2464,9 @@ const Maps = {
     /* Claves NUEVAS el 29-09-2026: las viejas podían guardar el «apagado»
        de cuando las flechas mentían, y entonces no volverían nunca. */
     this.verBarbas  = LS.get('tbarbs2', true);
-    this.verIsobaras = LS.get('tiso', false);   // isobaras encima de cualquier capa (24-10-2026)
+    /* Qué líneas van encima de la capa de color (25-10-2026, ver LINEAS); las isobaras del 24-10 siguen encendidas si lo estaban. */
+    this.lineas = LS.get('tlineas', LS.get('tiso', false) ? 'iso' : null);
+    if (this.lineas && !LINEAS[this.lineas]) this.lineas = null;
     this.verParticulas = LS.get('tpart2', true);
     this.verPeor = LS.get('tpeor', false);
     /* 17-09-2026, 10:50, suyo con el radar, el satélite y la
@@ -2998,6 +3021,7 @@ const Maps = {
     const q = new URLSearchParams({ variable, interpolation: interpolacionDe(L_) });
     if (L_?.arrows)   q.set('arrows', 'true');     // barbas de viento
     if (L_?.contours) q.set('contours', 'true');   // isobaras / isohipsas
+    if (L_?.contours && L_?.intervals) q.set('intervals', L_.intervals.join(','));   // dónde van las líneas (ver LINEAS)
     /* Degradado continuo entre cortes en las escalas cuyos cortes NO son
        listones suyos: reflectividad (bandas de 5 dBZ que dibujaban la
        malla, «se ve pixelado lo verde»), base y tope convectivos, tapa,
@@ -3497,7 +3521,15 @@ const Maps = {
          Las de Presión y Geopotencial salen solas; en el resto, con el botón «Isobaras»: presión a nivel del mar del MISMO
          modelo y la MISMA hora que pinta la capa. Si ese modelo no la publica, no se dibujan y se dice. */
       if (L_.contours) this.isobaras(url);
-      else if (this.verIsobaras) { const u = this.isoUrl(R); if (u) this.isobaras(u, ISO_ZMAX); }
+      else if (this.lineas) {
+        /* Si el modelo no publica esa variable se piden las del europeo, y su catálogo puede no estar cargado aún (25-10-2026:
+           con AROME HD las isotermas no salían y NO SE DECÍA). Se carga; y si ni así hay líneas, la barra lo dice. */
+        let u = this.isoUrl(R);
+        const prestada = LINEAS[this.lineas].prestada || ISO_PRESTADAS;
+        if (!u && !this.metaCache?.[prestada]) { try { await this.metaDe(prestada); } catch { /* sin catálogo: se dice abajo */ } u = this.isoUrl(R); }
+        this._sinLineas = u ? null : LINEAS[this.lineas].corto;
+        if (u) this.isobaras(u, ISO_ZMAX, LINEAS[this.lineas]);
+      } else this._sinLineas = null;
       this.costaEncima();
       /* Los nombres, legibles en cualquier capa: se rehacen aquí porque
          al cambiar de capa o de fondo el estilo se vuelve a montar. */
@@ -4040,18 +4072,22 @@ const Maps = {
      Los números salen de los glifos de CARTO, que son de fuera: sin
      cobertura se quedan las líneas sin etiquetar. Las líneas, que son el
      dato, se dibujan igual.                                            */
-  isobaras(url, zmax = 12) {
+  isobaras(url, zmax = 12, lineas = null) {
     try {
       if (this.map.getSource('isoSrc')) return;
       this.map.addSource('isoSrc', {
         type:'vector', tiles:[`${url}/{z}/{x}/{y}`], maxzoom:zmax });
-      const antes = this.firstLabelLayer();
+      /* ENCIMA del color (25-10-2026). Con `firstLabelLayer()` entraban detrás del mapa base, o sea DEBAJO de la capa de color:
+         medido en pantalla «isoBorde > isoLinea > isoLbl > hillLayer > omLayer», y con el color opaco no se veían. Era el
+         segundo fallo, además de la letra. Un solo ancla para las tres, para que no se den la vuelta entre ellas. */
+      const antes = this.firstLabelLayer(true);
       /* COMO WINDY Y METEOBLUE (24-10-2026, suyo: «las isobaras más profesionales, tipo Windy o Meteoblue», con sus capturas):
          línea FINA, sin el borde blanco grueso de antes, y el número pequeño encima. Oscura sobre el fondo claro (Meteoblue) y
          clara sobre el oscuro (Windy). El 1013, la presión media, un pelo más marcada, como hace Meteoblue. */
       const osc = this.base === 'oscuro';
       const tinta = osc ? '#e8eef8' : '#2b3446', halo = osc ? 'rgba(10,16,30,.85)' : 'rgba(255,255,255,.9)';
-      const media = ['all', ['>=', ['to-number', ['get', 'value']], 1012], ['<=', ['to-number', ['get', 'value']], 1014]];
+      const media = lineas?.capa === 't850' ? ['==', ['to-number', ['get', 'value']], 0]   // en las isotermas, la del 0 °C
+                  : ['all', ['>=', ['to-number', ['get', 'value']], 1012], ['<=', ['to-number', ['get', 'value']], 1014]];
       this.map.addLayer({ id:'isoBorde', type:'line', source:'isoSrc',
         'source-layer':'contours',
         layout:{ 'line-join':'round' },
@@ -4059,14 +4095,17 @@ const Maps = {
       this.map.addLayer({ id:'isoLinea', type:'line', source:'isoSrc',
         'source-layer':'contours',
         layout:{ 'line-join':'round', 'line-cap':'round' },
-        paint:{ 'line-color':tinta, 'line-width':['case', media, 1.6, 1.0], 'line-opacity':0.9 } }, antes);
+        paint:{ 'line-color':tinta, 'line-width':['case', media, 2.0, 1.4], 'line-opacity':0.95 } }, antes);   // 1,0 no se veía sobre el color opaco (25-10)
       this.map.addLayer({ id:'isoLbl', type:'symbol', source:'isoSrc',
         'source-layer':'contours',
         layout:{ 'symbol-placement':'line', 'symbol-spacing':320,
-                 'text-field':['to-string', ['get','value']], 'text-size':10,
-                 'text-font':['Open Sans Semibold','Arial Unicode MS Regular'],
+                 'text-field': lineas?.rotulo ?? ['to-string', ['get','value']], 'text-size':12,
+                 /* La letra de CARTO, que es la que su servidor tiene. Con «Open Sans Semibold» el servidor daba 404, MapLibre
+                    tiraba la tesela ENTERA —también las líneas— y NO SALIÓ NI UNA ISOBARA desde el 14-09 hasta el 25-10-2026
+                    (medido: la misma tesela pintaba 152 líneas con esta letra y 0 con la otra). */
+                 'text-font': LETRA_CARTO,
                  'text-allow-overlap':false, 'text-padding':6, 'text-keep-upright':true },
-        paint:{ 'text-color':tinta, 'text-halo-color':halo, 'text-halo-width':1.4 } },
+        paint:{ 'text-color':tinta, 'text-halo-color':halo, 'text-halo-width':2 } },
         antes);
     } catch (e) {
       // Sin isobaras se sigue viendo el color: no se tira la capa entera.
@@ -4445,7 +4484,8 @@ const Maps = {
     this.status(`${M.name} · ${M.res} · pasada de las ${ref} · ${T.length} pasos (${dias.toFixed(0)} días)${deAntes}`
       + (h > 1 ? ` · paso de ${h} h: ${this.layer === 'nieve' ? 'la nieve' : this.layer === 'tipo' ? 'la lluvia y la nieve' : 'la lluvia'} se enseña POR HORA (la suma de ${h} h ÷ ${h})` : '')
       + (this.usando?.sustituido ? ' · CAPA SUSTITUIDA' : '')
-      + (this.verIsobaras && this._isoDe ? ` · isobaras de ${this._isoDe} (${M.name} no publica la presión)` : '')
+      + (this.lineas && this._isoDe ? ` · ${LINEAS[this.lineas].corto} de ${this._isoDe} (${M.name} no ${this.lineas === 'iso' ? 'publica la presión' : 'la publica'})` : '')
+      + (this.lineas && this._sinLineas ? ` · SIN ${this._sinLineas.toUpperCase()}: ni ${M.name} ni ${TMODELS.find(m => m.id === (LINEAS[this.lineas].prestada || ISO_PRESTADAS))?.name || 'el europeo'} las tienen a esta hora` : '')
       /* Un modelo de ZONA deja en blanco lo que no cubre (22-10-2026: HARMONIE, media España sin color en «Viento 10 m»). */
       + (M.zona ? ' · modelo de zona: donde no pinta es que NO LLEGA, no que haya calma' : '')
       + (this._sinEncima ? ` · SIN ${this._sinEncima === 'snowfall_water_equivalent' ? 'NIEVE' : this._sinEncima.toUpperCase()}: este modelo no la publica, solo se pinta la lluvia` : ''));
@@ -5440,7 +5480,7 @@ const Maps = {
       if (!m.getSource('ciudadesSrc')) m.addSource('ciudadesSrc', { type: 'geojson', data: 'data/ciudades.geojson' });
       if (!m.getLayer('ciudadesPlace')) {
         m.addLayer({ id: 'ciudadesPlace', type: 'symbol', source: 'ciudadesSrc', maxzoom: NOMBRES_DESDE.pueblo,
-          layout: { 'text-field': ['get', 'n'], 'text-font': ['Montserrat Medium', 'Open Sans Bold', 'Noto Sans Regular', 'HanWangHeiLight Regular', 'NanumBarunGothic Regular'],
+          layout: { 'text-field': ['get', 'n'], 'text-font': LETRA_CARTO,
                     'text-size': ['interpolate', ['linear'], ['zoom'], 3, 10, 6, 12], 'symbol-sort-key': ['get', 'r'],
                     'icon-image': 'circle-11', 'icon-size': 0.4, 'text-anchor': 'left', 'text-offset': [0.6, 0], 'text-padding': 1 } });
       }
@@ -6479,23 +6519,29 @@ const Maps = {
    ellos «Peor 12 h». Los tres botones solo salen en la capa que los usa. */
   /** La plantilla de la presión con isobaras (`contours=true`) del modelo que pinta, a la hora mirada. */
   isoUrl(R) {
-    const LP = TLAYERS.find(l => l.id === 'pres');
-    if (!R?.meta || !LP) return null;
+    const def = LINEAS[this.lineas] || LINEAS.iso;
+    const base = TLAYERS.find(l => l.id === def.capa);
+    if (!R?.meta || !base) return null;
+    /* Solo las líneas: sin la escala de color de la capa (no se pinta) y con sus valores, si los lleva. */
+    const LP = { id: base.id, v: base.v, contours: true, intervals: def.intervals };
     /* SI EL MODELO NO PUBLICA LA PRESIÓN, LA DEL EUROPEO (24-10-2026). Su captura: AROME HD con «Isobaras» y «Variable:
        pressure_msl not found» en el cartel de trozos sin cargar, y el mapa lentísimo de reintentos. AROME HD y GFS no la dan
        en las teselas (MEDIDO en sus latest.json). Se piden las de ECMWF HRES a la MISMA hora, y se dice en la barra. */
     const tiene = m => !Array.isArray(m?.variables) || m.variables.includes(LP.v);
     this._isoDe = null;
     if (tiene(R.meta)) return this.omUrl(LP.v, this.t, R.modelo, R.meta, LP);
-    const alt = this.metaCache?.[ISO_PRESTADAS], vt = R.meta.valid_times?.[this.t];
+    const prestada = def.prestada || ISO_PRESTADAS;
+    const alt = this.metaCache?.[prestada], vt = R.meta.valid_times?.[this.t];
     if (!alt || !tiene(alt) || !vt) return null;
     const i = (alt.valid_times || []).findIndex(x => new Date(x).getTime() === new Date(vt).getTime());
     if (i < 0) return null;
-    this._isoDe = TMODELS.find(m => m.id === ISO_PRESTADAS)?.name || ISO_PRESTADAS;
-    return this.omUrl(LP.v, i, ISO_PRESTADAS, alt, LP);
+    this._isoDe = TMODELS.find(m => m.id === prestada)?.name || prestada;
+    return this.omUrl(LP.v, i, prestada, alt, LP);
   },
-  setIsobaras(on) {
-    this.verIsobaras = !!on; LS.set('tiso', this.verIsobaras);
+  /** Elige las líneas de encima (iso, t850, z500) o ninguna; pulsar la que ya está la quita. */
+  setLineas(cual) {
+    this.lineas = (cual && cual !== this.lineas && LINEAS[cual]) ? cual : null;
+    LS.set('tlineas', this.lineas); LS.set('tiso', false);
     this.ui(); this.apply();
   },
   setBarbas(on) {
@@ -6526,6 +6572,13 @@ const Maps = {
            data-l="${l.id}" title="${esc(l.desc)}${this.propia(l) ? '' : ' · no la publica este modelo: se mostrará con otro'}"
            >${l.name}${this.propia(l) ? '' : '<i>*</i>'}</button>`).join('') +
       `</div>`).join('');
+    /* Qué es el asterisco, dicho a la vista (25-10-2026, sus capturas de «Radiación solar *»): solo lo decía el título al pasar
+       el ratón, y en el móvil no hay ratón. En su propio renglón: dentro de la fila de capas, que se desplaza de lado, no se vería. */
+    const nota = document.querySelector('#mapLayersNota');
+    if (nota) {
+      nota.hidden = !disp.some(l => !this.propia(l));
+      nota.innerHTML = `<i>*</i> ${esc(TMODELS.find(m => m.id === this.model)?.name || 'Este modelo')} no publica esa capa: si la pulsas se pinta con otro modelo, y abajo se dice con cuál.`;
+    }
 
     /* ── EL RATÓN AVISA ANTES QUE EL CLIC ─────────────────────────────
        Suyo, 31-08-2026: *«pero tarda en cargar mucho»* — cambiar de capa
@@ -6569,7 +6622,10 @@ const Maps = {
       `<button class="mbtn${this.verValores ? ' is-on' : ''}" data-tv="1" title="Números del modelo sobre las ciudades">Valores</button>` +
       /* Isobaras encima de cualquier capa del modelo (24-10-2026); en las observadas (radar, satélite, Windy) no hay modelo que las dé. */
       (L_act?.v && !L_act?.contours
-        ? `<button class="mbtn${this.verIsobaras ? ' is-on' : ''}" data-tiso="1" title="Isobaras (presión a nivel del mar, cada 4 hPa) del mismo modelo, encima de la capa. Juntas = mucho viento; separadas = poco">≈ Isobaras</button>`
+        /* Con su rótulo «Líneas», como Fondo y Paso: «Geopotencial 500 viene en 2 sitios» (suyo, 25-10). Uno es la capa de color y
+           este, sus LÍNEAS para poner encima de otra; sin el rótulo parecía la misma cosa repetida. */
+        ? `<span class="msel__k">Líneas</span>` + Object.entries(LINEAS).filter(([, d]) => d.capa !== L_act.id)
+            .map(([k, d]) => `<button class="mbtn${this.lineas === k ? ' is-on' : ''}" data-tlin="${k}" title="${esc(d.titulo)}. Del mismo modelo y la misma hora que la capa. Pulsa otra vez para quitarlas">${d.nombre}</button>`).join('')
         : '') +
       /* Flechas, Movimiento y Peor 12 h (29-09-2026): SOLO en la capa que
          los usa. Un botón que no hace nada es de los que hacen dudar de

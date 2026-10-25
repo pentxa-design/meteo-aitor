@@ -2933,7 +2933,8 @@ ok('y manda recargar', /recargar/.test(sello.txt));
 ok('marcado como viejo', sello.clase === 'viejo');
 
 /* EL CASO DE VERDAD: la app abierta desde anoche. */
-S.parteCuando = T(21, 4) - 86400000;
+/* AYER a las 21:04 del RELOJ, no «menos 24 h»: el 25-10-2026 (cambio de hora) el día tuvo 25 h y la resta daba las 22:04. */
+S.parteCuando = (d => { d.setDate(d.getDate() - 1); return d.getTime(); })(new Date(T(21, 4)));
 sello = selloParte(T(7, 10));
 ok('un parte de AYER lo dice con todas las letras',
    /de AYER a las 21:04/.test(sello.txt), sello.txt);
@@ -14266,17 +14267,33 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
     M.metaCache = { ecmwf_ifs: { reference_time: '2026-10-24T00:00:00Z', variables: ['pressure_msl'], valid_times: ['2026-10-24T10:00Z', '2026-10-24T11:00Z', '2026-10-24T12:00Z'] } };
     var uArome = M.isoUrl({ modelo: 'meteofrance_arome_france_hd', meta: { reference_time: '2026-10-24T05:00:00Z', variables: ['precipitation'], valid_times: ['2026-10-24T11:00Z', '2026-10-24T12:00Z'] } });
     var deArome = M._isoDe;
+    /* Como en sus latest.json del 25-10-2026: el ECMWF de 9 km NO trae la T850; el de 25 km, sí. */
+    M.lineas = 't850'; M.metaCache.ecmwf_ifs025 = { reference_time: '2026-10-24T00:00:00Z', variables: ['pressure_msl', 'temperature_850hPa'], valid_times: ['2026-10-24T12:00Z'] };
+    var uT850 = M.isoUrl({ modelo: 'meteofrance_arome_france_hd', meta: { reference_time: '2026-10-24T05:00:00Z', variables: ['precipitation'], valid_times: ['2026-10-24T11:00Z', '2026-10-24T12:00Z'] } });
+    M.lineas = 'z500';
+    var uZ500 = M.isoUrl({ modelo: 'ecmwf_ifs', meta: { reference_time: '2026-10-24T00:00:00Z', valid_times: ['2026-10-24T11:00Z', '2026-10-24T12:00Z'] } });
+    M.lineas = null;
   } catch (e) { err = e; }
   const Mx = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
   ok('con otra capa puesta, las isobaras piden la PRESIÓN con sus líneas, del mismo modelo y la misma hora (12:00)',
      !err && /ecmwf_ifs\/2026\/10\/24\/0000Z\/2026-10-24T1200\.om\?/.test(u || '') && /variable=pressure_msl/.test(u) && /contours=true/.test(u), err ? String(err) : u);
   ok('   con AROME HD, que no publica la presión, salen las del EUROPEO a la misma hora (no se pide lo que no existe) y se dice',
      !err && /ecmwf_ifs\/2026\/10\/24\/0000Z\/2026-10-24T1200\.om\?/.test(uArome || '') && deArome === 'ECMWF HRES'
-     && /isobaras de \$\{this\._isoDe\} \(\$\{M\.name\} no publica la presión\)/.test(Mx), err ? String(err) : `${uArome} · ${deArome}`);
+     && /\$\{LINEAS\[this\.lineas\]\.corto\} de \$\{this\._isoDe\}/.test(Mx), err ? String(err) : `${uArome} · ${deArome}`);
+  ok('toda capa de texto del mapa usa la letra de CARTO (con «Open Sans Semibold» el servidor daba 404 y no salió NI UNA isobara del 14-09 al 25-10)',
+     (Mx.match(/'text-font'\s*:\s*([^,\n]+)/g) || []).every(t => /LETRA_CARTO/.test(t))
+     && /const LETRA_CARTO = \['Montserrat Medium', 'Open Sans Bold'/.test(Mx) && (Mx.match(/'text-font'/g) || []).length >= 2,
+     (Mx.match(/'text-font'\s*:\s*([^,\n]+)/g) || []).join(' | '));
+  ok('una capa de color y otra de LÍNEAS (25-10-2026, «sí»): isotermas de 850 cada 4 °C y geopotencial de 500 cada 60 m, con sus valores pedidos a la librería',
+     !err && /variable=temperature_850hPa/.test(uT850 || '') && /contours=true/.test(uT850) && /intervals=-24%2C-20%2C[^&]*%2C0%2C4%2C/.test(uT850)
+     && /ecmwf_ifs025\/2026\/10\/24\/0000Z\/2026-10-24T1200\.om\?/.test(uT850)
+     && /variable=geopotential_height_500hPa/.test(uZ500 || '') && /intervals=4980%2C5040%2C/.test(uZ500) && !/MARCA|escala=/.test(uZ500), err ? String(err) : `${uT850} · ${uZ500}`);
   ok('   y se dibujan en apply() y siguen a la hora en setT(); el botón, solo en capas de modelo sin líneas propias',
-     /else if \(this\.verIsobaras\) \{ const u = this\.isoUrl\(R\); if \(u\) this\.isobaras\(u, ISO_ZMAX\); \}/.test(Mx)
-     && /const ui = L_\.contours \? url : this\.isoUrl\(this\.usando\)/.test(Mx) && /\(L_act\?\.v && !L_act\?\.contours\s*\? `<button class="mbtn\$\{this\.verIsobaras/.test(Mx)
-     && /if \(b\.dataset\.tiso\) Maps\.setIsobaras\(!Maps\.verIsobaras\);/.test(src));
+     /let u = this\.isoUrl\(R\);[\s\S]{0,400}await this\.metaDe\(prestada\)[\s\S]{0,200}this\._sinLineas = u \? null : LINEAS\[this\.lineas\]\.corto;\s*if \(u\) this\.isobaras\(u, ISO_ZMAX, LINEAS\[this\.lineas\]\);/.test(Mx)
+     && /SIN \$\{this\._sinLineas\.toUpperCase\(\)\}/.test(Mx)
+     && /const ui = L_\.contours \? url : this\.isoUrl\(this\.usando\)/.test(Mx) && /\(L_act\?\.v && !L_act\?\.contours[\s\S]{0,400}\? `<span class="msel__k">Líneas<\/span>` \+ Object\.entries\(LINEAS\)/.test(Mx)
+     && /const antes = this\.firstLabelLayer\(true\);/.test(Mx.slice(Mx.indexOf('isobaras(url, zmax'), Mx.indexOf('isobaras(url, zmax') + 1200))
+     && /data-tlin="\$\{k\}"/.test(Mx) && /if \(b\.dataset\.tlin\) Maps\.setLineas\(b\.dataset\.tlin\);/.test(src));
 }
 
 /* ═══ EL APARATO VA POR ENCIMA DE LA PREVISIÓN (23-10-2026) ══════════════════
@@ -14742,6 +14759,31 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
    ═══════════════════════════════════════════════════════════════════ */
 /* Lo que quedó en marcha (el GPS) se espera; y al acabar se SALE, que un
    temporizador suelto mantenía el proceso 11,5 s más (27-09-2026). */
+/* ═══ EL TÍTULO DICE DE CUÁNDO, Y EL OJO DICE POR QUÉ (25-10-2026) ═══════════════════════
+   Su captura de BI BERMEO: «Nada por encima de tus listones» y debajo «OJO» dos veces sin motivo: «este texto, ojo… me
+   confunde». Se EJECUTAN tituloVeredicto() y motivosDeFranja() con ese caso. */
+{
+  grupo('El veredicto dice de cuándo habla y cada OJO dice su motivo');
+  let r = null, err = null;
+  try {
+    const fn = new Function(sacar('function tituloVeredicto(st, franjas = []) {') + ';' + sacar('function motivosDeFranja(f, hs) {')
+      + '; return { tituloVeredicto, motivosDeFranja };')();
+    const H = (h, st, txt) => ({ date: new Date(2026, 9, 25, h), st, reasons: txt ? [{ s: st, txt }] : [] });
+    const hs = [H(12, 'go'), H(13, 'warn', 'Ráfaga 52 km/h — por encima de 45 km/h'), H(14, 'warn', 'Ráfaga 50 km/h — por encima de 45 km/h'),
+                H(15, 'go'), H(17, 'warn', 'Precipitación 0,6 mm/h'), H(18, 'warn', 'Sirimiri (llovizna) — poca agua')];
+    const fr = [{ st: 'go', ini: hs[0].date, fin: hs[0].date }, { st: 'warn', ini: hs[1].date, fin: hs[2].date },
+                { st: 'go', ini: hs[3].date, fin: hs[3].date }, { st: 'warn', ini: hs[4].date, fin: hs[5].date }];
+    r = { titulo: fn.tituloVeredicto('go', fr), soloAhora: fn.tituloVeredicto('go', [fr[0]]),
+          m1: fn.motivosDeFranja(fr[1], hs), m2: fn.motivosDeFranja(fr[3], hs), m0: fn.motivosDeFranja(fr[0], hs) };
+  } catch (e) { err = e; }
+  ok('«Ahora: nada por encima de tus listones; más tarde, algo los roza» (no «Nada…» a secas con OJO debajo)',
+     !err && r.titulo === 'Ahora: nada por encima de tus listones; más tarde, algo los roza' && r.soloAhora === 'Ahora: nada por encima de tus listones',
+     err ? String(err) : JSON.stringify(r));
+  ok('   y cada OJO con su motivo: «racha» de 13 a 15, «lluvia y sirimiri» de 17 a 19; un tramo SIN NADA no lleva motivo',
+     !err && r.m1 === 'racha' && r.m2 === 'lluvia y sirimiri' && r.m0 === ''
+     && /\$\{VT\[f\.st\]\}\$\{por \? `: \$\{esc\(por\)\}` : ''\}/.test(src) && /'así hasta las'/.test(src), JSON.stringify(r));
+}
+
 Promise.all(globalThis.__pendientes || []).then(() => {
 console.log(`\n  ${pasadas} bien, ${fallos} mal\n`);
 if (fallos) {

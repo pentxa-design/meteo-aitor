@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.24-2256';
+const BUILD = '2026.10.25-1307';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -4962,10 +4962,11 @@ function renderTower() {
   $('#vBadge').className = 'verdict__badge';
   $('#vBadge').textContent = VT[c.st];
   $('#vTitle').className = '';
-  $('#vTitle').textContent = {
-    go:'Nada por encima de tus listones', warn:'Algo roza tus listones',
-    no:'Algo por encima de tus listones', nd:'Faltan datos del modelo',
-  }[c.st];
+  /* ── EL TÍTULO DICE DE CUÁNDO HABLA (25-10-2026) ─────────────────────────────
+     Suyo, con «Nada por encima de tus listones» encima y «OJO» en los tramos de debajo: «este texto, ojo… me confunde».
+     El título era de la hora en curso y los tramos de las horas siguientes, y nada lo decía. Ahora empieza por «Ahora» y,
+     si más tarde algo roza o pasa sus listones, lo añade. */
+  $('#vTitle').textContent = tituloVeredicto(c.st, franjasDeEstado(S.data.hours));
   /* ── SIN REPETIR EL TÍTULO ──────────────────────────────────────
      Suyo, 02-09-2026, con la pantalla delante: arriba «Nada por encima
      de tus listones», debajo «Nada llega a tus listones», debajo «SIN
@@ -5044,9 +5045,11 @@ function renderTower() {
     const franjas = franjasDeEstado(S.data.hours);
     const fr = franjas.map((f, i) => {
       const fin = new Date(f.fin.getTime() + 36e5);
-      const cab = i === 0 ? 'ahora hasta' : `de ${cuando(f.ini)} a`;
+      /* «así hasta las 13:00»: sigue al título («Ahora: …»), que ya dice cómo está; antes «ahora hasta 13:00» quedaba vacío. */
+      const cab = (i === 0 && f.st === c.st) ? 'así hasta las' : i === 0 ? 'ahora hasta' : `de ${cuando(f.ini)} a`;
+      const por = motivosDeFranja(f, S.data.hours);
       const et = (i === 0 && f.st === c.st) ? ''
-        : ` <b data-s="${f.st}">${VT[f.st]}</b>`;
+        : ` <b data-s="${f.st}">${VT[f.st]}${por ? `: ${esc(por)}` : ''}</b>`;
       return `${cab} ${cuando(fin)}${et}`;
     });
     if (fr.length) trozos.push(fr.join(' · '));
@@ -13354,6 +13357,32 @@ function enHoras(hs, n) {
 
    Empieza en la hora EN CURSO, no en la siguiente: es «lo que hay ahora
    mismo» y sigue desde ahí.                                            */
+/** El título del veredicto: de AHORA, y si más tarde algo roza o pasa sus listones, se dice (25-10-2026). */
+function tituloVeredicto(st, franjas = []) {
+  const ahora = { go: 'Ahora: nada por encima de tus listones', warn: 'Ahora: algo roza tus listones',
+                  no: 'Ahora: algo por encima de tus listones', nd: 'Ahora: faltan datos del modelo' }[st] || '';
+  const luego = franjas.slice(1).map(f => f.st);
+  if (st === 'go' && luego.includes('no')) return `${ahora}; más tarde, algo los pasa`;
+  if (st === 'go' && luego.includes('warn')) return `${ahora}; más tarde, algo los roza`;
+  return ahora;
+}
+
+/** Por qué una franja va en OJO o FUERTE, en una o dos palabras («racha», «lluvia y tormenta»), de los motivos de sus horas. */
+function motivosDeFranja(f, hs) {
+  if (!f || (f.st !== 'warn' && f.st !== 'no')) return '';
+  const corto = t => /^Ráfaga|^Racha/i.test(t) ? 'racha' : /^Viento/i.test(t) ? 'viento'
+    : /^Sirimiri/i.test(t) ? 'sirimiri' : /^Precipitaci|lluvia|^Llueve|chubasco/i.test(t) ? 'lluvia'
+    : /rayo|tormenta|CAPE|tapa|elevación/i.test(t) ? 'tormenta' : /niev|hielo|isocero/i.test(t) ? 'nieve o hielo'
+    : /^Visibilidad|niebla/i.test(t) ? 'niebla' : /^Sensación|frío/i.test(t) ? 'frío' : /calor/i.test(t) ? 'calor' : 'ver la hora';
+  const ini = f.ini.getTime(), fin = f.fin.getTime(), vistos = [];
+  for (const h of hs || []) {
+    const t = h.date.getTime();
+    if (t < ini || t > fin) continue;
+    for (const r of h.reasons || []) if (r.s === f.st) { const k = corto(r.txt); if (!vistos.includes(k)) vistos.push(k); }
+  }
+  return vistos.slice(0, 2).join(' y ');
+}
+
 function franjasDeEstado(hs, cuantas = 12) {
   if (!hs?.length) return [];
   const i0 = hs.findIndex(h => h.date.getTime() + 36e5 > Date.now());
@@ -19204,7 +19233,7 @@ function bind() {
        traído de la API de pronóstico (se quitaron el 21-09 porque la
        librería de teselas no sabe dar la componente norte-sur). */
     if (b.dataset.tbb) Maps.setBarbas(!Maps.verBarbas);
-    if (b.dataset.tiso) Maps.setIsobaras(!Maps.verIsobaras);
+    if (b.dataset.tlin) Maps.setLineas(b.dataset.tlin);   // isobaras, isotermas de 850 o geopotencial de 500 encima del color
     if (b.dataset.tmv) Maps.setParticulas(!Maps.verParticulas);
     if (b.dataset.tpr) Maps.setPeor(!Maps.verPeor);
     if (b.dataset.tl) Maps.setRayos(!Maps.verRayos);

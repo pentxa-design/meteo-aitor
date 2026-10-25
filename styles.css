@@ -897,6 +897,9 @@ canvas.mvals{width:100%;height:100%;display:block}
 /* Capa que este modelo no publica */
 .ovb.is-alt i{font-style:normal;color:var(--warn);font-weight:800;margin-left:3px}
 .ovb.is-alt{border-style:dashed}
+.lgrp__nota{margin:0 13px 6px;font-size:0.75rem;color:var(--faint)}
+.lgrp__nota[hidden]{display:none}
+.lgrp__nota i{font-style:normal;color:var(--warn);font-weight:800}
 
 /* Aviso de preparación de la animación */
 .mprec{position:absolute;right:14px;bottom:14px;z-index:6;pointer-events:none;
