@@ -3090,7 +3090,7 @@ ok('en mm/h nada se pinta ni se rotula por debajo de 0,1, y los rótulos llevan 
   const claro = c => { const m = typeof c === 'string' && c.match(/^#([0-9a-f]{6})$/i); if (!m) return true;
     const [r, g, b] = [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)); return 0.299 * r + 0.587 * g + 0.114 * b >= 170; };
   const corre = (M, on) => { try { new Function(`return function(on) ${cuerpo}`)().call(M, on); return true; } catch { return false; } };
-  const M = { map: nuevoMapa() };
+  const M = { map: nuevoMapa(), fuenteBase: () => 'carto' };
   const ok1 = !!cuerpo && corre(M, true);
   const puestas = { ...M.map.pintura };
   corre(M, false);
@@ -11402,7 +11402,7 @@ grupo('El mapa se ve debajo del color: costa por encima, opacidad 0,75 y el «no
 {
   const M = mapsSrc;
   ok('la línea de costa va por encima del color: se ve España aunque la capa lo tape todo',
-     /costaEncima\(\) \{/.test(M) && /id: 'costaLayer', type: 'line', source: 'carto', 'source-layer': 'water'/.test(M)
+     /costaEncima\(\) \{/.test(M) && /id: 'costaLayer', type: 'line', source: this\.fuenteBase\(\), 'source-layer': 'water'/.test(M)
      && (M.match(/this\.costaEncima\(\);/g) || []).length >= 1
      && M.indexOf('this.costaEncima();') > M.indexOf("this.map.addLayer({\n        id:'omLayer'"),
      'los nombres ya iban por encima; la costa no, y sin costa no se sabe dónde está uno');
@@ -11519,7 +11519,7 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
      /const ESCALAS_SUAVES = new Set\(\[[^\]]*'nubes'[^\]]*\]\);/.test(M));
   ok('con una capa de nubes, el suelo se pone en tono tierra y el mar en azul acero (solo en Color desde el 19-10-2026); en Oscuro y Claro no',
      /sueloParaNubes\(on\) \{/.test(M) && /if \(!on \|\| this\.base === 'oscuro' \|\| this\.base === 'claro'\) \{ quitar\(\); return; \}/.test(M)
-     && /id:'sueloLayer', type:'background'/.test(M) && /id:'marLayer', type:'fill', source:'carto', 'source-layer':'water'/.test(M),
+     && /id:'sueloLayer', type:'background'/.test(M) && /id:'marLayer', type:'fill', source:this\.fuenteBase\(\), 'source-layer':'water'/.test(M),
      'una nube blanca sobre tierra blanca (#fafaf8) no existe');
   const iApply = M.indexOf('async apply() {'), iOm = M.indexOf("id:'omLayer', type:'raster', source:'omSrc'", iApply);
   const iSuelo = M.indexOf("this.sueloParaNubes(ESCALAS_BLANCAS.has(L_.escala));", iApply);
@@ -11567,7 +11567,7 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
   const nLineas = costa?.features?.[0]?.geometry?.coordinates?.length ?? 0;
   ok('sin rayas de tesela en el mar: la costa de CARTO solo desde zoom 7 y, por debajo, la de Natural Earth (data/costa.geojson, en la caché del móvil)',
      /const COSTA_DETALLE_DESDE = 7;/.test(M)
-     && /source: 'carto', 'source-layer': 'water',\s*minzoom: COSTA_DETALLE_DESDE/.test(M)
+     && /source: this\.fuenteBase\(\), 'source-layer': 'water', filter: \['==', \['geometry-type'\], 'Polygon'\],\s*minzoom: COSTA_DETALLE_DESDE/.test(M)
      && /id: 'costaLayerNE', type: 'line', source: 'costaNE',\s*maxzoom: COSTA_DETALLE_DESDE/.test(M)
      && nLineas > 50 && /'\.\/data\/costa\.geojson'/.test(fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf8')),
      `líneas de costa: ${nLineas}`);
@@ -14103,7 +14103,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
     const capasMN = ['place_town', 'place_villages', 'place_state', 'place_city_dot_r7', 'place_city_dot_r4', 'place_city_dot_r2', 'place_country_1'].map(id => ({ id, type: 'symbol' }));
     const M2 = Object.create(M);
     M2.map = { getLayer: id => capasMN.find(l => l.id === id) || pedido.capas.find(l => l.id === id), getSource: id => pedido.fuentes.includes(id),
-      getStyle: () => ({ layers: capasMN }), setLayerZoomRange: (id, a, b) => { pedido.rangos[id] = [a, b]; }, setFilter: () => {},
+      getStyle: () => ({ layers: capasMN }), setLayerZoomRange: (id, a, b) => { pedido.rangos[id] = [a, b]; }, setFilter: () => {}, getFilter: () => ['==', 'class', 'city'],
       setLayoutProperty: (id, k, v) => { if (k === 'text-field') pedido.texto[id] = JSON.stringify(v); },
       addSource: (id, o) => { pedido.fuentes.push(id); pedido.datos = o.data; }, addLayer: o => pedido.capas.push(o) };
     M2.masNombres();
@@ -14111,13 +14111,27 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
     /* El vigilante de lo de encima (25-10-2026): costa DEBAJO del color y relieve apagado → los recoloca y lo apunta. */
     const M3 = Object.create(M); let llamado = 0;
     const capas3 = [{ id: 'costaLayerNE' }, { id: 'omLayer' }, { id: 'sombraLayer' }, { id: 'fronteraPaisLayer' }];
-    M3.map = { getStyle: () => ({ layers: capas3 }), getSource: id => id === 'carto', getLayoutProperty: () => 'none', getLayer: () => true };
+    M3.map = { getStyle: () => ({ layers: capas3, sources: { protomaps: { type: 'vector' } } }), getSource: () => true, getLayoutProperty: () => 'none', getLayer: () => true };
     M3.layer = 'temp'; M3.terrain = true; M3.costaEncima = () => { llamado++; }; M3.relieve = () => {}; M3.status = () => {}; M3._arreglosEncima = 0;
     M3.vigilarEncima();
     r.vigila = { llamado, mal: M3._encimaMal || '' };
     const M4 = Object.create(M3); M4.map = { ...M3.map, getStyle: () => ({ layers: [{ id: 'omLayer' }, { id: 'sombraLayer' }, { id: 'costaLayerNE' }, { id: 'fronteraPaisLayer' }] }), getLayoutProperty: () => 'visible' };
+    M4.map.getStyle = () => ({ layers: [{ id: 'omLayer' }, { id: 'sombraLayer' }, { id: 'costaLayerNE' }, { id: 'fronteraPaisLayer' }], sources: { protomaps: { type: 'vector' } } });
     M4._encimaMal = null; M4._arreglosEncima = 0; let llamado4 = 0; M4.costaEncima = () => { llamado4++; }; M4.vigilarEncima();
     r.vigilaBien = llamado4;
+    /* EL PORQUÉ del 25-10-2026: CARTO pasó a Protomaps. Con un estilo así, costa y fronteras tienen que montarse igual. */
+    const puestas5 = [];
+    const capas5 = [{ id: 'water', type: 'fill', source: 'protomaps', 'source-layer': 'water' },
+      { id: 'boundary_country_inner', type: 'line', source: 'protomaps', 'source-layer': 'boundaries', filter: ['==', ['get', 'kind_detail'], 2] },
+      { id: 'boundary_state', type: 'line', source: 'protomaps', 'source-layer': 'boundaries', filter: ['==', ['get', 'kind_detail'], 4] },
+      { id: 'omLayer', type: 'raster' }, { id: 'place_town', type: 'symbol', layout: { 'text-font': ['Montserrat SemiBold', 'Open Sans Bold'] } }];
+    const M5 = Object.create(M);
+    M5.map = { getStyle: () => ({ layers: capas5, sources: { protomaps: { type: 'vector' } } }), getSource: id => id === 'costaNE' ? null : true,
+      getLayer: id => capas5.find(l => l.id === id) || puestas5.find(l => l.id === id), addSource: () => {}, addLayer: o => puestas5.push(o),
+      moveLayer: () => {}, setPaintProperty: () => {}, setLayoutProperty: () => {}, removeLayer: () => {} };
+    M5.layer = 'temp'; M5.base = 'claro'; M5.relieveSegunCapa = () => {};
+    M5.costaEncima();
+    r.proto = { fuente: M5.fuenteBase(), letra: M5.letraBase(), capas: puestas5.map(l => `${l.id}:${l.source}:${l['source-layer'] || ''}:${JSON.stringify(l.filter || '')}`) };
     r.mar = [...demSinMar(new Uint8ClampedArray([120, 48, 0, 255, 131, 232, 0, 255, 127, 255, 255, 255, 128, 0, 0, 255]))];
     /* El orden de su pantalla (24-10): costa YA colocada debajo del color. Lo de «encima» tiene que salir DETRÁS de omLayer. */
     capas = [{ id: 'fondo', type: 'background' }, { id: 'agua', type: 'fill' }, { id: 'hillLayer', type: 'raster' },
@@ -14137,6 +14151,10 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('   y con el satélite vuelve DEBAJO, con su pintura de siempre (la foto ya trae el terreno)',
      !err && r.orden2.indexOf('hillLayer') < r.orden2.indexOf('omLayer') && r.p2['raster-brightness-max'] === 1 && r.v2.hillLayer === 'visible' && r.v2.sombraLayer === 'none', JSON.stringify(r));
   const Mf = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  ok('con el estilo NUEVO de CARTO (Protomaps: fuente «protomaps», fronteras en «boundaries») se montan la costa y las fronteras, y la letra es la de sus rótulos — el porqué de «sin costa ni relieve en ninguna capa» (25-10)',
+     !err && r.proto.fuente === 'protomaps' && r.proto.letra[0] === 'Montserrat SemiBold'
+     && r.proto.capas.some(c => /^costaLayer:protomaps:water:/.test(c)) && r.proto.capas.some(c => c.startsWith('fronteraPaisLayer:protomaps:boundaries:') && /kind_detail/.test(c))
+     && !/source: 'carto'|getSource\('carto'\)/.test(Mf), JSON.stringify(r?.proto));
   ok('el vigilante del mapa: si la costa queda DEBAJO del color o el relieve apagado, los recoloca y lo apunta en la barra; si todo está bien, no toca nada',
      !err && r.vigila.llamado === 1 && /costaLayerNE debajo del color/.test(r.vigila.mal) && /relieve apagado/.test(r.vigila.mal) && r.vigilaBien === 0
      && /this\.map\.on\('idle', \(\) => this\.vigilarEncima\(\)\)/.test(Mf), JSON.stringify([r?.vigila, r?.vigilaBien]));
@@ -14301,7 +14319,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      /const tinta = this\.base === 'oscuro' \? '#e8eef8' : '#1f2a44'/.test(Mx) && /lluvia \? 'rgba\(18,38,66,0\.85\)' : 'rgba\(0,0,0,0\.9\)'/.test(Mx)
      && /\['zoom'\], 4, 1\.6, 7, 2\.1, 10, 2\.8\]/.test(Mx) && /\['fronteraProvLayer', 6,/.test(Mx));
   ok('toda capa de texto del mapa usa la letra de CARTO (con «Open Sans Semibold» el servidor daba 404 y no salió NI UNA isobara del 14-09 al 25-10)',
-     (Mx.match(/'text-font'\s*:\s*([^,\n]+)/g) || []).every(t => /LETRA_CARTO/.test(t))
+     (Mx.match(/'text-font'\s*:\s*([^,\n]+)/g) || []).every(t => /this\.letraBase\(\)/.test(t))
      && /const LETRA_CARTO = \['Montserrat Medium', 'Open Sans Bold'/.test(Mx) && (Mx.match(/'text-font'/g) || []).length >= 2,
      (Mx.match(/'text-font'\s*:\s*([^,\n]+)/g) || []).join(' | '));
   ok('una capa de color y otra de LÍNEAS (25-10-2026, «sí»): isotermas de 850 cada 4 °C y geopotencial de 500 cada 60 m, con sus valores pedidos a la librería',

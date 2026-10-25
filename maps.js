@@ -4112,7 +4112,7 @@ const Maps = {
                  /* La letra de CARTO, que es la que su servidor tiene. Con «Open Sans Semibold» el servidor daba 404, MapLibre
                     tiraba la tesela ENTERA —también las líneas— y NO SALIÓ NI UNA ISOBARA desde el 14-09 hasta el 25-10-2026
                     (medido: la misma tesela pintaba 152 líneas con esta letra y 0 con la otra). */
-                 'text-font': LETRA_CARTO,
+                 'text-font': this.letraBase(),
                  'text-allow-overlap':false, 'text-padding':6, 'text-keep-upright':true },
         paint:{ 'text-color':tinta, 'text-halo-color':halo, 'text-halo-width':2 } },
         antes);
@@ -4186,7 +4186,7 @@ const Maps = {
            «se ve mejor dónde hay nubes y dónde no»). El ocre claro de antes,
            al 80 %, dejaba ver el mapa claro debajo y la nube fina se perdía. */
         paint:{ 'background-color':'#8a773a', 'background-opacity':1 } }, agua?.id || this.firstLabelLayer());
-      if (agua && this.map.getSource('carto')) {
+      if (agua && this.fuenteBase()) {
         /* EL MAR DESPEJADO, OCRE COMO LA TIERRA (06-10-2026). Suyo, con
            Windy al lado a las 19:16: «la nuestra marca en todo el mundo que
            hay nubes». Los datos estaban bien —medido en su Chrome con GFS:
@@ -4196,7 +4196,7 @@ const Maps = {
            color. Ahora el despejado es ocre en tierra y en mar, como en
            Windy, y el mar un tono más oscuro para que se vea la costa. Lo
            gris o blanco es nube, siempre. */
-        this.map.addLayer({ id:'marLayer', type:'fill', source:'carto', 'source-layer':'water',
+        this.map.addLayer({ id:'marLayer', type:'fill', source:this.fuenteBase(), 'source-layer':'water',
           paint:{ 'fill-color':'#7a6932', 'fill-opacity':1 } }, this.firstLabelLayer());
       }
       this.rayasParaNubes(true);
@@ -4220,15 +4220,15 @@ const Maps = {
     if (!this.map) return;
     if (this._rayasEstilo !== this.map.style) { this._rayasEstilo = this.map.style; this._rayasOriginales = {}; }
     const orig = this._rayasOriginales;
-    const RAYAS = ['boundary', 'transportation', 'waterway', 'aeroway'];
+    const RAYAS = ['boundary', 'transportation', 'waterway', 'aeroway', 'boundaries', 'roads'];   // las dos últimas, de Protomaps (25-10-2026)
     const tono = l => l.type === 'fill' ? (l['source-layer'] === 'building' ? '#6b5c2c' : '#7a6932')
-      : l['source-layer'] === 'boundary' ? '#3a3117'
+      : (l['source-layer'] === 'boundary' || l['source-layer'] === 'boundaries') ? '#3a3117'
       : l['source-layer'] === 'waterway' ? '#6a5a2a'
       : /case/.test(l.id) ? '#6b5c2c' : '#a8935a';
     for (const l of this.map.getStyle()?.layers || []) {
       const raya = l.type === 'line' && RAYAS.includes(l['source-layer']);
       const relleno = l.type === 'fill' && ['water', 'building'].includes(l['source-layer']) && !/Layer$/.test(l.id);   // las nuestras acaban en «Layer»
-      if (l.source !== 'carto' || !(raya || relleno)) continue;
+      if (l.source !== this.fuenteBase() || !(raya || relleno)) continue;
       const prop = raya ? 'line-color' : 'fill-color';
       try {
         if (on) {
@@ -4300,8 +4300,8 @@ const Maps = {
       const agua = ls.find(l => l.id === 'water') || ls.find(l => l.type === 'fill' && /water/.test(l.id));
       this.map.addLayer({ id:'sueloLluviaLayer', type:'background',
         paint:{ 'background-color':tono.tierra, 'background-opacity':tono.tierraOp } }, agua?.id || this.firstLabelLayer());
-      if (agua && this.map.getSource('carto')) {
-        this.map.addLayer({ id:'marLluviaLayer', type:'fill', source:'carto', 'source-layer':'water',
+      if (agua && this.fuenteBase()) {
+        this.map.addLayer({ id:'marLluviaLayer', type:'fill', source:this.fuenteBase(), 'source-layer':'water',
           paint:{ 'fill-color':tono.mar, 'fill-opacity':tono.marOp } }, this.firstLabelLayer());
       }
       this.etiquetasLegibles();
@@ -4371,6 +4371,32 @@ const Maps = {
      mismo código: «¿por qué pasa esto?». Desde aquí no se reproduce y no se puede ver su pantalla. Así que, cada vez que el mapa
      termina de pintar, se comprueba que estén y que vayan ENCIMA del color; si no, se recolocan y SE APUNTA qué había mal
      (en la barra de abajo y en localStorage 'torre.capasMal'), para que su captura diga el porqué. Tope de 5 por capa pintada. */
+  /* ── EL MAPA BASE, SE LLAME COMO SE LLAME (25-10-2026) ───────────────────────────────────────────────────
+     EL PORQUÉ de «sin costa, ni fronteras, ni relieve en ninguna capa» en su app y bien en el panel de Claude: CARTO cambió sus
+     estilos (versión del 01-10-2026) a datos de Protomaps. La fuente pasó de «carto» a «protomaps», las fronteras de
+     `boundary`/`admin_level` a `boundaries`/`kind_detail`, y la letra de sus rótulos. Su navegador cargó el estilo NUEVO y el
+     panel tenía el VIEJO en caché (un día de vida). Todo lo que estaba escrito a mano con «carto» se saltaba en silencio.
+     Ahora se lee del estilo cargado: la fuente, el filtro de cada frontera (copiado de sus propias capas) y la letra. */
+  fuenteBase() {
+    const src = this.map?.getStyle()?.sources || {};
+    for (const n of ['carto', 'protomaps', 'openmaptiles']) if (src[n]?.type === 'vector') return n;
+    const propias = /^(omSrc2?|isoSrc|hillSrc|demSrc|radarSrc|satSrc|aemetSrc|acumSrc|ciudadesSrc|costaNE|rayosSrc)$/;
+    return Object.keys(src).find(k => src[k]?.type === 'vector' && !propias.test(k)) || null;
+  },
+  /** La capa de datos y el filtro de una frontera del mapa base (2 país, 4 comunidad, 6 provincia), copiados de su propio estilo. */
+  fronteraBase(nivel) {
+    const id = { 2: 'boundary_country_inner', 4: 'boundary_state', 6: 'boundary_county' }[nivel];
+    const l = (this.map?.getStyle()?.layers || []).find(x => x.id === id);
+    if (l?.['source-layer'] && l.filter) return { capa: l['source-layer'], filtro: l.filter };
+    return this.fuenteBase() === 'protomaps' ? { capa: 'boundaries', filtro: ['==', ['get', 'kind_detail'], nivel] }
+      : { capa: 'boundary', filtro: ['all', ['==', 'admin_level', nivel], ['==', 'maritime', 0]] };
+  },
+  /** La letra de los rótulos del propio mapa base: la que su servidor tiene seguro (una que no tenga tira la tesela entera). */
+  letraBase() {
+    const l = (this.map?.getStyle()?.layers || []).find(x => x.type === 'symbol' && /^place_(town|city)/.test(x.id) && Array.isArray(x.layout?.['text-font']));
+    return l?.layout['text-font'] || LETRA_CARTO;
+  },
+
   vigilarEncima() {
     const m = this.map;
     if (!m?.getStyle) return;
@@ -4379,7 +4405,7 @@ const Maps = {
     if (!color.length) return;
     const arriba = Math.max(...color), L_ = TLAYERS.find(l => l.id === this.layer), lluvia = CON_SUELO_NEGRO.has(L_?.escala);
     const mal = [];
-    if (!m.getSource('carto')) mal.push('el mapa base no ha cargado');
+    if (!this.fuenteBase()) mal.push('el mapa base no ha cargado');
     else {
       for (const id of ['costaLayerNE', ...(lluvia ? [] : ['fronteraPaisLayer'])]) {
         const i = pos(id);
@@ -4400,14 +4426,14 @@ const Maps = {
       const prev = JSON.parse(localStorage.getItem('torre.capasMal') || '[]');
       localStorage.setItem('torre.capasMal', JSON.stringify([...prev.slice(-4), { t: new Date().toISOString(), capa: this.layer, mal }]));
     } catch { /* sin almacén: se dice igual en la barra */ }
-    if (!m.getSource('carto')) return;
+    if (!this.fuenteBase()) return;
     if (this.terrain && pos('sombraLayer') < 0) this.relieve();
     this.costaEncima();
     this.status(this._statusBase ?? '');
   },
 
   costaEncima() {
-    if (!this.map?.getSource('carto')) return;
+    if (!this.fuenteBase()) return;
     this.relieveSegunCapa();
     const oscuro = this.base === 'oscuro';
     const lluvia = CON_SUELO_NEGRO.has(TLAYERS.find(l => l.id === this.layer)?.escala);   // la lluvia, como estaba
@@ -4439,7 +4465,8 @@ const Maps = {
         }
       }
       if (this.map.getLayer('costaLayer')) return;
-      this.map.addLayer({ id: 'costaLayer', type: 'line', source: 'carto', 'source-layer': 'water',
+      /* Solo el borde de los polígonos de agua: en el esquema de Protomaps 'water' trae también los ríos como líneas (25-10-2026). */
+      this.map.addLayer({ id: 'costaLayer', type: 'line', source: this.fuenteBase(), 'source-layer': 'water', filter: ['==', ['geometry-type'], 'Polygon'],
         minzoom: COSTA_DETALLE_DESDE, paint }, this.firstLabelLayer(true));
       this.map.addLayer({ id: 'costaLayerNE', type: 'line', source: 'costaNE',
         maxzoom: COSTA_DETALLE_DESDE, paint }, this.firstLabelLayer(true));
@@ -4452,7 +4479,7 @@ const Maps = {
      debajo de los nombres. En Oscuro, en claro. */
   fronterasEncima(oscuro, lluvia = false) {
     const m = this.map;
-    if (!m?.getSource('carto')) return;
+    if (!this.fuenteBase()) return;
     if (lluvia) {   // la lluvia, como estaba: sin estas líneas
       for (const id of ['fronteraPaisLayer', 'fronteraRegionLayer', 'fronteraProvLayer']) if (m.getLayer(id)) m.removeLayer(id);
       return;
@@ -4469,8 +4496,9 @@ const Maps = {
           m.setPaintProperty(id, 'line-color', color); m.setPaintProperty(id, 'line-width', ancho);
           m.moveLayer(id, this.firstLabelLayer(true));
         } else {
-          m.addLayer({ id, type: 'line', source: 'carto', 'source-layer': 'boundary', minzoom: nivel === 6 ? 5 : nivel === 4 ? 4 : 0,
-            filter: ['all', ['==', 'admin_level', nivel], ['==', 'maritime', 0]],
+          const fb = this.fronteraBase(nivel);
+          m.addLayer({ id, type: 'line', source: this.fuenteBase(), 'source-layer': fb.capa, minzoom: nivel === 6 ? 5 : nivel === 4 ? 4 : 0,
+            filter: fb.filtro,
             layout: { 'line-join': 'round' }, paint: { 'line-color': color, 'line-width': ancho } }, this.firstLabelLayer(true));
         }
       }
@@ -5510,7 +5538,8 @@ const Maps = {
       zoom('place_town', NOMBRES_DESDE.pueblo, 14);
       zoom('place_villages', NOMBRES_DESDE.aldea, 16);
       zoom('place_city_dot_r4', 4, 7);
-      if (m.getLayer('place_city_dot_r7')) {
+      /* El filtro por `class`/`rank` es del esquema viejo de CARTO; con el de Protomaps (25-10-2026) dejaría la capa vacía. */
+      if (m.getLayer('place_city_dot_r7') && JSON.stringify(m.getFilter('place_city_dot_r7') || '').includes('"class"')) {
         m.setFilter('place_city_dot_r7', ['all', ['==', 'class', 'city'], ['<=', 'rank', NOMBRES_DESDE.rangoCiudad]]);
         m.setLayerZoomRange('place_city_dot_r7', 5, 7);
       }
@@ -5533,7 +5562,7 @@ const Maps = {
       if (!m.getSource('ciudadesSrc')) m.addSource('ciudadesSrc', { type: 'geojson', data: 'data/ciudades.geojson' });
       if (!m.getLayer('ciudadesPlace')) {
         m.addLayer({ id: 'ciudadesPlace', type: 'symbol', source: 'ciudadesSrc', maxzoom: NOMBRES_DESDE.pueblo,
-          layout: { 'text-field': ['get', 'n'], 'text-font': LETRA_CARTO,
+          layout: { 'text-field': ['get', 'n'], 'text-font': this.letraBase(),
                     'text-size': ['interpolate', ['linear'], ['zoom'], 3, 10, 6, 12], 'symbol-sort-key': ['get', 'r'],
                     'icon-image': 'circle-11', 'icon-size': 0.4, 'text-anchor': 'left', 'text-offset': [0.6, 0], 'text-padding': 1 } });
       }
