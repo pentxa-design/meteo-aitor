@@ -14142,7 +14142,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      !err && r.orden1.indexOf('omLayer') < r.orden1.indexOf('sombraLayer') && r.v1.sombraLayer === 'visible' && r.v1.hillLayer === 'none',
      err ? String(err) : JSON.stringify(r));
   ok('   con la PRECIPITACIÓN, como estaba («ni tocar»): Esri encima, oscuro y a media opacidad, y el sombreado nuevo apagado',
-     !err && r.ordenL.indexOf('omLayer') < r.ordenL.indexOf('hillLayer') && r.pL['raster-brightness-max'] < 0.8 && r.pL['raster-opacity'] >= 0.35
+     !err && r.ordenL.indexOf('hillLayer') < r.ordenL.indexOf('omLayer') && r.pL['raster-brightness-max'] === 1   // relieve DEBAJO de la lluvia (25-10 noche)
      && r.vL.hillLayer === 'visible' && r.vL.sombraLayer === 'none', JSON.stringify(r));
   ok('   el fondo del mar se aplana antes de sombrear (sin las rayas de la fosa del Cantábrico): bajo 0 m → 0 m, la tierra intacta',
      !err && JSON.stringify(r.mar) === JSON.stringify([128, 0, 0, 255, 131, 232, 0, 255, 128, 0, 0, 255, 128, 0, 0, 255]), JSON.stringify(r?.mar));

@@ -4343,8 +4343,10 @@ const Maps = {
     const m = this.map;
     if (!m?.getLayer('hillLayer')) return;
     const L_ = TLAYERS.find(l => l.id === this.layer);
-    const encima = !!L_ && !L_.sat && !L_.windy && (m.getLayer('omLayer') || m.getLayer('radarLayer') || m.getLayer('aemetLayer'));
-    const lluvia = encima && CON_SUELO_NEGRO.has(L_.escala);   // como estaba: Esri encima (ver RELIEVE_ENCIMA)
+    const encima = !!L_ && !L_.sat && !L_.windy && !CON_SUELO_NEGRO.has(L_.escala) && (m.getLayer('omLayer') || m.getLayer('radarLayer') || m.getLayer('aemetLayer'));
+    /* La lluvia, con el relieve DEBAJO, como el sábado por la mañana (25-10-2026, suyo: «me has desaturado la capa de
+       precipitación, pon como estaba el sábado»): el gris de Esri encima la apagaba. */
+    const lluvia = false;
     const nuevo = encima && !lluvia;
     try {
       const P = lluvia ? RELIEVE_ENCIMA : RELIEVE_DEBAJO;
