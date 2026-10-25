@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.25-1652';
+const BUILD = '2026.10.25-1656';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11415,6 +11415,10 @@ function renderTorres() {
       <div class="tor__res">${resumenTorre(t.horas)}</div>
       <!-- Lo MEDIDO, a la vista (25-10-2026, suyo: «en cada estación lo de Euskalmet y AEMET, datos online de los pluviómetros,
            así lo miro de un vistazo»). En su renglón y con su estación: lo medido y lo calculado no se mezclan. -->
+      <!-- Y LO DE AHORA Y LO DE DENTRO DE UN RATO, con sus cifras (25-10-2026, suyo: «en Sollubemendi quiero saber lo que pasa
+           ahora mismo y lo que viene en un rato: CAPE, viento, lluvia, y lo que marcan las estaciones, todo en un mismo sitio
+           para leerlo de golpe»). Las columnas ahora · +1 · +2 · +4 h, a la vista y no plegadas. -->
+      ${lineaLlegada}
       <div class="tor__medv">${medidoAhoraLinea(S.medidoTorres?.get(key(t.place)))}</div>
       ${avisoDeHoy(key(t.place), t.horas)}
       <div class="tor__tl">${tiras}<span class="tor__tlx">próximas 12 h</span></div>
@@ -11606,7 +11610,6 @@ function renderTorres() {
       ${lineaPista(t.pista)}
       <div class="tor__why">${esc(motivo)}${aviso ? ` · <b>${esc(aviso)}</b>` : ''}${
         t.copia ? ` · <span class="tor__old">copia ${esc(textoEdad(t.copia.t, t.copia.edadH))}</span>` : ''}</div>
-      ${lineaLlegada}
       ${(() => {
         /* ── EL PARTE, DENTRO DE SU TARJETA ────────────────────────
            Suyo, 02-09-2026, con las dos listas de sus veinte sitios en

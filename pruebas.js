@@ -14843,8 +14843,8 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   const plantilla = src.slice(src.indexOf('function renderTorres()'), src.indexOf('pintarPortadaEstacion();', src.indexOf('function renderTorres()')));
   const iDet = plantilla.indexOf('<details class="tor__mas"><summary>Ver detalle</summary>');
   ok('   las once cifras, la lluvia de cada modelo, el acceso y los botones van DENTRO de «Ver detalle»; fuera, la chapa con «ahora», el resumen, el aviso y la tira',
-     iDet > 0 && ['<div class="tor__ds">', 'lineaAguaTorre(', 'lineaPista(', '${lineaLlegada}', '<div class="tor__cfg">'].every(k => plantilla.indexOf(k) > iDet)
-     && ['<small>ahora</small>', '<div class="tor__res">${resumenTorre(t.horas)}</div>', '<div class="tor__medv">${medidoAhoraLinea(', 'avisoDeHoy(key(t.place), t.horas)', '<div class="tor__tl">${tiras}'].every(k => { const i = plantilla.indexOf(k); return i > 0 && i < iDet; })
+     iDet > 0 && ['<div class="tor__ds">', 'lineaAguaTorre(', 'lineaPista(', '<div class="tor__cfg">'].every(k => plantilla.indexOf(k) > iDet)
+     && ['<small>ahora</small>', '<div class="tor__res">${resumenTorre(t.horas)}</div>', '${lineaLlegada}', '<div class="tor__medv">${medidoAhoraLinea(', 'avisoDeHoy(key(t.place), t.horas)', '<div class="tor__tl">${tiras}'].every(k => { const i = plantilla.indexOf(k); return i > 0 && i < iDet; })
      && /\$\{conOjo\} con OJO/.test(src) && /const dueno = d\.dueno\?\.nombre && !d\.apagado/.test(src));
   const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   ok('   y fuera «Quién acierta en tus estaciones» («esto sobra», 25-10): el bloque va oculto y ni se pide al servidor',
