@@ -560,13 +560,17 @@ async function unaHora(hh) {
   for (const c of doc.querySelectorAll('#torres .tor__d[data-a="2"]'))
     if (/aguanta/.test(c.textContent)) { falla(`Mis estaciones: una cifra en ROJO dice «aguanta»: «${c.textContent.replace(/\s+/g, ' ').trim().slice(0, 60)}»`); break; }
 
-  /* 7. Marcador: contesta, con lo que le han contestado, y con las palabras enteras. */
-  const marc = txt(doc, '#marcador');
+  /* 7. Marcador: contesta, con lo que le han contestado, y con las palabras enteras. Desde el 25-10-2026 va OCULTO por orden suya
+     («esto sobra»): entonces lo que se comprueba es que siga oculto, no su contenido (ni se pide). */
+  const marcOculto = !!doc.querySelector('#marcCard')?.hasAttribute('hidden');
+  const marc = marcOculto ? '' : txt(doc, '#marcador');
+  if (!marcOculto) {
   if (/Cargando el marcador/.test(marc)) falla('Marcador: sigue en «Cargando…» con la respuesta contestada');
   if (!/Matxitxako/.test(marc)) falla('Marcador: no enseña la estación que contesta la trampa');
   if (!/AROME HD\s*se queda\s*12 km\/h corto/.test(marc)) falla(`Marcador: AROME HD va 12,4 corto y no lo dice así: «${marc.slice(0, 120)}»`);
   if (!/en 20 comparaciones/.test(marc)) falla('Marcador: no dice en cuántas comparaciones (20)');
   if (/\d+ veces(?! más de)/.test(marc)) falla('Marcador: «N veces» sin decir de qué');
+  }
 
   /* 8. Ahora: la tormenta sin contradecirse, la próxima lluvia sin afirmar lo que no se ha mirado,
         la hora de la mínima, y lo prestado pegado POR HORA. */
@@ -937,7 +941,9 @@ async function unaHora(hh) {
       falla(`${z}: decimal con punto «${d[0]}» (aquí van con coma): …${t.slice(Math.max(0, d.index - 30), d.index + 30)}…`);
       break;
     }
-    const ph = t.match(/midiendo…|Cargando emplazamientos|Cargando el marcador|Consultando estaciones|Consultando \d+ emplazamiento|Evaluando condiciones/);
+    /* El marcador oculto (25-10-2026, «esto sobra») no se pide: su «Cargando…» no es un hueco que él vea. */
+    const tVisible = doc.querySelector('#marcCard')?.hasAttribute('hidden') ? t.replace(/Cargando el marcador…?/g, '') : t;
+    const ph = tVisible.match(/midiendo…|Cargando emplazamientos|Cargando el marcador|Consultando estaciones|Consultando \d+ emplazamiento|Evaluando condiciones/);
     if (ph) falla(`${z}: se queda en «${ph[0]}» con todo contestado`);
   }
   for (const e of w.__cielo.slice(0, 2)) falla(`el vigilante del cielo ha tenido que repintar: ${String(e).slice(0, 140)}`);
