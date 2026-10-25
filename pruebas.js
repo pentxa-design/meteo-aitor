@@ -14108,6 +14108,16 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
       addSource: (id, o) => { pedido.fuentes.push(id); pedido.datos = o.data; }, addLayer: o => pedido.capas.push(o) };
     M2.masNombres();
     r.nombres = pedido;
+    /* El vigilante de lo de encima (25-10-2026): costa DEBAJO del color y relieve apagado → los recoloca y lo apunta. */
+    const M3 = Object.create(M); let llamado = 0;
+    const capas3 = [{ id: 'costaLayerNE' }, { id: 'omLayer' }, { id: 'sombraLayer' }, { id: 'fronteraPaisLayer' }];
+    M3.map = { getStyle: () => ({ layers: capas3 }), getSource: id => id === 'carto', getLayoutProperty: () => 'none', getLayer: () => true };
+    M3.layer = 'temp'; M3.terrain = true; M3.costaEncima = () => { llamado++; }; M3.relieve = () => {}; M3.status = () => {}; M3._arreglosEncima = 0;
+    M3.vigilarEncima();
+    r.vigila = { llamado, mal: M3._encimaMal || '' };
+    const M4 = Object.create(M3); M4.map = { ...M3.map, getStyle: () => ({ layers: [{ id: 'omLayer' }, { id: 'sombraLayer' }, { id: 'costaLayerNE' }, { id: 'fronteraPaisLayer' }] }), getLayoutProperty: () => 'visible' };
+    M4._encimaMal = null; M4._arreglosEncima = 0; let llamado4 = 0; M4.costaEncima = () => { llamado4++; }; M4.vigilarEncima();
+    r.vigilaBien = llamado4;
     r.mar = [...demSinMar(new Uint8ClampedArray([120, 48, 0, 255, 131, 232, 0, 255, 127, 255, 255, 255, 128, 0, 0, 255]))];
     /* El orden de su pantalla (24-10): costa YA colocada debajo del color. Lo de «encima» tiene que salir DETRÁS de omLayer. */
     capas = [{ id: 'fondo', type: 'background' }, { id: 'agua', type: 'fill' }, { id: 'hillLayer', type: 'raster' },
@@ -14127,6 +14137,9 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('   y con el satélite vuelve DEBAJO, con su pintura de siempre (la foto ya trae el terreno)',
      !err && r.orden2.indexOf('hillLayer') < r.orden2.indexOf('omLayer') && r.p2['raster-brightness-max'] === 1 && r.v2.hillLayer === 'visible' && r.v2.sombraLayer === 'none', JSON.stringify(r));
   const Mf = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  ok('el vigilante del mapa: si la costa queda DEBAJO del color o el relieve apagado, los recoloca y lo apunta en la barra; si todo está bien, no toca nada',
+     !err && r.vigila.llamado === 1 && /costaLayerNE debajo del color/.test(r.vigila.mal) && /relieve apagado/.test(r.vigila.mal) && r.vigilaBien === 0
+     && /this\.map\.on\('idle', \(\) => this\.vigilarEncima\(\)\)/.test(Mf), JSON.stringify([r?.vigila, r?.vigilaBien]));
   const ciu = (() => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'ciudades.geojson'), 'utf8')).features; } catch { return []; } })();
   const hay = n => ciu.some(f => f.properties.n === n && f.geometry.coordinates[0] > -10 && f.geometry.coordinates[0] < 4 && f.geometry.coordinates[1] > 36 && f.geometry.coordinates[1] < 44);
   ok('alejado se ven las capitales de provincia (suyo: «si alejas un poco, nada»): data/ciudades.geojson las trae y masNombres() las pinta por debajo del zoom de los pueblos',
@@ -14147,7 +14160,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      !e4 && E4 && E4.capeE.scale.breakpoints.includes(700) && E4.tapa.scale.breakpoints.join() === '0,10,25,50,75,100,150,200,300,500');
   ok('el rótulo grande del mapa (como AguaceroWx) dice modelo y hora, y se QUITA: apply() lo borra antes de pintar y solo lo pone stamp(), que es de las capas de modelo',
      !err && r.rotPuesto.vis && /Válido/.test(r.rotPuesto.l2) && !r.rotQuitado.vis && r.rotQuitado.l1 === ''
-     && /if \(!L_\) return;\n    this\.rotulo\(null\);/.test(Mf) && /this\.rotulo\(`\$\{M\.name\}/.test(Mf), JSON.stringify([r?.rotPuesto, r?.rotQuitado]));
+     && /if \(!L_\) return;\n(?:[^\n]*\n)?    this\.rotulo\(null\);/.test(Mf) && /this\.rotulo\(`\$\{M\.name\}/.test(Mf), JSON.stringify([r?.rotPuesto, r?.rotQuitado]));
   ok('   costa NEGRA y fronteras de país y comunidad encima del color en Claro y Color (como AguaceroWx); en la lluvia, la costa de antes y sin fronteras',
      /lluvia \? 'rgba\(18,38,66,0\.85\)' : 'rgba\(0,0,0,0\.9\)'/.test(Mf) && /this\.fronterasEncima\(oscuro, lluvia\);/.test(Mf)
      && /\['fronteraPaisLayer', 2,/.test(Mf) && /\['fronteraRegionLayer', 4,/.test(Mf) && /\['==', 'maritime', 0\]/.test(Mf));
@@ -14284,8 +14297,9 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('   con AROME HD, que no publica la presión, salen las del EUROPEO a la misma hora (no se pide lo que no existe) y se dice',
      !err && /ecmwf_ifs\/2026\/10\/24\/0000Z\/2026-10-24T1200\.om\?/.test(uArome || '') && deArome === 'ECMWF HRES'
      && /\$\{LINEAS\[this\.lineas\]\.corto\} de \$\{this\._isoDe\}/.test(Mx), err ? String(err) : `${uArome} · ${deArome}`);
-  ok('las isobaras e isotermas van BLANCAS con borde oscuro (oscuras se confundían con la costa negra: «costas no se ven», 25-10)',
-     /const tinta = '#ffffff', halo = 'rgba\(10,16,30,\.85\)';/.test(Mx) && /lluvia \? 'rgba\(18,38,66,0\.85\)' : 'rgba\(0,0,0,0\.9\)'/.test(Mx));
+  ok('isobaras gris azulado y gruesas (blancas no se veían sobre el amarillo), costa negra más gruesa y fronteras de país, comunidad y PROVINCIA (25-10)',
+     /const tinta = this\.base === 'oscuro' \? '#e8eef8' : '#1f2a44'/.test(Mx) && /lluvia \? 'rgba\(18,38,66,0\.85\)' : 'rgba\(0,0,0,0\.9\)'/.test(Mx)
+     && /\['zoom'\], 4, 1\.6, 7, 2\.1, 10, 2\.8\]/.test(Mx) && /\['fronteraProvLayer', 6,/.test(Mx));
   ok('toda capa de texto del mapa usa la letra de CARTO (con «Open Sans Semibold» el servidor daba 404 y no salió NI UNA isobara del 14-09 al 25-10)',
      (Mx.match(/'text-font'\s*:\s*([^,\n]+)/g) || []).every(t => /LETRA_CARTO/.test(t))
      && /const LETRA_CARTO = \['Montserrat Medium', 'Open Sans Bold'/.test(Mx) && (Mx.match(/'text-font'/g) || []).length >= 2,

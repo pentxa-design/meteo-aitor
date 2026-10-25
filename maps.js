@@ -2586,6 +2586,7 @@ const Maps = {
       this.map.on('move', () => { this.limpiarValores(); this.limpiarBarbas(); });
       this.map.on('zoomend', () => { this._pedidas = new Set(); this.precargar(this._dir ?? 1); this.reaplicarPorZoom(); });
       this.map.on('click', e => this.consultar(e.lngLat));
+      this.map.on('idle', () => this.vigilarEncima());   // costa, fronteras y relieve encima del color, siempre (25-10-2026)
       this.map.getCanvas().style.cursor = 'crosshair';
       try { sessionStorage.removeItem('mapaSinWebGL'); } catch {}   // ha cargado: la marca de «ya recargué» se borra
       this.ui();
@@ -3354,6 +3355,7 @@ const Maps = {
     if (!this.map || !this.meta) return;
     const L_ = TLAYERS.find(l => l.id === this.layer);
     if (!L_) return;
+    this._arreglosEncima = 0;   // ver vigilarEncima
     this.rotulo(null);   // solo lo vuelve a poner stamp(), que es de las capas de modelo: nunca la hora de un modelo sobre el satélite
 
     Peticiones.reset();
@@ -4089,17 +4091,20 @@ const Maps = {
          clara sobre el oscuro (Windy). El 1013, la presión media, un pelo más marcada, como hace Meteoblue. */
       /* BLANCAS, como Windy (25-10-2026). Oscuras eran iguales que la costa negra y se confundían con ella: «el relieve del mapa,
          costas etc no se ven». Blanca con un borde oscuro fino se distingue de la costa en los tres fondos. */
-      const tinta = '#ffffff', halo = 'rgba(10,16,30,.85)';
+      /* Y el 25-10 por la tarde, otra vuelta: blancas sobre el amarillo de la temperatura NO SE VEÍAN; las negras gruesas de una
+         prueba suya sí («aquí sí se veía»). Gris azulado oscuro y gruesas, con borde claro: se ven sobre cualquier color y no se
+         confunden con la costa, que es negra pura y sin número. */
+      const tinta = this.base === 'oscuro' ? '#e8eef8' : '#1f2a44', halo = this.base === 'oscuro' ? 'rgba(10,16,30,.85)' : 'rgba(255,255,255,.75)';
       const media = lineas?.capa === 't850' ? ['==', ['to-number', ['get', 'value']], 0]   // en las isotermas, la del 0 °C
                   : ['all', ['>=', ['to-number', ['get', 'value']], 1012], ['<=', ['to-number', ['get', 'value']], 1014]];
       this.map.addLayer({ id:'isoBorde', type:'line', source:'isoSrc',
         'source-layer':'contours',
         layout:{ 'line-join':'round' },
-        paint:{ 'line-color':halo, 'line-width':['case', media, 3.2, 2.6], 'line-opacity':0.35 } }, antes);
+        paint:{ 'line-color':halo, 'line-width':['case', media, 4.2, 3.4], 'line-opacity':0.5 } }, antes);
       this.map.addLayer({ id:'isoLinea', type:'line', source:'isoSrc',
         'source-layer':'contours',
         layout:{ 'line-join':'round', 'line-cap':'round' },
-        paint:{ 'line-color':tinta, 'line-width':['case', media, 2.0, 1.4], 'line-opacity':0.95 } }, antes);   // 1,0 no se veía sobre el color opaco (25-10)
+        paint:{ 'line-color':tinta, 'line-width':['case', media, 2.6, 1.9], 'line-opacity':0.95 } }, antes);   // 1,0 no se veía sobre el color opaco (25-10)
       this.map.addLayer({ id:'isoLbl', type:'symbol', source:'isoSrc',
         'source-layer':'contours',
         layout:{ 'symbol-placement':'line', 'symbol-spacing':320,
@@ -4361,6 +4366,46 @@ const Maps = {
     } catch (e) { console.warn('relieve: no se ha podido colocar', e); }
   },
 
+  /* ── EL VIGILANTE DE LO DE ENCIMA (25-10-2026) ────────────────────────────────────────────────────────────
+     Suyo, con su app instalada sin costa, ni fronteras, ni relieve en NINGUNA capa, mientras en el panel de Claude salían, con el
+     mismo código: «¿por qué pasa esto?». Desde aquí no se reproduce y no se puede ver su pantalla. Así que, cada vez que el mapa
+     termina de pintar, se comprueba que estén y que vayan ENCIMA del color; si no, se recolocan y SE APUNTA qué había mal
+     (en la barra de abajo y en localStorage 'torre.capasMal'), para que su captura diga el porqué. Tope de 5 por capa pintada. */
+  vigilarEncima() {
+    const m = this.map;
+    if (!m?.getStyle) return;
+    const ls = m.getStyle()?.layers || [], pos = id => ls.findIndex(l => l.id === id);
+    const color = ['omLayer', 'radarLayer', 'aemetLayer', 'acumLayer'].map(pos).filter(i => i >= 0);
+    if (!color.length) return;
+    const arriba = Math.max(...color), L_ = TLAYERS.find(l => l.id === this.layer), lluvia = CON_SUELO_NEGRO.has(L_?.escala);
+    const mal = [];
+    if (!m.getSource('carto')) mal.push('el mapa base no ha cargado');
+    else {
+      for (const id of ['costaLayerNE', ...(lluvia ? [] : ['fronteraPaisLayer'])]) {
+        const i = pos(id);
+        if (i < 0) mal.push(`${id} no está`); else if (i < arriba) mal.push(`${id} debajo del color`);
+      }
+      if (this.terrain && !L_?.sat && !L_?.windy && !lluvia) {
+        const i = pos('sombraLayer');
+        if (i < 0) mal.push('relieve no está');
+        else if (m.getLayoutProperty('sombraLayer', 'visibility') === 'none') mal.push('relieve apagado');
+        else if (i < arriba) mal.push('relieve debajo del color');
+      }
+    }
+    if (!mal.length) return;
+    if ((this._arreglosEncima = (this._arreglosEncima || 0) + 1) > 5) return;
+    const hora = new Date().toTimeString().slice(0, 5);
+    this._encimaMal = `${hora} ${mal.join(', ')}`;
+    try {
+      const prev = JSON.parse(localStorage.getItem('torre.capasMal') || '[]');
+      localStorage.setItem('torre.capasMal', JSON.stringify([...prev.slice(-4), { t: new Date().toISOString(), capa: this.layer, mal }]));
+    } catch { /* sin almacén: se dice igual en la barra */ }
+    if (!m.getSource('carto')) return;
+    if (this.terrain && pos('sombraLayer') < 0) this.relieve();
+    this.costaEncima();
+    this.status(this._statusBase ?? '');
+  },
+
   costaEncima() {
     if (!this.map?.getSource('carto')) return;
     this.relieveSegunCapa();
@@ -4370,7 +4415,8 @@ const Maps = {
        se perdía sobre los verdes y azules de la temperatura. */
     const paint = {
       'line-color': oscuro ? 'rgba(225,235,245,0.9)' : lluvia ? 'rgba(18,38,66,0.85)' : 'rgba(0,0,0,0.9)',
-      'line-width': lluvia ? ['interpolate', ['linear'], ['zoom'], 4, 0.7, 7, 1.2, 10, 1.9] : ['interpolate', ['linear'], ['zoom'], 4, 1.1, 7, 1.5, 10, 2.2],
+      /* 1,1 px se perdía sobre el amarillo a toda pantalla (25-10-2026, «sigo sin ver las comarcas, líneas de costa»): más gruesa. */
+      'line-width': lluvia ? ['interpolate', ['linear'], ['zoom'], 4, 0.7, 7, 1.2, 10, 1.9] : ['interpolate', ['linear'], ['zoom'], 4, 1.6, 7, 2.1, 10, 2.8],
     };
     this.fronterasEncima(oscuro, lluvia);
     /* ── SIN LAS RAYAS DE LOS CORTES DE TESELA (17-10-2026) ──────────────
@@ -4408,12 +4454,14 @@ const Maps = {
     const m = this.map;
     if (!m?.getSource('carto')) return;
     if (lluvia) {   // la lluvia, como estaba: sin estas líneas
-      for (const id of ['fronteraPaisLayer', 'fronteraRegionLayer']) if (m.getLayer(id)) m.removeLayer(id);
+      for (const id of ['fronteraPaisLayer', 'fronteraRegionLayer', 'fronteraProvLayer']) if (m.getLayer(id)) m.removeLayer(id);
       return;
     }
     const capas = [
-      ['fronteraPaisLayer', 2, oscuro ? 'rgba(235,240,245,0.85)' : 'rgba(0,0,0,0.85)', ['interpolate', ['linear'], ['zoom'], 4, 0.9, 7, 1.4, 10, 2]],
-      ['fronteraRegionLayer', 4, oscuro ? 'rgba(235,240,245,0.5)' : 'rgba(0,0,0,0.45)', ['interpolate', ['linear'], ['zoom'], 4, 0.5, 7, 0.9, 10, 1.3]],
+      ['fronteraPaisLayer', 2, oscuro ? 'rgba(235,240,245,0.9)' : 'rgba(0,0,0,0.9)', ['interpolate', ['linear'], ['zoom'], 4, 1.3, 7, 1.8, 10, 2.4]],
+      ['fronteraRegionLayer', 4, oscuro ? 'rgba(235,240,245,0.65)' : 'rgba(0,0,0,0.6)', ['interpolate', ['linear'], ['zoom'], 4, 0.8, 7, 1.2, 10, 1.6]],
+      /* Y las provincias, como AguaceroWx (25-10-2026: «sigo sin ver las comarcas»), más finas y desde el zoom 5. */
+      ['fronteraProvLayer', 6, oscuro ? 'rgba(235,240,245,0.4)' : 'rgba(0,0,0,0.35)', ['interpolate', ['linear'], ['zoom'], 5, 0.5, 8, 0.9, 10, 1.2]],
     ];
     try {
       for (const [id, nivel, color, ancho] of capas) {
@@ -4421,7 +4469,7 @@ const Maps = {
           m.setPaintProperty(id, 'line-color', color); m.setPaintProperty(id, 'line-width', ancho);
           m.moveLayer(id, this.firstLabelLayer(true));
         } else {
-          m.addLayer({ id, type: 'line', source: 'carto', 'source-layer': 'boundary', minzoom: nivel === 4 ? 4 : 0,
+          m.addLayer({ id, type: 'line', source: 'carto', 'source-layer': 'boundary', minzoom: nivel === 6 ? 5 : nivel === 4 ? 4 : 0,
             filter: ['all', ['==', 'admin_level', nivel], ['==', 'maritime', 0]],
             layout: { 'line-join': 'round' }, paint: { 'line-color': color, 'line-width': ancho } }, this.firstLabelLayer(true));
         }
@@ -5080,7 +5128,8 @@ const Maps = {
   status(t) {
     this._statusBase = t;
     const e = document.querySelector('#mapStatus');
-    if (e) e.textContent = this._avisoRango ? `${t} · ${this._avisoRango}` : t;
+    if (e) e.textContent = (this._avisoRango ? `${t} · ${this._avisoRango}` : t)
+      + (this._encimaMal ? ` · ⚠ recolocado (${this._encimaMal})` : '');   // ver vigilarEncima: qué faltaba en su pantalla
   },
 
   /** Pone o quita el aviso de valor imposible sin tocar el resto de la línea. */
