@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.25-1702';
+const BUILD = '2026.10.25-1800';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -13053,8 +13053,13 @@ function antesDeSalir() {
     const orden = { no: 0, nd: 1, warn: 2, go: 3 };
     motivos.sort((a, b) => orden[a.s] - orden[b.s]);
     const s = estadoSalir(estados);
+    /* La explicación de detrás de «—» UNA vez (25-10-2026, su captura: «lo que esté a la intemperie estará mojado: contador, CGP
+       y fusibles del poste» tres veces seguidas, una por hora). En las demás horas queda la cifra. */
+    const dichas = new Set();
+    const sinRepetir = t => { const i = t.indexOf(' — '); if (i < 0) return t; const cola = t.slice(i + 3);
+      if (dichas.has(cola)) return t.slice(0, i); dichas.add(cola); return t; };
     const txt = motivos.length
-      ? motivos.slice(0, 4).map(m => (m.s === 'no' ? `<b>${m.txt}</b>` : m.txt)).join(' · ')
+      ? motivos.slice(0, 4).map(m => { const t = sinRepetir(m.txt); return m.s === 'no' ? `<b>${t}</b>` : t; }).join(' · ')
       : `nada llega a tus listones de ${hh(hs[0])} a ${hh(hs[hs.length - 1])}, ni en tu modelo ni en los otros`;
     filas.push({ k: `Las ${SALIR_HORAS} horas siguientes`, s, txt });
   }

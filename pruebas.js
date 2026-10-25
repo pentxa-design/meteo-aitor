@@ -14852,6 +14852,11 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      vNow.indexOf('id="verdict"') > 0 && vNow.indexOf('id="verdict"') < vNow.indexOf('<details class="card ahora__mas" id="ahoraMas">')
      && ['id="msel"', 'id="kpis"', 'id="det"'].every(k => vNow.indexOf(k) > vNow.indexOf('id="ahoraMas"')) && /<\/details>\s*<\/section>/.test(vNow)
      && /<b>racha \$\{esc\(wtxt\(x\.gust, true\)\)\}<\/b>\$\{has\(x\.prec\)[^\n]*CAPE \$\{Math\.round\(x\.cape\)\}/.test(src));
+  ok('   y en «Las 3 horas siguientes» la explicación («lo que esté a la intemperie…») sale UNA vez, no una por hora (25-10)',
+     (() => { try { const motivos = [{ s: 'warn', txt: '16:00 · Precipitación 0,2 mm/h — lo que esté a la intemperie estará mojado' }, { s: 'warn', txt: '17:00 · Precipitación 0,7 mm/h — lo que esté a la intemperie estará mojado' }];
+       const cuerpo = src.slice(src.indexOf('    const dichas = new Set();'), src.indexOf(".join(' · ')", src.indexOf('    const dichas = new Set();')) + 12);
+       const t = new Function('motivos', cuerpo.replace('const txt = motivos.length\n      ? ', 'return ') + ';')(motivos);
+       return (t.match(/intemperie/g) || []).length === 1 && /17:00 · Precipitación 0,7 mm\/h/.test(t); } catch (e) { return false; } })());
   ok('   y fuera «Quién acierta en tus estaciones» («esto sobra», 25-10): el bloque va oculto y ni se pide al servidor',
      /<div class="card" id="marcCard" hidden>\s*<h2 class="ch">Quién acierta en tus estaciones/.test(html) && /if \(!el \|\| el\.closest\('\[hidden\]'\)\) return;/.test(src));
 }
