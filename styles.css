@@ -3085,3 +3085,16 @@ body.sin-scroll{overflow:hidden}
 /* La tabla de modelos contra estación, plegada (24-10-2026) */
 .pt__plegado{margin-top:8px}
 .pt__plegado>summary{cursor:pointer;font-size:.85rem;color:#9fb3d1;padding:6px 0}
+
+/* Mis estaciones de un vistazo (25-10-2026): chapa con «ahora», una línea de resumen, y lo demás plegado en «Ver detalle». */
+.tor__badge small{display:block;font-size:0.625rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;opacity:.75}
+.tor__res{grid-column:3;font-size:0.9375rem;line-height:1.45;margin:0}   /* al lado del nombre: la 3.ª columna era la de las cifras, ya plegadas */
+@media(max-width:820px){.tor__res{grid-column:1/-1}}
+.tor__res b[data-s="warn"]{color:var(--warn)}
+.tor__res b[data-s="no"]{color:var(--no, #ff5a5a)}
+.tor__res b[data-s="go"]{color:var(--go)}
+.tor__mas{grid-column:1/-1;margin-top:6px}
+.tor__mas>summary{cursor:pointer;color:var(--dim);font-size:0.8125rem;padding:4px 0}
+
+.tor__medv{grid-column:1/-1;font-size:0.875rem}
+.tor__medv .tor__med{display:block;margin:0}

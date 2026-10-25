@@ -14165,11 +14165,15 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
     eval(sacar('function medidoAhoraLinea(M) {'));
     r = { con: medidoAhoraLinea({ fuente: 'Euskalmet', nombre: 'Sollube', km: 1.2, altitud: 433, alturaAnemometro: 65, temperatura: 11.4, racha: 31, viento: 12, direccion: 315, lluvia: 0, humedad: 88 }),
           sin: medidoAhoraLinea(null) };
+    S.medidoSinEuskalmet = 'no he podido leer ninguna de las 72'; r.sinEus = medidoAhoraLinea({ fuente: 'AEMET', nombre: 'FORUA', km: 8.2, lluvia: 0 });
+    r.conEus = medidoAhoraLinea({ fuente: 'Euskalmet', nombre: 'Sollube', km: 1.2, lluvia: 0 }); S.medidoSinEuskalmet = null;
     S.medidoTorres = null; r.esperando = medidoAhoraLinea(null);
   } catch (e) { err = e; }
   ok('sale «Medido ahora · Euskalmet Sollube (1,2 km): 11,4° · racha 31 km/h · viento 12 km/h del noroeste · 0,0 mm en la hora · HR 88 %»',
      !err && /Medido ahora · Euskalmet Sollube \(1,2 km · 433 m · mide a 65 m\)/.test(r.con) && /11,4°/.test(r.con) && /racha <b>31 km\/h/.test(r.con)
-     && /0,0 mm en la hora/.test(r.con) && /HR 88 %/.test(r.con), err ? String(err) : r.con);
+     && /: lluvia <b>0,0 mm<\/b> en la última hora · racha/.test(r.con) && /HR 88 %/.test(r.con), err ? String(err) : r.con);   // el pluviómetro DELANTE (25-10-2026)
+  ok('   si Euskalmet no contesta y sale una de AEMET, la línea lo dice (25-10-2026: Forua a 8 km teniendo Sollube a 1,2)',
+     !err && /Euskalmet no contesta ahora/.test(r.sinEus) && !/no contesta/.test(r.conEus), JSON.stringify([r?.sinEus, r?.conEus]));
   ok('   y si no hay estación o aún no ha llegado, lo dice (nunca un hueco)',
      !err && /ninguna estación cerca/.test(r.sin) && /preguntando a la estación/.test(r.esperando)
      && /\$\{medidoAhoraLinea\(S\.medidoTorres\?\.get\(key\(t\.place\)\)\)\}/.test(src), JSON.stringify(r));
@@ -14280,6 +14284,8 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('   con AROME HD, que no publica la presión, salen las del EUROPEO a la misma hora (no se pide lo que no existe) y se dice',
      !err && /ecmwf_ifs\/2026\/10\/24\/0000Z\/2026-10-24T1200\.om\?/.test(uArome || '') && deArome === 'ECMWF HRES'
      && /\$\{LINEAS\[this\.lineas\]\.corto\} de \$\{this\._isoDe\}/.test(Mx), err ? String(err) : `${uArome} · ${deArome}`);
+  ok('las isobaras e isotermas van BLANCAS con borde oscuro (oscuras se confundían con la costa negra: «costas no se ven», 25-10)',
+     /const tinta = '#ffffff', halo = 'rgba\(10,16,30,\.85\)';/.test(Mx) && /lluvia \? 'rgba\(18,38,66,0\.85\)' : 'rgba\(0,0,0,0\.9\)'/.test(Mx));
   ok('toda capa de texto del mapa usa la letra de CARTO (con «Open Sans Semibold» el servidor daba 404 y no salió NI UNA isobara del 14-09 al 25-10)',
      (Mx.match(/'text-font'\s*:\s*([^,\n]+)/g) || []).every(t => /LETRA_CARTO/.test(t))
      && /const LETRA_CARTO = \['Montserrat Medium', 'Open Sans Bold'/.test(Mx) && (Mx.match(/'text-font'/g) || []).length >= 2,
@@ -14782,6 +14788,32 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('   y cada OJO con su motivo: «racha» de 13 a 15, «lluvia y sirimiri» de 17 a 19; un tramo SIN NADA no lleva motivo',
      !err && r.m1 === 'racha' && r.m2 === 'lluvia y sirimiri' && r.m0 === ''
      && /\$\{VT\[f\.st\]\}\$\{por \? `: \$\{esc\(por\)\}` : ''\}/.test(src) && /'así hasta las'/.test(src), JSON.stringify(r));
+}
+
+/* ═══ MIS ESTACIONES DE UN VISTAZO (25-10-2026) ══════════════════════════════════════════
+   Suyo: «solo quiero ver de un vistazo en mis estaciones y saber qué pasa» · «en eso me baso». Cada tarjeta: chapa con «ahora»,
+   UNA línea de resumen (lo de ahora con su motivo, lo de luego con su motivo y hora, la racha máxima) y lo demás plegado. */
+{
+  grupo('Mis estaciones: una línea por sitio y lo demás plegado');
+  let r = null, err = null;
+  try {
+    const esc = x => String(x), wtxt = (v, u) => `${Math.round(v)}${u ? ' km/h' : ''}`, has = v => v !== null && v !== undefined && !Number.isNaN(v);
+    const VT = { go: 'SIN NADA', warn: 'OJO', no: 'FUERTE', nd: 'SIN DATO' }, nivelRacha = v => v >= 60 ? 'no' : v >= 45 ? 'warn' : 'go';
+    const fn = new Function('esc', 'wtxt', 'has', 'VT', 'nivelRacha', sacar('function motivosDeFranja(f, hs) {') + ';' + sacar('function franjasDeEstado(hs, cuantas = 12) {')
+      + ';' + sacar('function resumenTorre(horas) {') + '; return resumenTorre;')(esc, wtxt, has, VT, nivelRacha);
+    const ahora = Date.now(), H = (k, st, txt, g) => ({ date: new Date(ahora + k * 36e5), st, gust10: g, reasons: txt ? [{ s: st, txt }] : [] });
+    r = { ojo: fn([H(0, 'warn', 'Sirimiri (llovizna) — poca agua', 30), H(1, 'warn', 'Sirimiri (llovizna)', 32), H(2, 'go', '', 47), H(3, 'warn', 'Precipitación 0,9 mm/h', 40)]),
+          calma: fn([H(0, 'go', '', 20), H(1, 'go', '', 22)]) };
+  } catch (e) { err = e; }
+  ok('la línea dice el motivo de AHORA, lo de LUEGO con su hora, y la racha máxima en ámbar si pasa su aviso (BI BERMEO, 25-10)',
+     !err && /^ahora <b data-s="warn">sirimiri<\/b> hasta las \d\d:00 · luego <b data-s="warn">OJO: lluvia<\/b> desde las \d\d:00 · racha máx\. <b data-s="warn">47 km\/h<\/b>/.test(r.ojo)
+     && /próximas 12 h <b data-s="go">sin nada<\/b> · racha máx\. <b>22 km\/h<\/b>/.test(r.calma), err ? String(err) : JSON.stringify(r));
+  const plantilla = src.slice(src.indexOf('function renderTorres()'), src.indexOf('pintarPortadaEstacion();', src.indexOf('function renderTorres()')));
+  const iDet = plantilla.indexOf('<details class="tor__mas"><summary>Ver detalle</summary>');
+  ok('   las once cifras, la lluvia de cada modelo, el acceso y los botones van DENTRO de «Ver detalle»; fuera, la chapa con «ahora», el resumen, el aviso y la tira',
+     iDet > 0 && ['<div class="tor__ds">', 'lineaAguaTorre(', 'lineaPista(', '${lineaLlegada}', '<div class="tor__cfg">'].every(k => plantilla.indexOf(k) > iDet)
+     && ['<small>ahora</small>', '<div class="tor__res">${resumenTorre(t.horas)}</div>', '<div class="tor__medv">${medidoAhoraLinea(', 'avisoDeHoy(key(t.place), t.horas)', '<div class="tor__tl">${tiras}'].every(k => { const i = plantilla.indexOf(k); return i > 0 && i < iDet; })
+     && /\$\{conOjo\} con OJO/.test(src) && /const dueno = d\.dueno\?\.nombre && !d\.apagado/.test(src));
 }
 
 Promise.all(globalThis.__pendientes || []).then(() => {

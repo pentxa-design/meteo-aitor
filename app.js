@@ -11,7 +11,7 @@
 'use strict';
 
 /* Fecha de compilación — la sustituye deploy.sh en cada publicación. */
-const BUILD = '2026.10.25-1307';
+const BUILD = '2026.10.25-1347';
 
 /* ---------- 1. Constantes y estado ---------- */
 
@@ -11185,6 +11185,7 @@ function renderTorres() {
      «ninguna fuera de umbrales» hablaba solo de los que SÍ se miraron y se
      leía como si hablara de los veinte (20-09-2026). */
   const sinMirar = orden.filter(t => !t.horas?.[0]).length;
+  const conOjo = orden.filter(t => t.horas?.[0]?.st === 'warn').length;
   /* Solo si otro modelo da TORMENTA (su código), no CAPE sin tapa (04-10-2026:
      «⚠ en 21 otro modelo ve tormenta» contando el CAPE de ECMWF 25 km sin tapa). */
   const conDisc = orden.filter(t => (dPorSitio.get(key(t.place))?.avisos || []).some(a => a.tor)).length;
@@ -11192,9 +11193,10 @@ function renderTorres() {
      era una respuesta falsa: nueve en verde con ECMWF dando tormenta en
      tres de ellas. Si hay discrepancia, se dice aquí arriba. */
   $('#torresHint').textContent =
-    (noAptas ? `· ${noAptas} fuera de umbrales ahora mismo`
-             : sinMirar === orden.length ? '· no se ha podido mirar ninguna'
-             : `· ninguna de las ${orden.length - sinMirar} miradas fuera de umbrales`)
+    /* Con los OJO contados (25-10-2026): «ninguna fuera de umbrales» encima de tres tarjetas en OJO confundía. */
+    (sinMirar === orden.length ? '· no se ha podido mirar ninguna'
+      : `· ahora: ${noAptas ? `${noAptas} por encima de tus listones` : 'ninguna por encima de tus listones'}`
+        + (conOjo ? ` · ${conOjo} con OJO` : ''))
     + (sinMirar && sinMirar < orden.length ? ` · ⚠ ${sinMirar} sin mirar` : '')
     + (conDisc ? ` · ⚠ en ${conDisc} otro modelo ve tormenta` : '')
     /* ── EL AVISO QUE SE ESCRIBÍA Y NO LEÍA NADIE (20-09-2026) ───────
@@ -11362,7 +11364,7 @@ function renderTorres() {
       || (has(h.cape) && h.cape >= (S.thr?.capeWarn ?? 300))
       || (has(h.nieve) && h.nieve > 0);
     return `<div class="tor" data-s="${h.st}"${D ? ' data-disc="1"' : ''}${alarma ? ' data-alarma="1"' : ''} data-ir="${esc(key(t.place))}">
-      <div class="tor__badge">${VT[h.st]}</div>
+      <div class="tor__badge"><small>ahora</small>${VT[h.st]}</div>
       <div class="tor__n">
         <b>${esc(t.place.name)}</b>${(() => {
           /* El chip del parte —SIN RAYO, o RAYO de tal a tal hora— junto
@@ -11409,8 +11411,14 @@ function renderTorres() {
              (medido el 26-09-2026 contra los datos de 15 min). */
           return `a las ${z(d.getHours())}${cola}`;
         })()}</span>
-        ${medidoAhoraLinea(S.medidoTorres?.get(key(t.place)))}
       </div>
+      <div class="tor__res">${resumenTorre(t.horas)}</div>
+      <!-- Lo MEDIDO, a la vista (25-10-2026, suyo: «en cada estación lo de Euskalmet y AEMET, datos online de los pluviómetros,
+           así lo miro de un vistazo»). En su renglón y con su estación: lo medido y lo calculado no se mezclan. -->
+      <div class="tor__medv">${medidoAhoraLinea(S.medidoTorres?.get(key(t.place)))}</div>
+      ${avisoDeHoy(key(t.place), t.horas)}
+      <div class="tor__tl">${tiras}<span class="tor__tlx">próximas 12 h</span></div>
+      <details class="tor__mas"><summary>Ver detalle</summary>
       <div class="tor__ds">${(() => {
         /* Los tres números grandes cambian según lo que vayas a hacer.
            Antes salía siempre «ráfaga a 40 m», y en el trabajo de caseta
@@ -11594,10 +11602,8 @@ function renderTorres() {
              + num(has(h.wind) ? wtxt(h.wind) : '—', `viento ${wu().lbl}`)
              + num(has(h.cape) ? h.cape.toFixed(0) : '—', 'CAPE J/kg');
       })()}</div>
-      ${avisoDeHoy(key(t.place), t.horas)}
       ${lineaAguaTorre(key(t.place))}
       ${lineaPista(t.pista)}
-      <div class="tor__tl">${tiras}<span class="tor__tlx">próximas 12 h</span></div>
       <div class="tor__why">${esc(motivo)}${aviso ? ` · <b>${esc(aviso)}</b>` : ''}${
         t.copia ? ` · <span class="tor__old">copia ${esc(textoEdad(t.copia.t, t.copia.edadH))}</span>` : ''}</div>
       ${lineaLlegada}
@@ -11644,6 +11650,7 @@ function renderTorres() {
         <button class="tor__aj" data-abrir="${esc(key(t.place))}">Ver en Ahora</button>
         <button class="tor__aj" data-aj="${esc(key(t.place))}">Ajustar</button>
       </div>
+      </details>
     </div>`;
   }).join('');
   pintarPortadaEstacion();
@@ -13381,6 +13388,32 @@ function motivosDeFranja(f, hs) {
     for (const r of h.reasons || []) if (r.s === f.st) { const k = corto(r.txt); if (!vistos.includes(k)) vistos.push(k); }
   }
   return vistos.slice(0, 2).join(' y ');
+}
+
+/** La línea de cada tarjeta de Mis estaciones, para leer de un vistazo (25-10-2026, suyo: «solo quiero ver de un vistazo en
+ *  mis estaciones y saber qué pasa»): lo que viene en las 12 h siguientes con su motivo y su hora, y la racha más alta. */
+function resumenTorre(horas) {
+  if (!horas?.length) return '';
+  const hh = d => String(d.getHours()).padStart(2, '0') + ':00';
+  const fr = franjasDeEstado(horas, 12);
+  const luego = fr.slice(1).filter(f => f.st === 'warn' || f.st === 'no');
+  const trozos = [];
+  /* Por qué la chapa dice OJO o FUERTE AHORA: sin esto la chapa no decía el motivo (estaba plegado en «Ver detalle»). */
+  if (fr[0] && (fr[0].st === 'warn' || fr[0].st === 'no')) {
+    const m0 = motivosDeFranja(fr[0], horas);
+    if (m0) trozos.push(`ahora <b data-s="${fr[0].st}">${esc(m0)}</b>${fr.length > 1 ? ` hasta las ${hh(new Date(fr[0].fin.getTime() + 36e5))}` : ''}`);
+  }
+  if (luego.length) {
+    const st = luego.some(f => f.st === 'no') ? 'no' : 'warn';
+    const motivos = [...new Set(luego.flatMap(f => motivosDeFranja(f, horas).split(' y ')).filter(Boolean))].slice(0, 3);
+    trozos.push(`luego <b data-s="${st}">${VT[st]}${motivos.length ? ': ' + esc(motivos.join(', ')) : ''}</b> desde las ${hh(luego[0].ini)}`);
+  } else if (fr[0]?.st === 'go') trozos.push('próximas 12 h <b data-s="go">sin nada</b>');
+  else if (fr.length === 1) trozos.push(`así las próximas 12 h`);
+  let max = null;
+  for (const x of horas.slice(0, 12)) { const v = x.gust10 ?? x.gust; if (has(v) && (!max || v > max.v)) max = { v, d: x.date }; }
+  if (max) { const n = typeof nivelRacha === 'function' ? nivelRacha(max.v) : null;
+    trozos.push(`racha máx. <b${n === 'warn' || n === 'no' ? ` data-s="${n}"` : ''}>${esc(wtxt(max.v, true))}</b> a las ${hh(max.d)}`); }
+  return trozos.join(' · ');
 }
 
 function franjasDeEstado(hs, cuantas = 12) {
@@ -17963,19 +17996,25 @@ function medidoAhoraLinea(M) {
   if (S.medidoTorres == null) return `<span class="tor__med">Medido: ${S.medidoFallo ? 'no se ha podido leer' : 'preguntando a la estación…'}</span>`;
   if (!M) return `<span class="tor__med">Medido: ninguna estación cerca</span>`;
   const f = (v, d = 0) => has(v) ? Number(v).toFixed(d).replace('.', ',') : null;
+  /* El pluviómetro DELANTE (25-10-2026): es lo que él mira de un vistazo. Sin pluviómetro en esa estación, el de la más cercana
+     que lo tenga, con su nombre; y si ninguna, se dice. */
   const partes = [
-    has(M.temperatura) ? `<b>${f(M.temperatura, 1)}°</b>` : null,
+    has(M.lluvia) ? `lluvia <b>${mmTxt(M.lluvia)} mm</b> en la última hora`
+      : M.lluviaDe ? `lluvia <b>${mmTxt(M.lluviaDe.lluvia)} mm</b> en la última hora (pluviómetro de ${esc(M.lluviaDe.nombre)})`
+      : 'lluvia: sin pluviómetro cerca',
     has(M.racha) ? `racha <b>${f(M.racha)} km/h</b>` : null,
+    has(M.temperatura) ? `<b>${f(M.temperatura, 1)}°</b>` : null,
     has(M.viento) ? `viento ${f(M.viento)} km/h${has(M.direccion) ? ` del ${esc(rumboLargo(M.direccion))}` : ''}` : null,
-    has(M.lluvia) ? `${mmTxt(M.lluvia)} mm en la hora`
-      : M.lluviaDe ? `${mmTxt(M.lluviaDe.lluvia)} mm (${esc(M.lluviaDe.nombre)})` : null,
     has(M.humedad) ? `HR ${Math.min(100, Math.round(M.humedad))} %` : null,
   ].filter(Boolean);
   const hace = M.medidoEn ? haceTxt(M.medidoEn) : '';
   /* Dónde está y a qué altura mide: 37 km/h medidos a 65 m (Matxitxako) no son 37 a 10 m. */
   const donde = [`${kmTxt(M.km)} km`, has(M.altitud) ? `${M.altitud} m` : null,
                  M.alturaAnemometro ? `mide a ${M.alturaAnemometro} m` : null, hace || null].filter(Boolean).join(' · ');
-  return `<span class="tor__med">Medido ahora · ${esc(M.fuente || '')} ${esc(M.nombre || '')} (${esc(donde)}): ${partes.join(' · ') || 'sin datos'}</span>`;
+  /* Si Euskalmet no contesta, se dice aquí, a la vista: si no, una AEMET a 8 km parece la elegida teniendo una de Euskalmet al lado
+     (25-10-2026: Euskalmet sin respuesta en 15 s en las 72 estaciones; la línea salía con AEMET sin decir por qué). */
+  const sinEus = S.medidoSinEuskalmet && M.fuente !== 'Euskalmet' ? ' · <b>Euskalmet no contesta ahora</b>' : '';
+  return `<span class="tor__med">Medido ahora · ${esc(M.fuente || '')} ${esc(M.nombre || '')} (${esc(donde)}): ${partes.join(' · ') || 'sin datos'}${sinEus}</span>`;
 }
 
 /* ── LA COPIA DE LAS TORRES, PARA CUANDO EL SERVIDOR NO CONTESTA ──────
@@ -21212,7 +21251,8 @@ function textoPulso(d) {
   const faltan = has(d.nLista) && d.sitios && d.nLista > d.sitios;
   /* Quién manda en la lluvia de los AVISOS al móvil (02-10-2026). Solo se
      cuenta: lo que ves en pantalla sigue siendo el modelo que tú pones. */
-  const dueno = d.dueno?.nombre
+  /* Con los avisos al móvil apagados (decisión suya, 06-10-2026) no pinta nada y lía (25-10-2026, repaso de Mis estaciones). */
+  const dueno = d.dueno?.nombre && !d.apagado
     ? `<br><span class="pulso__dueno">Lluvia de los avisos al móvil: manda <b>${esc(d.dueno.nombre)}</b>`
       + (d.dueno.aprendido ? ' (elegido por lo que acierta contra AEMET)' : ' (el de siempre: aún faltan casos medidos para cambiarlo)') + '.</span>'
     : '';

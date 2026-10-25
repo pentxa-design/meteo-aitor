@@ -784,7 +784,10 @@ function ponerProtocoloTierra() {
   });
 }
 const SOMBRA_ENCIMA = { 'hillshade-shadow-color': 'rgba(0,0,0,0.55)', 'hillshade-highlight-color': 'rgba(255,255,255,0.08)',
-                        'hillshade-accent-color': 'rgba(0,0,0,0.25)', 'hillshade-exaggeration': 0.6, 'hillshade-illumination-direction': 315 };
+                        'hillshade-accent-color': 'rgba(0,0,0,0.25)',
+                        /* Más marcado cuanto más alejado (25-10-2026, «el relieve no se ve» a zoom 4): el modelo de alturas se
+                           suaviza al alejar y a 0,6 los montes se perdían. */
+                        'hillshade-exaggeration': ['interpolate', ['linear'], ['zoom'], 3, 1, 6, 0.8, 9, 0.6], 'hillshade-illumination-direction': 315 };
 /* Las capas de color fuerte, más saturadas: con el relieve encima («todavía pálido, pero vas bien», 24-10, probado en su pantalla). */
 const VIVOS_FUERTES = { 'raster-saturation': 0.75, 'raster-contrast': 0.25 };   // todas desde el 24-10-2026 noche; antes la temperatura (24-10: «no se ve nada» al lado de AguaceroWx)   // y el geopotencial (24-10-2026, suyo: «sosa, desaturada, dale vida»)
 /* La única letra que el servidor de CARTO sirve tal cual (la de sus propios rótulos). Cualquier otra da 404 y MapLibre tira la
@@ -4084,14 +4087,15 @@ const Maps = {
       /* COMO WINDY Y METEOBLUE (24-10-2026, suyo: «las isobaras más profesionales, tipo Windy o Meteoblue», con sus capturas):
          línea FINA, sin el borde blanco grueso de antes, y el número pequeño encima. Oscura sobre el fondo claro (Meteoblue) y
          clara sobre el oscuro (Windy). El 1013, la presión media, un pelo más marcada, como hace Meteoblue. */
-      const osc = this.base === 'oscuro';
-      const tinta = osc ? '#e8eef8' : '#2b3446', halo = osc ? 'rgba(10,16,30,.85)' : 'rgba(255,255,255,.9)';
+      /* BLANCAS, como Windy (25-10-2026). Oscuras eran iguales que la costa negra y se confundían con ella: «el relieve del mapa,
+         costas etc no se ven». Blanca con un borde oscuro fino se distingue de la costa en los tres fondos. */
+      const tinta = '#ffffff', halo = 'rgba(10,16,30,.85)';
       const media = lineas?.capa === 't850' ? ['==', ['to-number', ['get', 'value']], 0]   // en las isotermas, la del 0 °C
                   : ['all', ['>=', ['to-number', ['get', 'value']], 1012], ['<=', ['to-number', ['get', 'value']], 1014]];
       this.map.addLayer({ id:'isoBorde', type:'line', source:'isoSrc',
         'source-layer':'contours',
         layout:{ 'line-join':'round' },
-        paint:{ 'line-color':halo, 'line-width':['case', media, 2.2, 1.6], 'line-opacity':0.35 } }, antes);
+        paint:{ 'line-color':halo, 'line-width':['case', media, 3.2, 2.6], 'line-opacity':0.35 } }, antes);
       this.map.addLayer({ id:'isoLinea', type:'line', source:'isoSrc',
         'source-layer':'contours',
         layout:{ 'line-join':'round', 'line-cap':'round' },
