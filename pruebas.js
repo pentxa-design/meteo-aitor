@@ -11526,7 +11526,7 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
   ok('apply() pone el suelo ANTES de montar la capa y solo para las escalas blancas (nubes, niebla), con la nube casi opaca (≥ 0,92); quitarCapasDeDatos() lo quita con las demás',
      iSuelo > iApply && iSuelo < iOm
      && /const op = opacidadDeCapa\(L_, this\.base, this\.opacity\);/.test(M)
-     && /const CAPAS  = \['omLayer', 'omLayer2', 'radarLayer', 'satLayer', 'aemetLayer', 'acumLayer',\s*'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'\];/.test(M),
+     && /const CAPAS  = \['omLayer', 'omLayer2', 'omLayer3', 'radarLayer', 'satLayer', 'aemetLayer', 'acumLayer',\s*'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'\];/.test(M),
      'si se quedara puesto, la siguiente capa (temperatura, ráfagas) saldría sobre tierra ocre sin motivo');
   /* 17:52, con Windy al lado otra vez: «blancas, negras donde pinta agua», «verde donde lloverá», «así quiero». */
   const sl = ((M.match(/const slc = \[([\s\S]*?)\];/) || [])[1] || '').match(/\['#([0-9a-f]{6})',\s*([0-9.]+)\]/g) || [];
@@ -11554,7 +11554,7 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
      relleno, y esa es omLayer en cuanto está montada: todo lo que se pedía «encima»
      se colaba debajo. Con la nube al 0,92 ya no se ve nada de lo de abajo. */
   ok('la capa de encima (sombra de lluvia) se monta ENCIMA de la nube, no debajo: justo detrás de omLayer',
-     /encimaDe\(id\) \{/.test(M) && /id:'omLayer2', type:'raster', source:'omSrc2',[\s\S]{0,200}this\.encimaDe\('omLayer'\)\)/.test(M),
+     /encimaDe\(id\) \{/.test(M) && /id:'omLayer2', type:'raster', source:'omSrc2',[\s\S]{0,200}this\.encimaDe\(this\.map\.getLayer\('omLayer3'\) \? 'omLayer3' : 'omLayer'\)\)/.test(M),
      'con firstLabelLayer() la segunda capa quedaba debajo de la primera');
   ok('la costa va por encima de TODAS las capas propias (nube, sombra, relieve), no solo del fondo',
      /firstLabelLayer\(porEncimaDeLasPropias = false\) \{/.test(M)
@@ -14870,6 +14870,20 @@ grupo('«Pantalla completa» no pisa la fila de botones (26-10-2026)');
   const m = css.match(/\.mapcard > \.mfull ~ \.msel--map\{padding-right:(\d+)px\}/);
   ok('la fila de botones del mapa deja a «Pantalla completa» su hueco a la derecha (≥ 190 px, lo que mide con su texto)',
      !!m && Number(m[1]) >= 190 && html.indexOf('id="mapFull"') < html.indexOf('id="mapModels"'), m?.[1]);
+}
+
+grupo('Las nubes que TAPAN el sol, no el velo de cirros (26-10-2026)');
+{
+  const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  /* Sus fotos de Bermeo a las 13:43 con el cielo azul y la capa marcando 60 %; Windy 6 %, Ventusky 8 %. MEDIDO por /om: el
+     europeo 84 % de total = 84 de nube ALTA, 0 bajas, 0 medias. La capa pintaba el total, cirros incluidos. */
+  const c = M.slice(M.indexOf("{ id:'clouds',"), M.indexOf('\n', M.indexOf("{ id:'clouds',")));
+  ok('la capa «Nubes» pinta las BAJAS y encima las MEDIAS con la misma escala (ya no el total, que contaba los cirros)',
+     /v:'cloud_cover_low', con:'cloud_cover_mid'/.test(c) && !/v:'cloud_cover',/.test(c)
+     && /this\.map\.addLayer\(\{ id:'omLayer3', type:'raster', source:'omSrc3'/.test(M)
+     && /if \(L_\.con && this\.map\.getSource\('omSrc3'\)\) \{/.test(M), c.slice(0, 120));
+  ok('   y los números y el clic dan la mayor de bajas y medias', /if \(L_\.con && urlCon\) \{   \/\/ las nubes que tapan: la mayor de bajas y medias/.test(M)
+     && /return Number\.isFinite\(vc\) \? Math\.max\(Number\.isFinite\(v\) \? v : 0, vc\) : v;/.test(M));
 }
 
 Promise.all(globalThis.__pendientes || []).then(() => {
