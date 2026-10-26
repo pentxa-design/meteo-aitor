@@ -1529,6 +1529,10 @@ canvas.mvals{width:100%;height:100%;display:block}
 .mfull svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;
   stroke-linecap:round;stroke-linejoin:round}
 .mapcard{position:relative}
+/* «Pantalla completa» flota arriba a la derecha y la fila de botones le pasaba POR DEBAJO (26-10-2026, su captura: tapaba
+   «Geop…» y el de al lado). Medido en Chrome de 800 a 2000 px: pisaba algo en TODOS los anchos. La fila le deja su hueco.
+   Solo cuando el botón está en la tarjeta (ordenador); en el móvil vive dentro del mapa y no hace falta. */
+.mapcard > .mfull ~ .msel--map{padding-right:200px}
 body.sin-scroll{overflow:hidden}
 
 .view.is-pantalla{position:fixed;inset:0;z-index:70;margin:0;padding:0;

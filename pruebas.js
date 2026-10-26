@@ -14861,6 +14861,17 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      /<div class="card" id="marcCard" hidden>\s*<h2 class="ch">Quién acierta en tus estaciones/.test(html) && /if \(!el \|\| el\.closest\('\[hidden\]'\)\) return;/.test(src));
 }
 
+grupo('«Pantalla completa» no pisa la fila de botones (26-10-2026)');
+{
+  /* Su captura: el botón tapaba «Geop…» y el de al lado. Medido con Chrome de 800 a 2000 px: pisaba algo en TODOS los anchos,
+     porque flota arriba a la derecha y la fila le pasaba por debajo. La fila le deja su hueco; en el móvil el botón va dentro
+     del mapa (app.js lo mueve a .mapwrap) y la regla no aplica. */
+  const css = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8'), html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const m = css.match(/\.mapcard > \.mfull ~ \.msel--map\{padding-right:(\d+)px\}/);
+  ok('la fila de botones del mapa deja a «Pantalla completa» su hueco a la derecha (≥ 190 px, lo que mide con su texto)',
+     !!m && Number(m[1]) >= 190 && html.indexOf('id="mapFull"') < html.indexOf('id="mapModels"'), m?.[1]);
+}
+
 Promise.all(globalThis.__pendientes || []).then(() => {
 console.log(`\n  ${pasadas} bien, ${fallos} mal\n`);
 if (fallos) {
