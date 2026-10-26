@@ -18,6 +18,9 @@
    max-age=60` y sin x-origen, aunque el fichero de netlify/ ya llevaba
    la puerta. */
 
+/* OJO: DESDE EL 26-10-2026 TAMBIÉN LO USA LA AGENDA FAMILIAR (agenda-bermeo.vercel.app, app.js trozosPorIntermediario): sus
+   trozos de mapa vienen por aquí con ?rango= y ?cabecera=1, desde otro dominio (por eso el CORS abierto). Si se cambia la ruta,
+   la lista blanca o el formato, se rompe también su mapa (vuelve sola a Amazon directo, más lento). */
 import { cabeceras } from '../lib/cabeceras.mjs';
 import { rutaDeTeselasValida } from '../lib/ruta-teselas.mjs';
 
