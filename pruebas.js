@@ -7737,14 +7737,14 @@ grupo('La tarde de los tres cuelgues del mapa (31-08-2026, 17:37-17:40)');
      dejaban «Cargando Ráfagas… 34 s» y sin barbas. Vuelve lo medido (una entera, el centro de
      la segunda) y la línea de tiempo va aparte: solo con la capa pintada, 12 pasos por
      delante y 6 por detrás, una hora cada medio segundo, y se aborta al tocar. */
-  ok('y también la de detrás por si vuelves, y el centro de la de después; la línea de tiempo aparte, suave y abortable',
+  ok('y también la de detrás por si vuelves, y el centro de la de después; la línea de tiempo aparte, suave y cortable',
      /pedir\(en\(-d\), visibles\.slice\(0, 2\)\)/.test(M)
      && /pedir\(en\(2\*d\), \[centro\]\)/.test(M)
      && !/pedir\(en\(2\*d\), visibles\)/.test(M)
      && /async calentarLinea\(\)/.test(M) && /this\._lineaTimer = setTimeout\(\(\) => this\.calentarLinea\(\), 3000\)/.test(M)
      && /idx\.slice\(pos \+ 3, pos \+ 15\)/.test(M) && /await respiro\(500\);/.test(M)
      && /x\.state === 'loaded' \|\| x\.state === 'errored'\)\) \{\n      clearTimeout\(this\._lineaTimer\);/.test(M)
-     && (M.match(/if \(this\._lineaAC\) \{ try \{ this\._lineaAC\.abort\(\); \} catch \{\} this\._lineaAC = null; \}/g) || []).length >= 2);
+     && (M.match(/if \(this\._lineaAC\) \{ this\._lineaAC\.cortado = true; this\._lineaAC = null; \}/g) || []).length >= 2);   // cortable por turno (26-10: abortar dejaba un AbortError suelto)
 
   /* «Pero tarda en cargar mucho» — el cambio de CAPA. En el Mac el
      puntero se posa en el botón un instante antes del clic: ahí ya se
@@ -15017,6 +15017,15 @@ grupo('Las nubes que TAPAN el sol, no el velo de cirros (26-10-2026)');
      && /if \(L_\.con && this\.map\.getSource\('omSrc3'\)\) \{/.test(M), c.slice(0, 120));
   ok('   y los números y el clic dan la mayor de bajas y medias', /if \(L_\.con && urlCon\) \{   \/\/ las nubes que tapan: la mayor de bajas y medias/.test(M)
      && /return Number\.isFinite\(vc\) \? Math\.max\(Number\.isFinite\(v\) \? v : 0, vc\) : v;/.test(M));
+}
+
+grupo('La precarga de horas no deja «Uncaught AbortError» (26-10-2026)');
+{
+  const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const f = M.slice(M.indexOf('  async calentarLinea() {'), M.indexOf('\n  },', M.indexOf('  async calentarLinea() {')));
+  ok('calentarLinea se corta por turno y nunca aborta la lectura de la librería a medias (eso lanzaba un error que nadie recogía)',
+     /const ac = this\._lineaAC = \{ cortado: false \}, sinCortar = new AbortController\(\);/.test(f) && /if \(ac\.cortado \|\| document\.hidden\) return;/.test(f)
+     && /omProtocol\(\{ url: k, type: 'image' \}, sinCortar\)/.test(f) && !/this\._lineaAC\.abort\(\)/.test(M));
 }
 
 Promise.all(globalThis.__pendientes || []).then(() => {

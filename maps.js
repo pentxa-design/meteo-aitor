@@ -5284,7 +5284,7 @@ const Maps = {
   cancelarPrecarga() {
     if (this._ac) { try { this._ac.abort(); } catch {} this._ac = null; }
     clearTimeout(this._lineaTimer);
-    if (this._lineaAC) { try { this._lineaAC.abort(); } catch {} this._lineaAC = null; }
+    if (this._lineaAC) { this._lineaAC.cortado = true; this._lineaAC = null; }   // por turno, no abortando (ver calentarLinea)
     clearTimeout(this._pre);
     this._pedidas = new Set();
     this._enCurso = 0;
@@ -5370,7 +5370,7 @@ const Maps = {
       if (this._pedidas.size > 400) this._pedidas = new Set();
       this.bombear();
       /* La línea de tiempo, solo con el mapa quieto 3 s y la capa pintada. */
-      if (this._lineaAC) { try { this._lineaAC.abort(); } catch {} this._lineaAC = null; }
+      if (this._lineaAC) { this._lineaAC.cortado = true; this._lineaAC = null; }   // por turno, no abortando (ver calentarLinea)
       clearTimeout(this._lineaTimer);
       this._lineaTimer = setTimeout(() => this.calentarLinea(), 3000);
     }, 500);
@@ -5404,19 +5404,22 @@ const Maps = {
     /* Doce pasos por delante (con paso 3 h, día y medio) y seis por
        detrás: lo que el dedo puede tocar en un rato, no las 93 horas. */
     const orden = idx.slice(pos + 3, pos + 15).concat(idx.slice(Math.max(0, pos - 6), pos).reverse());
-    const ac = this._lineaAC = new AbortController();
+    /* CORTAR POR TURNO, NO ABORTANDO (26-10-2026). Abortar la lectura a medias hacía que la librería lanzara un «Uncaught (in
+       promise) AbortError» que nadie podía recoger (visto en el móvil ×4 al cambiar de hora; la agenda lo arregló igual el mismo
+       día, §83). La lectura en curso termina sola y sus trozos sirven igual; lo que no se pide es la siguiente. */
+    const ac = this._lineaAC = { cortado: false }, sinCortar = new AbortController();
     const respiro = ms => new Promise(r => setTimeout(r, ms));
     let n = 0;
     const t0 = Date.now();
     try {
       for (const th of orden) {
-        if (ac.signal.aborted || document.hidden) return;
+        if (ac.cortado || document.hidden) return;
         const u = this.omUrl(L_.v, th, R.modelo, R.meta);
         if (!u) continue;
         const k = `${u}/${z}/${centro[0]}/${centro[1]}`;
         if (this._pedidas?.has(k)) continue;
         this._pedidas?.add(k);
-        try { await OMWeatherMapLayer.omProtocol({ url: k, type: 'image' }, ac); n++; }
+        try { await OMWeatherMapLayer.omProtocol({ url: k, type: 'image' }, sinCortar); n++; }
         catch { /* una hora que falle no para las demás */ }
         await respiro(500);
       }
