@@ -11246,12 +11246,145 @@ grupo('El viento vuelve a tener rumbo en el mapa, de la API, y la peor racha de 
     })().catch(e => ok('el pintado de flechas con el mapa de mentira no revienta', false, e.message)));
   }
 
+  /* ── EJECUTADO: el viento de la TESELA para las motas (26-10-2026) ──
+     Su captura de Windy: las borrascas dando vueltas a escala de Europa. MEDIDO ese día: la librería guarda para
+     wind_u_component_* values = VELOCIDAD y directions = RUMBO, y getValueFromLatLong solo da values (por eso el 21-09
+     u y v salían iguales). Aquí, con una librería de mentira que guarda lo mismo, se comprueba que se usan las dos. */
+  let VT = null, porqueVT = '';
+  try {
+    const iV = M.indexOf('\nasync function vientoDeTesela(');
+    if (iV < 0) throw new Error('no encuentro async function vientoDeTesela en maps.js');
+    const fuente = M.slice(iV, M.indexOf('\n}\n', iV) + 2);
+    VT = OM => new Function('OMWeatherMapLayer', `${fuente}; return vientoDeTesela;`)(OM);
+  } catch (e) { porqueVT = e.message; }
+  ok('vientoDeTesela existe en maps.js y se puede ejecutar', !!VT, porqueVT);
+  if (VT) {
+    const libreria = (velocidad, rumbo) => {
+      const estados = new Map(), cuenta = { om: 0, ajustes: null, lecturas: [] };
+      const L = {
+        domainOptions: [{ value: 'ecmwf_ifs' }], defaultOmProtocolSettings: { prueba: true },
+        getProtocolInstance: () => ({ stateByKey: estados }),
+        omProtocol: async (req, ac, ajustes) => {
+          cuenta.om++; cuenta.ajustes = ajustes; cuenta.tipo = req.type;
+          const r = ajustes.resolveRequest();
+          estados.set(`${req.url.replace(/^om:\/\//, '').split('?')[0]}?variable=wind_u_component_10m`,
+            { dataOptions: r.dataOptions, ranges: [], data: { values: velocidad, directions: rumbo } });
+          return { data: new ArrayBuffer(0) };
+        },
+        getValueFromLatLong: async (lat, lon, url) => {
+          const [, base, q] = /^om:\/\/([^?]+)\?(.*)$/.exec(url), p = new URLSearchParams(q);
+          const st = estados.get(`${base}?variable=${p.get('variable')}`);
+          if (!st) throw new Error(`State not found for key: ${base}`);
+          cuenta.lecturas.push(`${p.get('variable')}:${p.get('interpolation')}`);
+          return { value: st.data.values[Math.round(lon)] ?? NaN };   // el punto i está en la longitud i
+        },
+      };
+      return { L, estados, cuenta };
+    };
+    const URLU = 'om://https://s3/data_spatial/ecmwf_ifs/2026/10/26/0600Z/2026-11-03T1800.om?variable=wind_u_component_10m&interpolation=linear';
+    const caja = [-40, 30, 30, 65], puntos = [{ lat: 45, lon: 0 }, { lat: 45, lon: 1 }, { lat: 45, lon: 2 }];
+    (globalThis.__pendientes ??= []).push((async () => {
+      /* Punto 0: 10 m/s del OESTE (270°) · punto 1: 5 m/s del NORTE (0°) · punto 2: sin dato. */
+      const A = libreria([10, 5, NaN], [270, 0, 90]);
+      const f = VT(A.L);
+      const r = await f(URLU, caja, puntos, A.L.defaultOmProtocolSettings);
+      const cerca = (a, b) => Math.abs(a - b) < 1e-6;
+      ok('el viento de la tesela usa VELOCIDAD y RUMBO: del oeste a 10 m/s sopla hacia el este (u = +10, v = 0) y del norte a 5 hacia el sur (v = −5)',
+         !!r?.U && cerca(r.U[0], 10) && cerca(r.V[0], 0) && cerca(r.U[1], 0) && cerca(r.V[1], -5),
+         r?.U ? `u ${[...r.U].map(x => x.toFixed(2))} · v ${[...r.V].map(x => x.toFixed(2))}` : JSON.stringify(r));
+      ok('   donde la tesela no tiene dato sale NaN, no un viento inventado (la mota renace en otro sitio)',
+         !!r?.U && Number.isNaN(r.U[2]) && Number.isNaN(r.V[2]));
+      ok('   la velocidad se interpola y el rumbo se toma del nudo más cercano (interpolar ángulos rompe en el 0/360)',
+         A.cuenta.lecturas.includes('viento_velocidad:linear') && A.cuenta.lecturas.includes('viento_rumbo:nearest')
+         && !A.cuenta.lecturas.some(x => /viento_rumbo:linear|viento_velocidad:nearest/.test(x)), [...new Set(A.cuenta.lecturas)].join(' '));
+      ok('   lee SOLO la caja que se ve, sin dibujar nada (arrayBuffer, sin flechas), y no deja estados suyos en la librería',
+         A.cuenta.om === 1 && A.cuenta.tipo === 'arrayBuffer' && A.cuenta.ajustes?.prueba === true
+         && A.cuenta.ajustes.resolveRequest().dataOptions.bounds === caja && A.cuenta.ajustes.resolveRequest().renderOptions.drawArrows === false
+         && A.estados.size === 0, `${A.cuenta.om} lecturas · ${[...A.estados.keys()].join(', ')}`);
+      await f(URLU, [-30, 35, 20, 60], puntos, A.L.defaultOmProtocolSettings);
+      ok('   moverse dentro de la caja ya leída no vuelve a leer el fichero', A.cuenta.om === 1, `${A.cuenta.om} lecturas`);
+      /* Dos lecturas a la vez (el mapa pide motas al pintar y al quedarse quieto): la librería comparte la lectura y la
+         primera que acaba saca el estado; la segunda no puede darse por fallida. */
+      const C2 = libreria([10, 5, NaN], [270, 0, 90]), h = VT(C2.L), soltar = [];
+      C2.L.omProtocol = async (req, ac, ajustes) => {
+        C2.cuenta.om++;
+        const k = `${req.url.replace(/^om:\/\//, '').split('?')[0]}?variable=wind_u_component_10m`;
+        if (!C2.estados.has(k)) C2.estados.set(k, { dataOptions: ajustes.resolveRequest().dataOptions, ranges: [], data: { values: [10, 5, NaN], directions: [270, 0, 90] } });
+        await new Promise(r => soltar.push(r));
+        return { data: new ArrayBuffer(0) };
+      };
+      const pA = h(URLU, caja, puntos, {}), pB = h(URLU, [-30, 35, 20, 60], puntos, {});
+      await new Promise(r => setTimeout(r, 0)); soltar.splice(0).forEach(r => r());
+      const [rA, rB] = await Promise.all([pA, pB]);
+      ok('   dos lecturas a la vez del mismo fichero: las dos dan el viento (la segunda no cae a la API por llegar tarde)',
+         !!rA?.U && !!rB?.U && Math.abs(rB.U[0] - 10) < 1e-6, `${rA?.error || 'bien'} · ${rB?.error || 'bien'}`);
+      const B2 = libreria([10], [270]), g = VT(B2.L);
+      const mal = await g(URLU.replace('wind_u_component_10m', 'temperature_2m'), caja, puntos, {});
+      const fuera = await g(URLU.replace('ecmwf_ifs/', 'inventado/'), caja, puntos, {});
+      ok('   con otra variable o un modelo que la librería no conoce NO lee nada y lo dice (y entonces van las de la API)',
+         !!mal?.error && !!fuera?.error && B2.cuenta.om === 0, `${mal?.error} · ${fuera?.error}`);
+    })().catch(e => ok('el viento de la tesela con la librería de mentira no revienta', false, e.message)));
+
+    /* Y las motas: de la tesela si se puede; si no (o con ▶ en marcha), de la API. */
+    const iT = M.indexOf('\n  async particulasDeTeselas(');
+    let PT = null, porquePT = '';
+    try {
+      const metodo = M.slice(iT + 1, M.indexOf('\n  },', iT) + 4);
+      PT = (vdt, extra, doc = { hidden: false }) => new Function('vientoDeTesela', 'limpiarMarca', 'Peticiones', 'OMWeatherMapLayer', 'document', 'TILES_PROXY', 'TILES_DIRECTO',
+        `${bloqueConst('MOTAS_DE_TESELA')}; return Object.assign({ ${metodo} }, arguments[7]);`)(vdt, u => u, { conReintento: f => f() }, { defaultOmProtocolSettings: {} }, doc,
+        'https://app/omtiles', 'https://s3/data_spatial', extra);
+    } catch (e) { porquePT = e.message; }
+    ok('particulasDeTeselas se puede ejecutar aislado', iT > 0 && !!PT, porquePT);
+    if (PT) {
+      const mapa = { getCanvas: () => ({ clientWidth: 90, clientHeight: 54 }), unproject: ([x, y]) => ({ lat: 50 - y / 10, lng: -10 + x / 10 }),
+                     getZoom: () => 3.5, getBounds: () => ({ getWest: () => -10, getEast: () => -1, getSouth: () => 44.6, getNorth: () => 50 }) };
+      const yo = (extra) => ({ verParticulas: true, map: mapa, t: 0, _turnoPart: 0,
+        usando: { modelo: 'ecmwf_ifs', meta: { variables: ['wind_u_component_10m', 'wind_v_component_10m'], valid_times: ['2026-11-03T18:00Z'] } },
+        omUrl: () => URLU, pararParticulas() { this.parado = true; },
+        particulasDeApi: async function () { this.deApi = true; }, animarParticulas(cv, G) { this.G = G; }, ...extra });
+      (globalThis.__pendientes ??= []).push((async () => {
+        let pedido = null;
+        const o1 = PT(async (u, c, p) => { pedido = { u, c, n: p.length }; return { U: new Float32Array(p.length).fill(3), V: new Float32Array(p.length).fill(1) }; }, yo());
+        await o1.particulasDeTeselas({}, { id: 'gusts', vientoApi: true });
+        ok('las motas salen de la TESELA: una muestra cada ~18 px de pantalla, de la caja que se ve con margen, sin tocar la API',
+           !!o1.G && !o1.deApi && o1._motasDe === 'tesela' && pedido?.u === URLU && pedido.n === o1.G.nx * o1.G.ny && pedido.n >= 20
+           && pedido.c[0] < -10 && pedido.c[2] > -1 && pedido.c[1] < 44.6 && pedido.c[3] > 50,
+           pedido ? `${pedido.n} muestras · caja ${pedido.c}` : 'no pidió');
+        /* La API sin contestar (su casa, 26-10: «Daily API request limit exceeded») y las motas de la tesela en marcha: el pie
+           no puede decir «movimiento en pausa» con las motas moviéndose. */
+        const pie = { textContent: '↗ Flechas y movimiento en pausa hasta las 20:15: ya se han pedido muchas rejillas…' }, aviso = { textContent: '↗ Flechas y movimiento en pausa hasta las 20:15 · el rumbo sale al pulsar' };
+        const doc = { hidden: false, querySelector: q => q === '#mapViento' ? pie : q === '#mapBarbs .barbas-pausa' ? aviso : null };
+        const o5 = PT(async (u, c, p) => ({ U: new Float32Array(p.length).fill(3), V: new Float32Array(p.length).fill(1) }), yo(), doc);
+        await o5.particulasDeTeselas({}, { id: 'gusts', vientoApi: true });
+        ok('   con la API en pausa o sin contestar y las motas de la tesela en marcha, el pie y el aviso dicen que las motas SÍ van',
+           /^↗ Flechas en pausa/.test(pie.textContent) && /Las motas sí se mueven: salen de la tesela/.test(pie.textContent)
+           && !/movimiento en pausa/.test(aviso.textContent), `${pie.textContent} · ${aviso.textContent}`);
+        const o2 = PT(async () => ({ error: 'la tesela del viento no ha llegado' }), yo());
+        await o2.particulasDeTeselas({}, { id: 'gusts', vientoApi: true });
+        /* Su navegador, el 26-10, pedía las capas por /omtiles (lo eligió la carrera de velocidad): las motas no pueden ir por ahí. */
+        let porDonde = '';
+        const o6 = PT(async (u, c, p) => { porDonde = u; return { U: new Float32Array(p.length).fill(3), V: new Float32Array(p.length).fill(1) }; },
+          yo({ omUrl: () => URLU.replace('https://s3/data_spatial', 'https://app/omtiles') }));
+        await o6.particulasDeTeselas({}, { id: 'gusts', vientoApi: true });
+        ok('   el viento de las motas va SIEMPRE directo a Amazon, nunca por el intermediario de Vercel (gasto), aunque las capas vayan por él',
+           porDonde.startsWith('om://https://s3/data_spatial/') && !porDonde.includes('omtiles'), porDonde);
+        ok('   si la tesela falla, las motas van por la API (respaldo) y se apunta por qué', o2.deApi === true && !o2.G && /no ha llegado/.test(o2._motasDe));
+        const o3 = PT(async () => { throw new Error('no debía leer'); }, yo({ usando: { modelo: 'x', meta: { variables: ['wind_gusts_10m'] } } }));
+        await o3.particulasDeTeselas({}, { id: 'gusts', vientoApi: true });
+        const o4 = PT(async () => { throw new Error('no debía leer'); }, yo({ playing: true }));
+        await o4.particulasDeTeselas({}, { id: 'gusts', vientoApi: true });
+        ok('   con un modelo sin u/v en sus teselas, o con ▶ en marcha (una hora nueva cada poco), van por la API sin leer teselas',
+           o3.deApi === true && o4.deApi === true);
+      })().catch(e => ok('las motas de la tesela con un mapa de mentira no revientan', false, e.message)));
+    }
+  }
+
   /* ── Enganches ── */
   const barbas = M.slice(M.indexOf('\n  async barbas()'), M.indexOf('\n  limpiarBarbas()'));
   const part = M.slice(M.indexOf('\n  async particulas()'), M.indexOf('\n  animarParticulas('));
-  ok('las barbas y las motas de la capa de Ráfagas van por la API (vientoApi), las de teselas siguen cerradas',
+  ok('las barbas de la capa de Ráfagas van por la API (vientoApi) y las motas por la tesela (con la API de respaldo)',
      /if \(L_\?\.vientoApi\) return this\.barbasDeApi\(cont, L_\);/.test(barbas)
-     && /if \(L_\?\.vientoApi\) return this\.particulasDeApi\(cv, L_\);/.test(part)
+     && /if \(L_\?\.vientoApi\) return this\.particulasDeTeselas\(cv, L_\);/.test(part)
      && /id:'gusts',[^\n]*vientoApi: true/.test(M));
   const rej = M.slice(M.indexOf('\n  async rejillaDeApi('), M.indexOf('\n  async rejillaDeApi(') + 3500);
   ok('la rejilla se pide UNA vez por vista y día, con caché y con cupo por hora (el vigilante usa el mismo)',
@@ -11274,7 +11407,7 @@ grupo('El viento vuelve a tener rumbo en el mapa, de la API, y la peor racha de 
      parando la publicación si falla. */
   const bApi = M.slice(M.indexOf('\n  async barbasDeApi('), M.indexOf('\n  async particulasDeApi('));
   ok('sin flechas por la API caída o por el cupo, el pie lo dice: un mapa sin flechas nunca callado',
-     /if \(D\?\.pausa\) \{[\s\S]{0,900}cont\.innerHTML = `<div class="barbas-pausa"[\s\S]{0,600}decir\(`↗ Flechas y movimiento en pausa/.test(bApi)
+     /if \(D\?\.pausa\) \{[\s\S]{0,1100}cont\.innerHTML = `<div class="barbas-pausa"[\s\S]{0,600}decir\(`↗ Flechas\$\{conMotas \? '' : ' y movimiento'\} en pausa/.test(bApi)
      && /if \(!D \|\| D\.error \|\| !D\.T\) \{[\s\S]{0,120}decir\(`↗ Sin flechas: la API de pronóstico no ha contestado/.test(bApi)
      && /No es calma/.test(bApi));
   ok('el pie del viento existe en la página (#mapViento), que un pie sin sitio es un aviso mudo',

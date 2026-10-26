@@ -48,3 +48,6 @@ sincronizar-reglas.mjs
 reglas-iguales.mjs
 *.md
 revisiones/
+
+# La carpeta de Claude (permisos, servidor local y bancos de prueba) no se publica (26-10-2026: se servía en el sitio).
+.claude

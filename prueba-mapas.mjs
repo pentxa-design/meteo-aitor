@@ -105,10 +105,13 @@ import { readFileSync, readdirSync } from 'node:fs';
      la lectura por teselas. Esta prueba seguía exigiendo los botones apagados
      (de 21-09) y estuvo en rojo días sin que nadie la viera, porque este
      fichero no bloquea la publicación. */
-  ok('las flechas y el movimiento del viento van de la API de pronóstico, con sus botones, y la librería de teselas no los alimenta',
+  /* 26-10-2026: las MOTAS pasan a leer el viento de la tesela (rumbo de `directions`, medido contra /om: TRASPASO §85), con la
+     API de respaldo; las FLECHAS siguen viniendo de la API. Esta prueba exigía «la librería de teselas no los alimenta» y se
+     quedó en rojo el mismo día sin bloquear nada: se pone al día con lo medido. */
+  ok('las flechas del viento van de la API; el movimiento, de la tesela (rumbo de directions, medido) con la API de respaldo; con sus botones',
      /setBarbas\(on\) \{/.test(mapa) && /setParticulas\(on\) \{/.test(mapa)
      && /if \(L_\?\.vientoApi\) return this\.barbasDeApi\(cont, L_\);/.test(mapa)
-     && /if \(L_\?\.vientoApi\) return this\.particulasDeApi\(cv, L_\);/.test(mapa)
+     && /if \(L_\?\.vientoApi\) return this\.particulasDeTeselas\(cv, L_\);/.test(mapa) && /async particulasDeApi\(/.test(mapa)
      && /vientoApi: true/.test(mapa)
      && /data-tbb="1"/.test(mapa) && /data-tmv="1"/.test(mapa)
      && /Maps\.setBarbas\(!Maps\.verBarbas\)/.test(app) && /Maps\.setParticulas\(!Maps\.verParticulas\)/.test(app),

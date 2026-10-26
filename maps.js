@@ -1269,6 +1269,13 @@ function vientoDeUV(u, v) {
    Para que vuelvan las barbas hace falta traer la rejilla entera de la
    API de pronóstico en una sola petición (como ya se hace con sus veinte
    emplazamientos). Eso está sin hacer.
+
+   CORREGIDO EL 26-10-2026, MIDIENDO: lo de arriba describe bien lo que se
+   veía, pero el porqué era otro. La librería no confunde u con v: para
+   `wind_u_component_*` lee las DOS y guarda VELOCIDAD en `values` y RUMBO
+   en `directions`; getValueFromLatLong solo da `values`, así que se leía
+   la velocidad dos veces. El rumbo se puede leer de la tesela (ver
+   vientoDeTesela) y las motas salen de ahí desde ese día.
    ══════════════════════════════════════════════════════════════════════ */
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -1317,6 +1324,8 @@ const modeloEnApi = m => MODELO_EN_API[m] ?? null;
    las 12 y se quedó sin flechas ni movimiento. Cada rejilla son ~100 puntos de la API: 20 a la hora son ~2.000 consultas, lejos
    de lo que comparte con el vigilante. */
 const VIENTO_CUPO_HORA = 20;
+/** Lo que dice el pie de las flechas cuando la API falla pero las motas van de la tesela (26-10-2026). */
+const MOTAS_DE_TESELA = ' Las motas sí se mueven: salen de la tesela del modelo, no de la API.';
 /** Horas de la «peor racha»: las mismas 12 que enseña Windy por defecto. */
 const RACHA_VENTANA_H = 12;
 
@@ -1365,6 +1374,66 @@ function uvEnRejilla(G, U, V, lat, lon) {
   if (q.some(x => Number.isNaN(U[x]) || Number.isNaN(V[x]))) return null;
   const mezcla = A => (A[q[0]] * (1 - a) + A[q[1]] * a) * (1 - b) + (A[q[2]] * (1 - a) + A[q[3]] * a) * b;
   return { u: mezcla(U), v: mezcla(V) };
+}
+
+/* ── EL VIENTO DE LA TESELA, ENTERO Y GRATIS (26-10-2026) ───────────────────────────────────────────────────────────
+   Suyo, con su captura de Windy (ECMWF, 3-nov 21:00): las borrascas dando vueltas a escala de Europa. Con la rejilla de la
+   API (≤100 puntos, cada uno gasta cupo) los puntos quedan a cientos de km y no dibujan remolinos.
+   EL FALLO DEL 21-09 NO ERA DE LA TESELA, ERA DE LECTURA. MEDIDO el 26-10 en el navegador: para `wind_u_component_*` la
+   librería lee u Y v juntos y guarda `values` = VELOCIDAD y `directions` = RUMBO (de dónde viene). getValueFromLatLong solo
+   devuelve `values`: por eso u y v salían iguales —las dos eran la velocidad— y todas las barbas apuntaban del 225°.
+   Leyendo `directions` del estado de la librería, contra la API por /om, mismo modelo y hora:
+     ECMWF 9 km · Bermeo 125°/127° 12,5/11,2 km/h · Atlántico 50N 20W 284°/283° 64/65 · 55N 15W 235°/236° · Med. 199°/199°
+     AROME HD   · Bermeo, Bilbao y Oiz idénticos (0°, 0 km/h) · Golfo 45N 4W 114°/115°
+     ICON-EU    · Atlántico y Mediterráneo idénticos · costa 4-9° (interpolado frente al nudo)
+   Se lee SOLO la zona que se ve (`caja`, con resolveRequest propio: las demás capas siguen como estaban) y con
+   'arrayBuffer' sin flechas la librería no dibuja nada. La velocidad se interpola (lineal); el rumbo se toma del nudo más
+   cercano, que interpolar ángulos rompe en el 0/360. Lo que no tiene dato sale NaN: ahí la mota renace en otro sitio. */
+/** u, v (m/s) del viento a 10 m en cada punto de `puntos` ([{lat, lon}]), leídos de la tesela .om (sin API ni Vercel).
+ *  `urlU`: la om:// de wind_u_component_10m sin marcas propias · `caja`: [oeste, sur, este, norte] que se lee ·
+ *  `ajustes`: los del protocolo · `pedir`: por dónde se pide (la cola de teselas). Devuelve { U, V, n } o { error }. */
+async function vientoDeTesela(urlU, caja, puntos, ajustes, pedir = f => f()) {
+  const P = typeof OMWeatherMapLayer === 'undefined' ? null : OMWeatherMapLayer;
+  const m = /^om:\/\/([^?]+)\?(?:.*&)?variable=wind_u_component_10m(?:&|$)/.exec(urlU || '');
+  if (!P || !m || !Array.isArray(caja) || caja.length !== 4 || !caja.every(Number.isFinite) || !Array.isArray(puntos))
+    return { error: 'sin tesela de viento' };
+  const base = m[1], dominio = /\/([^/]+)\/\d{4}\/\d{2}\/\d{2}\/\d{4}Z\/[^/]+\.om$/.exec(base)?.[1];
+  const domain = (P.domainOptions || []).find(d => d.value === dominio);
+  if (!domain) return { error: `la librería no conoce el modelo ${dominio}` };
+  const A = ajustes || P.defaultOmProtocolSettings, inst = P.getProtocolInstance(A), clave = `${base}?variable=wind_u_component_10m`;
+  /* Lo leído se guarda (el último): mover el mapa dentro de la misma caja no vuelve a leer. */
+  const cubre = C => !!C && C.clave === clave && C.caja[0] <= caja[0] && C.caja[1] <= caja[1] && C.caja[2] >= caja[2] && C.caja[3] >= caja[3];
+  let d = cubre(vientoDeTesela.leido) ? vientoDeTesela.leido.datos : null;
+  if (!d) {
+    const conZona = { ...A, resolveRequest: () => ({ dataOptions: { domain, variable: 'wind_u_component_10m', bounds: caja },
+      renderOptions: { drawArrows: false, drawContours: false, drawGrid: false } }) };
+    const lon = (caja[0] + caja[2]) / 2, lat = Math.max(-80, Math.min(80, (caja[1] + caja[3]) / 2)), r = lat * Math.PI / 180;
+    const x = Math.min(3, Math.max(0, Math.floor((lon + 180) / 90))), y = Math.min(3, Math.max(0, Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) * 2)));
+    try { await pedir(() => P.omProtocol({ url: `${urlU}/2/${x}/${y}`, type: 'arrayBuffer' }, new AbortController(), conZona)); }
+    catch (e) { return { error: `la tesela del viento no ha llegado (${String(e?.message || e).slice(0, 80)})` }; }
+    const st = inst.stateByKey.get(clave);
+    /* Dos lecturas a la vez del mismo fichero: la librería las junta en una, y la que acaba primero saca el estado de la
+       librería; la otra usa lo que aquella dejó guardado en vez de darse por fallida. */
+    d = st?.data?.values && st.data.directions ? st : cubre(vientoDeTesela.leido) ? vientoDeTesela.leido.datos : null;
+    /* Fuera del mapa de estados de la librería en cuanto se tiene: así no echa de él a las capas que se están pintando. */
+    if (st && st.dataOptions?.bounds === caja) inst.stateByKey.delete(clave);
+    if (!d) return { error: 'la tesela del viento no trae el rumbo' };
+    if (d === st) vientoDeTesela.leido = { clave, caja, datos: d };
+  }
+  const kV = `${base}?variable=viento_velocidad`, kR = `${base}?variable=viento_rumbo`;
+  inst.stateByKey.set(kV, { ...d, data: { values: d.data.values }, lastAccess: Date.now() });
+  inst.stateByKey.set(kR, { ...d, data: { values: d.data.directions }, lastAccess: Date.now() });
+  const n = puntos.length, U = new Float32Array(n).fill(NaN), V = new Float32Array(n).fill(NaN);
+  try {
+    const leer = async (k, interp, q) => (await P.getValueFromLatLong(q.lat, q.lon, `om://${base}?variable=${k}&interpolation=${interp}`))?.value;
+    await Promise.all(puntos.map(async (pt, i) => {
+      try {
+        const [ms, desde] = await Promise.all([leer('viento_velocidad', 'linear', pt), leer('viento_rumbo', 'nearest', pt)]);
+        if (Number.isFinite(ms) && Number.isFinite(desde)) { const r = desde * Math.PI / 180; U[i] = -ms * Math.sin(r); V[i] = -ms * Math.cos(r); }
+      } catch { /* sin dato en ese punto: NaN */ }
+    }));
+  } finally { inst.stateByKey.delete(kV); inst.stateByKey.delete(kR); }
+  return { U, V, n: d.data.values.length };
 }
 
 /** La racha más fuerte de las `horas` siguientes a t0. La racha de cada
@@ -6264,15 +6333,17 @@ const Maps = {
          que pasara nada ni le dijera nada. Se dice encima del mapa y con la hora a la que vuelven. */
       const vuelve = new Date(Math.min(...(this._vientoCupo || [Date.now()])) + 3600e3)
         .toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
-      cont.innerHTML = `<div class="barbas-pausa">↗ Flechas y movimiento en pausa hasta las ${vuelve} · el rumbo sale al pulsar</div>`;
-      decir(`↗ Flechas y movimiento en pausa hasta las ${vuelve}: ya se han pedido muchas rejillas de viento esta hora y el vigilante de avisos `
-        + 'tira del mismo cupo de la API. Vuelven solas; el rumbo sigue saliendo al pulsar.');
+      /* Desde el 26-10-2026 las motas salen de la tesela y no gastan este cupo: si ya van de ahí, no se dice que estén en pausa. */
+      const conMotas = this._motasDe === 'tesela';
+      cont.innerHTML = `<div class="barbas-pausa">↗ Flechas${conMotas ? '' : ' y movimiento'} en pausa hasta las ${vuelve} · el rumbo sale al pulsar</div>`;
+      decir(`↗ Flechas${conMotas ? '' : ' y movimiento'} en pausa hasta las ${vuelve}: ya se han pedido muchas rejillas de viento esta hora y el vigilante de avisos `
+        + 'tira del mismo cupo de la API. Vuelven solas; el rumbo sigue saliendo al pulsar.' + (conMotas ? MOTAS_DE_TESELA : ''));
       return;
     }
     if (!D || D.error || !D.T) {
       cont.innerHTML = '';
       decir(`↗ Sin flechas: la API de pronóstico no ha contestado (${D?.error || 'sin respuesta'}). `
-        + 'No es calma: el rumbo sigue saliendo al pulsar.');
+        + 'No es calma: el rumbo sigue saliendo al pulsar.' + (this._motasDe === 'tesela' ? MOTAS_DE_TESELA : ''));
       return;
     }
     const vt = R.meta?.valid_times?.[this.t];
@@ -6320,13 +6391,58 @@ const Maps = {
       piezas.push(`<svg class="barb" style="left:${pt.x.toFixed(0)}px;top:${pt.y.toFixed(0)}px" viewBox="0 0 44 44">${svgBarba(ms * KT_POR_MS, desde)}</svg>`);
     });
     cont.innerHTML = piezas.join('');
-    decir(`↗ Flechas: viento MEDIO a 10 m de ${quien}, de la API de pronóstico (la tesela no sabe dar el rumbo). `
+    decir(`↗ Flechas: viento MEDIO a 10 m de ${quien}, de la API de pronóstico; las motas, del mismo modelo leído de su tesela. `
       + 'Apuntan de DONDE viene; cada pluma entera son 10 nudos (18 km/h). El color es ' + colorEs + '.'
       + (piezas.length ? '' : ' Ningún punto con dato en lo que ves.'));
   },
 
+  /** Las motas de la capa de Ráfagas, con el viento LEÍDO DE LA TESELA (vientoDeTesela, 26-10-2026): una muestra cada
+   *  ~18 px de pantalla del modelo entero, que es lo que dibuja los remolinos de las borrascas a escala de Europa. Gratis:
+   *  sin API ni Vercel. Si la tesela no llega o el modelo no publica u/v, se cae a la rejilla de la API (particulasDeApi). */
+  async particulasDeTeselas(cv, L_) {
+    if (!this.verParticulas || !this.usando || !this.map || document.hidden) { this.pararParticulas(); return; }
+    const R = this.usando;
+    const vars = R.meta?.variables || [];
+    /* SIEMPRE directo de Amazon, nunca por el intermediario /omtiles aunque la carrera lo haya elegido para las capas: leer u y v
+       de media Europa son varios MB por vista y por Vercel serían gasto (Hobby al 80 % el 26-10; su norma «ojo con lo de
+       Vercel»). Si Amazon no se alcanza desde esa red, las motas caen a la API, como antes. */
+    const urlU = vars.includes('wind_u_component_10m') && vars.includes('wind_v_component_10m')
+      ? limpiarMarca(this.omUrl('wind_u_component_10m', this.t, R.modelo, R.meta) || '').replace(`om://${TILES_PROXY}/`, `om://${TILES_DIRECTO}/`) : '';
+    /* Con ▶ en marcha, cada hora sería un fichero nuevo que leer y le quitaría turno a la hora siguiente: ahí, como antes, la
+       rejilla de la API, que trae dos días de una vez. */
+    if (!urlU || this.playing) { this._motasDe = 'api'; return this.particulasDeApi(cv, L_); }
+    const turno = (this._turnoPart = (this._turnoPart || 0) + 1);
+    const c = this.map.getCanvas();
+    const W = c.clientWidth, H = c.clientHeight;
+    if (!W || !H) return;
+    const PASO = 18;
+    let nx = Math.max(4, Math.ceil(W / PASO) + 1), ny = Math.max(4, Math.ceil(H / PASO) + 1);
+    while (nx * ny > 4000) { if (nx >= ny) nx--; else ny--; }
+    const dx = W / (nx - 1), dy = H / (ny - 1);
+    const puntos = [];
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const ll = this.map.unproject([i * dx, j * dy]); puntos.push({ lat: ll.lat, lon: ll.lng }); }
+    /* La caja que se lee: lo que se ve con un margen, redondeada hacia fuera (moverse un poco no vuelve a leer). */
+    const zoom = this.map.getZoom(), s = zoom < 4.5 ? 5 : zoom < 6.5 ? 2 : 0.5, b = this.map.getBounds();
+    const caja = [Math.max(-180, (Math.floor(b.getWest() / s) - 1) * s), Math.max(-85, (Math.floor(b.getSouth() / s) - 1) * s),
+                  Math.min(180, (Math.ceil(b.getEast() / s) + 1) * s), Math.min(85, (Math.ceil(b.getNorth() / s) + 1) * s)];
+    const D = await vientoDeTesela(urlU, caja, puntos, OMWeatherMapLayer.defaultOmProtocolSettings,
+      f => Peticiones.conReintento(f, null, 2, false));
+    if (turno !== this._turnoPart) return;
+    if (D.error || !D.U.some(Number.isFinite)) { this._motasDe = `api (${D.error || 'la tesela no tiene viento en lo que se ve'})`; return this.particulasDeApi(cv, L_); }
+    this._motasDe = 'tesela';
+    /* Si las flechas ya dijeron que la API no contesta (o que van en pausa), se añade que las motas sí van: si no, el pie
+       diría «movimiento en pausa» con las motas moviéndose debajo. */
+    const pie = document.querySelector?.('#mapViento'), aviso = document.querySelector?.('#mapBarbs .barbas-pausa');
+    if (pie && /^↗ (Sin flechas|Flechas y movimiento en pausa)/.test(pie.textContent) && !pie.textContent.includes(MOTAS_DE_TESELA))
+      pie.textContent = pie.textContent.replace('Flechas y movimiento en pausa', 'Flechas en pausa') + MOTAS_DE_TESELA;
+    if (aviso) aviso.textContent = aviso.textContent.replace('Flechas y movimiento en pausa', 'Flechas en pausa');
+    const z = Math.min(12, Math.max(0, Math.round(zoom)));
+    this.animarParticulas(cv, { W, H, nx, ny, dx, dy, U: D.U, V: D.V, z, turno });
+  },
+
   /** Las motas de la capa de Ráfagas, con la misma rejilla de la API
-   *  interpolada a la pantalla. Si no hay rejilla se paran: el porqué ya
+   *  interpolada a la pantalla. Solo de RESPALDO desde el 26-10-2026 (si
+   *  la tesela no da el viento). Si no hay rejilla se paran: el porqué ya
    *  lo dice el pie de las flechas. */
   async particulasDeApi(cv, L_) {
     if (!this.verParticulas || !this.usando || !this.map || document.hidden) { this.pararParticulas(); return; }
@@ -6382,7 +6498,7 @@ const Maps = {
       document.addEventListener('visibilitychange', () => { if (!document.hidden && this.verParticulas && this.map) this.particulas(); });
     }
     const L_ = TLAYERS.find(l => l.id === this.layer);
-    if (L_?.vientoApi) return this.particulasDeApi(cv, L_);
+    if (L_?.vientoApi) return this.particulasDeTeselas(cv, L_);
     const C = this.componentes(L_);
     if (!this.verParticulas || !C || !puedeLeerse(C.v) || !this.usando || !this.map || document.hidden) { this.pararParticulas(); return; }
     const R = this.usando;
@@ -6437,8 +6553,10 @@ const Maps = {
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, G.W, G.H);
-    /* Cuántas: una por cada 350 px² (un iPhone ~700, un Mac grande ~3.000). */
-    const N = Math.round(Math.min(3500, Math.max(600, G.W * G.H / 350)));
+    /* Cuántas: una por cada 350 px² (un iPhone ~700, un Mac grande ~3.000), y MÁS al alejar (26-10-2026, su captura de
+       Windy a escala de Europa): con zoom 4 o menos una por cada 200 px², con zoom 5-6 una por cada 270, que si no los
+       remolinos de las borrascas se quedan en cuatro rayas sueltas. */
+    const N = Math.round(Math.min(5000, Math.max(600, G.W * G.H / (G.z <= 4 ? 200 : G.z <= 6 ? 270 : 350))));
     const P = new Float32Array(N * 3);                // x, y, edad
     const VIDA = 110;
     const nacer = i => { P[i * 3] = Math.random() * G.W; P[i * 3 + 1] = Math.random() * G.H; P[i * 3 + 2] = Math.random() * VIDA; };
