@@ -1324,6 +1324,10 @@ const modeloEnApi = m => MODELO_EN_API[m] ?? null;
    las 12 y se quedó sin flechas ni movimiento. Cada rejilla son ~100 puntos de la API: 20 a la hora son ~2.000 consultas, lejos
    de lo que comparte con el vigilante. */
 const VIENTO_CUPO_HORA = 20;
+/** Las motas de la tesela, APAGADAS el 26-10-2026 por la noche: en la agenda, en su móvil, «cambiar a otra capa tarda 1
+ *  minuto». La librería tiene UN solo lector de ficheros y setToOmFile() tira el que se está leyendo: la lectura de u/v y la
+ *  de la capa se pisaban. Hasta arreglarlo (lector propio) las motas van por la API, como antes. */
+const MOTAS_TESELA_ENCENDIDAS = false;
 /** Lo que dice el pie de las flechas cuando la API falla pero las motas van de la tesela (26-10-2026). */
 const MOTAS_DE_TESELA = ' Las motas sí se mueven: salen de la tesela del modelo, no de la API.';
 /** Horas de la «peor racha»: las mismas 12 que enseña Windy por defecto. */
@@ -6413,7 +6417,7 @@ const Maps = {
       ? limpiarMarca(this.omUrl('wind_u_component_10m', this.t, R.modelo, R.meta) || '').replace(`om://${TILES_PROXY}/`, `om://${TILES_DIRECTO}/`) : '';
     /* Con ▶ en marcha, cada hora sería un fichero nuevo que leer y le quitaría turno a la hora siguiente: ahí, como antes, la
        rejilla de la API, que trae dos días de una vez. */
-    if (!urlU || this.playing) { this._motasDe = 'api'; return this.particulasDeApi(cv, L_); }
+    if (!urlU || this.playing || !MOTAS_TESELA_ENCENDIDAS) { this._motasDe = 'api'; return this.particulasDeApi(cv, L_); }
     const turno = (this._turnoPart = (this._turnoPart || 0) + 1);
     const c = this.map.getCanvas();
     const W = c.clientWidth, H = c.clientHeight;

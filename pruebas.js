@@ -11330,9 +11330,9 @@ grupo('El viento vuelve a tener rumbo en el mapa, de la API, y la peor racha de 
     let PT = null, porquePT = '';
     try {
       const metodo = M.slice(iT + 1, M.indexOf('\n  },', iT) + 4);
-      PT = (vdt, extra, doc = { hidden: false }) => new Function('vientoDeTesela', 'limpiarMarca', 'Peticiones', 'OMWeatherMapLayer', 'document', 'TILES_PROXY', 'TILES_DIRECTO',
-        `${bloqueConst('MOTAS_DE_TESELA')}; return Object.assign({ ${metodo} }, arguments[7]);`)(vdt, u => u, { conReintento: f => f() }, { defaultOmProtocolSettings: {} }, doc,
-        'https://app/omtiles', 'https://s3/data_spatial', extra);
+      PT = (vdt, extra, doc = { hidden: false }, encendidas = true) => new Function('vientoDeTesela', 'limpiarMarca', 'Peticiones', 'OMWeatherMapLayer', 'document', 'TILES_PROXY', 'TILES_DIRECTO', 'MOTAS_TESELA_ENCENDIDAS',
+        `${bloqueConst('MOTAS_DE_TESELA')}; return Object.assign({ ${metodo} }, arguments[8]);`)(vdt, u => u, { conReintento: f => f() }, { defaultOmProtocolSettings: {} }, doc,
+        'https://app/omtiles', 'https://s3/data_spatial', encendidas, extra);
     } catch (e) { porquePT = e.message; }
     ok('particulasDeTeselas se puede ejecutar aislado', iT > 0 && !!PT, porquePT);
     if (PT) {
@@ -11373,8 +11373,11 @@ grupo('El viento vuelve a tener rumbo en el mapa, de la API, y la peor racha de 
         await o3.particulasDeTeselas({}, { id: 'gusts', vientoApi: true });
         const o4 = PT(async () => { throw new Error('no debía leer'); }, yo({ playing: true }));
         await o4.particulasDeTeselas({}, { id: 'gusts', vientoApi: true });
+        const o7 = PT(async () => { throw new Error('no debía leer'); }, yo(), { hidden: false }, false);
+        await o7.particulasDeTeselas({}, { id: 'gusts', vientoApi: true });
         ok('   con un modelo sin u/v en sus teselas, o con ▶ en marcha (una hora nueva cada poco), van por la API sin leer teselas',
            o3.deApi === true && o4.deApi === true);
+        ok('   con las motas de tesela APAGADAS (26-10, frenaban el cambio de capa) van por la API sin leer teselas', o7.deApi === true);
       })().catch(e => ok('las motas de la tesela con un mapa de mentira no revientan', false, e.message)));
     }
   }
