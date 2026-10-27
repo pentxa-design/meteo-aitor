@@ -1602,3 +1602,23 @@ Estado en agenda-familiar 2026.10.25-2057: `mapaLluvia()` en app.js (botón «Ve
 - **Cierre del §85 (METEO-APP):** la sesión del viento publicó sin guardar en git; guardado ahora. `.claude` añadido a `.vercelignore`: se servía en el sitio (settings.local.json, servidor-local.cjs, bancos de prueba; sin secretos, pero no pinta ahí) — comprobado 404 tras publicar. Y `prueba-mapas.mjs` (no bloquea) exigía «la librería de teselas no alimenta el viento»: puesta al día con lo medido en §85 (motas de la tesela, flechas de la API).
 - **App: precarga de horas sin «Uncaught AbortError»** (visto por la sesión del viento en el móvil ×4 al cambiar de hora): `calentarLinea` se corta por TURNO (`_lineaAC = { cortado }`) y le pasa a la librería un controlador que nunca se aborta, igual que la agenda (§83). Prueba nueva vista en rojo; la vieja «abortable» puesta al día. Comprobado en la app publicada: 4 cambios de hora, 0 errores sin recoger.
 - **26-10, 23:30 — APAGADAS (app y agenda).** Suyo, probándolo en el móvil: «tarda mucho agenda familiar el mapa» · «cambiar a otra capa tarda 1 minuto». Apagadas en las dos (`MOTAS_TESELA_ENCENDIDAS = false` en maps.js, `MOTAS_DE_TESELA = false` en la agenda; las motas vuelven a la API) y publicadas: agenda 2026.10.26-2333 y la app a continuación. **Causa probable, leída en la librería:** UN solo lector de ficheros (`omFileReader`); `setToOmFile()` empieza con `dispose()` del fichero en curso, así que la lectura de u/v y la de la capa se pisan; y la de u/v llena la misma caché de 128 trozos y echa lo precargado. **Medido A/B en móvil simulado (CPU ×4, 4G), agenda publicada con el app.js de antes y con el de las motas:** iguales (Temperatura/Rachas 0,5 s; Nubes 10,6-11,4 s en las dos; hora siguiente 0,6-10 s en las dos), y en esa simulación las motas de tesela no llegaron a arrancar en 23 s. O sea: el minuto NO se reprodujo; queda por saber si con lo apagado se le va. **Para volver a encenderlas:** lector PROPIO (`new inst.omFileReader.constructor({...config, cache: caché propia})`, `getRanges(domain.grid, caja)`, `readVariable(..., señal)`) con corte por señal al mover/cambiar capa, y medirlo en SU móvil.
+
+## §86 · 27-10-2026 · Mapa de la app: ECMWF HRES de lejos, hora a hora; «Radar + previsión» viva
+
+Suyo: «no me va de hora en hora» · «los saltos del slider» · «el de antes» · «más saturación a esto también».
+
+- **No lo rompió el otro chat** (solo tocó las motas del viento, ya apagadas). Venía del 14-09: con ECMWF HRES y zoom < 6 (su
+  vista de siempre, 5,2) se pintaba el ECMWF de 25 km, que publica **cada 3 h** y sin las 24 h de antes. Con «PASO 1 h»
+  marcado, el ▶ saltaba 3 h.
+- **Arreglo:** `HRES_DE_LEJOS_CON_25 = false` (maps.js) → de lejos también el de 9 km. Medido antes en la app publicada: 6
+  capas seguidas sin OOM con zoom 5,2 y 3,6 (Chrome sin ventana, montón máx. 200 MB) y otras 6 en SU navegador (panel oculto:
+  temperatura 5,5 s, nubes 11 s). Paso de hora ~0,6 s. Es más lento que el de 25 km al cambiar de capa: es el precio de la hora
+  a hora. Si vuelve el OOM, `true` y vuelve el de 25 km; la red de seguridad (recarga, y a la segunda ICON-EU) sigue puesta.
+  Regla de NO-SE-TOCA.md cambiada con su porqué.
+- **«Radar + previsión»:** la parte de previsión (`frameMixta`) montaba `omLayer` sin saturación ni contraste. Ahora con la
+  pintura de la Reflectividad (`VIVOS`, opacidad de `opacidadDeCapa`). Medido publicado: 0,65 / 0,22 / 0,95.
+- **«Va más lento»:** medido A/B con y sin `calentarLinea` (el cambio por turno del 26-10): 0,27-0,30 s por hora en los dos.
+  No es eso. Lo lento que sí se ve es el ECMWF de 9 km al cambiar de capa.
+- La barra roja «Cannot read properties of undefined (reading 'name')» de las 10:00 la provocó una prueba mía (pedí
+  `icon_eu`; en la app es `dwd_icon_eu`). No es de la app.
+- Pruebas nuevas vistas en ROJO rompiendo los dos arreglos. Publicado 2026.10.27-1016.

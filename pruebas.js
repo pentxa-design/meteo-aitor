@@ -11584,8 +11584,15 @@ grupo('Agua precipitable en Lluvia, presión por bandas de 4 hPa y HRES solo de 
   /* Sin `let` del mismo nombre: un `let` en el bloque tapaba la función que
      declara el eval y la prueba salía en rojo con el código bien. */
   const hl = (() => { try { eval(mapsSrc.slice(mapsSrc.indexOf('const HRES_ZOOM_MIN'), mapsSrc.indexOf('\n}', mapsSrc.indexOf('function hresDeLejos(')) + 2).replace('const HRES_ZOOM_MIN', 'globalThis.HRES_ZOOM_MIN')); return hresDeLejos; } catch (e) { console.log(`  (sin hresDeLejos: ${e.message})`); return null; } })();
-  ok('ECMWF HRES solo de cerca: por debajo del zoom 6 se pinta con ECMWF 25 km y se dice; desde el 6, el de 9 km',
-     typeof hl === 'function' && hl('ecmwf_ifs', 5.9) === true && hl('ecmwf_ifs', 6) === false
+  ok('ECMWF HRES de lejos TAMBIÉN con el de 9 km (27-10-2026, «no me va de hora en hora»): el de 25 km va de 3 en 3 h y sin las de antes',
+     typeof hl === 'function' && hl('ecmwf_ifs', 5.2) === false && hl('ecmwf_ifs', 3.6) === false && hl('ecmwf_ifs', 6) === false
+     && /const HRES_DE_LEJOS_CON_25 = false;/.test(M),
+     'con la sustitución puesta, a zoom 5,2 el ▶ saltaba 3 h con «PASO 1 h» marcado');
+  ok('«Radar + previsión»: la previsión se pinta con la pintura de la Reflectividad (VIVOS y su opacidad), no pálida (27-10-2026)',
+     /frameMixta\(t\) \{[\s\S]{0,4000}?addLayer\(\{ id:'omLayer'[^\n]*\n[^\n]*opacidadDeCapa\(LR, this\.base, this\.opacity\)[^\n]*\.\.\.VIVOS \}/.test(M),
+     'se montaba sin saturación ni contraste: «más saturación a esto también»');
+  ok('la vuelta al de 25 km de lejos sigue montada por si vuelve el OOM (avisada y repintada al cruzar el zoom 6)',
+     typeof hl === 'function' && hl('ecmwf_ifs', 6) === false
      && hl('ecmwf_ifs025', 3) === false && hl('ecmwf_ifs', NaN) === false
      && /sustituido: true, porZoom: true/.test(M) && /this\.avisoSustitucion\(R\.sustituido \|\| R\.mar \? R\.modelo : null, R\.porZoom, !!R\.mar\)/.test(M)
      && /solo de cerca/.test(M) && /reaplicarPorZoom\(\)/.test(M) && /on\('zoomend'[^\n]*reaplicarPorZoom/.test(M),

@@ -838,8 +838,17 @@ function opacidadDeCapa(L_, base, o) {
    (ver costaEncima: los cortes de tesela de CARTO salían como rayas). */
 const COSTA_DETALLE_DESDE = 7;
 const HRES_ZOOM_MIN = 6;
+/* ── DE LEJOS TAMBIÉN EL DE 9 km (27-10-2026) ──────────────────────────────────────────────────────────────────────────
+   Suyo: «no me va de hora en hora» · «los saltos del slider» · «el de antes». Con ECMWF HRES y el mapa alejado (su vista de
+   siempre, zoom 5,2) se pintaba el de 25 km, que solo publica cada 3 h y sin las 24 h de antes: el ▶ saltaba de 3 en 3 con
+   «PASO 1 h» marcado y la tira empezaba en su pasada. MEDIDO ese día en la app publicada (Chrome sin ventana, 1280×900): el de
+   9 km de lejos va de hora en hora, 0,55-0,6 s por hora, capas de 0,5 a 3,8 s, y SEIS capas seguidas sin quedarse sin memoria
+   con España (zoom 5,2) y con Europa (3,6), montón máximo 200 MB. El «15 s y sin memoria al 5.º cambio» del 14-09 (ya con los
+   bloques de 256 KB) hoy no sale; el porqué no está medido. Si vuelve el OOM, la red de seguridad sigue puesta (recarga sola y
+   a la segunda se pasa a ICON-EU) y esto se vuelve a encender con `true`. */
+const HRES_DE_LEJOS_CON_25 = false;
 function hresDeLejos(modelo, zoom) {
-  return modelo === 'ecmwf_ifs' && Number.isFinite(zoom) && zoom < HRES_ZOOM_MIN;
+  return HRES_DE_LEJOS_CON_25 && modelo === 'ecmwf_ifs' && Number.isFinite(zoom) && zoom < HRES_ZOOM_MIN;
 }
 
 /* Rangos de cordura por capa. No es meteorología fina: es cazar que la
@@ -4090,8 +4099,11 @@ const Maps = {
         else {
           this.map.addSource('omSrc', { type:'raster', tiles:[`${url}/{z}/{x}/{y}`], tileSize:256, maxzoom:12,
                                         attribution:'Datos de modelo: Open-Meteo' });
+          /* Con la pintura de la Reflectividad, que es el mismo dato (27-10-2026, suyo con la previsión de ECMWF delante: «más
+             saturación a esto también»): esta capa se montaba sin saturación ni contraste y con la opacidad del deslizador sin el
+             mínimo de las capas de lluvia, y salía más pálida que la Reflectividad pintando lo mismo. */
           this.map.addLayer({ id:'omLayer', type:'raster', source:'omSrc',
-            paint:{ 'raster-opacity': this.opacity, 'raster-fade-duration': 120, 'raster-resampling': 'linear' } },
+            paint:{ 'raster-opacity': opacidadDeCapa(LR, this.base, this.opacity), 'raster-fade-duration': 120, 'raster-resampling': 'linear', ...VIVOS } },
             this.firstLabelLayer());
         }
         if (this.map.getLayer('radarLayer')) this.map.setLayoutProperty('radarLayer', 'visibility', 'none');
