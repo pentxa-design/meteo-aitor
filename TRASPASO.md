@@ -1678,3 +1678,11 @@ su ventana, 3× más teselas que el panel, o las isobaras en su máquina).
 
 Y «eso negro molesta» · «fuera»: la pastilla `.mapRayosPill` («⚡ los rayos son MEDIDOS…») tapaba la tira de horas.
 Apagada (`PASTILLA_RAYOS_ENCENDIDA = false`); el motivo sigue en el pie `#mapRayos`. Prueba vista en roja.
+
+### §86 sexies — El vigilante del camino directo (27-10-2026, noche)
+
+Suyo: «haz algo para que no pase más y ya». Mientras el mapa va directo a Amazon, `instalarBloquesPorUrl` cronometra
+cada trozo 206 hasta su último byte (TransformStream, sin copiar el cuerpo) y `anotarDirecto()` mira la mediana cada 6:
+si pasa de 700 ms se cambia `TILES` al intermediario en el acto y se guarda en `torre.origenTeselas4` (motivo «el directo
+iba lento»). Solo va hacia el intermediario. Los trozos de la carrera (`no-store`) no cuentan. Pruebas ejecutadas con sus
+tiempos (1,1-1,3 s → cambia al 6.º; 0,2-0,3 s → se queda), vistas en roja.

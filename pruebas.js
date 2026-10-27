@@ -15097,6 +15097,37 @@ grupo('La carrera de las teselas se decide con un TROZO de verdad, no con un HEA
   })());
 }
 
+grupo('El vigilante del camino directo (27-10-2026, noche, «haz algo para que no pase más y ya»)');
+{
+  const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const src = M.slice(M.indexOf('const DIRECTO_LENTO_MS'), M.indexOf('function instalarBloquesPorUrl() {'));
+  /* Se EJECUTA anotarDirecto con los tiempos de su casa. */
+  const montar = (inicial) => {
+    const guardado = {};
+    const ls = { getItem: k => guardado[k] ?? null, setItem: (k, v) => { guardado[k] = v; } };
+    const f = new Function('localStorage', `const TILES_DIRECTO = 'D', TILES_PROXY = 'P'; let TILES = ${JSON.stringify(inicial)}; ${src}
+      return { anotar: anotarDirecto, tiles: () => TILES };`);
+    return { ...f(ls), guardado };
+  };
+  const casa = montar('D');
+  const antes = [1100, 1180, 1250, 1300, 1120].map(ms => casa.anotar(ms));
+  const sigueAntes = casa.tiles() === 'D';
+  const salto = casa.anotar(1150);
+  ok('directo de Amazon con trozos de 1,1-1,3 s (su casa, 27-10): al SEXTO trozo se pasa al intermediario y lo guarda',
+     sigueAntes && !antes.some(Boolean) && salto && casa.tiles() === 'P' && /"proxy":true/.test(casa.guardado['torre.origenTeselas4'] || ''),
+     JSON.stringify({ antes, salto, tiles: casa.tiles() }));
+  const rapida = montar('D');
+  [200, 250, 300, 180, 900, 220, 260, 240].forEach(ms => rapida.anotar(ms));
+  ok('   una red donde Amazon va rápido (0,2-0,3 s, con un trozo suelto de 0,9) se QUEDA en directo', rapida.tiles() === 'D');
+  const yaProxy = montar('P');
+  [2000, 2000, 2000, 2000, 2000, 2000].forEach(ms => yaProxy.anotar(ms));
+  ok('   y yendo ya por el intermediario no hace nada (no hay a dónde mejorar)', yaProxy.tiles() === 'P' && !yaProxy.guardado['torre.origenTeselas4']);
+  ok('   cronometra los trozos directos que pide el MAPA (206, hasta el último byte) y NO los de la carrera (no-store)',
+     /const deLaCarrera = \(init && init\.cache\) === 'no-store';/.test(M)
+     && /new TransformStream\(\{ flush\(\) \{ anotarDirecto\(Date\.now\(\) - t0\); \} \}\)/.test(M)
+     && /cache: 'no-store', signal: ac\.signal/.test(M));
+}
+
 grupo('La capa «Nubes» como Windy también en Claro (27-10-2026, «solo pintáis grises»)');
 {
   const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');

@@ -111,6 +111,28 @@ const RANGO_BYTES = /^bytes=(\d+)-(\d+)$/;
    respuesta a medias guardada en la caché del CDN o del navegador se servía igual al reintentar. Durante un minuto después de
    pulsar Reintentar, los bloques se piden SIN caché: por el intermediario con otra URL (`&fresco=`) y directos con `reload`. */
 let FRESCO_HASTA = 0;
+/* ── EL VIGILANTE DEL CAMINO DIRECTO (27-10-2026, noche) ──────────────────────────────────────────────────────────────
+   Suyo, después de una tarde con el mapa a paso de tortuga porque la carrera se había quedado con Amazon: «haz algo para
+   que no pase más y ya». La carrera mide UN trozo al abrir y se fía 6 h; si se equivoca, el mapa va lento 6 h. Ahora,
+   mientras se va directo, cada trozo de 256 KB que de verdad pide el mapa se cronometra hasta su último byte, y cada 6
+   trozos se mira la mediana: si pasa de 700 ms (desde su casa Amazon da 1,1-1,3 s; el intermediario 0,15-1,0), se pasa
+   al intermediario en ese momento y se guarda así para las próximas 6 h. Solo se va hacia el intermediario, que es el
+   que llega desde cualquier red (por eso existe). Los trozos de la carrera (`no-store`) no cuentan. */
+const DIRECTO_LENTO_MS = 700, DIRECTO_MUESTRAS = 6;
+let tiemposDirecto = [];
+function anotarDirecto(ms) {
+  if (TILES !== TILES_DIRECTO || TILES_PROXY === TILES_DIRECTO || !Number.isFinite(ms)) return false;
+  tiemposDirecto.push(ms);
+  if (tiemposDirecto.length < DIRECTO_MUESTRAS) return false;
+  const orden = tiemposDirecto.sort((a, b) => a - b), mediana = orden[Math.floor(orden.length / 2)];
+  tiemposDirecto = [];
+  if (mediana < DIRECTO_LENTO_MS) return false;
+  TILES = TILES_PROXY;
+  try {
+    localStorage.setItem('torre.origenTeselas4', JSON.stringify({ proxy: true, t: Date.now(), motivo: 'el directo iba lento', medianaDirecto: mediana }));
+  } catch { /* sin sitio: vale para esta sesión */ }
+  return true;
+}
 function instalarBloquesPorUrl() {
   if (typeof window === 'undefined' || typeof window.fetch !== 'function' || window.fetch.bloquesPorUrl) return false;
   const original = window.fetch.bind(window);
@@ -118,7 +140,14 @@ function instalarBloquesPorUrl() {
     const url = typeof entrada === 'string' ? entrada
               : (entrada instanceof URL ? entrada.href : entrada && entrada.url);
     const fresco = Date.now() < FRESCO_HASTA;
-    if (url && fresco && url.endsWith('.om') && !url.startsWith(TILES_PROXY + '/')) return original(entrada, { ...(init || {}), cache: 'reload' });
+    if (url && url.endsWith('.om') && !url.startsWith(TILES_PROXY + '/')) {
+      const t0 = Date.now();
+      const r = await original(entrada, fresco ? { ...(init || {}), cache: 'reload' } : init);
+      const deLaCarrera = (init && init.cache) === 'no-store';
+      if (deLaCarrera || r.status !== 206 || !r.body || typeof TransformStream !== 'function') return r;
+      const cronometro = new TransformStream({ flush() { anotarDirecto(Date.now() - t0); } });
+      return new Response(r.body.pipeThrough(cronometro), { status: r.status, statusText: r.statusText, headers: r.headers });
+    }
     if (!url || !url.startsWith(TILES_PROXY + '/') || !url.endsWith('.om')) return original(entrada, init);
     const metodo = String((init && init.method) || (entrada && entrada.method) || 'GET').toUpperCase();
     const señal = (init && init.signal) || (entrada && entrada.signal) || undefined;
