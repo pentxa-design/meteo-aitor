@@ -1649,3 +1649,17 @@ Suyo: «no me va de hora en hora» · «los saltos del slider» · «el de antes
   Claro el suelo ocre y la nube blanca, como en Color; el agua del modelo sigue encima en azul. Bajas, medias, altas y niebla
   siguen como estaban. NO-SE-TOCA.md al día. Visto en pantalla (ECMWF HRES 12:00, el frente de Galicia igual que en su
   Windy). Publicado 2026.10.27-1139.
+
+### §86 quater · 27-10-2026, 12:10 · Las nubes ALTAS vuelven a «Nubes», en gris clarito
+
+- Sus fotos de Bermeo a las 12:03: cielo cubierto y gris, sin llover; «Windy lo clava» y nuestro mapa salía limpio (ocre).
+- **MEDIDO por /om, Bermeo 12:00:** bajas 0 %, medias 0-5 %, **altas 95-100 %** en ECMWF 9 y 25 km, ICON-EU, AROME HD y GFS. El
+  26-10 se quitaron las altas de «Nubes» (cirros con cielo azul daban 60 %); hoy, con el manto gris, eso dejaba el cielo limpio.
+- **Arreglo:** `alta:'cloud_cover_high'` en la capa, `omLayer4`/`omSrc4` DEBAJO de las bajas y medias, con la misma escala pero
+  a `ALTAS_OPACIDAD` 0,55 y `ALTAS_BRILLO` 0,82 → gris clarito. Números y clic: la mayor de las tres. Él: «blancas y algunas
+  grises claritas, no oscuras porque no llevan tanta agua».
+- **Lo que el modelo NO dice:** el espesor. El velo fino del 26-10 y el manto del 27-10 salen igual de claritos.
+- Un intento intermedio (pintar en gris la nube a medias, 40-55 %) se deshizo sin publicar: él lo paró con las fotos.
+- **Coste:** con ECMWF HRES la capa Nubes son 4 ficheros por hora (bajas, medias, altas y lluvia): en el panel tardó ~25 s
+  la primera vez. Si se queja de lentitud en Nubes, es esto.
+- Publicado 2026.10.27-1211, visto en pantalla (12:00, ECMWF HRES, Claro).

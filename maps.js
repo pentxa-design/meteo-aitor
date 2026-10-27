@@ -567,8 +567,8 @@ const TLAYERS = [
      (bajas 0, medias 0, altas 84); ICON-EU 52 % = 34 de cirro + 20 de baja. El TOTAL del modelo cuenta el velo de cirros,
      que deja pasar el sol, igual que un techo gris. Ahora la capa pinta las BAJAS y, encima con la misma escala, las MEDIAS
      (`con`); los cirros siguen en «Nubes altas». Números y clic: la mayor de las dos. */
-  { id:'clouds',      g:'Cielo', name:'Nubes', v:'cloud_cover_low', con:'cloud_cover_mid', unit:'%', escala:'nubes', encima:'precipitation', encimaEscala:'sombraLluvia',
-    desc:'Las nubes que TAPAN el sol (bajas y medias), como Windy: blanca con claros, gris con el cielo cerrado, y el agua del modelo en azul (claro con llovizna, casi negro con chaparrón). Los cirros, el velo fino y alto que deja pasar el sol, no cuentan aquí: están en «Nubes altas»' },
+  { id:'clouds',      g:'Cielo', name:'Nubes', v:'cloud_cover_low', con:'cloud_cover_mid', alta:'cloud_cover_high', unit:'%', escala:'nubes', encima:'precipitation', encimaEscala:'sombraLluvia',
+    desc:'Como Windy: las nubes bajas y medias en BLANCO, las altas en GRIS CLARITO debajo (el modelo no dice si son un velo fino o un manto gris: las dos salen igual de claritas), y el agua del modelo en azul (claro con llovizna, casi negro con chaparrón). El número es la mayor de las tres' },
   { id:'clouds_low',  g:'Cielo', name:'Nubes bajas', v:'cloud_cover_low', unit:'%', escala:'nubes',
     desc:'Las que te dejan sin ver la torre' },
   { id:'clouds_mid',  g:'Cielo', name:'Nubes medias', v:'cloud_cover_mid', unit:'%', escala:'nubes', desc:'Nubosidad media' },
@@ -767,6 +767,9 @@ const ESCALAS_BLANCAS = new Set(['nubes', 'niebla']);
 /* En el fondo Claro las nubes y la niebla van sin suelo ocre y oscurecidas a gris: blanca sobre el mapa claro no se veía (19-10-2026, probado
    en pantalla antes de ponerlo: 0,72 deja la nube cerrada en gris claro y se distingue del mapa). */
 const NUBE_EN_CLARO = { 'raster-brightness-max': 0.72 };
+/* Las nubes ALTAS en la capa «Nubes» (27-10-2026): debajo de las bajas y medias, a esta parte de su opacidad y apagadas a gris
+   clarito. El modelo da su porcentaje, no su espesor: el velo fino de cirros y el manto gris salen igual de claritos. */
+const ALTAS_OPACIDAD = 0.55, ALTAS_BRILLO = 0.82;
 /* ── LA CAPA «NUBES», COMO WINDY TAMBIÉN EN CLARO (27-10-2026) ──────────────────────────────────────────────────────────
    Suyo, con Windy al lado: «solo pintáis grises» · «lleva con grises 2 días» · «donde hay blancas hay que poner blancas» ·
    «la capa de nubes como Windy la quiero». Y contestado en la pregunta: «Sí, como Windy». En Claro la nube iba oscurecida a
@@ -3638,6 +3641,20 @@ const Maps = {
           this.map.addLayer({ id:'omLayer3', type:'raster', source:'omSrc3', paint:{ 'raster-fade-duration': 120, ...pin } }, this.encimaDe('omLayer'));
         }
       }
+      /* ── LAS ALTAS VUELVEN, EN GRIS CLARITO Y DEBAJO (27-10-2026) ──────────────────────────────────────────────────────────
+         Suyo, con dos fotos de Bermeo a las 12:03 (cielo cubierto y gris, sin llover) y Windy al lado: «Windy lo clava» · «blancas
+         y algunas grises claritas, no oscuras porque no llevan tanta agua». MEDIDO por /om a las 12:00 en Bermeo: bajas 0 %, medias
+         0-5 %, ALTAS 95-100 % en ECMWF 9 y 25 km, ICON-EU, AROME HD y GFS. El 26-10 se quitaron las altas (los cirros con cielo azul
+         daban 60 %) y hoy el manto gris salía como cielo limpio. Vuelven, pero con la misma escala, por DEBAJO de las bajas y medias
+         y más transparentes y apagadas: el porcentaje del modelo, sin inventar, en gris clarito en vez de blanco. */
+      if (L_.alta && (!R.meta?.variables || R.meta.variables.includes(L_.alta))) {
+        const u4 = this.omUrl(L_.alta, this.t, R.modelo, R.meta, { escala: L_.escala });
+        if (u4) {
+          this.map.addSource('omSrc4', { type:'raster', tiles:[`${u4}/{z}/{x}/{y}`], tileSize:256, maxzoom:12 });
+          this.map.addLayer({ id:'omLayer4', type:'raster', source:'omSrc4', paint:{ 'raster-fade-duration': 120, 'raster-resampling': 'linear',
+            'raster-opacity': opacidadDeCapa(L_, this.base, this.opacity) * ALTAS_OPACIDAD, 'raster-brightness-max': ALTAS_BRILLO } }, 'omLayer');
+        }
+      }
       const publicaEncima = !!L_.encima && (!R.meta?.variables || R.meta.variables.includes(L_.encima));
       /* Se guarda para el sello (stamp), que es lo que se lee: un status
          suelto aquí lo pisaba el sello un instante después (visto en
@@ -4292,9 +4309,9 @@ const Maps = {
   quitarWindy() { this.map?.getContainer?.()?.querySelector('.mapa-windy')?.remove(); },
 
   quitarCapasDeDatos(conservarAcum = false) {
-    const CAPAS  = ['omLayer', 'omLayer2', 'omLayer3', 'radarLayer', 'satLayer', 'aemetLayer', 'acumLayer',
+    const CAPAS  = ['omLayer', 'omLayer2', 'omLayer3', 'omLayer4', 'radarLayer', 'satLayer', 'aemetLayer', 'acumLayer',
                     'isoLbl', 'isoLinea', 'isoBorde', 'sueloLayer', 'marLayer'];
-    const FUENTES = ['omSrc', 'omSrc2', 'omSrc3', 'radarSrc', 'satSrc', 'aemetSrc', 'acumSrc', 'isoSrc'];
+    const FUENTES = ['omSrc', 'omSrc2', 'omSrc3', 'omSrc4', 'radarSrc', 'satSrc', 'aemetSrc', 'acumSrc', 'isoSrc'];
     /* Repintando la lluvia acumulada NO se quita su imagen ni su suelo: se le cambia la foto encima (sin parpadeo). */
     CAPAS.forEach(id => { if (conservarAcum && id === 'acumLayer') return; if (this.map.getLayer(id)) this.map.removeLayer(id); });
     if (!conservarAcum) ['sueloLluviaLayer', 'marLluviaLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
@@ -5640,6 +5657,9 @@ const Maps = {
     const urlCon = L_.con ? this.omUrl(L_.con, this.t, R?.modelo, R?.meta, { escala: L_.escala }) : null;
     if (urlCon) await Promise.all(this.tilesVisibles(zc).slice(0, 9).map(([x, y]) =>
       OMWeatherMapLayer.omProtocol({ url: `${urlCon}/${zc}/${x}/${y}`, type: 'image' }, new AbortController()).catch(() => {})));
+    const urlAlta = L_.alta ? this.omUrl(L_.alta, this.t, R?.modelo, R?.meta, { escala: L_.escala }) : null;   // y las altas (27-10-2026)
+    if (urlAlta) await Promise.all(this.tilesVisibles(zc).slice(0, 9).map(([x, y]) =>
+      OMWeatherMapLayer.omProtocol({ url: `${urlAlta}/${zc}/${x}/${y}`, type: 'image' }, new AbortController()).catch(() => {})));
     if (!vigente()) return;
 
     // Lo peor que puede hacer una capa NO es quedarse en blanco: es dar
@@ -5655,6 +5675,10 @@ const Maps = {
       if (L_.con && urlCon) {   // las nubes que tapan: la mayor de bajas y medias
         let vc = null; try { vc = (await OMWeatherMapLayer.getValueFromLatLong(p.lat, p.lng, limpiarMarca(urlCon)))?.value; } catch {}
         if (Number.isFinite(vc)) v = Math.max(Number.isFinite(v) ? v : 0, vc);
+      }
+      if (urlAlta) {   // con las altas: un 0 % debajo del gris clarito diría «despejado» con el cielo tapado
+        let va = null; try { va = (await OMWeatherMapLayer.getValueFromLatLong(p.lat, p.lng, limpiarMarca(urlAlta)))?.value; } catch {}
+        if (Number.isFinite(va)) v = Math.max(Number.isFinite(v) ? v : 0, va);
       }
       if (!vigente()) return;
       if (!valorReal(v, L_)) continue;
@@ -5946,8 +5970,17 @@ const Maps = {
       lngLat.lat, lngLat.lng, limpiarMarca(url)))?.value;
     /* En «Nubes»: la mayor de bajas y medias, que son las que tapan el sol (26-10-2026). */
     const urlConC = L_?.con ? this.omUrl(L_.con, this.t, this.usando?.modelo, this.usando?.meta, { escala: L_.escala }) : null;
+    const urlAltaC = L_?.alta ? this.omUrl(L_.alta, this.t, this.usando?.modelo, this.usando?.meta, { escala: L_.escala }) : null;
+    const leerOtra = async (u, v) => {   // la mayor con otra capa de nubes (las altas, 27-10-2026)
+      if (!u) return v;
+      const z = Math.min(12, Math.max(0, Math.round(this.map.getZoom()))), n = 2 ** z, r = lngLat.lat * Math.PI / 180;
+      const x = Math.floor((lngLat.lng + 180) / 360 * n), y = Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n);
+      await OMWeatherMapLayer.omProtocol({ url: `${u}/${z}/${x}/${y}`, type: 'image' }, new AbortController()).catch(() => {});
+      let w = null; try { w = (await OMWeatherMapLayer.getValueFromLatLong(lngLat.lat, lngLat.lng, limpiarMarca(u)))?.value; } catch {}
+      return Number.isFinite(w) ? Math.max(Number.isFinite(v) ? v : 0, w) : v;
+    };
     const leer = async () => {
-      const v = await leerUna();
+      const v = await leerOtra(urlAltaC, await leerUna());
       if (!urlConC) return v;
       const z = Math.min(12, Math.max(0, Math.round(this.map.getZoom()))), n = 2 ** z, r = lngLat.lat * Math.PI / 180;
       const x = Math.floor((lngLat.lng + 180) / 360 * n), y = Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n);
@@ -7254,6 +7287,10 @@ const Maps = {
         const u3 = this.omUrl(L_.con, this.t, this.usando.modelo, this.usando.meta, { escala: L_.escala });
         if (u3) this.map.getSource('omSrc3').setTiles([`${u3}/{z}/{x}/{y}`]);
       }
+      if (L_.alta && this.map.getSource('omSrc4')) {   // las altas, igual (27-10-2026)
+        const u4 = this.omUrl(L_.alta, this.t, this.usando.modelo, this.usando.meta, { escala: L_.escala });
+        if (u4) this.map.getSource('omSrc4').setTiles([`${u4}/{z}/{x}/{y}`]);
+      }
       if (L_.encima && this.map.getSource('omSrc2')) {
         const u2 = this.omUrl(L_.encima, this.t, this.usando.modelo, this.usando.meta, L_.encimaEscala ? { escala: L_.encimaEscala } : null);
         if (u2) this.map.getSource('omSrc2').setTiles([`${u2}/{z}/{x}/{y}`]);
@@ -7302,6 +7339,7 @@ const Maps = {
     // (el velo de las densas murió el 31-08: la sombra va encima del color)
     if (this.map?.getLayer('omLayer')) this.map.setPaintProperty('omLayer', 'raster-opacity', opacidadDeCapa(L_, this.base, o));   // la misma cuenta que al pintar
     if (this.map?.getLayer('omLayer3')) this.map.setPaintProperty('omLayer3', 'raster-opacity', opacidadDeCapa(L_, this.base, o));   // las nubes medias, igual
+    if (this.map?.getLayer('omLayer4')) this.map.setPaintProperty('omLayer4', 'raster-opacity', opacidadDeCapa(L_, this.base, o) * ALTAS_OPACIDAD);   // y las altas, más tenues
     if (this.map?.getLayer('radarLayer')) this.map.setPaintProperty('radarLayer', 'raster-opacity', Math.max(o, RADAR_OPACIDAD_MIN));
   },
 
