@@ -1638,3 +1638,14 @@ Suyo: «no me va de hora en hora» · «los saltos del slider» · «el de antes
 - **Isobaras:** con AROME se piden al ECMWF de 9 km (AROME no publica presión). No retrasan el agua (sale a 0,1-0,4 s) pero
   el mapa tarda 2,5-3,7 s en terminar en vez de 0,3-0,5. Si se quiere más ligero, ICON-EU (7 km, hora a hora, publica la
   presión); no se ha cambiado porque «del europeo» lo eligió él.
+
+### §86 ter · 27-10-2026, 11:40 · Lluvia más saturada y la capa «Nubes» como Windy también en Claro
+
+- **Lluvia** («dale más saturación» · «un pelín más»): `VIVOS` de 0,65 / 0,22 a **0,9 / 0,3** (lluvia, reflectividad, la
+  previsión de «Radar + previsión» y la acumulada). Publicado 2026.10.27-1133 y visto en pantalla con AROME.
+- **Nubes** («solo pintáis grises» · «lleva con grises 2 días» · «donde hay blancas hay que poner blancas» · «la capa de
+  nubes como Windy la quiero»; preguntado y contestado «Sí, como Windy»). En Claro las nubes iban oscurecidas a gris
+  (`NUBE_EN_CLARO`, decisión suya del 19-10). Ahora la capa **«Nubes»** (`NUBES_COMO_WINDY`, `nubeGrisEnClaro()`) lleva en
+  Claro el suelo ocre y la nube blanca, como en Color; el agua del modelo sigue encima en azul. Bajas, medias, altas y niebla
+  siguen como estaban. NO-SE-TOCA.md al día. Visto en pantalla (ECMWF HRES 12:00, el frente de Galicia igual que en su
+  Windy). Publicado 2026.10.27-1139.

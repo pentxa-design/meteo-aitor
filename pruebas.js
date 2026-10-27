@@ -11661,11 +11661,11 @@ grupo('Las nubes como en Windy: blancas con cuerpo y con el suelo en tono tierra
   ok('las nubes piden degradado continuo (color_blend), como la reflectividad',
      /const ESCALAS_SUAVES = new Set\(\[[^\]]*'nubes'[^\]]*\]\);/.test(M));
   ok('con una capa de nubes, el suelo se pone en tono tierra y el mar en azul acero (solo en Color desde el 19-10-2026); en Oscuro y Claro no',
-     /sueloParaNubes\(on\) \{/.test(M) && /if \(!on \|\| this\.base === 'oscuro' \|\| this\.base === 'claro'\) \{ quitar\(\); return; \}/.test(M)
+     /sueloParaNubes\(on, L_ = null\) \{/.test(M) && /if \(!on \|\| this\.base === 'oscuro' \|\| nubeGrisEnClaro\(L_, this\.base\)\) \{ quitar\(\); return; \}/.test(M)
      && /id:'sueloLayer', type:'background'/.test(M) && /id:'marLayer', type:'fill', source:this\.fuenteBase\(\), 'source-layer':'water'/.test(M),
      'una nube blanca sobre tierra blanca (#fafaf8) no existe');
   const iApply = M.indexOf('async apply() {'), iOm = M.indexOf("id:'omLayer', type:'raster', source:'omSrc'", iApply);
-  const iSuelo = M.indexOf("this.sueloParaNubes(ESCALAS_BLANCAS.has(L_.escala));", iApply);
+  const iSuelo = M.indexOf("this.sueloParaNubes(ESCALAS_BLANCAS.has(L_.escala), L_);", iApply);
   ok('apply() pone el suelo ANTES de montar la capa y solo para las escalas blancas (nubes, niebla), con la nube casi opaca (≥ 0,92); quitarCapasDeDatos() lo quita con las demás',
      iSuelo > iApply && iSuelo < iOm
      && /const op = opacidadDeCapa\(L_, this\.base, this\.opacity\);/.test(M)
@@ -13595,8 +13595,8 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
      /quitarCapasDeDatos\(conservarAcum = false\)/.test(M) && /this\.quitarCapasDeDatos\(!!TLAYERS\.find\(l => l\.id === this\.layer\)\?\.acum\);/.test(M)
      && /if \(conservarAcum && id === 'acumLayer'\) return;/.test(M) && /if \(conservarAcum && id === 'acumSrc'\) return;/.test(M));
   ok('las capas de datos van más vivas (suyo, 16-10: «sosos»): el modelo y la acumulada llevan raster-saturation y raster-contrast, y las nubes blancas quedan fuera',
-     /const VIVOS = \{ 'raster-saturation': 0\.(6[5-9]|[7-9])\d*, 'raster-contrast': 0\.\d+ \};/.test(M)
-     && /\.\.\.\(ESCALAS_BLANCAS\.has\(L_\.escala\) \? \(this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? VIVOS : COPIADAS_TAL_CUAL\.has\(L_\.escala\) \? \{\} : VIVOS_FUERTES\) \}/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
+     /const VIVOS = \{ 'raster-saturation': (0\.9\d*|1), 'raster-contrast': 0\.(3|[3-9]\d*) \};/.test(M)   // 27-10: «dale más saturación» · «un pelín más»
+     && /\.\.\.\(ESCALAS_BLANCAS\.has\(L_\.escala\) \? \(nubeGrisEnClaro\(L_, this\.base\) \? NUBE_EN_CLARO : \{\}\)\s*: CON_SUELO_NEGRO\.has\(L_\.escala\) \? VIVOS : COPIADAS_TAL_CUAL\.has\(L_\.escala\) \? \{\} : VIVOS_FUERTES\) \}/.test(M) && /'raster-resampling': 'linear', \.\.\.VIVOS \}/.test(M));
   ok('la rampa es EXACTAMENTE la «Acumulación de lluvia» de Windy (tabla leída de windy.com/colors el 16-10-2026): cortes 0·1·5·10·30·50·80·120·200·320·600 y sus once colores, todos opacos desde 5 litros',
      (() => { const t = M.slice(M.indexOf('const acc = ['), M.indexOf('];', M.indexOf('const acc = [')));
        const hx = [...t.matchAll(/'#([0-9a-f]{6})',(\.?\d+)/g)];
@@ -14169,7 +14169,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('   y el deslizador CAPA usa la misma cuenta',
      /setPaintProperty\('omLayer', 'raster-opacity', opacidadDeCapa\(L_, this\.base, o\)\)/.test(M));
   ok('   color: VIVOS_FUERTES en todas, VIVOS en la lluvia, y las nubes en gris en Claro',
-     /this\.base === 'claro' \? NUBE_EN_CLARO : \{\}\)/.test(M) && /: CON_SUELO_NEGRO\.has\(L_\.escala\) \? VIVOS : COPIADAS_TAL_CUAL\.has\(L_\.escala\) \? \{\} : VIVOS_FUERTES\) \}/.test(M));
+     /nubeGrisEnClaro\(L_, this\.base\) \? NUBE_EN_CLARO : \{\}\)/.test(M) && /: CON_SUELO_NEGRO\.has\(L_\.escala\) \? VIVOS : COPIADAS_TAL_CUAL\.has\(L_\.escala\) \? \{\} : VIVOS_FUERTES\) \}/.test(M));
 }
 
 
@@ -15069,6 +15069,17 @@ grupo('La carrera de las teselas se decide con un TROZO de verdad, no con un HEA
     ok('   y al revés (una red donde Amazon baja rápido) → se elige DIRECTO, aunque pierda el HEAD', b.t === 'directo', JSON.stringify(b));
     ok('   y lo guarda con la clave nueva (la vieja no vale: midió con el HEAD)', !!a.g['torre.origenTeselas3'] && !a.g['torre.origenTeselas2']);
   })());
+}
+
+grupo('La capa «Nubes» como Windy también en Claro (27-10-2026, «solo pintáis grises»)');
+{
+  const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const src = M.slice(M.indexOf('const NUBES_COMO_WINDY'), M.indexOf('\n', M.indexOf('const nubeGrisEnClaro')));
+  const g = new Function(src + '\nreturn nubeGrisEnClaro;')();
+  ok('«Nubes» en Claro NO va en gris: lleva el suelo ocre y la nube blanca, como Windy y como en Color',
+     g({ id: 'clouds', escala: 'nubes' }, 'claro') === false && g({ id: 'clouds', escala: 'nubes' }, 'color') === false);
+  ok('   las otras blancas (bajas, medias, altas, niebla) siguen en gris en Claro, como él las dejó el 19-10',
+     ['clouds_low', 'clouds_mid', 'clouds_high', 'niebla'].every(id => g({ id }, 'claro') === true) && g({ id: 'niebla' }, 'color') === false);
 }
 
 Promise.all(globalThis.__pendientes || []).then(() => {

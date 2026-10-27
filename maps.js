@@ -767,6 +767,14 @@ const ESCALAS_BLANCAS = new Set(['nubes', 'niebla']);
 /* En el fondo Claro las nubes y la niebla van sin suelo ocre y oscurecidas a gris: blanca sobre el mapa claro no se veía (19-10-2026, probado
    en pantalla antes de ponerlo: 0,72 deja la nube cerrada en gris claro y se distingue del mapa). */
 const NUBE_EN_CLARO = { 'raster-brightness-max': 0.72 };
+/* ── LA CAPA «NUBES», COMO WINDY TAMBIÉN EN CLARO (27-10-2026) ──────────────────────────────────────────────────────────
+   Suyo, con Windy al lado: «solo pintáis grises» · «lleva con grises 2 días» · «donde hay blancas hay que poner blancas» ·
+   «la capa de nubes como Windy la quiero». Y contestado en la pregunta: «Sí, como Windy». En Claro la nube iba oscurecida a
+   gris sobre el mapa claro (19-10): todo gris, cerrada o no. Ahora la capa «Nubes» pone en Claro el suelo ocre de Windy y la
+   nube blanca, como en Color; la que lleva agua sigue saliendo con el agua del modelo encima. Las demás capas blancas (bajas,
+   medias, altas, niebla) siguen en Claro como estaban. */
+const NUBES_COMO_WINDY = new Set(['clouds']);
+const nubeGrisEnClaro = (L_, base) => base === 'claro' && !NUBES_COMO_WINDY.has(L_?.id);
 /* ── EL FONDO CLARO, CLARO DE VERDAD (19-10-2026) ─────────────────────────
    Suyo: «en modo color o claro no hay ninguna diferencia» · «en temperatura o en cualquier capa no había diferencia, solo contra el
    oscuro» · «en color y oscuro déjalo como está». La capa de datos iba casi opaca y tapaba el fondo entero, así que Claro y Color eran
@@ -1002,8 +1010,9 @@ const ACUM_RESPALDO = 'ecmwf_ifs';
     (son blancas: el contraste las apagaría). */
 /* Desde el 24-10-2026 solo la usan las capas de lluvia (las demás van con VIVOS_FUERTES), y «un poco» más saturada (suyo,
    22:52, con la precipitación delante: «satura esta capa un poco · los colores · lluvia etc»; antes 0,5 y 0,2). Solo el
-   color: su opacidad, su relieve y su costa siguen como estaban. */
-const VIVOS = { 'raster-saturation': 0.65, 'raster-contrast': 0.22 };
+   color: su opacidad, su relieve y su costa siguen como estaban. Y más el 27-10-2026 (suyo, con AROME y la lluvia del
+   Cantábrico delante: «dale más saturación»): de 0,65 / 0,22 a 0,9 / 0,3; los azules flojos se leían casi grises. */
+const VIVOS = { 'raster-saturation': 0.9, 'raster-contrast': 0.3 };
 const ACUM_PUNTOS = 150;                      // la cuota de la API es POR MINUTO y cuenta cada punto: con 250 y una petición por cambio de hora saltó el 429 (16-10-2026) y se llevó por delante a la ficha
 const mercY = lat => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI / 180) / 2));
 const latDeMerc = y => (2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180 / Math.PI;
@@ -3577,7 +3586,7 @@ const Maps = {
          contraste, mapas apagados») se sirven A LA VEZ con el truco de
          los mapas profesionales: el COLOR va pleno y la SOMBRA del
          terreno se dibuja ENCIMA, suave. Ya no hay que elegir. */
-      this.sueloParaNubes(ESCALAS_BLANCAS.has(L_.escala));
+      this.sueloParaNubes(ESCALAS_BLANCAS.has(L_.escala), L_);
       this.sueloParaLluvia(CON_SUELO_NEGRO.has(L_.escala));
       /* La nube blanca a 0,75 sobre el mar azul acero salía lavada (visto
          en su Chrome el 15-09 a las 13:20): las capas de nubes van casi
@@ -3595,7 +3604,7 @@ const Maps = {
       this.map.addLayer({
         id:'omLayer', type:'raster', source:'omSrc',
         paint:{ 'raster-opacity': op, 'raster-fade-duration': 120,
-                'raster-resampling': 'linear', ...(ESCALAS_BLANCAS.has(L_.escala) ? (this.base === 'claro' ? NUBE_EN_CLARO : {})
+                'raster-resampling': 'linear', ...(ESCALAS_BLANCAS.has(L_.escala) ? (nubeGrisEnClaro(L_, this.base) ? NUBE_EN_CLARO : {})
                     : CON_SUELO_NEGRO.has(L_.escala) ? VIVOS : COPIADAS_TAL_CUAL.has(L_.escala) ? {} : VIVOS_FUERTES) },
       }, this.firstLabelLayer());
       /* La sombra del terreno, POR ENCIMA del color y rebajada: así el
@@ -4301,12 +4310,12 @@ const Maps = {
      debajo del agua del propio estilo (tapa los rellenos de suelo, deja
      carreteras y nombres encima) y un azul acero sobre el agua. En
      Oscuro no hace falta. Se quita con las demás capas propias. */
-  sueloParaNubes(on) {
+  sueloParaNubes(on, L_ = null) {
     if (!this.map) return;
     const quitar = () => { ['sueloLayer', 'marLayer'].forEach(id => { if (this.map.getLayer(id)) this.map.removeLayer(id); }); this.rayasParaNubes(false); };
     /* SOLO EN COLOR (19-10-2026, suyo: «en color y oscuro déjalo como está» — que Claro se distinga). En Claro se ve el mapa claro debajo y
        la nube va oscurecida a gris (`raster-brightness-max`, en la capa), que blanca sobre blanco no existe; en Oscuro nunca hizo falta. */
-    if (!on || this.base === 'oscuro' || this.base === 'claro') { quitar(); return; }
+    if (!on || this.base === 'oscuro' || nubeGrisEnClaro(L_, this.base)) { quitar(); return; }   // la capa «Nubes», también en Claro (27-10-2026)
     try {
       quitar();
       const ls = this.map.getStyle()?.layers || [];
