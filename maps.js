@@ -149,7 +149,7 @@ async function elegirOrigenTeselas() {
   if (forzado) { TILES = forzado === 'proxy' ? TILES_PROXY : TILES_DIRECTO; return TILES; }
 
   try {
-    const g = JSON.parse(localStorage.getItem('torre.origenTeselas2') || 'null');
+    const g = JSON.parse(localStorage.getItem('torre.origenTeselas3') || 'null');   // 3: con el trozo de verdad (27-10-2026); la 2 no vale
     if (g && Date.now() - g.t < RECUERDA_MS) {
       TILES = g.proxy ? TILES_PROXY : TILES_DIRECTO;
       return TILES;
@@ -184,11 +184,38 @@ async function elegirOrigenTeselas() {
     mide(`${TILES_DIRECTO}/dwd_icon_eu/latest.json`),
     mide(`${TILES_PROXY}/dwd_icon_eu/latest.json`),
   ]);
-  const directo = tDirecto < Infinity && tDirecto <= tProxy;
+  /* ── Y LUEGO UN TROZO DE VERDAD (27-10-2026) ──────────────────────────────────────────────────────────────────────────
+     Suyo: «AROME iba como un rayo» · «desde ayer mal» · «10 segundos en ponerse el agua». MEDIDO ese día desde su casa: el
+     HEAD de arriba casi empata (directo 638 ms, intermediario 515 en su navegador; 0,55-0,65 s contra 0,28-0,58 por curl),
+     pero lo que el mapa baja son trozos de 256 KB y ahí no hay color: 1,10-1,18 s cada uno directo de Amazon y 0,32-0,48
+     por el intermediario (0,15 si ya lo tiene su CDN). Unos milisegundos de más en un HEAD daban la carrera a Amazon y el
+     mapa iba de 5 a 10 veces más lento durante 6 h. Ahora gana el que baja ANTES un trozo entero, uno al azar de un fichero
+     real de ICON-EU (al azar para que el CDN no lo tenga guardado y no haga trampa). Si este paso falla, decide el HEAD. */
+  let bDirecto = null, bProxy = null;
+  if (tDirecto < Infinity && tProxy < Infinity) {
+    try {
+      const meta = await (await fetch(`${TILES_DIRECTO}/dwd_icon_eu/latest.json`, { cache: 'no-store' })).json();
+      const R = new Date(meta.reference_time), V = new Date(meta.valid_times[0]), p2 = n => String(n).padStart(2, '0');
+      const ruta = `dwd_icon_eu/${R.getUTCFullYear()}/${p2(R.getUTCMonth() + 1)}/${p2(R.getUTCDate())}/${p2(R.getUTCHours())}00Z/`
+        + `${V.getUTCFullYear()}-${p2(V.getUTCMonth() + 1)}-${p2(V.getUTCDate())}T${p2(V.getUTCHours())}${p2(V.getUTCMinutes())}.om`;
+      const a = Math.floor(Math.random() * 16) * BLOQUE_OM, b = a + BLOQUE_OM - 1;
+      const trozo = async (url) => {
+        const t0 = Date.now(), ac = new AbortController(), reloj = setTimeout(() => ac.abort(), 8000);
+        try {
+          const r = await fetch(url, { headers: { Range: `bytes=${a}-${b}` }, cache: 'no-store', signal: ac.signal });
+          const n = r.ok ? (await r.arrayBuffer()).byteLength : 0;
+          return n === BLOQUE_OM ? Date.now() - t0 : Infinity;
+        } catch { return Infinity; } finally { clearTimeout(reloj); }
+      };
+      [bDirecto, bProxy] = await Promise.all([trozo(`${TILES_DIRECTO}/${ruta}`), trozo(`${TILES_PROXY}/${ruta}`)]);
+    } catch { bDirecto = bProxy = null; }
+  }
+  const porTrozo = bDirecto !== null && (bDirecto < Infinity || bProxy < Infinity);
+  const directo = porTrozo ? bDirecto <= bProxy : (tDirecto < Infinity && tDirecto <= tProxy);
   TILES = directo ? TILES_DIRECTO : (tProxy < Infinity ? TILES_PROXY : TILES_DIRECTO);
   try {
-    localStorage.setItem('torre.origenTeselas2',
-      JSON.stringify({ proxy: TILES === TILES_PROXY, t: Date.now(), ms: { directo: tDirecto, proxy: tProxy } }));
+    localStorage.setItem('torre.origenTeselas3',
+      JSON.stringify({ proxy: TILES === TILES_PROXY, t: Date.now(), ms: { directo: tDirecto, proxy: tProxy, trozoDirecto: bDirecto, trozoProxy: bProxy } }));
   } catch { /* sin sitio para guardarlo: se vuelve a probar la próxima vez */ }
   return TILES;
 }

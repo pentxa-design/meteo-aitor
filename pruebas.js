@@ -10835,14 +10835,14 @@ grupo('El mapa elige el origen de las teselas por velocidad, no por «responde»
      /const \[tDirecto, tProxy\] = await Promise\.all\(\[/.test(M)
      && /mide\(`\$\{TILES_DIRECTO\}\/dwd_icon_eu\/latest\.json`\)/.test(M)
      && /mide\(`\$\{TILES_PROXY\}\/dwd_icon_eu\/latest\.json`\)/.test(M)
-     && /const directo = tDirecto < Infinity && tDirecto <= tProxy;/.test(M),
+     && /const directo = porTrozo \? bDirecto <= bProxy : \(tDirecto < Infinity && tDirecto <= tProxy\);/.test(M),
      'antes bastaba con que S3 respondiera en 6 s para ir directo, aunque tardara 5');
   ok('la carrera se corre con HEAD y un origen sin Content-Length queda fuera (la librería lo rechaza)',
      /fetch\(url, \{ method: 'HEAD', signal: ac\.signal, cache: 'no-store' \}\)/.test(M)
      && /if \(!r\.ok \|\| !\(r\.headers\.get\('content-length'\) \|\| r\.headers\.get\('x-content-length'\)\)\) return Infinity;/.test(M),
      '14-09-2026: el intermediario ganaba la carrera y luego fallaba cada apertura de .om');
   ok('y lo medido se guarda con el elegido, para poder mirarlo',
-     /ms: \{ directo: tDirecto, proxy: tProxy \}/.test(M));
+     /ms: \{ directo: tDirecto, proxy: tProxy, trozoDirecto: bDirecto, trozoProxy: bProxy \}/.test(M));
   ok('si el intermediario también falla, se queda el directo y el mapa lo dirá',
      /\(tProxy < Infinity \? TILES_PROXY : TILES_DIRECTO\)/.test(M));
 }
@@ -15036,6 +15036,39 @@ grupo('La precarga de horas no deja «Uncaught AbortError» (26-10-2026)');
   ok('calentarLinea se corta por turno y nunca aborta la lectura de la librería a medias (eso lanzaba un error que nadie recogía)',
      /const ac = this\._lineaAC = \{ cortado: false \}, sinCortar = new AbortController\(\);/.test(f) && /if \(ac\.cortado \|\| document\.hidden\) return;/.test(f)
      && /omProtocol\(\{ url: k, type: 'image' \}, sinCortar\)/.test(f) && !/this\._lineaAC\.abort\(\)/.test(M));
+}
+
+grupo('La carrera de las teselas se decide con un TROZO de verdad, no con un HEAD (27-10-2026, «AROME iba como un rayo»)');
+{
+  const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  const src = M.slice(M.indexOf('async function elegirOrigenTeselas() {'), M.indexOf('\n}\n', M.indexOf('async function elegirOrigenTeselas() {')) + 2);
+  /* Se ejecuta la función de verdad con un Amazon y un intermediario de mentira: tiempos de su casa el 27-10. */
+  const correr = async ({ headD, headP, trozoD, trozoP }) => {
+    const D = 'https://s3.falso/data_spatial', P = 'https://app.falsa/omtiles', BLOQUE = 256 * 1024, guardado = {};
+    const espera = ms => new Promise(r => setTimeout(r, ms));
+    const fetchFalso = async (url, init = {}) => {
+      const dir = url.startsWith(D) ? 'D' : 'P';
+      if ((init.method || 'GET') === 'HEAD') { await espera(dir === 'D' ? headD : headP); return new Response(null, { status: 200, headers: { 'content-length': '5000' } }); }
+      if (url.endsWith('latest.json')) return new Response(JSON.stringify({ reference_time: '2026-10-27T03:00Z', valid_times: ['2026-10-27T03:00Z'] }));
+      await espera(dir === 'D' ? trozoD : trozoP);
+      return new Response(new Uint8Array(BLOQUE), { status: 206 });
+    };
+    /* Con su propio reloj que corre: con HORA_FALSA (revisar.sh, otras horas del día) Date.now() está quieto y los dos caminos
+       «tardaban» 0 ms, empataban y salía directo. La hora del día no pinta nada aquí; lo que se mide es lo que tarda. */
+    const Reloj = new Proxy(Date, { get: (T, k) => k === 'now' ? () => Math.round(performance.now()) : T[k] });
+    const f = new Function('location', 'localStorage', 'fetch', 'TILES_DIRECTO', 'TILES_PROXY', 'RECUERDA_MS', 'BLOQUE_OM', 'Date',
+      `let TILES; ${src}; return elegirOrigenTeselas().then(t => t);`);
+    const ls = { getItem: k => guardado[k] ?? null, setItem: (k, v) => { guardado[k] = v; } };
+    return f({ search: '' }, ls, fetchFalso, D, P, 6 * 3600e3, BLOQUE, Reloj).then(t => ({ t: t === D ? 'directo' : 'intermediario', g: guardado }));
+  };
+  (globalThis.__pendientes ??= []).push((async () => {
+    const a = await correr({ headD: 10, headP: 250, trozoD: 900, trozoP: 30 });
+    ok('su casa el 27-10: Amazon gana el HEAD por poco pero tarda mucho más en el trozo → se elige el INTERMEDIARIO',
+       a.t === 'intermediario', JSON.stringify(a));
+    const b = await correr({ headD: 250, headP: 10, trozoD: 30, trozoP: 900 });
+    ok('   y al revés (una red donde Amazon baja rápido) → se elige DIRECTO, aunque pierda el HEAD', b.t === 'directo', JSON.stringify(b));
+    ok('   y lo guarda con la clave nueva (la vieja no vale: midió con el HEAD)', !!a.g['torre.origenTeselas3'] && !a.g['torre.origenTeselas2']);
+  })());
 }
 
 Promise.all(globalThis.__pendientes || []).then(() => {

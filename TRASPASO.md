@@ -1622,3 +1622,19 @@ Suyo: «no me va de hora en hora» · «los saltos del slider» · «el de antes
 - La barra roja «Cannot read properties of undefined (reading 'name')» de las 10:00 la provocó una prueba mía (pedí
   `icon_eu`; en la app es `dwd_icon_eu`). No es de la app.
 - Pruebas nuevas vistas en ROJO rompiendo los dos arreglos. Publicado 2026.10.27-1016.
+
+### §86 bis · 27-10-2026, 11:10 · «AROME iba como un rayo… desde ayer mal» (10 s en salir el agua)
+
+- No lo reproduje: en Chrome sin ventana el agua de AROME sale en 0,1-1,2 s, también saltando a horas sin precargar.
+- **Lo que sí se midió:** la carrera que elige de dónde bajar las teselas (Amazon directo o `/omtiles`) medía un HEAD de
+  `latest.json`, y en su red casi empata (en su navegador directo 638 ms, intermediario 515). Lo que el mapa baja son
+  trozos de 256 KB: por curl, 1,10-1,18 s cada uno de Amazon y 0,32-0,48 por el intermediario (0,15 con HIT). Si el HEAD
+  caía del lado de Amazon, durante 6 h el mapa iba varias veces más lento. **Es la causa probable, no comprobada en su app
+  de escritorio** (su localStorage no se lee desde aquí).
+- **Arreglo:** tras los HEAD, carrera con un trozo de 256 KB al azar de un fichero real de ICON-EU (al azar para que el CDN
+  no lo tenga guardado); clave nueva `torre.origenTeselas3` para que se repita en cuanto abra la versión. Publicado
+  2026.10.27-1110; en el navegador de este Mac salió intermediario (trozo 667 ms contra 727 de Amazon).
+- Prueba ejecutada con orígenes falsos, vista roja; lleva su propio reloj porque con HORA_FALSA el de verdad está quieto.
+- **Isobaras:** con AROME se piden al ECMWF de 9 km (AROME no publica presión). No retrasan el agua (sale a 0,1-0,4 s) pero
+  el mapa tarda 2,5-3,7 s en terminar en vez de 0,3-0,5. Si se quiere más ligero, ICON-EU (7 km, hora a hora, publica la
+  presión); no se ha cambiado porque «del europeo» lo eligió él.
