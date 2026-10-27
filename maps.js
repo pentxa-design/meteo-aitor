@@ -67,6 +67,8 @@ const TILES_PROXY   = (typeof location !== 'undefined')
 
 let TILES = TILES_DIRECTO;
 const RECUERDA_MS = 6 * 3600e3;
+/** El directo de Amazon tiene que bajar el trozo en menos de la mitad que el intermediario para ganar la carrera. */
+const VENTAJA_DIRECTO = 2;
 
 /* ═══════════════════════════════════════════════════════════════════
    LOS BLOQUES DEL .om, CON SU RANGO EN LA URL (14-09-2026)
@@ -149,7 +151,7 @@ async function elegirOrigenTeselas() {
   if (forzado) { TILES = forzado === 'proxy' ? TILES_PROXY : TILES_DIRECTO; return TILES; }
 
   try {
-    const g = JSON.parse(localStorage.getItem('torre.origenTeselas3') || 'null');   // 3: con el trozo de verdad (27-10-2026); la 2 no vale
+    const g = JSON.parse(localStorage.getItem('torre.origenTeselas4') || 'null');   // 4: con la ventaja del intermediario (27-10-2026, noche); la 3 pudo quedarse en Amazon por un empate
     if (g && Date.now() - g.t < RECUERDA_MS) {
       TILES = g.proxy ? TILES_PROXY : TILES_DIRECTO;
       return TILES;
@@ -210,11 +212,18 @@ async function elegirOrigenTeselas() {
       [bDirecto, bProxy] = await Promise.all([trozo(`${TILES_DIRECTO}/${ruta}`), trozo(`${TILES_PROXY}/${ruta}`)]);
     } catch { bDirecto = bProxy = null; }
   }
+  /* ── Y AMAZON SOLO GANA SI ES CLARAMENTE MÁS RÁPIDO (27-10-2026, 21:20) ──────────────────────────────────────────────
+     Suyo, con ECMWF 25 km y el jueves: «esto tarda más que nunca» · «en tu navegador va a toda leche, dentro de la app
+     va despacio, comprobado». Medido ese rato en el panel: trozo directo 859 ms, intermediario 721. Casi empate, y con
+     un empate la moneda caía en su ventana del lado de Amazon durante 6 h. Y el trozo al azar es el PEOR caso del
+     intermediario (no lo tiene su CDN): cada bloque que alguien ya bajó le sale a 0,15 s, y Amazon nunca baja de 1,1 s
+     (medido por curl el mismo rato: 1,10-1,30 s directo, 0,34-1,00 intermediario sin guardar, 0,14-0,15 guardado).
+     Así que el directo solo gana si baja el trozo en menos de la mitad de tiempo que el intermediario. */
   const porTrozo = bDirecto !== null && (bDirecto < Infinity || bProxy < Infinity);
-  const directo = porTrozo ? bDirecto <= bProxy : (tDirecto < Infinity && tDirecto <= tProxy);
+  const directo = porTrozo ? bDirecto * VENTAJA_DIRECTO < bProxy : (tDirecto < Infinity && tDirecto <= tProxy);
   TILES = directo ? TILES_DIRECTO : (tProxy < Infinity ? TILES_PROXY : TILES_DIRECTO);
   try {
-    localStorage.setItem('torre.origenTeselas3',
+    localStorage.setItem('torre.origenTeselas4',
       JSON.stringify({ proxy: TILES === TILES_PROXY, t: Date.now(), ms: { directo: tDirecto, proxy: tProxy, trozoDirecto: bDirecto, trozoProxy: bProxy } }));
   } catch { /* sin sitio para guardarlo: se vuelve a probar la próxima vez */ }
   return TILES;
@@ -885,6 +894,8 @@ const HRES_ZOOM_MIN = 6;
    bloques de 256 KB) hoy no sale; el porqué no está medido. Si vuelve el OOM, la red de seguridad sigue puesta (recarga sola y
    a la segunda se pasa a ICON-EU) y esto se vuelve a encender con `true`. */
 const HRES_DE_LEJOS_CON_25 = false;
+/** La pastilla negra de «⚡ los rayos son MEDIDOS…» dentro del mapa: apagada el 27-10-2026 por orden suya («fuera»). */
+const PASTILLA_RAYOS_ENCENDIDA = false;
 function hresDeLejos(modelo, zoom) {
   return HRES_DE_LEJOS_CON_25 && modelo === 'ecmwf_ifs' && Number.isFinite(zoom) && zoom < HRES_ZOOM_MIN;
 }
@@ -6751,9 +6762,12 @@ const Maps = {
      limpio: «la opción de rayos en el mapa de lluvia, ¿no va?». Iba: el texto «los rayos son MEDIDOS y llegan hasta las
      18:00» estaba en la franja de abajo, fuera de su pantalla. Un mapa sin rayos sin decir por qué se lee como «no cae
      ninguno». */
+  /* QUITADA EL 27-10-2026: suyo, con el recuadro negro tapando la tira de horas: «eso negro molesta» · «fuera». El
+     motivo sigue en el pie del mapa (#mapRayos); la pastilla ya no se pone, solo se borra la que hubiera. */
   pastillaRayos(txt) {
     const cont = this.map?.getContainer?.(); if (!cont) return;
     let p = cont.querySelector('.mapRayosPill');
+    if (!PASTILLA_RAYOS_ENCENDIDA) txt = '';
     if (!txt) { if (p) p.remove(); return; }
     if (!p) { p = document.createElement('div'); p.className = 'mapRayosPill'; cont.appendChild(p); }
     p.textContent = txt;

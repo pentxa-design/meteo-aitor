@@ -1663,3 +1663,18 @@ Suyo: «no me va de hora en hora» · «los saltos del slider» · «el de antes
 - **Coste:** con ECMWF HRES la capa Nubes son 4 ficheros por hora (bajas, medias, altas y lluvia): en el panel tardó ~25 s
   la primera vez. Si se queja de lentitud en Nubes, es esto.
 - Publicado 2026.10.27-1211, visto en pantalla (12:00, ECMWF HRES, Claro).
+
+## §86 quinquies — La carrera de las teselas ya no se la lleva Amazon por un empate · fuera la pastilla negra de los rayos (27-10-2026, 21:30)
+
+Suyo, ECMWF 25 km, lluvia del jueves: «esto tarda más que nunca» · «no puedo esperar 3 minutos» · «en tu navegador va a
+toda leche, dentro de la app va despacio, comprobado». Vercel NO estaba agotado (`/om` 0,12 s). Medido en el panel: el
+jueves 07:00 pintaba en 1 s, también con isobaras (1-1,5 s). La carrera del §86 bis salió casi empatada (trozo directo
+859 ms, intermediario 721); con un empate su ventana pudo quedarse 6 h en Amazon, donde cada trozo de 256 KB son 1,1-1,3 s
+(curl), contra 0,34-1,0 del intermediario sin guardar y 0,14 guardado. Ahora el directo solo gana si baja el trozo en
+menos de la MITAD (`VENTAJA_DIRECTO = 2`) y la clave pasa a `torre.origenTeselas4` para que la elección vieja se rehaga.
+Prueba ejecutada con 860/720 y 700/900 → intermediario; vista en roja con la ventaja a 1.
+NO VISTO EN SU VENTANA: si tras cerrar y abrir la app sigue lento, la causa es otra (la siguiente sospecha: el tamaño de
+su ventana, 3× más teselas que el panel, o las isobaras en su máquina).
+
+Y «eso negro molesta» · «fuera»: la pastilla `.mapRayosPill` («⚡ los rayos son MEDIDOS…») tapaba la tira de horas.
+Apagada (`PASTILLA_RAYOS_ENCENDIDA = false`); el motivo sigue en el pie `#mapRayos`. Prueba vista en roja.

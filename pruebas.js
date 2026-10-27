@@ -10835,7 +10835,7 @@ grupo('El mapa elige el origen de las teselas por velocidad, no por «responde»
      /const \[tDirecto, tProxy\] = await Promise\.all\(\[/.test(M)
      && /mide\(`\$\{TILES_DIRECTO\}\/dwd_icon_eu\/latest\.json`\)/.test(M)
      && /mide\(`\$\{TILES_PROXY\}\/dwd_icon_eu\/latest\.json`\)/.test(M)
-     && /const directo = porTrozo \? bDirecto <= bProxy : \(tDirecto < Infinity && tDirecto <= tProxy\);/.test(M),
+     && /const directo = porTrozo \? bDirecto \* VENTAJA_DIRECTO < bProxy : \(tDirecto < Infinity && tDirecto <= tProxy\);/.test(M),
      'antes bastaba con que S3 respondiera en 6 s para ir directo, aunque tardara 5');
   ok('la carrera se corre con HEAD y un origen sin Content-Length queda fuera (la librería lo rechaza)',
      /fetch\(url, \{ method: 'HEAD', signal: ac\.signal, cache: 'no-store' \}\)/.test(M)
@@ -13728,15 +13728,21 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   const hijos = [];
   const cont = { querySelector: () => hijos[0] || null, appendChild: el => { hijos.push(el); el.remove = () => hijos.splice(hijos.indexOf(el), 1); } };
   const doc = { createElement: () => ({ className: '', textContent: '' }) };
-  const f = new Function('document', 'const o = { ' + cuerpo.replace(/^\s*pastillaRayos/, 'pastillaRayos: function') + ' }; return o.pastillaRayos;');
-  const pastilla = f(doc);
+  const f = new Function('document', 'PASTILLA_RAYOS_ENCENDIDA', 'const o = { ' + cuerpo.replace(/^[\s\S]*?\n\s*pastillaRayos\(txt\)/, 'pastillaRayos: function(txt)') + ' }; return o.pastillaRayos;');
+  const pastilla = f(doc, true);
+  const encendida = /\nconst PASTILLA_RAYOS_ENCENDIDA = (true|false);/.exec(Mx)?.[1];
+  const apagada = f(doc, encendida === 'true');
   const yo = { map: { getContainer: () => cont } };
   pastilla.call(yo, '⚡ Los rayos son MEDIDOS y llegan hasta las 18:00');
   const puesta = hijos.length === 1 && /18:00/.test(hijos[0].textContent);
   pastilla.call(yo, '⚡ otro texto'); pastilla.call(yo, '⚡ otro texto');
   const una = hijos.length === 1 && hijos[0].textContent === '⚡ otro texto';
   pastilla.call(yo, '');
+  apagada.call(yo, '⚡ Los rayos son MEDIDOS y llegan hasta las 18:00');
+  const sinPastilla = hijos.length === 0;
   grupo('Rayos sin rayos: el motivo se ve');
+  ok('la pastilla negra NO sale en el mapa (27-10-2026, suyo: «eso negro molesta» · «fuera»); el motivo queda en el pie #mapRayos',
+     encendida === 'false' && sinPastilla && /if \(el\) el\.textContent = fuera;/.test(Mx));
   ok('la pastilla del mapa se pone con el motivo, no se duplica y se quita al pintar rayos (texto vacío)',
      puesta && una && hijos.length === 0);
   ok('rayos() la pone cuando la hora no encaja con lo medido, la quita al pintar y limpiarRayos() también la quita',
@@ -15071,10 +15077,11 @@ grupo('La carrera de las teselas se decide con un TROZO de verdad, no con un HEA
     /* Con su propio reloj que corre: con HORA_FALSA (revisar.sh, otras horas del día) Date.now() está quieto y los dos caminos
        «tardaban» 0 ms, empataban y salía directo. La hora del día no pinta nada aquí; lo que se mide es lo que tarda. */
     const Reloj = new Proxy(Date, { get: (T, k) => k === 'now' ? () => Math.round(performance.now()) : T[k] });
-    const f = new Function('location', 'localStorage', 'fetch', 'TILES_DIRECTO', 'TILES_PROXY', 'RECUERDA_MS', 'BLOQUE_OM', 'Date',
+    const VENTAJA = Number(/\nconst VENTAJA_DIRECTO = ([\d.]+);/.exec(M)?.[1]);
+    const f = new Function('location', 'localStorage', 'fetch', 'TILES_DIRECTO', 'TILES_PROXY', 'RECUERDA_MS', 'BLOQUE_OM', 'Date', 'VENTAJA_DIRECTO',
       `let TILES; ${src}; return elegirOrigenTeselas().then(t => t);`);
     const ls = { getItem: k => guardado[k] ?? null, setItem: (k, v) => { guardado[k] = v; } };
-    return f({ search: '' }, ls, fetchFalso, D, P, 6 * 3600e3, BLOQUE, Reloj).then(t => ({ t: t === D ? 'directo' : 'intermediario', g: guardado }));
+    return f({ search: '' }, ls, fetchFalso, D, P, 6 * 3600e3, BLOQUE, Reloj, VENTAJA).then(t => ({ t: t === D ? 'directo' : 'intermediario', g: guardado }));
   };
   (globalThis.__pendientes ??= []).push((async () => {
     const a = await correr({ headD: 10, headP: 250, trozoD: 900, trozoP: 30 });
@@ -15082,7 +15089,11 @@ grupo('La carrera de las teselas se decide con un TROZO de verdad, no con un HEA
        a.t === 'intermediario', JSON.stringify(a));
     const b = await correr({ headD: 250, headP: 10, trozoD: 30, trozoP: 900 });
     ok('   y al revés (una red donde Amazon baja rápido) → se elige DIRECTO, aunque pierda el HEAD', b.t === 'directo', JSON.stringify(b));
-    ok('   y lo guarda con la clave nueva (la vieja no vale: midió con el HEAD)', !!a.g['torre.origenTeselas3'] && !a.g['torre.origenTeselas2']);
+    ok('   y lo guarda con la clave nueva (la 3 pudo quedarse en Amazon por un empate)', !!a.g['torre.origenTeselas4'] && !a.g['torre.origenTeselas3']);
+    const c = await correr({ headD: 10, headP: 10, trozoD: 860, trozoP: 720 });
+    const c2 = await correr({ headD: 10, headP: 10, trozoD: 700, trozoP: 900 });
+    ok('su ventana el 27-10 a las 21:15 («tarda más que nunca»): trozo directo 860 ms contra 720, y aunque Amazon fuera algo MÁS rápido (700 contra 900) → INTERMEDIARIO: un empate no se lo lleva Amazon',
+       c.t === 'intermediario' && c2.t === 'intermediario', JSON.stringify([c.t, c2.t]));
   })());
 }
 
