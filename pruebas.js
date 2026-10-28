@@ -14663,6 +14663,63 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   })());
 }
 
+/* ═══ LA LLUVIA NO SE ACABA CON AROME (28-10-2026) ══════════════════════════════
+   Suyo: «creo que el viernes o el fin de semana no cuadran». La capa de lluvia entra en AROME HD, que llega a 2 días: el
+   deslizador se clavaba el viernes a las 13:00 y, viniendo de otra capa en el sábado, le devolvía a la hora actual. Ahora
+   sigue con ECMWF HRES a la hora que tocaba y lo dice. Se EJECUTAN paso() y setModel() con las listas de horas de ese día. */
+{
+  grupo('La lluvia sigue con ECMWF HRES cuando AROME HD se acaba');
+  const vm = require('vm');
+  const nada = () => {};
+  const cualquiera = () => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => '' : cualquiera()), apply: () => cualquiera(), construct: () => cualquiera() });
+  const caja = { console: { log: nada, warn: nada, error: nada, info: nada }, setTimeout: () => 0, clearTimeout: nada, setInterval: () => 0, clearInterval: nada,
+    URL, URLSearchParams, Intl, Date, Math, JSON, Promise, AbortController, document: { querySelector: () => ({ max: 0, value: 0, style: {} }), querySelectorAll: () => [] },
+    navigator: { userAgent: 'node' }, localStorage: { getItem: () => null, setItem: nada, removeItem: nada }, sessionStorage: { getItem: () => null, setItem: nada, removeItem: nada },
+    location: { search: '', href: 'https://x/', origin: 'https://x' }, fetch: async () => ({ ok: false }), maplibregl: cualquiera(),
+    OMWeatherMapLayer: cualquiera(), addEventListener: nada, matchMedia: () => ({ matches: false, addEventListener: nada }),
+    requestAnimationFrame: nada, performance: { now: () => 0 }, Blob: function () {}, Image: function () {}, esc: x => String(x) };   // esc() vive en app.js
+  caja.window = caja; caja.globalThis = caja; caja.self = caja;
+  const horas = (desde, n, paso = 1) => Array.from({ length: n }, (_, k) => new Date(Date.parse(desde) + k * paso * 3600e3).toISOString());
+  const AROME = 'meteofrance_arome_france_hd';
+  const metas = { [AROME]: { valid_times: horas('2026-10-28T09:00:00Z', 52) },           // pasada de las 10:00: acaba el vie 30 a las 12:00 UTC (13:00 de aquí), como ese día
+                  ecmwf_ifs: { valid_times: horas('2026-10-28T06:00:00Z', 167) } };
+  const montar = () => {   // una caja nueva por caso: maps.js declara constantes y no se puede cargar dos veces en la misma
+    const c = { ...caja }; c.window = c; c.globalThis = c; c.self = c;
+    vm.createContext(c);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'reglas-tiempo.js'), 'utf8'), c);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8'), c, { filename: 'maps.js' });
+    const M = vm.runInContext('Maps', c);
+    c.LS = { get: (k, d) => d, set: nada };
+    for (const f of ['cerrarPopups', 'cancelarPrecarga', 'soltarMemoria', 'pause', 'ui']) M[f] = nada;
+    const r = { aviso: null, pedida: null };
+    M.avisoAlcance = h => { r.aviso = h; };
+    M.loadMeta = async () => { M.meta = metas[M.model]; M.usando = { modelo: M.model, meta: M.meta, sustituido: false }; };
+    M.apply = () => { r.pedida = M.horaPedida ? new Date(M.horaPedida).toISOString() : null; r.modelo = M.model; };
+    M.layer = 'precipitation'; M.pasoHoras = 1;
+    return { M, r };
+  };
+  let a = null, b = null, err = null;
+  (globalThis.__pendientes ??= []).push((async () => {
+    try {
+      // 1 · En AROME, en su última hora, pulsar «›»
+      { const { M, r } = montar();
+        M.model = AROME; await M.loadMeta(); M.t = 51; M._idx = M.indices(); M._pos = M._idx.length - 1;
+        M.paso(1); await new Promise(res => setImmediate(res)); await new Promise(res => setImmediate(res));
+        a = r; }
+      // 2 · Mirando el sábado 15:00 con ECMWF, entrar en AROME (lo que hace la capa de lluvia al entrar)
+      { const { M, r } = montar();
+        M.model = 'ecmwf_ifs'; await M.loadMeta(); M.t = metas.ecmwf_ifs.valid_times.indexOf('2026-10-31T14:00:00.000Z');
+        await M.setModel(AROME);
+        b = r; }
+    } catch (e) { err = e; }
+    ok('en la última hora de AROME (vie 30, 13:00), «›» no se queda clavado: pasa a ECMWF HRES y pide el viernes a las 14:00',
+       !err && a.modelo === 'ecmwf_ifs' && a.pedida === '2026-10-30T13:00:00.000Z', err ? String(err) : JSON.stringify(a));
+    ok('   y dice hasta cuándo llega AROME HD y que sigue ECMWF HRES', !err && /AROME HD llega hasta el/.test(a.aviso || '') && /ECMWF HRES/.test(a.aviso || ''), String(a?.aviso));
+    ok('entrar en la lluvia mirando el sábado 15:00: se queda en el SÁBADO con ECMWF HRES, no le devuelve a la hora actual',
+       !err && b.modelo === 'ecmwf_ifs' && b.pedida === '2026-10-31T14:00:00.000Z' && !/te he traído a la/.test(b.aviso || ''), err ? String(err) : JSON.stringify(b));
+  })());
+}
+
 /* ═══ FLECHAS EN PAUSA, A LA VISTA; Y LOS MODELOS DE ZONA LO DICEN (22-10-2026) ══
    Suyo: «le doy a flechas y movimiento y nada» (el cupo de la hora se gastó y el aviso iba en un pie fuera de la pantalla) ·
    «viento a 10 m con HARMONIE mal» (media España en blanco: su dominio no llega). Se EJECUTA barbasDeApi() con la rejilla en pausa. */

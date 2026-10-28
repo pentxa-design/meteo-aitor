@@ -1699,3 +1699,16 @@ ALTAS_OPACIDAD quitados. Números y clic, sin tocar (la mayor de las tres). La l
 TRAMPA: el ajuste se llamó primero `windy`, que es el de las capas de Windy EN DIRECTO (`apply` → `applyWindy`); se
 llama `comoWindy` y hay prueba que lo bloquea. Probado en su panel inyectando el código sobre lo publicado: teselas
 512×512 compuestas, 0 fallos al recargar y al cambiar de hora. Pruebas ejecutadas vistas en roja.
+
+### §86 octies — La lluvia del mapa ya no se acaba con AROME (28-10-2026, 15:45)
+
+Suyo, comparando la lluvia con Windy: «creo que el viernes o el fin de semana no cuadran». MEDIDO en su panel: la capa de
+lluvia entra en AROME HD (`MODELO_LLUVIA`), cuya pasada de las 10:00 acaba el vie 30 a las 13:00. El deslizador se clavaba
+ahí, y entrando en la lluvia desde otra capa mirando el sábado, `setModel` le devolvía a la hora ACTUAL con el cartel
+«solo llega a 2,1 días». Con ECMWF HRES en las dos, hoy, vie y sáb a las 15:00, la lluvia de la app y la de Windy pintan
+lo mismo (costa de Valencia–Murcia, Baleares, la banda del Atlántico). Ahora: `SIGUE_LLUVIA = 'ecmwf_ifs'`; `paso()`
+pasado el final de AROME en una capa de lluvia sigue con ECMWF HRES a la hora que tocaba, y `setModel(id, hora)` hace lo
+mismo cuando la hora mirada queda fuera de AROME; `avisoSigueLluvia()` dice hasta cuándo llega AROME y que sigue ECMWF.
+Pruebas EJECUTADAS (setModel y paso en una caja vm, una por caso: maps.js no se puede cargar dos veces en la misma),
+vistas en roja con `if (false &&`. Comprobado sobre lo publicado: vie 13:00 AROME → «›» → vie 14:00 ECMWF HRES con el
+cartel; y desde Nubes en el sáb 15:00 → Precipitación se queda en el sáb 15:00 con ECMWF HRES.

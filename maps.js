@@ -786,6 +786,10 @@ const CON_SUELO_NEGRO = new Set(['lluvia', 'lluviaVerde', 'dbz', 'nieveAzul', 'e
    la lluvia en sus sitios (17-10-2026, ver setLayer). */
 const MODELO_LLUVIA = 'meteofrance_arome_france_hd';
 const CAPAS_LLUVIA_AROME = new Set(['lluvia']);
+/* AROME HD llega a 2 días: el 28-10-2026 su lluvia se acababa el viernes a las 13:00 y el viernes por la tarde y el fin de
+   semana no se podían ver (suyo: «creo que el viernes o el fin de semana no cuadran»). Pasado su final la lluvia sigue con
+   ECMWF HRES de 9 km —el mismo que pinta Windy, comparado ese día viernes y sábado a las 15:00— y se dice desde cuándo. */
+const SIGUE_LLUVIA = 'ecmwf_ifs';
 /* «Tipo de precipitación» pinta la lluvia en verde y la NIEVE en azul, y AROME HD no publica nieve en los mapas (medido el
    18-10-2026): con él todo salía verde y no se veía la nieve del Pirineo y los Alpes («se que han dado algo de nieve y no
    lo veo»). Al entrar en esa capa con un modelo sin nieve se pone ICON-EU (7 km); los que la publican se respetan. */
@@ -7189,13 +7193,14 @@ const Maps = {
     this.ui(); this.apply();
   },
 
-  async setModel(id) {
+  async setModel(id, hora) {
     if (id === this.model) return;
     // Se recuerda QUÉ HORA se estaba mirando, no el número de paso: cada
     // modelo tiene su propia lista de horas y su propio alcance. Cambiar
     // de ECMWF (15 días) a AROME (2) y quedarse en el paso 40 llevaba a
-    // una hora que ese modelo no tiene.
-    const horaMirada = this.horaMirada();
+    // una hora que ese modelo no tiene. `hora` la pasa paso() cuando se
+    // sale del final de AROME en la lluvia (ver SIGUE_LLUVIA).
+    const horaMirada = hora ?? this.horaMirada();
     this.cerrarPopups();
     this.cancelarPrecarga();     // igual que en setLayer: ver el porqué allí
     this.soltarMemoria();
@@ -7216,6 +7221,11 @@ const Maps = {
       const vt = this.meta.valid_times.map(v => new Date(v));
       const ultima = vt[vt.length - 1];
       if (horaMirada > ultima) {
+        if (id === MODELO_LLUVIA && this.esCapaLluvia()) {
+          await this.setModel(SIGUE_LLUVIA, horaMirada);
+          this.avisoSigueLluvia(ultima);
+          return;
+        }
         const nom = TMODELS.find(m => m.id === id)?.name || id;
         const d = this.diasDe(id);
         const ult = ultima.toLocaleString('es', { weekday:'short', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
@@ -7233,6 +7243,16 @@ const Maps = {
         this.apply();
       }
     }
+  },
+
+  esCapaLluvia() { return CAPAS_LLUVIA_AROME.has(TLAYERS.find(l => l.id === this.layer)?.escala); },
+
+  /** La lluvia pasó del final de AROME HD a ECMWF HRES: se dice desde cuándo (ver SIGUE_LLUVIA). */
+  avisoSigueLluvia(ultima) {
+    const ult = ultima.toLocaleString('es', { weekday:'short', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+    const nom = id => esc(TMODELS.find(m => m.id === id)?.name || id);
+    this.avisoAlcance(`<b>${nom(MODELO_LLUVIA)} llega hasta el ${esc(ult)}</b>. Desde ahí la lluvia sigue con <b>${nom(SIGUE_LLUVIA)}</b>,
+      el mismo que pinta Windy. Para volver a ${nom(MODELO_LLUVIA)}, vuelve a antes de esa hora y púlsalo arriba.`);
   },
 
   /** Aviso de que el modelo elegido no llega tan lejos. */
@@ -7305,7 +7325,16 @@ const Maps = {
     }
     const idx = this._idx ?? this.indices();
     if (!idx.length) return;
-    const p = Math.max(0, Math.min(idx.length - 1, (this._pos ?? 0) + n));
+    const quiere = (this._pos ?? 0) + n;
+    // Pasado el final de AROME en la lluvia no se queda clavado: sigue con ECMWF HRES a la hora que tocaba (ver SIGUE_LLUVIA).
+    const vt = (this.usando?.meta ?? this.meta)?.valid_times;
+    if (quiere > idx.length - 1 && this.model === MODELO_LLUVIA && this.esCapaLluvia() && vt?.[idx[idx.length - 1]]) {
+      const ultima = new Date(vt[idx[idx.length - 1]]);
+      const objetivo = new Date(+ultima + (quiere - (idx.length - 1)) * (this.pasoHoras || 1) * 3600e3);
+      this.setModel(SIGUE_LLUVIA, objetivo).then(() => { this.ui(); this.avisoSigueLluvia(ultima); });
+      return;
+    }
+    const p = Math.max(0, Math.min(idx.length - 1, quiere));
     document.querySelector('#mapTime').value = p;
     this.irAPosicion(p);
   },
