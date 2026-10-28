@@ -1739,3 +1739,15 @@ WebAssembly). Si alguien lo retoma: medirlo con varias tandas y con un tope de t
 Lo que también se vio y no se tocó: la precarga (`precargar`/`bombear`) pide teselas a z5 mientras el mapa a zoom 5,2 pinta
 z6 (sirve igual: calienta los mismos trozos), y tras cambiar de modelo hay ~1,8 s sin peticiones antes de los datos de la
 hora que se mira (sin tareas largas ni red; no se sabe aún qué espera).
+
+### §86 undecies — Tope de 4 trozos en vuelo: también tumba la memoria (28-10-2026, 22:20)
+Probado EN VIVO sobre la app publicada (v1949), sin publicar nada: se cambió en la página `prefetch` de la caché de bloques por
+uno que dispara sin esperar mientras haya menos de 4 trozos en vuelo y espera a partir de ahí. Tras ~16 cambios HRES↔AROME
+(lluvia, ráfagas, temperatura, rocío, humedad) el mapa se quedó sin memoria y se recargó solo (`om_recargas`=1). Con la
+librería tal cual, la misma tanda no cayó. En mi red los trozos fríos tardan 0,3-0,7 s y una hora fría de AROME 2-6 s.
+POR QUÉ no se arregla «pidiendo más a la vez»: las 6 teselas de una hora de AROME leen los MISMOS trozos del mismo fichero
+(por eso se ven de dos en dos y en fila), y en cuanto los datos llegan antes, las descodificaciones se solapan en los 64 MB
+del WebAssembly. La velocidad y la memoria van atadas mientras se descodifique en el aparato. No volver a probar topes.
+LO QUE SÍ AYUDA YA, sin código: `calentar()` precalienta al abrir la app el modelo y la capa GUARDADOS (hora actual 3×3 y las
+dos siguientes). Si deja el mapa de lluvia en AROME HD, esa hora le llega caliente; si lo deja en el europeo, la que se
+calienta es la del europeo y el primer paso a AROME va en frío. Se le dijo el 28-10.
