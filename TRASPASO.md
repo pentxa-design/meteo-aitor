@@ -1724,3 +1724,18 @@ ECMWF 25 km va de 3 en 3 h: la hora más cercana a «vie 13:00 + 1 h» era la mi
 que resuelve a la más cercana como el de verdad, vista en roja. Comprobado sobre lo publicado (v2026.10.28-1559):
 vie 13:00 AROME → «›» vie 16:00 ECMWF 25 km → «›» 19:00, con el cartel. Windy va en 1 s porque sirve imágenes ya pintadas
 en su servidor; aquí se descodifica el dato crudo en el navegador: HRES (6,6 millones de puntos) es el peor caso.
+
+### §86 decies — HRES → AROME tarda: trozos de dos en dos, y el arreglo que se probó y se QUITÓ (28-10-2026, 19:50)
+Suyo: «pasar del europeo a arome y a esperar 20 segundos» · «he tenido que mirar en Windy». MEDIDO en la app publicada
+(1960×1100, su vista de zoom 5,2): una hora de lluvia de AROME HD en frío son ~14 trozos de 256 KB por el intermediario;
+cada trozo frío tarda ~1 s (Vercel MISS → S3) y caliente 70-100 ms. Y los trozos llegan DE DOS EN DOS Y EN FILA (bloques
+337-338, 339-340… 346): la librería precarga en tandas de 10 lecturas de 64 KB y espera cada tanda (`decodePrefetch` → `Ot`),
+y diez lecturas de 64 KB caen en dos o tres trozos. En su red (~1-2 s por trozo frío) eso son las 12-20 s del cartel.
+PROBADO Y RETIRADO: sustituir `prefetch` de la caché de bloques por uno que pide y no espera (todos los trozos a la vez).
+Iba: los 10 trozos de HRES salían a la vez. Pero al publicarlo (v1941), la misma secuencia HRES↔AROME en frío dio «sin
+memoria» y recarga **2 de 2 veces**; con la precarga de la librería restaurada en caliente, **0**. Vuelta atrás en v1949.
+El mecanismo del OOM no está medido (sospecha: al llegar todo a la vez se solapan más descodificaciones en los 64 MB del
+WebAssembly). Si alguien lo retoma: medirlo con varias tandas y con un tope de trozos en vuelo, nunca sin tope.
+Lo que también se vio y no se tocó: la precarga (`precargar`/`bombear`) pide teselas a z5 mientras el mapa a zoom 5,2 pinta
+z6 (sirve igual: calienta los mismos trozos), y tras cambiar de modelo hay ~1,8 s sin peticiones antes de los datos de la
+hora que se mira (sin tareas largas ni red; no se sabe aún qué espera).
