@@ -707,7 +707,9 @@ svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;
   text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000;max-width:calc(100% - 24px)}
 .mrotulo[hidden]{display:none}
 .mrotulo #mapRotulo2{font-size:1.25rem}
-@media (max-width:640px){.mrotulo{font-size:0.8125rem;bottom:62px}.mrotulo #mapRotulo2{font-size:0.9375rem}}
+/* En el móvil, solo la hora válida (28-10-2026, suyo con su captura: «muchas letra arome…»). El modelo ya sale en el selector de
+   encima y en la línea de abajo, y la pasada también abajo: tres veces lo mismo tapaba media España. */
+@media (max-width:640px){.mrotulo{font-size:0.8125rem;bottom:62px}.mrotulo #mapRotulo1{display:none}.mrotulo #mapRotulo2{font-size:0.875rem}}
 .omPop .maplibregl-popup-content{background:#0e1626;color:var(--ink);
   border:1px solid var(--line);border-radius:11px;padding:10px 13px;font-size:0.8125rem;
   box-shadow:0 14px 40px -16px rgba(0,0,0,.95)}

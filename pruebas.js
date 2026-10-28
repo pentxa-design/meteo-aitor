@@ -14328,6 +14328,9 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   ok('el rótulo grande del mapa (como AguaceroWx) dice modelo y hora, y se QUITA: apply() lo borra antes de pintar y solo lo pone stamp(), que es de las capas de modelo',
      !err && r.rotPuesto.vis && /Válido/.test(r.rotPuesto.l2) && !r.rotQuitado.vis && r.rotQuitado.l1 === ''
      && /if \(!L_\) return;\n(?:[^\n]*\n)?    this\.rotulo\(null\);/.test(Mf) && /this\.rotulo\(`\$\{M\.name\}/.test(Mf), JSON.stringify([r?.rotPuesto, r?.rotQuitado]));
+  ok('   en el MÓVIL el rótulo es solo la hora válida (28-10-2026, «muchas letra arome…»: modelo y pasada ya salen encima y debajo), y la nota del asterisco no habla de «esa capa»',
+     /@media \(max-width:640px\)\{[^}]*\}\.mrotulo #mapRotulo1\{display:none\}/.test(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8'))
+     && /Las capas con asterisco no las publica/.test(Mf) && !/no publica esa capa/.test(Mf));
   ok('   costa NEGRA y fronteras de país y comunidad encima del color en Claro y Color (como AguaceroWx); en la lluvia, la costa de antes y sin fronteras',
      /lluvia \? 'rgba\(18,38,66,0\.85\)' : 'rgba\(0,0,0,0\.9\)'/.test(Mf) && /this\.fronterasEncima\(oscuro, lluvia\);/.test(Mf)
      && /\['fronteraPaisLayer', 2,/.test(Mf) && /\['fronteraRegionLayer', 4,/.test(Mf) && /\['==', 'maritime', 0\]/.test(Mf));

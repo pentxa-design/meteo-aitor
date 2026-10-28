@@ -6993,7 +6993,8 @@ const Maps = {
     const nota = document.querySelector('#mapLayersNota');
     if (nota) {
       nota.hidden = !disp.some(l => !this.propia(l));
-      nota.innerHTML = `<i>*</i> ${esc(TMODELS.find(m => m.id === this.model)?.name || 'Este modelo')} no publica esa capa: si la pulsas se pinta con otro modelo, y abajo se dice con cuál.`;
+      /* «esa capa» se leía como la que tiene puesta (28-10-2026: debajo de «AROME HD · Precipitación», que AROME sí publica). */
+      nota.innerHTML = `<i>*</i> Las capas con asterisco no las publica ${esc(TMODELS.find(m => m.id === this.model)?.name || 'este modelo')}: se pintan con otro, y abajo se dice con cuál.`;
     }
 
     /* ── EL RATÓN AVISA ANTES QUE EL CLIC ─────────────────────────────
