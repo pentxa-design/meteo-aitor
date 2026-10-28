@@ -788,8 +788,11 @@ const MODELO_LLUVIA = 'meteofrance_arome_france_hd';
 const CAPAS_LLUVIA_AROME = new Set(['lluvia']);
 /* AROME HD llega a 2 días: el 28-10-2026 su lluvia se acababa el viernes a las 13:00 y el viernes por la tarde y el fin de
    semana no se podían ver (suyo: «creo que el viernes o el fin de semana no cuadran»). Pasado su final la lluvia sigue con
-   ECMWF HRES de 9 km —el mismo que pinta Windy, comparado ese día viernes y sábado a las 15:00— y se dice desde cuándo. */
-const SIGUE_LLUVIA = 'ecmwf_ifs';
+   el europeo y se dice desde cuándo. Primero se puso ECMWF HRES (9 km) y él lo tumbó por lento: «no puedo andar así
+   esperando 15 segundos… cuando Windy me lo da en 1 segundo». MEDIDO en su panel, lluvia, cambio de hora: AROME HD 1,0 s ·
+   ECMWF 25 km 1,3 s (3,6 s la primera) · ECMWF HRES 4,9 s (14 s en su pantalla grande). Va ECMWF 25 km: el mismo
+   europeo, más grueso, y casi tan rápido como AROME. */
+const SIGUE_LLUVIA = 'ecmwf_ifs025';
 /* «Tipo de precipitación» pinta la lluvia en verde y la NIEVE en azul, y AROME HD no publica nieve en los mapas (medido el
    18-10-2026): con él todo salía verde y no se veía la nieve del Pirineo y los Alpes («se que han dado algo de nieve y no
    lo veo»). Al entrar en esa capa con un modelo sin nieve se pone ICON-EU (7 km); los que la publican se respetan. */
@@ -7252,7 +7255,7 @@ const Maps = {
     const ult = ultima.toLocaleString('es', { weekday:'short', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
     const nom = id => esc(TMODELS.find(m => m.id === id)?.name || id);
     this.avisoAlcance(`<b>${nom(MODELO_LLUVIA)} llega hasta el ${esc(ult)}</b>. Desde ahí la lluvia sigue con <b>${nom(SIGUE_LLUVIA)}</b>,
-      el mismo que pinta Windy. Para volver a ${nom(MODELO_LLUVIA)}, vuelve a antes de esa hora y púlsalo arriba.`);
+      el europeo (como Windy), en su versión rápida. Para volver a ${nom(MODELO_LLUVIA)}, vuelve a antes de esa hora y púlsalo arriba.`);
   },
 
   /** Aviso de que el modelo elegido no llega tan lejos. */
@@ -7331,7 +7334,11 @@ const Maps = {
     if (quiere > idx.length - 1 && this.model === MODELO_LLUVIA && this.esCapaLluvia() && vt?.[idx[idx.length - 1]]) {
       const ultima = new Date(vt[idx[idx.length - 1]]);
       const objetivo = new Date(+ultima + (quiere - (idx.length - 1)) * (this.pasoHoras || 1) * 3600e3);
-      this.setModel(SIGUE_LLUVIA, objetivo).then(() => { this.ui(); this.avisoSigueLluvia(ultima); });
+      this.setModel(SIGUE_LLUVIA, objetivo).then(() => {
+        this.ui(); this.avisoSigueLluvia(ultima);
+        // ECMWF 25 km va de 3 en 3 h: la más cercana a las 14:00 es la misma 13:00 y el «›» parecía no hacer nada (medido el 28-10)
+        if (this.horaMirada() <= ultima) { const k = this._idx ?? this.indices(); this.irAPosicion(Math.min(k.length - 1, (this._pos ?? 0) + 1)); }
+      });
       return;
     }
     const p = Math.max(0, Math.min(idx.length - 1, quiere));

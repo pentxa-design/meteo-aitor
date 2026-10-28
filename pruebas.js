@@ -14668,7 +14668,7 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
    deslizador se clavaba el viernes a las 13:00 y, viniendo de otra capa en el sábado, le devolvía a la hora actual. Ahora
    sigue con ECMWF HRES a la hora que tocaba y lo dice. Se EJECUTAN paso() y setModel() con las listas de horas de ese día. */
 {
-  grupo('La lluvia sigue con ECMWF HRES cuando AROME HD se acaba');
+  grupo('La lluvia sigue con el europeo rápido (ECMWF 25 km) cuando AROME HD se acaba');
   const vm = require('vm');
   const nada = () => {};
   const cualquiera = () => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => '' : cualquiera()), apply: () => cualquiera(), construct: () => cualquiera() });
@@ -14682,7 +14682,8 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
   const horas = (desde, n, paso = 1) => Array.from({ length: n }, (_, k) => new Date(Date.parse(desde) + k * paso * 3600e3).toISOString());
   const AROME = 'meteofrance_arome_france_hd';
   const metas = { [AROME]: { valid_times: horas('2026-10-28T09:00:00Z', 52) },           // pasada de las 10:00: acaba el vie 30 a las 12:00 UTC (13:00 de aquí), como ese día
-                  ecmwf_ifs: { valid_times: horas('2026-10-28T06:00:00Z', 167) } };
+                  ecmwf_ifs: { valid_times: horas('2026-10-28T06:00:00Z', 167) },
+                  ecmwf_ifs025: { valid_times: horas('2026-10-28T06:00:00Z', 48, 3) } };
   const montar = () => {   // una caja nueva por caso: maps.js declara constantes y no se puede cargar dos veces en la misma
     const c = { ...caja }; c.window = c; c.globalThis = c; c.self = c;
     vm.createContext(c);
@@ -14694,7 +14695,13 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
     const r = { aviso: null, pedida: null };
     M.avisoAlcance = h => { r.aviso = h; };
     M.loadMeta = async () => { M.meta = metas[M.model]; M.usando = { modelo: M.model, meta: M.meta, sustituido: false }; };
-    M.apply = () => { r.pedida = M.horaPedida ? new Date(M.horaPedida).toISOString() : null; r.modelo = M.model; };
+    M.apply = () => {   // como el de verdad: la hora pedida se resuelve a la MÁS CERCANA de la lista del modelo
+      r.pedida = M.horaPedida ? new Date(M.horaPedida).toISOString() : null; r.modelo = M.model;
+      if (M.horaPedida) { const vt = M.meta.valid_times.map(v => Date.parse(v)); let k = 0;
+        vt.forEach((v, i) => { if (Math.abs(v - M.horaPedida) < Math.abs(vt[k] - M.horaPedida)) k = i; });
+        M.t = k; M._idx = M.indices(); M._pos = M._idx.indexOf(k); M.horaPedida = null; }
+    };
+    M.irAPosicion = p => { M._pos = p; M.t = M._idx[p]; };
     M.layer = 'precipitation'; M.pasoHoras = 1;
     return { M, r };
   };
@@ -14704,19 +14711,21 @@ grupo('ESTO NO SE TOCA: las reglas ya decididas siguen guardadas');
       // 1 · En AROME, en su última hora, pulsar «›»
       { const { M, r } = montar();
         M.model = AROME; await M.loadMeta(); M.t = 51; M._idx = M.indices(); M._pos = M._idx.length - 1;
-        M.paso(1); await new Promise(res => setImmediate(res)); await new Promise(res => setImmediate(res));
-        a = r; }
+        M.paso(1); for (let i = 0; i < 5; i++) await new Promise(res => setImmediate(res));
+        r.final = M.horaMirada()?.toISOString(); a = r; }
       // 2 · Mirando el sábado 15:00 con ECMWF, entrar en AROME (lo que hace la capa de lluvia al entrar)
       { const { M, r } = montar();
         M.model = 'ecmwf_ifs'; await M.loadMeta(); M.t = metas.ecmwf_ifs.valid_times.indexOf('2026-10-31T14:00:00.000Z');
         await M.setModel(AROME);
         b = r; }
     } catch (e) { err = e; }
-    ok('en la última hora de AROME (vie 30, 13:00), «›» no se queda clavado: pasa a ECMWF HRES y pide el viernes a las 14:00',
-       !err && a.modelo === 'ecmwf_ifs' && a.pedida === '2026-10-30T13:00:00.000Z', err ? String(err) : JSON.stringify(a));
-    ok('   y dice hasta cuándo llega AROME HD y que sigue ECMWF HRES', !err && /AROME HD llega hasta el/.test(a.aviso || '') && /ECMWF HRES/.test(a.aviso || ''), String(a?.aviso));
-    ok('entrar en la lluvia mirando el sábado 15:00: se queda en el SÁBADO con ECMWF HRES, no le devuelve a la hora actual',
-       !err && b.modelo === 'ecmwf_ifs' && b.pedida === '2026-10-31T14:00:00.000Z' && !/te he traído a la/.test(b.aviso || ''), err ? String(err) : JSON.stringify(b));
+    ok('en la última hora de AROME (vie 30, 13:00), «›» no se queda clavado: pasa a ECMWF 25 km (no a HRES, que tarda 5-14 s por hora) y pide el viernes a las 14:00',
+       !err && a.modelo === 'ecmwf_ifs025' && a.pedida === '2026-10-30T13:00:00.000Z', err ? String(err) : JSON.stringify(a));
+    ok('   y el «›» AVANZA: ECMWF 25 km va de 3 en 3 h y la más cercana a las 14:00 era la misma 13:00; queda en las 16:00',
+       !err && a.final === '2026-10-30T15:00:00.000Z', String(a?.final));
+    ok('   y dice hasta cuándo llega AROME HD y que sigue ECMWF 25 km', !err && /AROME HD llega hasta el/.test(a.aviso || '') && /ECMWF 25 km/.test(a.aviso || ''), String(a?.aviso));
+    ok('entrar en la lluvia mirando el sábado 15:00: se queda en el SÁBADO con ECMWF 25 km, no le devuelve a la hora actual',
+       !err && b.modelo === 'ecmwf_ifs025' && b.pedida === '2026-10-31T14:00:00.000Z' && !/te he traído a la/.test(b.aviso || ''), err ? String(err) : JSON.stringify(b));
   })());
 }
 

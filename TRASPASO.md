@@ -1712,3 +1712,15 @@ mismo cuando la hora mirada queda fuera de AROME; `avisoSigueLluvia()` dice hast
 Pruebas EJECUTADAS (setModel y paso en una caja vm, una por caso: maps.js no se puede cargar dos veces en la misma),
 vistas en roja con `if (false &&`. Comprobado sobre lo publicado: vie 13:00 AROME → «›» → vie 14:00 ECMWF HRES con el
 cartel; y desde Nubes en el sáb 15:00 → Precipitación se queda en el sáb 15:00 con ECMWF HRES.
+
+### §86 nonies — El relevo de la lluvia, con el europeo RÁPIDO (28-10-2026, 16:00)
+
+El relevo de §86 octies iba a ECMWF HRES y él lo tumbó en el acto: «no puedo andar así esperando 15 segundos… cuando Windy
+me lo da en 1 segundo» · «parece como en los años 90». MEDIDO en su panel, capa Precipitación, cambio de hora hasta
+tener todas las teselas: AROME HD 1,0 s · ECMWF 25 km 1,3 s (3,6 s la primera) · ECMWF HRES 4,9 s (14 s en su pantalla
+ancha, su captura) · ICON-EU 0,8 s pero ese día su pasada solo llegaba a 1,3 días. `SIGUE_LLUVIA = 'ecmwf_ifs025'`.
+ECMWF 25 km va de 3 en 3 h: la hora más cercana a «vie 13:00 + 1 h» era la misma 13:00 y el «›» parecía no hacer nada;
+`paso()` avanza una posición más si tras el relevo la hora no pasó del final de AROME. Prueba ejecutada con un apply()
+que resuelve a la más cercana como el de verdad, vista en roja. Comprobado sobre lo publicado (v2026.10.28-1559):
+vie 13:00 AROME → «›» vie 16:00 ECMWF 25 km → «›» 19:00, con el cartel. Windy va en 1 s porque sirve imágenes ya pintadas
+en su servidor; aquí se descodifica el dato crudo en el navegador: HRES (6,6 millones de puntos) es el peor caso.
