@@ -1686,3 +1686,16 @@ cada trozo 206 hasta su último byte (TransformStream, sin copiar el cuerpo) y `
 si pasa de 700 ms se cambia `TILES` al intermediario en el acto y se guarda en `torre.origenTeselas4` (motivo «el directo
 iba lento»). Solo va hacia el intermediario. Los trozos de la carrera (`no-store`) no cuentan. Pruebas ejecutadas con sus
 tiempos (1,1-1,3 s → cambia al 6.º; 0,2-0,3 s → se queda), vistas en roja.
+
+### §86 septies — «Nubes» con la escala de Windy: gris a medias (28-10-2026, 08:25)
+
+Suyo, con Windy al lado: «hay diferencia» · «del color de nubes» · «en Windy se ven grises también donde deben». MEDIDO en
+sus capturas: Windy pinta el 0 % en 146,130,70 y la nube a medias en GRIS NEUTRO; nosotros apilábamos tres capas de blanco
+transparente (bajas, medias en omLayer3, altas en omLayer4) sobre el ocre, que sale beis y nunca gris. Ahora la URL de la
+capa lleva `nubes_windy=<medias>.<altas>` y el protocolo `om` la manda a `nubesComoWindy()`: pide las tres con una escala
+de código (porcentaje en el canal rojo), en cada píxel la mayor de bajas y medias y las altas a la mitad (`nubeWindy`), y
+la pinta con `NUBES_WINDY_RAMPA` (ocre → gris 116 al 30 % → 160 al 45 → 210 al 60 → blanco del 70). omLayer3/omLayer4 y
+ALTAS_OPACIDAD quitados. Números y clic, sin tocar (la mayor de las tres). La lluvia azul encima, sin tocar.
+TRAMPA: el ajuste se llamó primero `windy`, que es el de las capas de Windy EN DIRECTO (`apply` → `applyWindy`); se
+llama `comoWindy` y hay prueba que lo bloquea. Probado en su panel inyectando el código sobre lo publicado: teselas
+512×512 compuestas, 0 fallos al recargar y al cambiar de hora. Pruebas ejecutadas vistas en roja.

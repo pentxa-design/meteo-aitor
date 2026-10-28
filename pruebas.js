@@ -15029,8 +15029,7 @@ grupo('Las nubes que TAPAN el sol, no el velo de cirros (26-10-2026)');
   const c = M.slice(M.indexOf("{ id:'clouds',"), M.indexOf('\n', M.indexOf("{ id:'clouds',")));
   ok('la capa «Nubes» pinta las BAJAS y encima las MEDIAS con la misma escala (ya no el total; las altas van aparte, en gris clarito)',
      /v:'cloud_cover_low', con:'cloud_cover_mid'/.test(c) && !/v:'cloud_cover',/.test(c)
-     && /this\.map\.addLayer\(\{ id:'omLayer3', type:'raster', source:'omSrc3'/.test(M)
-     && /if \(L_\.con && this\.map\.getSource\('omSrc3'\)\) \{/.test(M), c.slice(0, 120));
+     && /const otras = \[L_\.con, L_\.alta\]/.test(M), c.slice(0, 120));
   ok('   y los números y el clic dan la mayor de bajas y medias', /if \(L_\.con && urlCon\) \{   \/\/ las nubes que tapan: la mayor de bajas y medias/.test(M)
      && /return Number\.isFinite\(vc\) \? Math\.max\(Number\.isFinite\(v\) \? v : 0, vc\) : v;/.test(M));
 }
@@ -15041,13 +15040,42 @@ grupo('Las nubes ALTAS vuelven a «Nubes», en gris clarito y debajo (27-10-2026
   /* MEDIDO por /om a las 12:00 en Bermeo, con el cielo cubierto y gris de sus fotos: bajas 0 %, medias 0-5 %, ALTAS 95-100 % en
      los cinco modelos. Sin las altas, el mapa pintaba cielo limpio. */
   const c = M.slice(M.indexOf("{ id:'clouds',"), M.indexOf('\n', M.indexOf("{ id:'clouds',")));
-  ok('la capa «Nubes» lleva también las ALTAS (cloud_cover_high), en su propia capa omLayer4 DEBAJO de las bajas',
-     /alta:'cloud_cover_high'/.test(c) && /this\.map\.addLayer\(\{ id:'omLayer4', type:'raster', source:'omSrc4'[\s\S]{0,300}?\}, 'omLayer'\);/.test(M)
-     && /if \(L_\.alta && this\.map\.getSource\('omSrc4'\)\) \{/.test(M), c.slice(0, 140));
-  ok('   en gris clarito: más transparente y apagada que las bajas y medias (el modelo da el porcentaje, no el espesor)',
-     /const ALTAS_OPACIDAD = 0\.(\d+), ALTAS_BRILLO = 0\.(\d+);/.test(M) && (() => { const m = /const ALTAS_OPACIDAD = ([\d.]+), ALTAS_BRILLO = ([\d.]+);/.exec(M); return +m[1] < 0.8 && +m[1] > 0.3 && +m[2] < 0.95 && +m[2] > 0.7; })());
+  ok('la capa «Nubes» lleva también las ALTAS (cloud_cover_high), y cuentan la mitad al pintar (ver el grupo del 28-10)',
+     /alta:'cloud_cover_high'/.test(c) && /altas == null \? null : altas \* NUBES_WINDY_ALTAS/.test(M), c.slice(0, 140));
   ok('   y los números y el clic las cuentan: un 0 % debajo del gris diría «despejado» con el cielo tapado',
      /if \(urlAlta\) \{   \/\/ con las altas/.test(M) && /const v = await leerOtra\(urlAltaC, await leerUna\(\)\);/.test(M));
+}
+
+grupo('«Nubes» con la escala de Windy: ocre despejado, GRIS a medias, BLANCO cerrado (28-10-2026, sus capturas de las 08:25)');
+{
+  const M = fs.readFileSync(path.join(__dirname, 'maps.js'), 'utf8');
+  /* Suyo: «hay diferencia» · «del color de nubes» · «en Windy se ven grises también donde deben». MEDIDO en sus capturas: Windy
+     pinta el 0 % en 146,130,70 (Madrid, Cuenca, Sevilla y Badajoz) y la nube a medias en gris neutro; nosotros apilábamos
+     tres capas de blanco transparente sobre el ocre, que sale beis y nunca gris. */
+  const trozo = M.slice(M.indexOf('const NUBES_WINDY_RAMPA'), M.indexOf('const NUBES_CODIGO'));
+  const { nubeWindy, colorNubeWindy } = new Function(trozo + '; return { nubeWindy, colorNubeWindy };')();
+  const gris = c => Math.abs(c[0] - c[1]) <= 2 && Math.abs(c[1] - c[2]) <= 2;
+  const c0 = colorNubeWindy(0), c30 = colorNubeWindy(30), c50 = colorNubeWindy(50), c100 = colorNubeWindy(100);
+  ok('despejado (0 %): el ocre de Windy medido en sus capturas, y transparente para que se vea el suelo y la costa',
+     c0[0] === 146 && c0[1] === 130 && c0[2] === 70 && c0[3] === 0, c0.join(','));
+  ok('a medias (30 % y 50 %): GRIS NEUTRO opaco, no beis — es lo que pidió', gris(c30) && gris(c50) && c30[3] === 1 && c50[3] === 1 && c30[0] < c50[0],
+     c30.map(Math.round).join(',') + ' / ' + c50.map(Math.round).join(','));
+  ok('cerrado (100 %): blanco', c100[0] >= 245 && gris(c100) && c100[3] === 1, c100.join(','));
+  ok('se pinta la mayor de bajas y medias (20 y 80 → 80), no la suma ni la media', nubeWindy(20, 80, 0) === 80 && nubeWindy(80, 20, null) === 80);
+  ok('las altas cuentan la mitad: un manto de cirros al 100 % sale GRIS, no blanco como un techo bajo (26-10)',
+     nubeWindy(0, 0, 100) === 50 && gris(colorNubeWindy(nubeWindy(0, 0, 100))) && colorNubeWindy(nubeWindy(0, 0, 100))[0] < 240);
+  ok('sin ningún dato no se pinta nada (null), y un hueco en una no tumba las otras', nubeWindy(null, null, null) === null && nubeWindy(null, 40, NaN) === 40);
+  ok('el protocolo junta las tres ANTES que nada y la capa ya no apila omLayer3/omLayer4 de blanco transparente',
+     /if \(RE_NUBES_WINDY\.test\(params\.url\)\) return nubesComoWindy\(params, ac\);/.test(M)
+     && !/addLayer\(\{ id:'omLayer3'/.test(M) && !/addLayer\(\{ id:'omLayer4'/.test(M));
+  const c = M.slice(M.indexOf("{ id:'clouds',"), M.indexOf('\n', M.indexOf("{ id:'clouds',")));
+  /* La trampa del 28-10: el ajuste se llamó primero `windy`, que es el de las capas de Windy EN DIRECTO; con él, «Nubes» se
+     habría abierto como el visor de Windy (apply → applyWindy). */
+  ok('la capa «Nubes» lleva `comoWindy` y NO `windy` (eso la abriría como el visor de Windy en directo)',
+     /comoWindy:true/.test(c) && !/[ ,{]windy:/.test(c) && /if \(L_\.windy\) \{ this\.applyWindy\(L_\);/.test(M), c.slice(0, 160));
+  ok('la URL de la capa lleva las medias y altas que publique el modelo, y solo para «Nubes»',
+     /if \(L_\?\.comoWindy && variable === L_\.v && L_\.id === this\.layer\) \{/.test(M) && /q\.set\('nubes_windy', otras\.join\('\.'\)\)/.test(M));
+  ok('la barra de colores de arriba enseña la misma rampa con que se pinta', /if \(L_\.comoWindy\) \{\s*const R = NUBES_WINDY_RAMPA;/.test(M));
 }
 
 grupo('La precarga de horas no deja «Uncaught AbortError» (26-10-2026)');

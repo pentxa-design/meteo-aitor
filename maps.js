@@ -605,8 +605,8 @@ const TLAYERS = [
      (bajas 0, medias 0, altas 84); ICON-EU 52 % = 34 de cirro + 20 de baja. El TOTAL del modelo cuenta el velo de cirros,
      que deja pasar el sol, igual que un techo gris. Ahora la capa pinta las BAJAS y, encima con la misma escala, las MEDIAS
      (`con`); los cirros siguen en «Nubes altas». Números y clic: la mayor de las dos. */
-  { id:'clouds',      g:'Cielo', name:'Nubes', v:'cloud_cover_low', con:'cloud_cover_mid', alta:'cloud_cover_high', unit:'%', escala:'nubes', encima:'precipitation', encimaEscala:'sombraLluvia',
-    desc:'Como Windy: las nubes bajas y medias en BLANCO, las altas en GRIS CLARITO debajo (el modelo no dice si son un velo fino o un manto gris: las dos salen igual de claritas), y el agua del modelo en azul (claro con llovizna, casi negro con chaparrón). El número es la mayor de las tres' },
+  { id:'clouds',      g:'Cielo', name:'Nubes', v:'cloud_cover_low', con:'cloud_cover_mid', alta:'cloud_cover_high', comoWindy:true, unit:'%', escala:'nubes', encima:'precipitation', encimaEscala:'sombraLluvia',
+    desc:'Como Windy: ocre donde está despejado, GRIS donde la nube está a medias y BLANCO donde tapa (la mayor de bajas y medias; las altas cuentan la mitad, que el velo de cirros deja pasar el sol), y el agua del modelo en azul (claro con llovizna, casi negro con chaparrón). El número es la mayor de las tres' },
   { id:'clouds_low',  g:'Cielo', name:'Nubes bajas', v:'cloud_cover_low', unit:'%', escala:'nubes',
     desc:'Las que te dejan sin ver la torre' },
   { id:'clouds_mid',  g:'Cielo', name:'Nubes medias', v:'cloud_cover_mid', unit:'%', escala:'nubes', desc:'Nubosidad media' },
@@ -805,9 +805,59 @@ const ESCALAS_BLANCAS = new Set(['nubes', 'niebla']);
 /* En el fondo Claro las nubes y la niebla van sin suelo ocre y oscurecidas a gris: blanca sobre el mapa claro no se veía (19-10-2026, probado
    en pantalla antes de ponerlo: 0,72 deja la nube cerrada en gris claro y se distingue del mapa). */
 const NUBE_EN_CLARO = { 'raster-brightness-max': 0.72 };
-/* Las nubes ALTAS en la capa «Nubes» (27-10-2026): debajo de las bajas y medias, a esta parte de su opacidad y apagadas a gris
-   clarito. El modelo da su porcentaje, no su espesor: el velo fino de cirros y el manto gris salen igual de claritos. */
-const ALTAS_OPACIDAD = 0.55, ALTAS_BRILLO = 0.82;
+/* ── «NUBES» CON LA ESCALA DE WINDY: GRIS DONDE ESTÁ A MEDIAS (28-10-2026) ──────────────────────────────────────────────
+   Suyo, con Windy al lado a las 08:25: «hay diferencia» · «del color de nubes» · «en Windy se ven grises también donde
+   deben». MEDIDO en sus dos capturas, píxel a píxel: Windy pinta el despejado ocre (146,130,70 en Madrid, Cuenca, Sevilla y
+   Badajoz, los cuatro al 0 %) y la nube a medias en GRIS NEUTRO (el 112-176 es lo que más sale), blanca solo cuando tapa.
+   Nosotros pintábamos tres capas de BLANCO TRANSPARENTE (bajas, medias y altas) sobre el ocre, y blanco a medias sobre ocre
+   sale beis, nunca gris. Ahora las tres se juntan en UNA imagen: en cada píxel la mayor de bajas y medias, y las altas a la
+   mitad (el velo de cirros deja pasar el sol: 26-10), y ese número se pinta con la rampa de Windy. Nada inventado: es el
+   porcentaje del modelo; cambia el color. El agua del modelo sigue encima, en azul. */
+const NUBES_WINDY_RAMPA = [[0, 146, 130, 70, 0], [10, 132, 119, 70, .7], [20, 124, 118, 95, 1], [30, 116, 116, 116, 1], [45, 160, 160, 160, 1],
+                           [60, 210, 210, 210, 1], [70, 250, 250, 250, 1], [100, 250, 250, 250, 1]];
+const NUBES_WINDY_ALTAS = 0.5;
+/** El porcentaje de nube con que se pinta un píxel: la mayor de bajas y medias, y las altas a la mitad. null si ninguna tiene dato. */
+function nubeWindy(bajas, medias, altas) {
+  const v = [bajas, medias, altas == null ? null : altas * NUBES_WINDY_ALTAS].filter(x => x != null && Number.isFinite(x));
+  return v.length ? Math.max(...v) : null;
+}
+/** El color [r, g, b, alfa 0-1] de la rampa de Windy para un porcentaje de nube. */
+function colorNubeWindy(p) {
+  const R = NUBES_WINDY_RAMPA;
+  if (!(p > R[0][0])) return R[0].slice(1);
+  for (let i = 1; i < R.length; i++) {
+    if (p <= R[i][0]) {
+      const a = R[i - 1], b = R[i], f = (p - a[0]) / (b[0] - a[0]);
+      return [1, 2, 3, 4].map(k => a[k] + (b[k] - a[k]) * f);
+    }
+  }
+  return R[R.length - 1].slice(1);
+}
+/* La librería solo pinta con escala: cada variable se pide con esta, que guarda el porcentaje en el canal rojo (0-255 =
+   0-100 %), y aquí se leen los píxeles y se juntan. Sin dato, la librería deja el píxel transparente: se queda sin pintar. */
+const NUBES_CODIGO = { type: 'breakpoint', unit: '%', breakpoints: [0, 100], colors: [[0, 0, 0, 1], [255, 255, 255, 1]] };
+const RE_NUBES_WINDY = /[&?]nubes_windy=([A-Za-z0-9_.]+)/;
+async function nubesComoWindy(params, ac) {
+  const otras = (params.url.match(RE_NUBES_WINDY)?.[1] || '').split('.');
+  const base = limpiarMarca(params.url).replace(RE_NUBES_WINDY, '');
+  const conVariable = v => base.replace(/([?&]variable=)[A-Za-z0-9_]+/, `$1${v}`);
+  const ajustes = { ...OMWeatherMapLayer.defaultOmProtocolSettings, colorScales: { custom: NUBES_CODIGO } };
+  const pedir = u => Peticiones.conReintento(() => OMWeatherMapLayer.omProtocol({ ...params, url: u, type: 'image' }, ac, ajustes), ac);
+  /* Las medias y altas que fallen no tumban la tesela: se pinta con lo que haya (las bajas sí son obligatorias). */
+  const [bajas, medias, altas] = await Promise.all([pedir(base), ...[otras[0], otras[1]].map(v => v ? pedir(conVariable(v)).catch(() => null) : null)]);
+  if (!bajas?.data) return { data: null };
+  const W = bajas.data.width, H = bajas.data.height, lienzo = new OffscreenCanvas(W, H), cx = lienzo.getContext('2d', { willReadFrequently: true });
+  const leer = img => { if (!img?.data) return null; cx.clearRect(0, 0, W, H); cx.drawImage(img.data, 0, 0, W, H); return cx.getImageData(0, 0, W, H).data; };
+  const pb = leer(bajas), pm = leer(medias), pa = leer(altas), sal = new ImageData(W, H), o = sal.data;
+  const val = (px, i) => (px && px[i + 3] >= 128) ? px[i] / 2.55 : null;
+  for (let i = 0; i < o.length; i += 4) {
+    const p = nubeWindy(val(pb, i), val(pm, i), val(pa, i));
+    if (p == null) continue;
+    const [r, g, b, a] = colorNubeWindy(p);
+    o[i] = r; o[i + 1] = g; o[i + 2] = b; o[i + 3] = Math.round(a * 255);
+  }
+  return { data: await createImageBitmap(sal) };
+}
 /* ── LA CAPA «NUBES», COMO WINDY TAMBIÉN EN CLARO (27-10-2026) ──────────────────────────────────────────────────────────
    Suyo, con Windy al lado: «solo pintáis grises» · «lleva con grises 2 días» · «donde hay blancas hay que poner blancas» ·
    «la capa de nubes como Windy la quiero». Y contestado en la pregunta: «Sí, como Windy». En Claro la nube iba oscurecida a
@@ -2689,6 +2739,7 @@ const Maps = {
       this.ajustarCacheDeBloques();
 
       maplibregl.addProtocol('om', (params, ac) => {
+        if (RE_NUBES_WINDY.test(params.url)) return nubesComoWindy(params, ac);   // la capa «Nubes», como Windy (28-10-2026)
         const { nombre, h } = partirMarca(marcaDe(params.url));
         const url = nombre ? limpiarMarca(params.url) : params.url;
         const E = nombre ? escalasPropias()[nombre] : null;
@@ -3210,6 +3261,11 @@ const Maps = {
     /* La suma del paso, por hora: con paso de 3 h la marca va como
        «lluvia_x3» y el protocolo escala los cortes (ver ACUMULADAS). */
     const h = esAcumulada(variable) ? horasDelPaso(meta?.valid_times, t) : 1;
+    /* «Nubes» como Windy (28-10-2026): las medias y altas que publique el modelo van en la URL y el protocolo junta las tres. */
+    if (L_?.comoWindy && variable === L_.v && L_.id === this.layer) {
+      const otras = [L_.con, L_.alta].map(x => (x && (!meta?.variables || meta.variables.includes(x))) ? x : '');
+      if (otras.some(Boolean)) q.set('nubes_windy', otras.join('.'));
+    }
     if (L_?.escala) q.set(MARCA, h > 1 ? `${L_.escala}_x${h}` : L_.escala);  // se retira antes de llamar a la librería
     return `om://${TILES}/${modelo}/${dir}/${file}.om?${q}`;
   },
@@ -3669,32 +3725,8 @@ const Maps = {
       /* La de encima solo si ESTE modelo publica esa variable: AROME no
          trae nieve en teselas, y pedirla era una capa de «trozos sin
          cargar». Se dice abajo, en el sello, qué falta. */
-      /* Las nubes MEDIAS encima de las bajas, con la misma escala y la misma pintura (ver la capa «clouds»). */
-      if (L_.con && (!R.meta?.variables || R.meta.variables.includes(L_.con))) {
-        const u3 = this.omUrl(L_.con, this.t, R.modelo, R.meta, { escala: L_.escala });
-        if (u3) {
-          this.map.addSource('omSrc3', { type:'raster', tiles:[`${u3}/{z}/{x}/{y}`], tileSize:256, maxzoom:12 });
-          const pin = {};
-          for (const k of ['raster-opacity', 'raster-resampling', 'raster-brightness-max', 'raster-saturation', 'raster-contrast']) {
-            const v = this.map.getPaintProperty('omLayer', k); if (v !== undefined) pin[k] = v;
-          }
-          this.map.addLayer({ id:'omLayer3', type:'raster', source:'omSrc3', paint:{ 'raster-fade-duration': 120, ...pin } }, this.encimaDe('omLayer'));
-        }
-      }
-      /* ── LAS ALTAS VUELVEN, EN GRIS CLARITO Y DEBAJO (27-10-2026) ──────────────────────────────────────────────────────────
-         Suyo, con dos fotos de Bermeo a las 12:03 (cielo cubierto y gris, sin llover) y Windy al lado: «Windy lo clava» · «blancas
-         y algunas grises claritas, no oscuras porque no llevan tanta agua». MEDIDO por /om a las 12:00 en Bermeo: bajas 0 %, medias
-         0-5 %, ALTAS 95-100 % en ECMWF 9 y 25 km, ICON-EU, AROME HD y GFS. El 26-10 se quitaron las altas (los cirros con cielo azul
-         daban 60 %) y hoy el manto gris salía como cielo limpio. Vuelven, pero con la misma escala, por DEBAJO de las bajas y medias
-         y más transparentes y apagadas: el porcentaje del modelo, sin inventar, en gris clarito en vez de blanco. */
-      if (L_.alta && (!R.meta?.variables || R.meta.variables.includes(L_.alta))) {
-        const u4 = this.omUrl(L_.alta, this.t, R.modelo, R.meta, { escala: L_.escala });
-        if (u4) {
-          this.map.addSource('omSrc4', { type:'raster', tiles:[`${u4}/{z}/{x}/{y}`], tileSize:256, maxzoom:12 });
-          this.map.addLayer({ id:'omLayer4', type:'raster', source:'omSrc4', paint:{ 'raster-fade-duration': 120, 'raster-resampling': 'linear',
-            'raster-opacity': opacidadDeCapa(L_, this.base, this.opacity) * ALTAS_OPACIDAD, 'raster-brightness-max': ALTAS_BRILLO } }, 'omLayer');
-        }
-      }
+      /* Las nubes medias y altas ya no van en capas aparte (omLayer3 y omLayer4, del 26 y 27-10-2026): desde el 28-10 la capa
+         «Nubes» las junta con las bajas en UNA imagen y la pinta con la rampa de Windy (ver nubesComoWindy). */
       const publicaEncima = !!L_.encima && (!R.meta?.variables || R.meta.variables.includes(L_.encima));
       /* Se guarda para el sello (stamp), que es lo que se lee: un status
          suelto aquí lo pisaba el sello un instante después (visto en
@@ -5873,6 +5905,13 @@ const Maps = {
     const L_ = TLAYERS.find(l => l.id === this.layer);
     if (!L_?.v) return null;
 
+    /* «Nubes» como Windy (28-10-2026): la barra con la rampa con que se pinta (el despejado, en el ocre del suelo). */
+    if (L_.comoWindy) {
+      const R = NUBES_WINDY_RAMPA;
+      return { unidad: '%', factor: 1, breakpoints: R.map(x => x[0]), colors: R.map(x => [x[1], x[2], x[3], 1]),
+               convertida: false, etiquetas: R.map(x => x[0]) };
+    }
+
     // Escala propia: la barra se reparte sobre el eje que se lee de verdad
     // (dBZ, hPa o km), no sobre los valores internos de la tesela.
     if (L_.escala) {
@@ -7326,14 +7365,6 @@ const Maps = {
       this.map.getSource('omSrc').setTiles([`${url}/{z}/{x}/{y}`]);
       // Las isobaras son del mismo fichero: se mueven con la hora.
       if (this.map.getSource('isoSrc')) { const ui = L_.contours ? url : this.isoUrl(this.usando); if (ui) this.map.getSource('isoSrc').setTiles([`${ui}/{z}/{x}/{y}`]); }
-      if (L_.con && this.map.getSource('omSrc3')) {
-        const u3 = this.omUrl(L_.con, this.t, this.usando.modelo, this.usando.meta, { escala: L_.escala });
-        if (u3) this.map.getSource('omSrc3').setTiles([`${u3}/{z}/{x}/{y}`]);
-      }
-      if (L_.alta && this.map.getSource('omSrc4')) {   // las altas, igual (27-10-2026)
-        const u4 = this.omUrl(L_.alta, this.t, this.usando.modelo, this.usando.meta, { escala: L_.escala });
-        if (u4) this.map.getSource('omSrc4').setTiles([`${u4}/{z}/{x}/{y}`]);
-      }
       if (L_.encima && this.map.getSource('omSrc2')) {
         const u2 = this.omUrl(L_.encima, this.t, this.usando.modelo, this.usando.meta, L_.encimaEscala ? { escala: L_.encimaEscala } : null);
         if (u2) this.map.getSource('omSrc2').setTiles([`${u2}/{z}/{x}/{y}`]);
@@ -7381,8 +7412,6 @@ const Maps = {
     const L_ = TLAYERS.find(l => l.id === this.layer);
     // (el velo de las densas murió el 31-08: la sombra va encima del color)
     if (this.map?.getLayer('omLayer')) this.map.setPaintProperty('omLayer', 'raster-opacity', opacidadDeCapa(L_, this.base, o));   // la misma cuenta que al pintar
-    if (this.map?.getLayer('omLayer3')) this.map.setPaintProperty('omLayer3', 'raster-opacity', opacidadDeCapa(L_, this.base, o));   // las nubes medias, igual
-    if (this.map?.getLayer('omLayer4')) this.map.setPaintProperty('omLayer4', 'raster-opacity', opacidadDeCapa(L_, this.base, o) * ALTAS_OPACIDAD);   // y las altas, más tenues
     if (this.map?.getLayer('radarLayer')) this.map.setPaintProperty('radarLayer', 'raster-opacity', Math.max(o, RADAR_OPACIDAD_MIN));
   },
 

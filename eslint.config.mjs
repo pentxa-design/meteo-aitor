@@ -51,7 +51,7 @@ function globalesDelProyecto() {
 }
 
 const NAVEGADOR = [
-  'window','document','navigator','location','console','fetch','Request','Response','Headers','TransformStream',
+  'window','document','navigator','location','console','fetch','Request','Response','Headers','TransformStream', 'ImageData',
   'URL','URLSearchParams','AbortController','Blob','localStorage','sessionStorage','setTimeout',
   'clearTimeout','setInterval','clearInterval','requestAnimationFrame','cancelAnimationFrame',
   'performance','ResizeObserver','IntersectionObserver','MutationObserver','Image','Event',
