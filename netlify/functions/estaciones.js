@@ -43,6 +43,8 @@ function caducidad(clave) {
 const API = 'https://opendata.aemet.es/opendata/api/observacion/convencional/todas';
 
 const num = (v, min, max, def) => {
+  /* Sin el parámetro, Number(null) daba 0 y «sin lat/lon» se leía como el punto 0,0: lista vacía y sin error (07-11-2026). */
+  if (v === null || v === undefined || String(v).trim() === '') return def;
   const n = Number(v);
   return Number.isFinite(n) && n >= min && n <= max ? n : def;
 };
