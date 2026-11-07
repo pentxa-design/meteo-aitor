@@ -6043,7 +6043,26 @@ const Maps = {
     // devolvía "sin dato" encima de una zona con color.
     const R = this.usando;
     if (!L_?.v || !R?.meta) return;
-    const url = this.omUrl(L_.v, this.t, R.modelo, R.meta);
+    /* Radar + previsión: this.t es la posición en la tira mezclada, no un paso del modelo. Se leía el modelo en ese índice
+       (pulsando el radar de las 08:20 salía «ICON global · vie 14:00», medido el 07-11-2026). */
+    let ti = this.t;
+    if (this.layer === 'radarprev') {
+      const x = this._mixta?.[this.t];
+      if (!x) return;
+      if (x.kind === 'radar') {
+        this.cerrarPopups();
+        const h = new Date(x.time).toLocaleString('es', { weekday:'short', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+        const pop = new maplibregl.Popup({ offset: 10, closeButton: true, className: 'omPop' }).setLngLat(lngLat)
+          .setHTML(`<b>Radar observado · ${esc(h)}</b><br><small>Imagen de RainViewer: es una foto, no trae el número, así que la app
+            no puede darte los dBZ exactos de este punto. Guíate por el color y la leyenda.<br>Con mañana fría y en calma el radar
+            puede pintar ecos que no son lluvia: contrasta con una estación.<br>${lngLat.lat.toFixed(3)}, ${lngLat.lng.toFixed(3)}</small>`)
+          .addTo(this.map);
+        (this._pops ||= []).push(pop);
+        return;
+      }
+      ti = x.i;
+    }
+    const url = this.omUrl(L_.v, ti, R.modelo, R.meta);
     if (!url) return;
     const nombreModelo = TMODELS.find(m => m.id === R.modelo)?.name || R.modelo;
 
@@ -6095,7 +6114,7 @@ const Maps = {
 
       const e = this.escala();
       const f = e?.factor ?? 1, u = e?.unidad ?? (L_.unit || '');
-      const hora = new Date(R.meta.valid_times[this.t])
+      const hora = new Date(R.meta.valid_times[ti])
         .toLocaleString('es', { weekday:'short', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
 
       if (!valorReal(v, L_)) {
@@ -6112,14 +6131,14 @@ const Maps = {
       }
 
       // La lluvia de un paso de 3 h, por hora ANTES de convertir (ACUMULADAS).
-      const h = horasDelPaso(R.meta?.valid_times, this.t);
+      const h = horasDelPaso(R.meta?.valid_times, ti);
       const vh = porHora(v, L_.v, h);
       /* «Tipo de precipitación» apila la nieve (azul) sobre la lluvia (verde). Pulsar sobre azul leía solo la precipitación TOTAL
          y la rotulaba como agua (suyo, 18-10-2026: «si pincho en azul nieve, ¿por qué lee como agua?»). Se lee también la nieve en
          el mismo punto, hora y modelo, y el popup dice qué cae. */
       let tipoP = null;
       if (L_.v === 'precipitation' && L_.encima === 'snowfall_water_equivalent' && !this._sinEncima) {   // solo la capa que apila NIEVE sobre lluvia (en Nubes total la «encima» es la lluvia y el valor es un % de nubes)
-        const urlN = this.omUrl(L_.encima, this.t, R.modelo, R.meta);
+        const urlN = this.omUrl(L_.encima, ti, R.modelo, R.meta);
         if (urlN) {
           const leerN = async () => (await OMWeatherMapLayer.getValueFromLatLong(lngLat.lat, lngLat.lng, limpiarMarca(urlN)))?.value;
           let vn = null;
@@ -6170,8 +6189,8 @@ const Maps = {
          decir otra cosa. Y se pide SU hora exacta (start_hour = end_hour),
          que con `forecast_days=4` las horas de GFS a 10 días se quedaban sin
          rumbo. Parámetros por objeto: en local la URL sin proxy también vale. */
-      const hIso = R.meta?.valid_times?.[this.t]
-        ? new Date(R.meta.valid_times[this.t]).toISOString().slice(0, 13) + ':00' : null;
+      const hIso = R.meta?.valid_times?.[ti]
+        ? new Date(R.meta.valid_times[ti]).toISOString().slice(0, 13) + ':00' : null;
       if (L_.rumbo && hIso) {
         try {
           const d = await jget(API.fc, { latitude: lngLat.lat.toFixed(4), longitude: lngLat.lng.toFixed(4),

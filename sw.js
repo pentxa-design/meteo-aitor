@@ -10,7 +10,7 @@
      pantalla con la hora de la descarga.
    ═══════════════════════════════════════════════════════════════════ */
 
-const V     = 'torre-2026.10.28-2246';
+const V     = 'torre-2026.11.07-0836';
 const SHELL = [
   './', './index.html', './styles.css', './reglas-tiempo.js', './app.js', './maps.js',
   './manifest.webmanifest',

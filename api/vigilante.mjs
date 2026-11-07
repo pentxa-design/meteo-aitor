@@ -31,6 +31,7 @@ import { leer, guardar } from './suscribir.mjs';
 import { ReglasTiempo } from '../lib/reglas.mjs';
 import { lectorDeRayosServidor } from '../lib/rayos-png.mjs';
 import { lluviaMeteocat, cuotaMeteocat, pruebaXema, episodioMeteocat } from '../lib/meteocat.mjs';
+import { conPlazo } from '../lib/plazo.mjs';
 
 const ESTADO = 'avisos/vigilante.json';
 const APP = 'https://weather-app-ochre-one-76.vercel.app';
@@ -1177,7 +1178,7 @@ async function apuntarEnElMarcador(sitios, leido = null) {
 }
 
 let peticiones = 0;   // para saber si la instancia estaba fría
-export default async function handler(req, res) {
+async function handler(req, res) {
   /* Lo que cuesta esta llamada, en CPU de verdad (23-09-2026): sale en el
      pulso y en la pasada saltada, que es lo que más veces se llama. Así
      lo estimado en la auditoría del gasto pasa a ser medido. */
@@ -2753,3 +2754,7 @@ export default async function handler(req, res) {
       : undefined,
   });
 }
+
+/* cron-job.org corta a los 30 s: se le contesta a los 25 y la pasada
+   sigue por detrás (lib/plazo.mjs, 05-11-2026). */
+export default (req, res) => conPlazo(handler, req, res);
