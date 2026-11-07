@@ -7867,8 +7867,11 @@ grupo('RÁFAGAS: colores vivos y con SUS listones (01-09-2026)');
     const naranja = ([r, g, b]) => r > 200 && g > 120 && b < 130;
     ok('ráfagas como Windy: 83 km/h con su aviso en 60 sale ROJO, no naranja (Bermeo, viernes 23-10)',
        rojo(colorDe(83, 60, 90)) && rojo(colorDe(60, 60, 90)), JSON.stringify(colorDe(83, 60, 90)));
-    ok('   y desde su límite (90) CIRUELA-MORADO; justo por debajo de su aviso, naranja suave; y nada de amarillo ni verde (el «arcoíris»)',
-       morado(colorDe(90, 60, 90)) && morado(colorDe(95, 60, 90)) && naranja(colorDe(59, 60, 90)) && [18, 27, 36].every(v => { const [r, g, b] = colorDe(v, 60, 90); return b > r && b > g * 0.9; }), JSON.stringify([colorDe(95, 60, 90), colorDe(59, 60, 90)]));
+    /* 07-11-2026, suyo: «amarillo, naranja a rojo». Azul en la calma (18, 27), AMARILLO al 60 % de su aviso (36), naranja pegado al aviso. */
+    const amarillo = ([r, g, b]) => r > 220 && g > 190 && b < 100;
+    ok('   y desde su límite (90) CIRUELA-MORADO; justo por debajo de su aviso NARANJA; al 60 % de su aviso AMARILLO; en la calma azul',
+       morado(colorDe(90, 60, 90)) && morado(colorDe(95, 60, 90)) && naranja(colorDe(59, 60, 90)) && amarillo(colorDe(36, 60, 90)) && amarillo(colorDe(42, 70, 90))
+       && [18, 27].every(v => { const [r, g, b] = colorDe(v, 60, 90); return b > r && b > g * 0.9; }), JSON.stringify([colorDe(95, 60, 90), colorDe(59, 60, 90), colorDe(36, 60, 90)]));
     const op = new Function(`${(M.match(/const ESCALAS_BLANCAS = [^\n]*/) || [''])[0]}\n${(M.match(/const CON_SUELO_NEGRO = [^\n]*/) || [''])[0]}\n${(M.match(/function opacidadDeCapa[\s\S]*?\n\}/) || [''])[0]}\nreturn opacidadDeCapa;`)();
     ok('   y la capa de ráfagas va fuerte en cualquier fondo, como Windy: a 0,75 salía «pálida»; y desde el 24-10 todas (la presión también)',
        op({ escala: 'rafagas' }, 'claro', 0.75) >= 0.95 && op({ escala: 'rafagas' }, 'color', 0.75) >= 0.95 && op({ escala: 'presion' }, 'claro', 0.75) >= 0.95);

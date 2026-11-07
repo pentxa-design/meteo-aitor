@@ -2085,8 +2085,11 @@ function escalasPropias() {
   /* Y AFINADO (22-10-2026, el mismo rato: «está apagado el nuestro» · «pálido» → y con verdes y amarillos: «afínalo, eso parece
      un arcoíris» · «morado raro»). Probado en pantalla con sus datos del viernes antes de ponerlo: azules en la calma, un
      naranja suave solo pegado a su aviso, ROJO desde su aviso y un CIRUELA que se va a MORADO desde su límite, sin rosa. */
-  const rfc = [['#4a6fd0',0], ['#5a9ee0',0.3], ['#7fbfe8',0.45], ['#a8d4ee',0.6],
-               ['#f2a46a',0.85], ['#e23a3c',1], ['#cf2f3a',1], ['#b0263e',1],
+  /* AMARILLO → NARANJA → ROJO (07-11-2026, suyo con WeatherWise delante: «las rachas de viento quiero en color de amarillo,
+     naranja a rojo, ponmelo»). Pisa el «nada de amarillo» del 22-10: azul en la calma, AMARILLO desde el 60 % de su aviso,
+     NARANJA pegado al aviso, ROJO en su aviso y morado en su límite. Los saltos siguen en sus listones. */
+  const rfc = [['#4a6fd0',0], ['#5a9ee0',0.3], ['#7fbfe8',0.45], ['#f5d63a',0.6],
+               ['#f5901e',0.85], ['#e23a3c',1], ['#cf2f3a',1], ['#b0263e',1],
                ['#962a5e',1], ['#7a2c80',1], ['#5e2a86',1], ['#432070',1]];
   /* ── LA TESELA DE RACHA VIENE EN m/s, NO EN km/h (15-09-2026, 19:55) ──
      Cazado desde el portátil comparando con AguaceroWx: a las 16:00 de hoy
